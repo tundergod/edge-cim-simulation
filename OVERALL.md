@@ -128,16 +128,16 @@
 
 **純軟體階段（這台 Mac，不需上板、不需 GPU），接 Phase 0.1 的 trace。** Phase 0.1 回答「LLM 用到哪些 distinct (op, shape)」（sweep matrix，去重後 580 sig）；Phase 0.2 回答「每個 sig 在每個 (model × workload) **真實執行幾次、佔多少 compute / 記憶體**」——即把 sweep matrix 補上**權重**。這層權重是後面一切的接合點：
 
-- **加權合成端到端**：整體成本 = Σ_sig `count(sig | model, workload) × latency(sig | hardware)`。Phase 0.3 板上量到的是 per-sig latency，**沒有 count 就湊不出整體**。
-- **排序 0.3 量測**：580 sig 中少數主導執行（decode 的 attention bmm 隨 kv_len 成長、prefill 的投影 matmul）。profile 先標出主導者 → 0.3 把重複次數 / 精度預算集中在它們。
-- **roofline 定位**：每個 sig 由 shape 直接算 FLOPs / bytes / operational intensity → 判定每個 (model, workload) 落在 compute-bound（CIM 有利）還是 memory-bound。
+- **加權合成端到端**：整體成本 = Σ_sig `count(sig) × latency(shape)`，其中 `latency` 是 Phase 1 由板量測**擬合的方程式**在該 sig 的 (M,K,N)/kv 上求值（ADR-0006），**非離散 sig 查表**——因為 profile 會生成 board 未量的 off-grid 長度。沒有 count 就湊不出整體。
+- **排序 0.3 量測**：profile 的 sig 集合是 sweep matrix 的 **superset**；每 sig 帶 `measured` 旗標（是否落在 0.1 的離散追蹤網格上）。少數 sig 主導執行（decode attention bmm 隨 kv_len 成長、prefill 投影 matmul）→ 0.3 把重複次數 / 精度預算集中在主導且需錨定的 sig。
+- **roofline 定位（predicted-side）**：每個 sig 由 shape 算 FLOPs / bytes / operational intensity → 描出每個 (model, workload) 的**預測側**強度輪廓（量測側 roofline 與 compute/memory-bound knee 判定屬 Phase 0.3/1）。
 
 **做法：**
-- **粒度 = 完整 (op, in_shapes, out_shape) sig**，per (model × workload)，拆 prefill / decode。與 0.1 的 sweep matrix 1:1 對齊（同一批 sig，只是補次數），亦與 0.3 板 latency 1:1 join。
-- **計數法 = analytic**：每個 sig 在「一次 forward」的出現次數由模型結構決定（per-layer 次數 × layers；decode 的 attention / kv_cache sig 另隨 kv_len 變動），再乘該 workload 的 prefill / decode token 數。closed-form、不需跑滿整段；以 Phase 0.1 的一條真實 trace 做計數交叉驗證。
-- **每 sig 的 FLOPs / bytes**：由 shape 算（matmul `2·M·K·N`；bytes = 輸入 + 權重 + 輸出 element 數 × dtype size）→ intensity = FLOPs / bytes。
+- **粒度 = 完整 (op, in_shapes, out_shape) sig**，per (model × workload)，拆 prefill / decode。sig 集合 = sweep matrix 的 superset（補上 count 與 off-grid 長度）；Layer B 的 on-grid 點才與 0.1/0.3 離散 sig 直接對齊。
+- **計數法 = analytic 模板 + inventory 驗證**：以每層 op 模板為生成器（提供結構與長度軸），count 取自 Phase 0.1 `op_inventory` 的 `count` 欄位（已正確聚合 q≡o/k≡v/gate≡up 共形），**不自行 ×layers 推算**；模板於追蹤點生成的 (sig,count) 須逐筆等於 inventory。decode 的 length-dependent op 逐 kv 位置展開 shape。
+- **每 sig 的 FLOPs / bytes**：由 shape 算（matmul/bmm `2·M·K·N`；bytes = (輸入 + 權重 + 輸出 element 數) × dtype size，GEMM 預設 INT8、非-GEMM FP16，weight 每 token 串流一次）→ intensity = FLOPs / bytes。
 - **workload 軸**：Layer A 四任務（ShareGPT / GSM8K / LongBench-TriviaQA / HumanEval，長度取自 Phase 0.1 的 tokenize 統計）× 四模型；Layer B 合成長度掃描點供 scaling / roofline。
-- **產出**：`measurements/op_profile/{model}_{task}.json`（逐 sig：count、prefill/decode、FLOPs、bytes、intensity）+ op-breakdown 長條圖 + roofline 圖（皆走上方「資料與圖的可重現原則」）+ `docs/phase0.2-op-profile-findings.md`。
+- **產出**：`measurements/op_profile/{model}_{task}.json`（逐 sig：count、prefill/decode、FLOPs、bytes、intensity、measured）+ op-breakdown 長條圖 + roofline 圖（皆走上方「資料與圖的可重現原則」）+ `docs/phase0.2-op-profile-findings.md`。
 
 > **與 L1–L6 的關聯**：本階段不直接產生 L 資料，但提供把 per-op 量測（L1/L3）合成端到端（L4）所需的權重，且其 roofline 是 L1/L3/L6 roofline 驗證的「預測側」輸入。
 
