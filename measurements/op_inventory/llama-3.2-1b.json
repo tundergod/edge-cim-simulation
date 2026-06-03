@@ -61,7 +61,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 2
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.embedding.default",
@@ -80,6 +81,7 @@
       128,
       2048
      ],
+     "src": "LlamaModel.forward",
      "count": 1
     },
     {
@@ -92,7 +94,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 445
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -100,7 +103,8 @@
      "out_shape": [
       128
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.add.Tensor",
@@ -112,7 +116,8 @@
      "out_shape": [
       128
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.unsqueeze.default",
@@ -125,7 +130,8 @@
       1,
       128
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -135,7 +141,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 7
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -146,7 +153,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 12
+     "src": "find_packed_sequence_indices",
+     "count": 3
     },
     {
      "op": "aten.slice.Tensor",
@@ -160,6 +168,7 @@
       1,
       1
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -174,6 +183,7 @@
       1,
       1
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -183,6 +193,7 @@
       1,
       129
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -197,6 +208,7 @@
       1,
       128
      ],
+     "src": "find_packed_sequence_indices",
      "count": 2
     },
     {
@@ -208,6 +220,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "find_packed_sequence_indices",
      "count": 2
     },
     {
@@ -226,6 +239,7 @@
       1,
       128
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -240,6 +254,7 @@
       1,
       128
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -254,6 +269,7 @@
       1,
       128
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -262,6 +278,29 @@
      "out_shape": [
       1
      ],
+     "src": "sdpa_mask",
+     "count": 2
+    },
+    {
+     "op": "aten.arange.default",
+     "in_shapes": [],
+     "out_shape": [
+      128
+     ],
+     "src": "sdpa_mask",
+     "count": 2
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       128
+      ]
+     ],
+     "out_shape": [
+      128
+     ],
+     "src": "sdpa_mask",
      "count": 2
     },
     {
@@ -272,6 +311,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 6
     },
     {
@@ -285,6 +325,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -300,6 +341,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -311,6 +353,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -328,6 +371,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -340,6 +384,32 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       128
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 6
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       128
+      ]
+     ],
+     "out_shape": [
+      1,
+      128
+     ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -355,7 +425,20 @@
       1,
       128
      ],
-     "count": 3
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
     },
     {
      "op": "aten.unsqueeze.default",
@@ -372,6 +455,7 @@
       128,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -384,7 +468,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 5
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
     },
     {
      "op": "aten.unsqueeze.default",
@@ -401,6 +486,7 @@
       1,
       128
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -414,6 +500,7 @@
       ]
      ],
      "out_shape": [],
+     "src": "and_mask",
      "count": 1
     },
     {
@@ -438,6 +525,7 @@
       128,
       128
      ],
+     "src": "causal_mask_function",
      "count": 1
     },
     {
@@ -451,7 +539,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 5
+     "src": "and_mask",
+     "count": 4
     },
     {
      "op": "aten.bitwise_and.Tensor",
@@ -470,7 +559,20 @@
       128,
       128
      ],
+     "src": "and_mask",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128
+      ]
+     ],
+     "out_shape": null,
+     "src": "inner_mask",
+     "count": 4
     },
     {
      "op": "aten.index.Tensor",
@@ -486,6 +588,7 @@
       128,
       1
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -502,6 +605,7 @@
       1,
       128
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -526,6 +630,7 @@
       128,
       128
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -550,6 +655,7 @@
       128,
       128
      ],
+     "src": "and_mask",
      "count": 1
     },
     {
@@ -568,6 +674,21 @@
       128,
       128
      ],
+     "src": "sdpa_mask",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       128,
+       128
+      ]
+     ],
+     "out_shape": null,
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -576,6 +697,7 @@
       []
      ],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -584,12 +706,14 @@
       []
      ],
      "out_shape": null,
+     "src": "eager_mask",
      "count": 2
     },
     {
      "op": "aten.scalar_tensor.default",
      "in_shapes": [],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -610,6 +734,7 @@
       128,
       128
      ],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -620,6 +745,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 3
     },
     {
@@ -633,6 +759,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -648,6 +775,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -659,6 +787,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -671,6 +800,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 7
     },
     {
@@ -687,7 +817,36 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1,
+       128
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      128
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 1
     },
     {
      "op": "aten._to_copy.default",
@@ -703,7 +862,21 @@
       1,
       128
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       128
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
     },
     {
      "op": "aten.view.default",
@@ -719,6 +892,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -735,6 +909,7 @@
       1,
       128
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -751,6 +926,7 @@
       1,
       128
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -772,6 +948,7 @@
       32,
       128
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -788,6 +965,7 @@
       32,
       128
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -804,6 +982,7 @@
       128,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -816,6 +995,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -826,6 +1006,7 @@
       128,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -842,6 +1023,7 @@
       128,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -858,6 +1040,7 @@
       128,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
     },
     {
@@ -874,6 +1057,7 @@
       128,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -890,7 +1074,21 @@
       128,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 231
     },
     {
      "op": "aten._to_copy.default",
@@ -906,6 +1104,7 @@
       128,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 66
     },
     {
@@ -922,6 +1121,7 @@
       128,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -938,6 +1138,7 @@
       128,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -950,6 +1151,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 99
     },
     {
@@ -966,6 +1168,7 @@
       128,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -982,6 +1185,7 @@
       128,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -998,6 +1202,7 @@
       128,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -1019,6 +1224,7 @@
       128,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -1029,6 +1235,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -1048,6 +1255,7 @@
       128,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -1059,6 +1267,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 96
     },
     {
@@ -1073,6 +1282,7 @@
       2048,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -1088,7 +1298,21 @@
       128,
       2048
      ],
-     "count": 97
+     "src": "LlamaAttention.forward",
+     "count": 64
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
+     "count": 128
     },
     {
      "op": "prim.device.default",
@@ -1099,7 +1323,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 145
+     "src": "LlamaAttention.forward",
+     "count": 96
     },
     {
      "op": "aten.mm.default",
@@ -1117,6 +1342,7 @@
       128,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -1132,39 +1358,42 @@
       128,
       2048
      ],
+     "src": "LlamaAttention.forward",
+     "count": 32
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      32,
+      64
+     ],
+     "src": "LlamaAttention.forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 48
     },
     {
-     "op": "aten.view.default",
-     "in_shapes": [
-      [
-       1,
-       128,
-       2048
-      ]
-     ],
-     "out_shape": [
-      1,
-      128,
-      32,
-      64
-     ],
-     "count": 16
-    },
-    {
-     "op": "prim.device.default",
-     "in_shapes": [
-      [
-       1,
-       128,
-       32,
-       64
-      ]
-     ],
-     "out_shape": null,
-     "count": 96
-    },
-    {
      "op": "aten.transpose.int",
      "in_shapes": [
       [
@@ -1180,6 +1409,7 @@
       128,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -1193,7 +1423,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 400
+     "src": "LlamaAttention.forward",
+     "count": 16
     },
     {
      "op": "prim.device.default",
@@ -1204,6 +1435,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -1218,6 +1450,7 @@
       2048,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -1229,6 +1462,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -1247,6 +1481,7 @@
       128,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -1258,6 +1493,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -1273,6 +1509,7 @@
       128,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -1285,6 +1522,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -1302,6 +1540,7 @@
       8,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -1315,6 +1554,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -1333,6 +1573,7 @@
       128,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -1346,7 +1587,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 288
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.unsqueeze.default",
@@ -1363,6 +1605,7 @@
       128,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -1375,6 +1618,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -1399,7 +1643,36 @@
       128,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -1417,6 +1690,7 @@
       128,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -1430,6 +1704,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -1448,6 +1723,7 @@
       128,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -1459,6 +1735,7 @@
       128,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -1483,6 +1760,7 @@
       128,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -1507,7 +1785,36 @@
       128,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       128,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       128,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -1525,6 +1832,7 @@
       128,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -1538,6 +1846,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -1556,6 +1865,7 @@
       128,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -1567,6 +1877,7 @@
       128,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -1591,7 +1902,22 @@
       128,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       128,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
+     "count": 96
     },
     {
      "op": "aten.unsqueeze.default",
@@ -1610,6 +1936,7 @@
       128,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -1624,6 +1951,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -1644,6 +1972,7 @@
       128,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -1658,6 +1987,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -1678,6 +2008,7 @@
       128,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -1697,6 +2028,21 @@
       128,
       64
      ],
+     "src": "repeat_kv",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -1715,7 +2061,22 @@
       64,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 192
     },
     {
      "op": "prim.device.default",
@@ -1728,6 +2089,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 112
     },
     {
@@ -1746,6 +2108,7 @@
       128,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -1763,6 +2126,7 @@
       128,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -1775,6 +2139,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 48
     },
     {
@@ -1793,6 +2158,7 @@
       64,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -1810,6 +2176,7 @@
       64,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -1822,6 +2189,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -1843,6 +2211,7 @@
       128,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -1855,6 +2224,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -1872,6 +2242,7 @@
       128,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -1885,6 +2256,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 208
     },
     {
@@ -1903,6 +2275,7 @@
       128,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -1927,6 +2300,7 @@
       128,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -1945,6 +2319,7 @@
       128,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -1963,6 +2338,7 @@
       128,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -1981,6 +2357,7 @@
       128,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -1999,6 +2376,7 @@
       128,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -2016,6 +2394,7 @@
       128,
       128
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -2037,6 +2416,7 @@
       128,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -2054,6 +2434,7 @@
       128,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -2072,7 +2453,22 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 48
     },
     {
      "op": "aten.clone.default",
@@ -2090,6 +2486,7 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -2107,6 +2504,7 @@
       128,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -2128,6 +2526,20 @@
       128,
       2048
      ],
+     "src": "LlamaDecoderLayer.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaDecoderLayer.forward",
      "count": 32
     },
     {
@@ -2139,6 +2551,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -2153,6 +2566,7 @@
       2048,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -2164,7 +2578,49 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 64
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": [
+      128,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       128,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
     },
     {
      "op": "aten.mm.default",
@@ -2182,6 +2638,7 @@
       128,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -2193,6 +2650,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 48
     },
     {
@@ -2208,6 +2666,7 @@
       128,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -2220,6 +2679,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -2236,6 +2696,7 @@
       128,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -2257,6 +2718,7 @@
       128,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -2271,6 +2733,7 @@
       8192,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -2286,6 +2749,7 @@
       128,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -2304,7 +2768,37 @@
       128,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
+    },
+    {
+     "op": "aten._unsafe_view.default",
+     "in_shapes": [
+      [
+       128,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 5
     },
     {
      "op": "aten.alias.default",
@@ -2320,6 +2814,7 @@
       128,
       2048
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -2334,6 +2829,19 @@
       2048,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -2345,6 +2853,35 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": [
+      128,
+      2048
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       128,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -2363,6 +2900,7 @@
       128,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -2374,6 +2912,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -2389,6 +2928,7 @@
       128,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -2401,6 +2941,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     }
    ],
@@ -2414,7 +2955,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 2
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.embedding.default",
@@ -2433,6 +2975,7 @@
       256,
       2048
      ],
+     "src": "LlamaModel.forward",
      "count": 1
     },
     {
@@ -2445,7 +2988,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 445
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -2453,7 +2997,8 @@
      "out_shape": [
       256
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.add.Tensor",
@@ -2465,7 +3010,8 @@
      "out_shape": [
       256
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.unsqueeze.default",
@@ -2478,7 +3024,8 @@
       1,
       256
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -2488,7 +3035,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 7
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -2499,7 +3047,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 12
+     "src": "find_packed_sequence_indices",
+     "count": 3
     },
     {
      "op": "aten.slice.Tensor",
@@ -2513,6 +3062,7 @@
       1,
       1
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -2527,6 +3077,7 @@
       1,
       1
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -2536,6 +3087,7 @@
       1,
       257
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -2550,6 +3102,7 @@
       1,
       256
      ],
+     "src": "find_packed_sequence_indices",
      "count": 2
     },
     {
@@ -2561,6 +3114,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "find_packed_sequence_indices",
      "count": 2
     },
     {
@@ -2579,6 +3133,7 @@
       1,
       256
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -2593,6 +3148,7 @@
       1,
       256
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -2607,6 +3163,7 @@
       1,
       256
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -2615,6 +3172,29 @@
      "out_shape": [
       1
      ],
+     "src": "sdpa_mask",
+     "count": 2
+    },
+    {
+     "op": "aten.arange.default",
+     "in_shapes": [],
+     "out_shape": [
+      256
+     ],
+     "src": "sdpa_mask",
+     "count": 2
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       256
+      ]
+     ],
+     "out_shape": [
+      256
+     ],
+     "src": "sdpa_mask",
      "count": 2
     },
     {
@@ -2625,6 +3205,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 6
     },
     {
@@ -2638,6 +3219,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -2653,6 +3235,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -2664,6 +3247,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -2681,6 +3265,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -2693,6 +3278,32 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       256
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 6
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       256
+      ]
+     ],
+     "out_shape": [
+      1,
+      256
+     ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -2708,7 +3319,20 @@
       1,
       256
      ],
-     "count": 3
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
     },
     {
      "op": "aten.unsqueeze.default",
@@ -2725,6 +3349,7 @@
       256,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -2737,7 +3362,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 5
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
     },
     {
      "op": "aten.unsqueeze.default",
@@ -2754,6 +3380,7 @@
       1,
       256
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -2767,6 +3394,7 @@
       ]
      ],
      "out_shape": [],
+     "src": "and_mask",
      "count": 1
     },
     {
@@ -2791,6 +3419,7 @@
       256,
       256
      ],
+     "src": "causal_mask_function",
      "count": 1
     },
     {
@@ -2804,7 +3433,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 5
+     "src": "and_mask",
+     "count": 4
     },
     {
      "op": "aten.bitwise_and.Tensor",
@@ -2823,7 +3453,20 @@
       256,
       256
      ],
+     "src": "and_mask",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256
+      ]
+     ],
+     "out_shape": null,
+     "src": "inner_mask",
+     "count": 4
     },
     {
      "op": "aten.index.Tensor",
@@ -2839,6 +3482,7 @@
       256,
       1
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -2855,6 +3499,7 @@
       1,
       256
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -2879,6 +3524,7 @@
       256,
       256
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -2903,6 +3549,7 @@
       256,
       256
      ],
+     "src": "and_mask",
      "count": 1
     },
     {
@@ -2921,6 +3568,21 @@
       256,
       256
      ],
+     "src": "sdpa_mask",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       256,
+       256
+      ]
+     ],
+     "out_shape": null,
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -2929,6 +3591,7 @@
       []
      ],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -2937,12 +3600,14 @@
       []
      ],
      "out_shape": null,
+     "src": "eager_mask",
      "count": 2
     },
     {
      "op": "aten.scalar_tensor.default",
      "in_shapes": [],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -2963,6 +3628,7 @@
       256,
       256
      ],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -2973,6 +3639,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 3
     },
     {
@@ -2986,6 +3653,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3001,6 +3669,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3012,6 +3681,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3024,6 +3694,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 7
     },
     {
@@ -3040,7 +3711,36 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1,
+       256
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      256
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 1
     },
     {
      "op": "aten._to_copy.default",
@@ -3056,7 +3756,21 @@
       1,
       256
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       256
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
     },
     {
      "op": "aten.view.default",
@@ -3072,6 +3786,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3088,6 +3803,7 @@
       1,
       256
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3104,6 +3820,7 @@
       1,
       256
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3125,6 +3842,7 @@
       32,
       256
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3141,6 +3859,7 @@
       32,
       256
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3157,6 +3876,7 @@
       256,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3169,6 +3889,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3179,6 +3900,7 @@
       256,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3195,6 +3917,7 @@
       256,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3211,6 +3934,7 @@
       256,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
     },
     {
@@ -3227,6 +3951,7 @@
       256,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -3243,7 +3968,21 @@
       256,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 231
     },
     {
      "op": "aten._to_copy.default",
@@ -3259,6 +3998,7 @@
       256,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 66
     },
     {
@@ -3275,6 +4015,7 @@
       256,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -3291,6 +4032,7 @@
       256,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -3303,6 +4045,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 99
     },
     {
@@ -3319,6 +4062,7 @@
       256,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -3335,6 +4079,7 @@
       256,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -3351,6 +4096,7 @@
       256,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -3372,6 +4118,7 @@
       256,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -3382,6 +4129,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -3401,6 +4149,7 @@
       256,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -3412,6 +4161,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 96
     },
     {
@@ -3426,6 +4176,7 @@
       2048,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -3441,7 +4192,21 @@
       256,
       2048
      ],
-     "count": 97
+     "src": "LlamaAttention.forward",
+     "count": 64
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
+     "count": 128
     },
     {
      "op": "prim.device.default",
@@ -3452,7 +4217,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 145
+     "src": "LlamaAttention.forward",
+     "count": 96
     },
     {
      "op": "aten.mm.default",
@@ -3470,6 +4236,7 @@
       256,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -3485,39 +4252,42 @@
       256,
       2048
      ],
+     "src": "LlamaAttention.forward",
+     "count": 32
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      32,
+      64
+     ],
+     "src": "LlamaAttention.forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 48
     },
     {
-     "op": "aten.view.default",
-     "in_shapes": [
-      [
-       1,
-       256,
-       2048
-      ]
-     ],
-     "out_shape": [
-      1,
-      256,
-      32,
-      64
-     ],
-     "count": 16
-    },
-    {
-     "op": "prim.device.default",
-     "in_shapes": [
-      [
-       1,
-       256,
-       32,
-       64
-      ]
-     ],
-     "out_shape": null,
-     "count": 96
-    },
-    {
      "op": "aten.transpose.int",
      "in_shapes": [
       [
@@ -3533,6 +4303,7 @@
       256,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -3546,7 +4317,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 400
+     "src": "LlamaAttention.forward",
+     "count": 16
     },
     {
      "op": "prim.device.default",
@@ -3557,6 +4329,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -3571,6 +4344,7 @@
       2048,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -3582,6 +4356,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -3600,6 +4375,7 @@
       256,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -3611,6 +4387,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -3626,6 +4403,7 @@
       256,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -3638,6 +4416,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -3655,6 +4434,7 @@
       8,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -3668,6 +4448,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -3686,6 +4467,7 @@
       256,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -3699,7 +4481,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 288
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.unsqueeze.default",
@@ -3716,6 +4499,7 @@
       256,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -3728,6 +4512,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -3752,7 +4537,36 @@
       256,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -3770,6 +4584,7 @@
       256,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -3783,6 +4598,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -3801,6 +4617,7 @@
       256,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -3812,6 +4629,7 @@
       256,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -3836,6 +4654,7 @@
       256,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -3860,7 +4679,36 @@
       256,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       256,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       256,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -3878,6 +4726,7 @@
       256,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -3891,6 +4740,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -3909,6 +4759,7 @@
       256,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -3920,6 +4771,7 @@
       256,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -3944,7 +4796,22 @@
       256,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       256,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
+     "count": 96
     },
     {
      "op": "aten.unsqueeze.default",
@@ -3963,6 +4830,7 @@
       256,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -3977,6 +4845,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -3997,6 +4866,7 @@
       256,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -4011,6 +4881,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -4031,6 +4902,7 @@
       256,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -4050,6 +4922,21 @@
       256,
       64
      ],
+     "src": "repeat_kv",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -4068,7 +4955,22 @@
       64,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 192
     },
     {
      "op": "prim.device.default",
@@ -4081,6 +4983,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 112
     },
     {
@@ -4099,6 +5002,7 @@
       256,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -4116,6 +5020,7 @@
       256,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -4128,6 +5033,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 48
     },
     {
@@ -4146,6 +5052,7 @@
       64,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4163,6 +5070,7 @@
       64,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4175,6 +5083,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4196,6 +5105,7 @@
       256,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4208,6 +5118,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -4225,6 +5136,7 @@
       256,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4238,6 +5150,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 208
     },
     {
@@ -4256,6 +5169,7 @@
       256,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4280,6 +5194,7 @@
       256,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4298,6 +5213,7 @@
       256,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -4316,6 +5232,7 @@
       256,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4334,6 +5251,7 @@
       256,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4352,6 +5270,7 @@
       256,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4369,6 +5288,7 @@
       256,
       256
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4390,6 +5310,7 @@
       256,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4407,6 +5328,7 @@
       256,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4425,7 +5347,22 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 48
     },
     {
      "op": "aten.clone.default",
@@ -4443,6 +5380,7 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -4460,6 +5398,7 @@
       256,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -4481,6 +5420,20 @@
       256,
       2048
      ],
+     "src": "LlamaDecoderLayer.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaDecoderLayer.forward",
      "count": 32
     },
     {
@@ -4492,6 +5445,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -4506,6 +5460,7 @@
       2048,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -4517,7 +5472,49 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 64
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": [
+      256,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
     },
     {
      "op": "aten.mm.default",
@@ -4535,6 +5532,7 @@
       256,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -4546,6 +5544,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 48
     },
     {
@@ -4561,6 +5560,7 @@
       256,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -4573,6 +5573,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -4589,6 +5590,7 @@
       256,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -4610,6 +5612,7 @@
       256,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -4624,6 +5627,7 @@
       8192,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -4639,6 +5643,7 @@
       256,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -4657,7 +5662,37 @@
       256,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
+    },
+    {
+     "op": "aten._unsafe_view.default",
+     "in_shapes": [
+      [
+       256,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 5
     },
     {
      "op": "aten.alias.default",
@@ -4673,6 +5708,7 @@
       256,
       2048
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -4687,6 +5723,19 @@
       2048,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -4698,6 +5747,35 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": [
+      256,
+      2048
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -4716,6 +5794,7 @@
       256,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -4727,6 +5806,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -4742,6 +5822,7 @@
       256,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -4754,6 +5835,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     }
    ],
@@ -4767,7 +5849,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 2
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.embedding.default",
@@ -4786,6 +5869,7 @@
       512,
       2048
      ],
+     "src": "LlamaModel.forward",
      "count": 1
     },
     {
@@ -4798,7 +5882,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 445
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -4806,7 +5891,8 @@
      "out_shape": [
       512
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.add.Tensor",
@@ -4818,7 +5904,8 @@
      "out_shape": [
       512
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.unsqueeze.default",
@@ -4831,7 +5918,8 @@
       1,
       512
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -4841,7 +5929,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 7
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -4852,7 +5941,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 12
+     "src": "find_packed_sequence_indices",
+     "count": 3
     },
     {
      "op": "aten.slice.Tensor",
@@ -4866,6 +5956,7 @@
       1,
       1
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -4880,6 +5971,7 @@
       1,
       1
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -4889,6 +5981,7 @@
       1,
       513
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -4903,6 +5996,7 @@
       1,
       512
      ],
+     "src": "find_packed_sequence_indices",
      "count": 2
     },
     {
@@ -4914,6 +6008,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "find_packed_sequence_indices",
      "count": 2
     },
     {
@@ -4932,6 +6027,7 @@
       1,
       512
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -4946,6 +6042,7 @@
       1,
       512
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -4960,6 +6057,7 @@
       1,
       512
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -4968,6 +6066,29 @@
      "out_shape": [
       1
      ],
+     "src": "sdpa_mask",
+     "count": 2
+    },
+    {
+     "op": "aten.arange.default",
+     "in_shapes": [],
+     "out_shape": [
+      512
+     ],
+     "src": "sdpa_mask",
+     "count": 2
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       512
+      ]
+     ],
+     "out_shape": [
+      512
+     ],
+     "src": "sdpa_mask",
      "count": 2
     },
     {
@@ -4978,6 +6099,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 6
     },
     {
@@ -4991,6 +6113,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -5006,6 +6129,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -5017,6 +6141,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -5034,6 +6159,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -5046,6 +6172,32 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       512
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 6
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      512
+     ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -5061,7 +6213,20 @@
       1,
       512
      ],
-     "count": 3
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
     },
     {
      "op": "aten.unsqueeze.default",
@@ -5078,6 +6243,7 @@
       512,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -5090,7 +6256,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 5
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
     },
     {
      "op": "aten.unsqueeze.default",
@@ -5107,6 +6274,7 @@
       1,
       512
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -5120,6 +6288,7 @@
       ]
      ],
      "out_shape": [],
+     "src": "and_mask",
      "count": 1
     },
     {
@@ -5144,6 +6313,7 @@
       512,
       512
      ],
+     "src": "causal_mask_function",
      "count": 1
     },
     {
@@ -5157,7 +6327,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 5
+     "src": "and_mask",
+     "count": 4
     },
     {
      "op": "aten.bitwise_and.Tensor",
@@ -5176,7 +6347,20 @@
       512,
       512
      ],
+     "src": "and_mask",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512
+      ]
+     ],
+     "out_shape": null,
+     "src": "inner_mask",
+     "count": 4
     },
     {
      "op": "aten.index.Tensor",
@@ -5192,6 +6376,7 @@
       512,
       1
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -5208,6 +6393,7 @@
       1,
       512
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -5232,6 +6418,7 @@
       512,
       512
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -5256,6 +6443,7 @@
       512,
       512
      ],
+     "src": "and_mask",
      "count": 1
     },
     {
@@ -5274,6 +6462,21 @@
       512,
       512
      ],
+     "src": "sdpa_mask",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       512,
+       512
+      ]
+     ],
+     "out_shape": null,
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -5282,6 +6485,7 @@
       []
      ],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -5290,12 +6494,14 @@
       []
      ],
      "out_shape": null,
+     "src": "eager_mask",
      "count": 2
     },
     {
      "op": "aten.scalar_tensor.default",
      "in_shapes": [],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -5316,6 +6522,7 @@
       512,
       512
      ],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -5326,6 +6533,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 3
     },
     {
@@ -5339,6 +6547,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5354,6 +6563,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5365,6 +6575,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5377,6 +6588,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 7
     },
     {
@@ -5393,7 +6605,36 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1,
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      512
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 1
     },
     {
      "op": "aten._to_copy.default",
@@ -5409,7 +6650,21 @@
       1,
       512
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       512
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
     },
     {
      "op": "aten.view.default",
@@ -5425,6 +6680,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5441,6 +6697,7 @@
       1,
       512
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5457,6 +6714,7 @@
       1,
       512
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5478,6 +6736,7 @@
       32,
       512
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5494,6 +6753,7 @@
       32,
       512
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5510,6 +6770,7 @@
       512,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5522,6 +6783,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5532,6 +6794,7 @@
       512,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5548,6 +6811,7 @@
       512,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5564,6 +6828,7 @@
       512,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
     },
     {
@@ -5580,6 +6845,7 @@
       512,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -5596,7 +6862,21 @@
       512,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 231
     },
     {
      "op": "aten._to_copy.default",
@@ -5612,6 +6892,7 @@
       512,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 66
     },
     {
@@ -5628,6 +6909,7 @@
       512,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -5644,6 +6926,7 @@
       512,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -5656,6 +6939,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 99
     },
     {
@@ -5672,6 +6956,7 @@
       512,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -5688,6 +6973,7 @@
       512,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -5704,6 +6990,7 @@
       512,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -5725,6 +7012,7 @@
       512,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -5735,6 +7023,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -5754,6 +7043,7 @@
       512,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -5765,6 +7055,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 96
     },
     {
@@ -5779,6 +7070,7 @@
       2048,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -5794,7 +7086,21 @@
       512,
       2048
      ],
-     "count": 97
+     "src": "LlamaAttention.forward",
+     "count": 64
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
+     "count": 128
     },
     {
      "op": "prim.device.default",
@@ -5805,7 +7111,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 209
+     "src": "LlamaAttention.forward",
+     "count": 160
     },
     {
      "op": "aten.mm.default",
@@ -5823,6 +7130,7 @@
       512,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -5838,39 +7146,42 @@
       512,
       2048
      ],
+     "src": "LlamaAttention.forward",
+     "count": 32
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      32,
+      64
+     ],
+     "src": "LlamaAttention.forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 48
     },
     {
-     "op": "aten.view.default",
-     "in_shapes": [
-      [
-       1,
-       512,
-       2048
-      ]
-     ],
-     "out_shape": [
-      1,
-      512,
-      32,
-      64
-     ],
-     "count": 16
-    },
-    {
-     "op": "prim.device.default",
-     "in_shapes": [
-      [
-       1,
-       512,
-       32,
-       64
-      ]
-     ],
-     "out_shape": null,
-     "count": 96
-    },
-    {
      "op": "aten.transpose.int",
      "in_shapes": [
       [
@@ -5886,6 +7197,7 @@
       512,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -5899,7 +7211,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 400
+     "src": "LlamaAttention.forward",
+     "count": 16
     },
     {
      "op": "aten.t.default",
@@ -5913,6 +7226,7 @@
       2048,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -5924,6 +7238,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -5942,6 +7257,7 @@
       512,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -5953,6 +7269,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -5968,6 +7285,7 @@
       512,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -5980,6 +7298,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -5997,6 +7316,7 @@
       8,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -6010,6 +7330,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -6028,6 +7349,7 @@
       512,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -6041,7 +7363,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 288
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.unsqueeze.default",
@@ -6058,6 +7381,7 @@
       512,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -6070,6 +7394,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -6094,7 +7419,36 @@
       512,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -6112,6 +7466,7 @@
       512,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -6125,6 +7480,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -6143,6 +7499,7 @@
       512,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -6154,6 +7511,7 @@
       512,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -6178,6 +7536,7 @@
       512,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -6202,7 +7561,36 @@
       512,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       512,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       512,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -6220,6 +7608,7 @@
       512,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -6233,6 +7622,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -6251,6 +7641,7 @@
       512,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -6262,6 +7653,7 @@
       512,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -6286,7 +7678,22 @@
       512,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       512,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
+     "count": 96
     },
     {
      "op": "aten.unsqueeze.default",
@@ -6305,6 +7712,7 @@
       512,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -6319,6 +7727,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -6339,6 +7748,7 @@
       512,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -6353,6 +7763,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -6373,6 +7784,7 @@
       512,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -6392,6 +7804,21 @@
       512,
       64
      ],
+     "src": "repeat_kv",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -6410,7 +7837,22 @@
       64,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 192
     },
     {
      "op": "prim.device.default",
@@ -6423,6 +7865,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 112
     },
     {
@@ -6441,6 +7884,7 @@
       512,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -6458,6 +7902,7 @@
       512,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -6470,6 +7915,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 48
     },
     {
@@ -6488,6 +7934,7 @@
       64,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6505,6 +7952,7 @@
       64,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6517,6 +7965,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6538,6 +7987,7 @@
       512,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6550,6 +8000,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -6567,6 +8018,7 @@
       512,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6580,6 +8032,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 208
     },
     {
@@ -6598,6 +8051,7 @@
       512,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6622,6 +8076,7 @@
       512,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6640,6 +8095,7 @@
       512,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -6658,6 +8114,7 @@
       512,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6676,6 +8133,7 @@
       512,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6694,6 +8152,7 @@
       512,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6711,6 +8170,7 @@
       512,
       512
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6732,6 +8192,7 @@
       512,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6749,6 +8210,7 @@
       512,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6767,7 +8229,22 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 48
     },
     {
      "op": "aten.clone.default",
@@ -6785,6 +8262,7 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -6802,6 +8280,7 @@
       512,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -6823,6 +8302,20 @@
       512,
       2048
      ],
+     "src": "LlamaDecoderLayer.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaDecoderLayer.forward",
      "count": 32
     },
     {
@@ -6834,6 +8327,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -6848,6 +8342,7 @@
       2048,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -6859,7 +8354,49 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 64
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": [
+      512,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       512,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
     },
     {
      "op": "aten.mm.default",
@@ -6877,6 +8414,7 @@
       512,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -6888,6 +8426,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 48
     },
     {
@@ -6903,6 +8442,7 @@
       512,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -6915,6 +8455,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -6931,6 +8472,7 @@
       512,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -6952,6 +8494,7 @@
       512,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -6966,6 +8509,7 @@
       8192,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -6981,6 +8525,7 @@
       512,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -6999,7 +8544,37 @@
       512,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
+    },
+    {
+     "op": "aten._unsafe_view.default",
+     "in_shapes": [
+      [
+       512,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 5
     },
     {
      "op": "aten.alias.default",
@@ -7015,6 +8590,7 @@
       512,
       2048
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -7029,6 +8605,19 @@
       2048,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -7040,6 +8629,35 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": [
+      512,
+      2048
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       512,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -7058,6 +8676,7 @@
       512,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -7069,6 +8688,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -7084,6 +8704,7 @@
       512,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -7096,6 +8717,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     }
    ],
@@ -7109,7 +8731,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 2
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.embedding.default",
@@ -7128,6 +8751,7 @@
       1024,
       2048
      ],
+     "src": "LlamaModel.forward",
      "count": 1
     },
     {
@@ -7140,7 +8764,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 445
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -7148,7 +8773,8 @@
      "out_shape": [
       1024
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.add.Tensor",
@@ -7160,7 +8786,8 @@
      "out_shape": [
       1024
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.unsqueeze.default",
@@ -7173,7 +8800,8 @@
       1,
       1024
      ],
-     "count": 3
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -7183,7 +8811,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 7
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -7194,7 +8823,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 12
+     "src": "find_packed_sequence_indices",
+     "count": 3
     },
     {
      "op": "aten.slice.Tensor",
@@ -7208,6 +8838,7 @@
       1,
       1
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -7222,6 +8853,7 @@
       1,
       1
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -7231,6 +8863,7 @@
       1,
       1025
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -7245,6 +8878,7 @@
       1,
       1024
      ],
+     "src": "find_packed_sequence_indices",
      "count": 2
     },
     {
@@ -7256,6 +8890,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "find_packed_sequence_indices",
      "count": 2
     },
     {
@@ -7274,6 +8909,7 @@
       1,
       1024
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -7288,6 +8924,7 @@
       1,
       1024
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -7302,6 +8939,7 @@
       1,
       1024
      ],
+     "src": "find_packed_sequence_indices",
      "count": 1
     },
     {
@@ -7310,6 +8948,29 @@
      "out_shape": [
       1
      ],
+     "src": "sdpa_mask",
+     "count": 2
+    },
+    {
+     "op": "aten.arange.default",
+     "in_shapes": [],
+     "out_shape": [
+      1024
+     ],
+     "src": "sdpa_mask",
+     "count": 2
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1024
+      ]
+     ],
+     "out_shape": [
+      1024
+     ],
+     "src": "sdpa_mask",
      "count": 2
     },
     {
@@ -7320,6 +8981,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 6
     },
     {
@@ -7333,6 +8995,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -7348,6 +9011,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -7359,6 +9023,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -7376,6 +9041,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -7388,6 +9054,32 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1024
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 6
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1024
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024
+     ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 2
     },
     {
@@ -7403,7 +9095,20 @@
       1,
       1024
      ],
-     "count": 3
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
     },
     {
      "op": "aten.unsqueeze.default",
@@ -7420,6 +9125,7 @@
       1024,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -7432,7 +9138,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 5
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 2
     },
     {
      "op": "aten.unsqueeze.default",
@@ -7449,6 +9156,7 @@
       1,
       1024
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -7462,6 +9170,7 @@
       ]
      ],
      "out_shape": [],
+     "src": "and_mask",
      "count": 1
     },
     {
@@ -7486,6 +9195,7 @@
       1024,
       1024
      ],
+     "src": "causal_mask_function",
      "count": 1
     },
     {
@@ -7499,7 +9209,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 5
+     "src": "and_mask",
+     "count": 4
     },
     {
      "op": "aten.bitwise_and.Tensor",
@@ -7518,7 +9229,20 @@
       1024,
       1024
      ],
+     "src": "and_mask",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024
+      ]
+     ],
+     "out_shape": null,
+     "src": "inner_mask",
+     "count": 4
     },
     {
      "op": "aten.index.Tensor",
@@ -7534,6 +9258,7 @@
       1024,
       1
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -7550,6 +9275,7 @@
       1,
       1024
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -7574,6 +9300,7 @@
       1024,
       1024
      ],
+     "src": "inner_mask",
      "count": 1
     },
     {
@@ -7598,6 +9325,7 @@
       1024,
       1024
      ],
+     "src": "and_mask",
      "count": 1
     },
     {
@@ -7616,6 +9344,21 @@
       1024,
       1024
      ],
+     "src": "sdpa_mask",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1024,
+       1024
+      ]
+     ],
+     "out_shape": null,
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -7624,6 +9367,7 @@
       []
      ],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -7632,12 +9376,14 @@
       []
      ],
      "out_shape": null,
+     "src": "eager_mask",
      "count": 2
     },
     {
      "op": "aten.scalar_tensor.default",
      "in_shapes": [],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -7658,6 +9404,7 @@
       1024,
       1024
      ],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -7668,6 +9415,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 3
     },
     {
@@ -7681,6 +9429,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7696,6 +9445,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7707,6 +9457,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7719,6 +9470,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 7
     },
     {
@@ -7735,7 +9487,36 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1,
+       1024
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1024
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 1
     },
     {
      "op": "aten._to_copy.default",
@@ -7751,7 +9532,21 @@
       1,
       1024
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1024
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
     },
     {
      "op": "aten.view.default",
@@ -7767,6 +9562,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7783,6 +9579,7 @@
       1,
       1024
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7799,6 +9596,7 @@
       1,
       1024
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7820,6 +9618,7 @@
       32,
       1024
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7836,6 +9635,7 @@
       32,
       1024
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7852,6 +9652,7 @@
       1024,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7864,6 +9665,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7874,6 +9676,7 @@
       1024,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7890,6 +9693,7 @@
       1024,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7906,6 +9710,7 @@
       1024,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
     },
     {
@@ -7922,6 +9727,7 @@
       1024,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -7938,7 +9744,21 @@
       1024,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 231
     },
     {
      "op": "aten._to_copy.default",
@@ -7954,6 +9774,7 @@
       1024,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 66
     },
     {
@@ -7970,6 +9791,7 @@
       1024,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -7986,6 +9808,7 @@
       1024,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -7998,6 +9821,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 99
     },
     {
@@ -8014,6 +9838,7 @@
       1024,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -8030,6 +9855,7 @@
       1024,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -8046,6 +9872,7 @@
       1024,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -8067,6 +9894,7 @@
       1024,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -8077,6 +9905,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -8096,6 +9925,7 @@
       1024,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -8107,6 +9937,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 96
     },
     {
@@ -8121,6 +9952,7 @@
       2048,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -8136,7 +9968,21 @@
       1024,
       2048
      ],
-     "count": 97
+     "src": "LlamaAttention.forward",
+     "count": 64
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
+     "count": 128
     },
     {
      "op": "prim.device.default",
@@ -8147,7 +9993,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 145
+     "src": "LlamaAttention.forward",
+     "count": 96
     },
     {
      "op": "aten.mm.default",
@@ -8165,6 +10012,7 @@
       1024,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -8180,39 +10028,42 @@
       1024,
       2048
      ],
+     "src": "LlamaAttention.forward",
+     "count": 32
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      32,
+      64
+     ],
+     "src": "LlamaAttention.forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 48
     },
     {
-     "op": "aten.view.default",
-     "in_shapes": [
-      [
-       1,
-       1024,
-       2048
-      ]
-     ],
-     "out_shape": [
-      1,
-      1024,
-      32,
-      64
-     ],
-     "count": 16
-    },
-    {
-     "op": "prim.device.default",
-     "in_shapes": [
-      [
-       1,
-       1024,
-       32,
-       64
-      ]
-     ],
-     "out_shape": null,
-     "count": 96
-    },
-    {
      "op": "aten.transpose.int",
      "in_shapes": [
       [
@@ -8228,6 +10079,7 @@
       1024,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -8241,7 +10093,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 400
+     "src": "LlamaAttention.forward",
+     "count": 16
     },
     {
      "op": "prim.device.default",
@@ -8252,6 +10105,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -8266,6 +10120,7 @@
       2048,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -8277,6 +10132,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -8295,6 +10151,7 @@
       1024,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -8306,6 +10163,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -8321,6 +10179,7 @@
       1024,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -8333,6 +10192,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -8350,6 +10210,7 @@
       8,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -8363,6 +10224,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -8381,6 +10243,7 @@
       1024,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -8394,7 +10257,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 288
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.unsqueeze.default",
@@ -8411,6 +10275,7 @@
       1024,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -8423,6 +10288,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -8447,7 +10313,36 @@
       1024,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -8465,6 +10360,7 @@
       1024,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -8478,6 +10374,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -8496,6 +10393,7 @@
       1024,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -8507,6 +10405,7 @@
       1024,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -8531,6 +10430,7 @@
       1024,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -8555,7 +10455,36 @@
       1024,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -8573,6 +10502,7 @@
       1024,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -8586,6 +10516,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -8604,6 +10535,7 @@
       1024,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -8615,6 +10547,7 @@
       1024,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -8639,7 +10572,22 @@
       1024,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
+     "count": 96
     },
     {
      "op": "aten.unsqueeze.default",
@@ -8658,6 +10606,7 @@
       1024,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -8672,6 +10621,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -8692,6 +10642,7 @@
       1024,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -8706,6 +10657,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -8726,6 +10678,7 @@
       1024,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -8745,6 +10698,21 @@
       1024,
       64
      ],
+     "src": "repeat_kv",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -8763,7 +10731,22 @@
       64,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 192
     },
     {
      "op": "prim.device.default",
@@ -8776,6 +10759,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 112
     },
     {
@@ -8794,6 +10778,7 @@
       1024,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -8811,6 +10796,7 @@
       1024,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -8823,6 +10809,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 48
     },
     {
@@ -8841,6 +10828,7 @@
       64,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -8858,6 +10846,7 @@
       64,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -8870,6 +10859,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -8891,6 +10881,7 @@
       1024,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -8903,6 +10894,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -8920,6 +10912,7 @@
       1024,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -8933,6 +10926,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 208
     },
     {
@@ -8951,6 +10945,7 @@
       1024,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -8975,6 +10970,7 @@
       1024,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -8993,6 +10989,7 @@
       1024,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -9011,6 +11008,7 @@
       1024,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -9029,6 +11027,7 @@
       1024,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -9047,6 +11046,7 @@
       1024,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -9064,6 +11064,7 @@
       1024,
       1024
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -9085,6 +11086,7 @@
       1024,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -9102,6 +11104,7 @@
       1024,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -9120,7 +11123,22 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 48
     },
     {
      "op": "aten.clone.default",
@@ -9138,6 +11156,7 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -9155,6 +11174,7 @@
       1024,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -9176,6 +11196,20 @@
       1024,
       2048
      ],
+     "src": "LlamaDecoderLayer.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaDecoderLayer.forward",
      "count": 32
     },
     {
@@ -9187,6 +11221,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -9201,6 +11236,7 @@
       2048,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -9212,7 +11248,49 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 64
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1024,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
     },
     {
      "op": "aten.mm.default",
@@ -9230,6 +11308,7 @@
       1024,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -9241,6 +11320,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 48
     },
     {
@@ -9256,6 +11336,7 @@
       1024,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -9268,6 +11349,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -9284,6 +11366,7 @@
       1024,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -9305,6 +11388,7 @@
       1024,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -9319,6 +11403,7 @@
       8192,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -9334,6 +11419,7 @@
       1024,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -9352,7 +11438,37 @@
       1024,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
+    },
+    {
+     "op": "aten._unsafe_view.default",
+     "in_shapes": [
+      [
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 5
     },
     {
      "op": "aten.alias.default",
@@ -9368,6 +11484,7 @@
       1024,
       2048
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -9382,6 +11499,19 @@
       2048,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -9393,6 +11523,35 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1024,
+      2048
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -9411,6 +11570,7 @@
       1024,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -9422,6 +11582,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -9437,6 +11598,7 @@
       1024,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -9449,6 +11611,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     }
    ]
@@ -9472,6 +11635,7 @@
       1,
       2048
      ],
+     "src": "LlamaModel.forward",
      "count": 1
     },
     {
@@ -9484,7 +11648,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 445
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -9492,7 +11657,8 @@
      "out_shape": [
       1
      ],
-     "count": 4
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.add.Tensor",
@@ -9504,7 +11670,8 @@
      "out_shape": [
       1
      ],
-     "count": 2
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.unsqueeze.default",
@@ -9517,7 +11684,8 @@
       1,
       1
      ],
-     "count": 4
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -9527,7 +11695,30 @@
       ]
      ],
      "out_shape": null,
-     "count": 10
+     "src": "LlamaModel.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.arange.default",
+     "in_shapes": [],
+     "out_shape": [
+      1
+     ],
+     "src": "sdpa_mask",
+     "count": 3
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1
+      ]
+     ],
+     "out_shape": [
+      1
+     ],
+     "src": "sdpa_mask",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -9535,6 +11726,7 @@
      "out_shape": [
       129
      ],
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -9547,7 +11739,33 @@
      "out_shape": [
       129
      ],
+     "src": "sdpa_mask",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 9
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1
+     ],
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "aten.unsqueeze.default",
@@ -9562,7 +11780,8 @@
       1,
       1
      ],
-     "count": 4
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "prim.device.default",
@@ -9573,7 +11792,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 6
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "aten.unsqueeze.default",
@@ -9590,6 +11810,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 3
     },
     {
@@ -9602,7 +11823,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 105
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "prim.device.default",
@@ -9612,6 +11834,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 3
     },
     {
@@ -9625,6 +11848,7 @@
       1,
       129
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -9640,6 +11864,7 @@
       1,
       129
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -9651,6 +11876,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -9668,6 +11894,7 @@
       1,
       129
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -9680,6 +11907,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -9704,6 +11932,7 @@
       1,
       129
      ],
+     "src": "causal_mask_function",
      "count": 1
     },
     {
@@ -9722,6 +11951,7 @@
       1,
       129
      ],
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -9735,6 +11965,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -9743,6 +11974,7 @@
       []
      ],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -9751,12 +11983,14 @@
       []
      ],
      "out_shape": null,
+     "src": "eager_mask",
      "count": 2
     },
     {
      "op": "aten.scalar_tensor.default",
      "in_shapes": [],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -9777,6 +12011,7 @@
       1,
       129
      ],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -9787,6 +12022,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 3
     },
     {
@@ -9800,6 +12036,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9815,6 +12052,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9826,6 +12064,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9838,6 +12077,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 8
     },
     {
@@ -9854,7 +12094,36 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 1
     },
     {
      "op": "aten._to_copy.default",
@@ -9870,7 +12139,21 @@
       1,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
     },
     {
      "op": "aten.view.default",
@@ -9886,6 +12169,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9902,6 +12186,7 @@
       1,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9918,6 +12203,7 @@
       1,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9939,6 +12225,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9955,6 +12242,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9971,6 +12259,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9981,6 +12270,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -9997,6 +12287,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -10013,6 +12304,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
     },
     {
@@ -10029,6 +12321,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -10045,7 +12338,21 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 231
     },
     {
      "op": "aten._to_copy.default",
@@ -10061,6 +12368,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 66
     },
     {
@@ -10077,6 +12385,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -10093,7 +12402,21 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 99
     },
     {
      "op": "aten.add.Tensor",
@@ -10109,6 +12432,7 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -10125,6 +12449,7 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -10141,6 +12466,7 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -10162,6 +12488,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -10181,6 +12508,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -10195,6 +12523,7 @@
       2048,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10206,6 +12535,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 66
     },
     {
@@ -10221,7 +12551,21 @@
       1,
       2048
      ],
-     "count": 97
+     "src": "LlamaAttention.forward",
+     "count": 64
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
+     "count": 128
     },
     {
      "op": "prim.device.default",
@@ -10232,7 +12576,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 145
+     "src": "LlamaAttention.forward",
+     "count": 96
     },
     {
      "op": "aten.mm.default",
@@ -10250,6 +12595,7 @@
       1,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10265,7 +12611,8 @@
       1,
       2048
      ],
-     "count": 48
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.view.default",
@@ -10282,6 +12629,7 @@
       32,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -10295,7 +12643,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 64
+     "src": "LlamaAttention.forward",
+     "count": 48
     },
     {
      "op": "aten.transpose.int",
@@ -10313,6 +12662,7 @@
       1,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -10326,7 +12676,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 256
+     "src": "LlamaAttention.forward",
+     "count": 16
     },
     {
      "op": "aten.t.default",
@@ -10340,6 +12691,7 @@
       2048,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10351,6 +12703,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10362,6 +12715,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10380,6 +12734,7 @@
       1,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10391,6 +12746,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10406,6 +12762,7 @@
       1,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10418,6 +12775,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -10435,6 +12793,7 @@
       8,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10448,6 +12807,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -10466,6 +12826,7 @@
       1,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10479,7 +12840,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 192
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.unsqueeze.default",
@@ -10496,6 +12858,7 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -10508,6 +12871,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -10532,7 +12896,36 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -10550,6 +12943,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -10563,6 +12957,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -10581,6 +12976,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -10592,6 +12988,7 @@
       1,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -10616,6 +13013,7 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -10640,7 +13038,36 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -10658,6 +13085,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -10671,6 +13099,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -10689,6 +13118,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -10700,6 +13130,7 @@
       1,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -10724,6 +13155,7 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -10735,6 +13167,7 @@
       129,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -10748,7 +13181,22 @@
       ]
      ],
      "out_shape": null,
-     "count": 128
+     "src": "LlamaAttention.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       129,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
+     "count": 96
     },
     {
      "op": "aten.unsqueeze.default",
@@ -10767,6 +13215,7 @@
       129,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -10781,6 +13230,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -10801,6 +13251,7 @@
       129,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -10815,6 +13266,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -10835,6 +13287,7 @@
       129,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -10854,6 +13307,7 @@
       129,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -10867,7 +13321,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 96
+     "src": "repeat_kv",
+     "count": 32
     },
     {
      "op": "aten.transpose.int",
@@ -10885,7 +13340,22 @@
       64,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       129,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 64
     },
     {
      "op": "prim.device.default",
@@ -10898,6 +13368,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 112
     },
     {
@@ -10916,7 +13387,22 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 80
     },
     {
      "op": "aten.view.default",
@@ -10933,6 +13419,7 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -10945,6 +13432,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -10963,6 +13451,7 @@
       64,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -10980,6 +13469,7 @@
       64,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -10992,6 +13482,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11013,6 +13504,7 @@
       1,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11025,6 +13517,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -11042,6 +13535,7 @@
       1,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11055,6 +13549,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 208
     },
     {
@@ -11073,6 +13568,7 @@
       1,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11097,6 +13593,7 @@
       1,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11115,6 +13612,7 @@
       1,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -11133,6 +13631,7 @@
       1,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11151,6 +13650,7 @@
       1,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11169,6 +13669,7 @@
       1,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11186,6 +13687,7 @@
       1,
       129
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11204,6 +13706,7 @@
       129,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11221,6 +13724,7 @@
       129,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11233,6 +13737,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11254,6 +13759,7 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11271,6 +13777,7 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11289,6 +13796,21 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -11306,6 +13828,7 @@
       1,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -11327,6 +13850,20 @@
       1,
       2048
      ],
+     "src": "LlamaDecoderLayer.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaDecoderLayer.forward",
      "count": 32
     },
     {
@@ -11341,6 +13878,7 @@
       2048,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -11352,6 +13890,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 50
     },
     {
@@ -11363,7 +13902,49 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 49
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
     },
     {
      "op": "aten.mm.default",
@@ -11381,6 +13962,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -11392,6 +13974,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 48
     },
     {
@@ -11407,6 +13990,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -11419,6 +14003,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -11435,6 +14020,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -11456,6 +14042,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -11470,6 +14057,7 @@
       8192,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -11485,6 +14073,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -11503,6 +14092,23 @@
       1,
       2048
      ],
+     "src": "LlamaMLP.forward",
+     "count": 16
+    },
+    {
+     "op": "aten._unsafe_view.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -11513,7 +14119,21 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 5
     },
     {
      "op": "aten.alias.default",
@@ -11529,6 +14149,7 @@
       1,
       2048
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -11543,6 +14164,7 @@
       2048,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -11554,6 +14176,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -11565,6 +14188,35 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -11583,6 +14235,7 @@
       1,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -11594,6 +14247,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -11609,6 +14263,7 @@
       1,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -11621,6 +14276,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     }
    ],
@@ -11642,6 +14298,7 @@
       1,
       2048
      ],
+     "src": "LlamaModel.forward",
      "count": 1
     },
     {
@@ -11654,7 +14311,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 445
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -11662,7 +14320,8 @@
      "out_shape": [
       1
      ],
-     "count": 4
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.add.Tensor",
@@ -11674,7 +14333,8 @@
      "out_shape": [
       1
      ],
-     "count": 2
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.unsqueeze.default",
@@ -11687,7 +14347,8 @@
       1,
       1
      ],
-     "count": 4
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -11697,7 +14358,30 @@
       ]
      ],
      "out_shape": null,
-     "count": 10
+     "src": "LlamaModel.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.arange.default",
+     "in_shapes": [],
+     "out_shape": [
+      1
+     ],
+     "src": "sdpa_mask",
+     "count": 3
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1
+      ]
+     ],
+     "out_shape": [
+      1
+     ],
+     "src": "sdpa_mask",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -11705,6 +14389,7 @@
      "out_shape": [
       513
      ],
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -11717,7 +14402,33 @@
      "out_shape": [
       513
      ],
+     "src": "sdpa_mask",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 9
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1
+     ],
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "aten.unsqueeze.default",
@@ -11732,7 +14443,8 @@
       1,
       1
      ],
-     "count": 4
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "prim.device.default",
@@ -11743,7 +14455,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 6
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "aten.unsqueeze.default",
@@ -11760,6 +14473,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 3
     },
     {
@@ -11772,7 +14486,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 105
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "prim.device.default",
@@ -11782,6 +14497,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 3
     },
     {
@@ -11795,6 +14511,7 @@
       1,
       513
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -11810,6 +14527,7 @@
       1,
       513
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -11821,6 +14539,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -11838,6 +14557,7 @@
       1,
       513
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -11850,6 +14570,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -11874,6 +14595,7 @@
       1,
       513
      ],
+     "src": "causal_mask_function",
      "count": 1
     },
     {
@@ -11892,6 +14614,7 @@
       1,
       513
      ],
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -11905,6 +14628,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -11913,6 +14637,7 @@
       []
      ],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -11921,12 +14646,14 @@
       []
      ],
      "out_shape": null,
+     "src": "eager_mask",
      "count": 2
     },
     {
      "op": "aten.scalar_tensor.default",
      "in_shapes": [],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -11947,6 +14674,7 @@
       1,
       513
      ],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -11957,6 +14685,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 3
     },
     {
@@ -11970,6 +14699,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -11985,6 +14715,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -11996,6 +14727,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12008,6 +14740,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 8
     },
     {
@@ -12024,7 +14757,36 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 1
     },
     {
      "op": "aten._to_copy.default",
@@ -12040,7 +14802,21 @@
       1,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
     },
     {
      "op": "aten.view.default",
@@ -12056,6 +14832,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12072,6 +14849,7 @@
       1,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12088,6 +14866,7 @@
       1,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12109,6 +14888,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12125,6 +14905,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12141,6 +14922,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12151,6 +14933,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12167,6 +14950,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12183,6 +14967,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
     },
     {
@@ -12199,6 +14984,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -12215,7 +15001,21 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 231
     },
     {
      "op": "aten._to_copy.default",
@@ -12231,6 +15031,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 66
     },
     {
@@ -12247,6 +15048,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -12263,7 +15065,21 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 99
     },
     {
      "op": "aten.add.Tensor",
@@ -12279,6 +15095,7 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -12295,6 +15112,7 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -12311,6 +15129,7 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -12332,6 +15151,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -12351,6 +15171,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -12365,6 +15186,7 @@
       2048,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12376,6 +15198,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 66
     },
     {
@@ -12391,7 +15214,21 @@
       1,
       2048
      ],
-     "count": 97
+     "src": "LlamaAttention.forward",
+     "count": 64
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
+     "count": 128
     },
     {
      "op": "prim.device.default",
@@ -12402,7 +15239,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 145
+     "src": "LlamaAttention.forward",
+     "count": 96
     },
     {
      "op": "aten.mm.default",
@@ -12420,6 +15258,7 @@
       1,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12435,7 +15274,8 @@
       1,
       2048
      ],
-     "count": 48
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.view.default",
@@ -12452,6 +15292,7 @@
       32,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -12465,7 +15306,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 64
+     "src": "LlamaAttention.forward",
+     "count": 48
     },
     {
      "op": "aten.transpose.int",
@@ -12483,6 +15325,7 @@
       1,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -12496,7 +15339,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 256
+     "src": "LlamaAttention.forward",
+     "count": 16
     },
     {
      "op": "aten.t.default",
@@ -12510,6 +15354,7 @@
       2048,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12521,6 +15366,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12532,6 +15378,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12550,6 +15397,7 @@
       1,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12561,6 +15409,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12576,6 +15425,7 @@
       1,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12588,6 +15438,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -12605,6 +15456,7 @@
       8,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12618,6 +15470,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -12636,6 +15489,7 @@
       1,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12649,7 +15503,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 192
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.unsqueeze.default",
@@ -12666,6 +15521,7 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -12678,6 +15534,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -12702,7 +15559,36 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -12720,6 +15606,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -12733,6 +15620,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -12751,6 +15639,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -12762,6 +15651,7 @@
       1,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -12786,6 +15676,7 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -12810,7 +15701,36 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -12828,6 +15748,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -12841,6 +15762,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -12859,6 +15781,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -12870,6 +15793,7 @@
       1,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -12894,6 +15818,7 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -12905,6 +15830,7 @@
       513,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -12918,7 +15844,22 @@
       ]
      ],
      "out_shape": null,
-     "count": 128
+     "src": "LlamaAttention.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       513,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
+     "count": 96
     },
     {
      "op": "aten.unsqueeze.default",
@@ -12937,6 +15878,7 @@
       513,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -12951,6 +15893,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -12971,6 +15914,7 @@
       513,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -12985,6 +15929,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -13005,6 +15950,7 @@
       513,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -13024,6 +15970,7 @@
       513,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -13037,7 +15984,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 96
+     "src": "repeat_kv",
+     "count": 32
     },
     {
      "op": "aten.transpose.int",
@@ -13055,7 +16003,22 @@
       64,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       513,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 64
     },
     {
      "op": "prim.device.default",
@@ -13068,6 +16031,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 112
     },
     {
@@ -13086,7 +16050,22 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 80
     },
     {
      "op": "aten.view.default",
@@ -13103,6 +16082,7 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13115,6 +16095,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -13133,6 +16114,7 @@
       64,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13150,6 +16132,7 @@
       64,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13162,6 +16145,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13183,6 +16167,7 @@
       1,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13195,6 +16180,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -13212,6 +16198,7 @@
       1,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13225,6 +16212,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 208
     },
     {
@@ -13243,6 +16231,7 @@
       1,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13267,6 +16256,7 @@
       1,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13285,6 +16275,7 @@
       1,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -13303,6 +16294,7 @@
       1,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13321,6 +16313,7 @@
       1,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13339,6 +16332,7 @@
       1,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13356,6 +16350,7 @@
       1,
       513
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13374,6 +16369,7 @@
       513,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13391,6 +16387,7 @@
       513,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13403,6 +16400,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13424,6 +16422,7 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13441,6 +16440,7 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13459,6 +16459,21 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -13476,6 +16491,7 @@
       1,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -13497,6 +16513,20 @@
       1,
       2048
      ],
+     "src": "LlamaDecoderLayer.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaDecoderLayer.forward",
      "count": 32
     },
     {
@@ -13511,6 +16541,7 @@
       2048,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -13522,6 +16553,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 50
     },
     {
@@ -13533,7 +16565,49 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 49
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
     },
     {
      "op": "aten.mm.default",
@@ -13551,6 +16625,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -13562,6 +16637,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 48
     },
     {
@@ -13577,6 +16653,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -13589,6 +16666,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -13605,6 +16683,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -13626,6 +16705,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -13640,6 +16720,7 @@
       8192,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -13655,6 +16736,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -13673,6 +16755,23 @@
       1,
       2048
      ],
+     "src": "LlamaMLP.forward",
+     "count": 16
+    },
+    {
+     "op": "aten._unsafe_view.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -13683,7 +16782,21 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 5
     },
     {
      "op": "aten.alias.default",
@@ -13699,6 +16812,7 @@
       1,
       2048
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -13713,6 +16827,7 @@
       2048,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -13724,6 +16839,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -13735,6 +16851,35 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -13753,6 +16898,7 @@
       1,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -13764,6 +16910,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -13779,6 +16926,7 @@
       1,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -13791,6 +16939,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     }
    ],
@@ -13812,6 +16961,7 @@
       1,
       2048
      ],
+     "src": "LlamaModel.forward",
      "count": 1
     },
     {
@@ -13824,7 +16974,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 445
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -13832,7 +16983,8 @@
      "out_shape": [
       1
      ],
-     "count": 4
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.add.Tensor",
@@ -13844,7 +16996,8 @@
      "out_shape": [
       1
      ],
-     "count": 2
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "aten.unsqueeze.default",
@@ -13857,7 +17010,8 @@
       1,
       1
      ],
-     "count": 4
+     "src": "LlamaModel.forward",
+     "count": 1
     },
     {
      "op": "prim.device.default",
@@ -13867,7 +17021,30 @@
       ]
      ],
      "out_shape": null,
-     "count": 10
+     "src": "LlamaModel.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.arange.default",
+     "in_shapes": [],
+     "out_shape": [
+      1
+     ],
+     "src": "sdpa_mask",
+     "count": 3
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1
+      ]
+     ],
+     "out_shape": [
+      1
+     ],
+     "src": "sdpa_mask",
+     "count": 1
     },
     {
      "op": "aten.arange.default",
@@ -13875,6 +17052,7 @@
      "out_shape": [
       1025
      ],
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -13887,7 +17065,33 @@
      "out_shape": [
       1025
      ],
+     "src": "sdpa_mask",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 9
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1
+     ],
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "aten.unsqueeze.default",
@@ -13902,7 +17106,8 @@
       1,
       1
      ],
-     "count": 4
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "prim.device.default",
@@ -13913,7 +17118,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 6
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "aten.unsqueeze.default",
@@ -13930,6 +17136,7 @@
       1,
       1
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 3
     },
     {
@@ -13942,7 +17149,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 105
+     "src": "_non_vmap_expansion_sdpa",
+     "count": 3
     },
     {
      "op": "prim.device.default",
@@ -13952,6 +17160,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 3
     },
     {
@@ -13965,6 +17174,7 @@
       1,
       1025
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -13980,6 +17190,7 @@
       1,
       1025
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -13991,6 +17202,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -14008,6 +17220,7 @@
       1,
       1025
      ],
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -14020,6 +17233,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "_non_vmap_expansion_sdpa",
      "count": 1
     },
     {
@@ -14044,6 +17258,7 @@
       1,
       1025
      ],
+     "src": "causal_mask_function",
      "count": 1
     },
     {
@@ -14062,6 +17277,7 @@
       1,
       1025
      ],
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -14075,6 +17291,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "sdpa_mask",
      "count": 1
     },
     {
@@ -14083,6 +17300,7 @@
       []
      ],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -14091,12 +17309,14 @@
       []
      ],
      "out_shape": null,
+     "src": "eager_mask",
      "count": 2
     },
     {
      "op": "aten.scalar_tensor.default",
      "in_shapes": [],
      "out_shape": [],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -14117,6 +17337,7 @@
       1,
       1025
      ],
+     "src": "eager_mask",
      "count": 1
     },
     {
@@ -14127,6 +17348,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 3
     },
     {
@@ -14140,6 +17362,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14155,6 +17378,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14166,6 +17390,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14178,6 +17403,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 8
     },
     {
@@ -14194,7 +17420,36 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
+    },
+    {
+     "op": "aten.unsqueeze.default",
+     "in_shapes": [
+      [
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 1
     },
     {
      "op": "aten._to_copy.default",
@@ -14210,7 +17465,21 @@
       1,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRotaryEmbedding.forward",
+     "count": 3
     },
     {
      "op": "aten.view.default",
@@ -14226,6 +17495,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14242,6 +17512,7 @@
       1,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14258,6 +17529,7 @@
       1,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14279,6 +17551,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14295,6 +17568,7 @@
       32,
       1
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14311,6 +17585,7 @@
       1,
       32
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14321,6 +17596,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14337,6 +17613,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14353,6 +17630,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
     },
     {
@@ -14369,6 +17647,7 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 1
     },
     {
@@ -14385,7 +17664,21 @@
       1,
       64
      ],
+     "src": "LlamaRotaryEmbedding.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 231
     },
     {
      "op": "aten._to_copy.default",
@@ -14401,6 +17694,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 66
     },
     {
@@ -14417,6 +17711,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -14433,7 +17728,21 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
+     "count": 99
     },
     {
      "op": "aten.add.Tensor",
@@ -14449,6 +17758,7 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -14465,6 +17775,7 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -14481,6 +17792,7 @@
       1,
       1
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -14502,6 +17814,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -14521,6 +17834,7 @@
       1,
       2048
      ],
+     "src": "LlamaRMSNorm.forward",
      "count": 33
     },
     {
@@ -14535,6 +17849,7 @@
       2048,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14546,6 +17861,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 66
     },
     {
@@ -14561,7 +17877,21 @@
       1,
       2048
      ],
-     "count": 97
+     "src": "LlamaAttention.forward",
+     "count": 64
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaAttention.forward",
+     "count": 128
     },
     {
      "op": "prim.device.default",
@@ -14572,7 +17902,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 145
+     "src": "LlamaAttention.forward",
+     "count": 96
     },
     {
      "op": "aten.mm.default",
@@ -14590,6 +17921,7 @@
       1,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14605,7 +17937,8 @@
       1,
       2048
      ],
-     "count": 48
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.view.default",
@@ -14622,6 +17955,7 @@
       32,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -14635,7 +17969,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 64
+     "src": "LlamaAttention.forward",
+     "count": 48
     },
     {
      "op": "aten.transpose.int",
@@ -14653,6 +17988,7 @@
       1,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -14666,7 +18002,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 256
+     "src": "LlamaAttention.forward",
+     "count": 16
     },
     {
      "op": "aten.t.default",
@@ -14680,6 +18017,7 @@
       2048,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14691,6 +18029,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14702,6 +18041,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14720,6 +18060,7 @@
       1,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14731,6 +18072,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14746,6 +18088,7 @@
       1,
       512
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14758,6 +18101,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -14775,6 +18119,7 @@
       8,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14788,6 +18133,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaAttention.forward",
      "count": 64
     },
     {
@@ -14806,6 +18152,7 @@
       1,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -14819,7 +18166,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 192
+     "src": "LlamaAttention.forward",
+     "count": 32
     },
     {
      "op": "aten.unsqueeze.default",
@@ -14836,6 +18184,7 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -14848,6 +18197,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "apply_rotary_pos_emb",
      "count": 32
     },
     {
@@ -14872,7 +18222,36 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -14890,6 +18269,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -14903,6 +18283,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -14921,6 +18302,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -14932,6 +18314,7 @@
       1,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -14956,6 +18339,7 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -14980,7 +18364,36 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "apply_rotary_pos_emb",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "rotate_half",
+     "count": 112
     },
     {
      "op": "aten.slice.Tensor",
@@ -14998,6 +18411,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 32
     },
     {
@@ -15011,6 +18425,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "rotate_half",
      "count": 48
     },
     {
@@ -15029,6 +18444,7 @@
       1,
       32
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -15040,6 +18456,7 @@
       1,
       64
      ],
+     "src": "rotate_half",
      "count": 16
     },
     {
@@ -15064,6 +18481,7 @@
       1,
       64
      ],
+     "src": "apply_rotary_pos_emb",
      "count": 16
     },
     {
@@ -15075,6 +18493,7 @@
       1025,
       64
      ],
+     "src": "LlamaAttention.forward",
      "count": 32
     },
     {
@@ -15088,7 +18507,22 @@
       ]
      ],
      "out_shape": null,
-     "count": 128
+     "src": "LlamaAttention.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1025,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "repeat_kv",
+     "count": 96
     },
     {
      "op": "aten.unsqueeze.default",
@@ -15107,6 +18541,7 @@
       1025,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -15121,6 +18556,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -15141,6 +18577,7 @@
       1025,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -15155,6 +18592,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "repeat_kv",
      "count": 64
     },
     {
@@ -15175,6 +18613,7 @@
       1025,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -15194,6 +18633,7 @@
       1025,
       64
      ],
+     "src": "repeat_kv",
      "count": 32
     },
     {
@@ -15207,7 +18647,8 @@
       ]
      ],
      "out_shape": null,
-     "count": 96
+     "src": "repeat_kv",
+     "count": 32
     },
     {
      "op": "aten.transpose.int",
@@ -15225,7 +18666,22 @@
       64,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1025,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 64
     },
     {
      "op": "prim.device.default",
@@ -15238,6 +18694,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 112
     },
     {
@@ -15256,7 +18713,22 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
+     "count": 80
     },
     {
      "op": "aten.view.default",
@@ -15273,6 +18745,7 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15285,6 +18758,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -15303,6 +18777,7 @@
       64,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15320,6 +18795,7 @@
       64,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15332,6 +18808,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15353,6 +18830,7 @@
       1,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15365,6 +18843,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -15382,6 +18861,7 @@
       1,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15395,6 +18875,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 208
     },
     {
@@ -15413,6 +18894,7 @@
       1,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15437,6 +18919,7 @@
       1,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15455,6 +18938,7 @@
       1,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 32
     },
     {
@@ -15473,6 +18957,7 @@
       1,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15491,6 +18976,7 @@
       1,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15509,6 +18995,7 @@
       1,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15526,6 +19013,7 @@
       1,
       1025
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15544,6 +19032,7 @@
       1025,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15561,6 +19050,7 @@
       1025,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15573,6 +19063,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15594,6 +19085,7 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15611,6 +19103,7 @@
       1,
       64
      ],
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15629,6 +19122,21 @@
       32,
       64
      ],
+     "src": "eager_attention_forward",
+     "count": 16
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       32,
+       64
+      ]
+     ],
+     "out_shape": null,
+     "src": "eager_attention_forward",
      "count": 16
     },
     {
@@ -15646,6 +19154,7 @@
       1,
       2048
      ],
+     "src": "LlamaAttention.forward",
      "count": 16
     },
     {
@@ -15667,6 +19176,20 @@
       1,
       2048
      ],
+     "src": "LlamaDecoderLayer.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaDecoderLayer.forward",
      "count": 32
     },
     {
@@ -15681,6 +19204,7 @@
       2048,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -15692,6 +19216,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 50
     },
     {
@@ -15703,7 +19228,49 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 49
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "count": 32
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaMLP.forward",
+     "count": 48
     },
     {
      "op": "aten.mm.default",
@@ -15721,6 +19288,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -15732,6 +19300,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 48
     },
     {
@@ -15747,6 +19316,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 32
     },
     {
@@ -15759,6 +19329,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaMLP.forward",
      "count": 80
     },
     {
@@ -15775,6 +19346,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -15796,6 +19368,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -15810,6 +19383,7 @@
       8192,
       2048
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -15825,6 +19399,7 @@
       1,
       8192
      ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -15843,6 +19418,23 @@
       1,
       2048
      ],
+     "src": "LlamaMLP.forward",
+     "count": 16
+    },
+    {
+     "op": "aten._unsafe_view.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
      "count": 16
     },
     {
@@ -15853,7 +19445,21 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaRMSNorm.forward",
      "count": 2
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 5
     },
     {
      "op": "aten.alias.default",
@@ -15869,6 +19475,7 @@
       1,
       2048
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -15883,6 +19490,7 @@
       2048,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -15894,6 +19502,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -15905,6 +19514,35 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "aten.view.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "count": 1
+    },
+    {
+     "op": "prim.device.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ]
+     ],
+     "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -15923,6 +19561,7 @@
       1,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -15934,6 +19573,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -15949,6 +19589,7 @@
       1,
       128256
      ],
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     },
     {
@@ -15961,6 +19602,7 @@
       ]
      ],
      "out_shape": null,
+     "src": "LlamaForCausalLM.forward",
      "count": 1
     }
    ]
