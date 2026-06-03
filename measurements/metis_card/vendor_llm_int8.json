@@ -1,0 +1,248 @@
+{
+ "llama-3.2-1b/1c": {
+  "model": "llama-3.2-1b",
+  "cores": "1c",
+  "slug": "llama-3-2-1b-1024-static",
+  "context": 1024,
+  "runs": [
+   {
+    "prompt": "Explain gravity in one sentence.",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0067,
+    "ttft_s": 0.554,
+    "gen_s": 3.286,
+    "tok_s": 11.26,
+    "tokens": 37,
+    "cpu_pct": 21.1
+   },
+   {
+    "prompt": "Write a Python function to compute the n",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.006900000000000001,
+    "ttft_s": 0.554,
+    "gen_s": 15.995,
+    "tok_s": 13.07,
+    "tokens": 209,
+    "cpu_pct": 5.5
+   },
+   {
+    "prompt": "Summarize the main causes of World War I",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.006900000000000001,
+    "ttft_s": 0.554,
+    "gen_s": 17.695,
+    "tok_s": 13.11,
+    "tokens": 232,
+    "cpu_pct": 5.3
+   }
+  ],
+  "tok_s_median": 13.07,
+  "ttft_s_median": 0.554,
+  "prefill_ms_median": 0.006900000000000001
+ },
+ "llama-3.2-1b/4c": {
+  "model": "llama-3.2-1b",
+  "cores": "4c",
+  "slug": "llama-3-2-1b-1024-4core-static",
+  "context": 1024,
+  "runs": [
+   {
+    "prompt": "Explain gravity in one sentence.",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0067,
+    "ttft_s": 0.344,
+    "gen_s": 2.795,
+    "tok_s": 13.24,
+    "tokens": 37,
+    "cpu_pct": 16.7
+   },
+   {
+    "prompt": "Write a Python function to compute the n",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0064,
+    "ttft_s": 0.268,
+    "gen_s": 14.147,
+    "tok_s": 14.77,
+    "tokens": 209,
+    "cpu_pct": 7.0
+   },
+   {
+    "prompt": "Summarize the main causes of World War I",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.006900000000000001,
+    "ttft_s": 0.268,
+    "gen_s": 15.68,
+    "tok_s": 14.8,
+    "tokens": 232,
+    "cpu_pct": 5.2
+   }
+  ],
+  "tok_s_median": 14.77,
+  "ttft_s_median": 0.268,
+  "prefill_ms_median": 0.0067
+ },
+ "llama-3.2-3b/1c": {
+  "model": "llama-3.2-3b",
+  "cores": "1c",
+  "slug": "llama-3-2-3b-1024-static",
+  "context": 1024,
+  "runs": [
+   {
+    "prompt": "Explain gravity in one sentence.",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0074,
+    "ttft_s": 1.193,
+    "gen_s": 7.937,
+    "tok_s": 5.67,
+    "tokens": 45,
+    "cpu_pct": 9.6
+   },
+   {
+    "prompt": "Write a Python function to compute the n",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0074,
+    "ttft_s": 1.134,
+    "gen_s": 76.802,
+    "tok_s": 6.56,
+    "tokens": 504,
+    "cpu_pct": 0.5
+   },
+   {
+    "prompt": "Summarize the main causes of World War I",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0064,
+    "ttft_s": 1.134,
+    "gen_s": 26.633,
+    "tok_s": 6.38,
+    "tokens": 170,
+    "cpu_pct": 2.3
+   }
+  ],
+  "tok_s_median": 6.38,
+  "ttft_s_median": 1.134,
+  "prefill_ms_median": 0.0074
+ },
+ "llama-3.2-3b/4c": {
+  "model": "llama-3.2-3b",
+  "cores": "4c",
+  "slug": "llama-3-2-3b-1024-4core-static",
+  "context": 1024,
+  "runs": [
+   {
+    "prompt": "Explain gravity in one sentence.",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0074,
+    "ttft_s": 0.689,
+    "gen_s": 6.962,
+    "tok_s": 6.46,
+    "tokens": 45,
+    "cpu_pct": 9.7
+   },
+   {
+    "prompt": "Write a Python function to compute the n",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0079,
+    "ttft_s": 0.592,
+    "gen_s": 71.01,
+    "tok_s": 7.1,
+    "tokens": 504,
+    "cpu_pct": 0.6
+   },
+   {
+    "prompt": "Summarize the main causes of World War I",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0067,
+    "ttft_s": 0.592,
+    "gen_s": 24.309,
+    "tok_s": 6.99,
+    "tokens": 170,
+    "cpu_pct": 2.8
+   }
+  ],
+  "tok_s_median": 6.99,
+  "ttft_s_median": 0.592,
+  "prefill_ms_median": 0.0074
+ },
+ "llama-3.1-8b/1c": {
+  "model": "llama-3.1-8b",
+  "cores": "1c",
+  "slug": "llama-3-1-8b-1024-static",
+  "context": 1024,
+  "runs": [
+   {
+    "prompt": "Explain gravity in one sentence.",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0079,
+    "ttft_s": 3.944,
+    "gen_s": 19.376,
+    "tok_s": 2.27,
+    "tokens": 44,
+    "cpu_pct": 3.2
+   },
+   {
+    "prompt": "Write a Python function to compute the n",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0074,
+    "ttft_s": 3.794,
+    "gen_s": 206.017,
+    "tok_s": 2.8,
+    "tokens": 576,
+    "cpu_pct": 0.2
+   },
+   {
+    "prompt": "Summarize the main causes of World War I",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0079,
+    "ttft_s": 3.794,
+    "gen_s": 70.453,
+    "tok_s": 2.7,
+    "tokens": 190,
+    "cpu_pct": 0.6
+   }
+  ],
+  "tok_s_median": 2.7,
+  "ttft_s_median": 3.794,
+  "prefill_ms_median": 0.0079
+ },
+ "llama-3.1-8b/4c": {
+  "model": "llama-3.1-8b",
+  "cores": "4c",
+  "slug": "llama-3-1-8b-1024-4core-static",
+  "context": 1024,
+  "runs": [
+   {
+    "prompt": "Explain gravity in one sentence.",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.006900000000000001,
+    "ttft_s": 1.465,
+    "gen_s": 16.197,
+    "tok_s": 2.72,
+    "tokens": 44,
+    "cpu_pct": 3.9
+   },
+   {
+    "prompt": "Write a Python function to compute the n",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0081,
+    "ttft_s": 1.317,
+    "gen_s": 194.496,
+    "tok_s": 2.96,
+    "tokens": 576,
+    "cpu_pct": 0.3
+   },
+   {
+    "prompt": "Summarize the main causes of World War I",
+    "tokenization_ms": 0.4,
+    "prefill_ms": 0.0074,
+    "ttft_s": 1.317,
+    "gen_s": 65.006,
+    "tok_s": 2.92,
+    "tokens": 190,
+    "cpu_pct": 0.7
+   }
+  ],
+  "tok_s_median": 2.92,
+  "ttft_s_median": 1.317,
+  "prefill_ms_median": 0.0074
+ }
+}
