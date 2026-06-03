@@ -1,0 +1,25 @@
+{
+ "method": "ADR-0006 hold-out: fit decode BW on 1b+3b, predict 8b (size-invariance test)",
+ "weight_bytes": {
+  "llama-3.2-1b": 1498415104,
+  "llama-3.2-3b": 3606577152,
+  "llama-3.1-8b": 8029995008,
+  "qwen2.5-7b": 7615283200
+ },
+ "measured_tok_s_1c": {
+  "llama-3.2-1b": 13.07,
+  "llama-3.2-3b": 6.38,
+  "llama-3.1-8b": 2.7
+ },
+ "fit_BW_GBs": 21.3,
+ "implied_BW_per_model_GBs": {
+  "llama-3.2-1b": 19.58,
+  "llama-3.2-3b": 23.01,
+  "llama-3.1-8b": 21.68
+ },
+ "pred_8b_tok_s": 2.65,
+ "measured_8b_tok_s": 2.7,
+ "rel_error": 0.018,
+ "within_25pct": true,
+ "sanity_floor_note": "tok_s ~= BW / weight_bytes; decode is weight-streaming (r2~0.997 per voyager-sdk \u00a79)."
+}
