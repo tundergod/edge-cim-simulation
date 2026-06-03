@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Agent loop artifacts (regenerated per run; keep out of history)
+log.jsonl
+validation_result.json
+validator_output.json
+
+# Large / generated measurement & build outputs (commit curated JSON deliberately)
+*.tmp
+build/
+*.zip
+*.onnx
+*.axm
+*.bin
+
+# Plots / reports (regenerate from data)
+tools/plotting/_out/
+docs/_build/
