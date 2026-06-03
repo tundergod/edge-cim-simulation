@@ -25,8 +25,8 @@ MODELS = {
 N = 300
 OUT = Path("measurements/op_inventory/workload_lengths.json")
 SHAREGPT_CANDIDATES = [
+    "theblackcat102/sharegpt-english",  # English-first per workload scope
     "Aeala/ShareGPT_Vicuna_unfiltered",
-    "theblackcat102/sharegpt-english",
     "anon8231489123/ShareGPT_Vicuna_unfiltered",
 ]
 

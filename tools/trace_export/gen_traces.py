@@ -8,6 +8,7 @@ Full / long-context per-prompt traces are generated on-demand by M5 in Phase 2
 
 Run: PYTHONPATH=tools/trace_export ./.venv/bin/python tools/trace_export/gen_traces.py
 """
+import gzip
 import json
 from pathlib import Path
 
@@ -59,11 +60,13 @@ def main():
                 D = int(round(m["decode"]["mean"]))
                 K = min(P + max(D // 2, 1), CAP)
                 prefill, decode = trace_point(model, P, K)
-                (OUT / f"{key}_{task}.json").write_text(json.dumps(
-                    {"model": repo, "task": task, "prefill_len": P, "kv_len": K, "cap": CAP,
-                     "note": "compact [op,in_shapes,out_shape]; capped to CAP; "
-                             "long-context/full traces on-demand in Phase 2",
-                     "prefill_ops": prefill, "decode_ops": decode}))
+                payload = {"model": repo, "task": task, "prefill_len": P, "kv_len": K, "cap": CAP,
+                           "note": "compact [op,in_shapes,out_shape]; capped to CAP; "
+                                   "long-context/full traces on-demand in Phase 2",
+                           "prefill_ops": prefill, "decode_ops": decode}
+                # gzip: traces are ~98% redundant layer-replicated ops (~12MB raw -> ~0.2MB)
+                with gzip.open(OUT / f"{key}_{task}.json.gz", "wt") as fh:
+                    json.dump(payload, fh)
                 n += 1
         print(f"{key}: wrote {n} task traces")
 

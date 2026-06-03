@@ -55,13 +55,15 @@ Op-inventory decode traced at `kv_len ∈ {128,512,1024}` (ADR-0002). Silicon an
 
 `sweep_matrix.json`: **597** distinct `(op, in_shapes, out_shape)` signatures — matmul 105, attention 63, softmax 21, norm 45, rope 113, elementwise 230, embedding 20. Housekeeping excluded. This is the op×shape set Phase 0.2 micro-benchmarks per unit.
 
-## Deviation from plan
+## Deviations from plan
 
-Plan step 2 said to tag each operand activation-vs-weight. **Not implemented**: under FakeTensorMode params are fake tensors and appear transposed at the aten boundary, so id/shape tagging is unreliable. Instead the full `(M,K,N)` op signature is recorded — which is exactly the matmul/bmm spec a Phase 0.2 benchmark needs, so the sweep matrix is not polluted. (Recorded as a known deviation for the code review.)
+- **Operand activation/weight tag (step 2): not implemented.** Under FakeTensorMode params are fake tensors and appear transposed at the aten boundary, so id/shape tagging is unreliable. Instead the full `(M,K,N)` op signature is recorded — exactly the matmul/bmm spec a Phase 0.2 benchmark needs, so the sweep matrix is not polluted.
+- **Layer-B-labelled traces (step 6): not emitted.** `gen_traces.py` writes only the 16 Layer-A task traces. The Layer-B prefill×decode sweep shapes are already fully captured in the op inventories (prefill {128,256,512,1024}, decode kv {128,512,1024}) and in `sweep_matrix.json`, so a separate `{prefill}x{decode}` trace per point would be redundant; regenerate on-demand if needed.
+- **ShareGPT source:** the dedicated English set (`theblackcat102/sharegpt-english`) failed to load; fell back to `Aeala/ShareGPT_Vicuna_unfiltered` (ShareGPT is predominantly English). Length impact is minor; English-first ordering is retained for future runs.
 
 ## Artifacts
 
 - `measurements/op_inventory/{llama-3.2-1b,llama-3.2-3b,llama-3.1-8b,qwen2.5-7b}.json` — config + distinct ops + deduped inventory + expected-ops check
 - `measurements/op_inventory/workload_lengths.json`, `measurements/op_inventory/sweep_matrix.json`
-- `traces/{model}_{task}.json` — 16 compact representative traces (prefill@mean capped 1024 + a decode step); full/long-context traces regenerate on-demand via `gen_traces.py` (ADR-0002/0007)
+- `traces/{model}_{task}.json.gz` — 16 gzipped compact representative traces (~98% redundant layer-replicated ops → ~170 KB total; prefill@mean capped 1024 + a decode step); full/long-context traces regenerate on-demand via `gen_traces.py` (ADR-0002/0007)
 - `tools/trace_export/{op_inventory,expected_ops,realweight_check,workload_stats,gen_traces,sweep_matrix}.py`, `requirements.phase0.txt`

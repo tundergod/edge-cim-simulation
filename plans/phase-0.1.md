@@ -30,6 +30,6 @@ op inventory 抽 decode op 時的代表點以 `kv_len ∈ {128,512,1024}` 表示
 Outputs:
 - `measurements/op_inventory/{llama-3.2-1b,llama-3.2-3b,llama-3.1-8b,qwen2.5-7b}.json`
 - `measurements/op_inventory/workload_lengths.json`、`measurements/op_inventory/sweep_matrix.json`
-- `traces/{model}_{label}.json`
+- `traces/{model}_{task}.json.gz`（gzipped；長上下文/完整 trace 由 Phase 2 on-demand）
 - `docs/phase0-op-inventory.md`
-- `tools/trace_export/{op_inventory.py, expected_ops.py, workload_stats.py}`、`requirements.phase0.txt`
+- `tools/trace_export/{op_inventory.py, expected_ops.py, realweight_check.py, workload_stats.py, gen_traces.py, sweep_matrix.py}`、`requirements.phase0.txt`

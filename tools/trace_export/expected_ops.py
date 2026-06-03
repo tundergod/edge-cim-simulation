@@ -56,6 +56,8 @@ def check(distinct):
 def main():
     ok = True
     for f in sorted(OUT.glob("*.json")):
+        if f.name in ("workload_lengths.json", "sweep_matrix.json"):
+            continue
         doc = json.loads(f.read_text())
         res = check(doc["distinct_ops"])
         doc["expected_ops_check"] = res
