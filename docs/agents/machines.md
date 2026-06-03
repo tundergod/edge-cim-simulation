@@ -35,8 +35,17 @@ The Mac stays in the loop for every sync — no GitHub keys on the shared lab ma
 
 Same per-phase workflow as everything else (CLAUDE.md): a phase = branch off `main` → plan → subagent review → user approval → execute (drive boards via the rsync flow above) → subagent code review → PR → user review → merge.
 
-## Caveats (verified 2026-06-03)
+## Board readiness (verified 2026-06-03)
 
-- **aetina `/userdata` is 94% full (~960 MB free)** — Voyager builds default to `/userdata/voyager-sdk/build`. Heavy Phase 0.2 compiles may need cleanup first. The board working dir `~/edge-cim-simulation` is on `/` (8.1 GB free) — fine for scripts + result JSONs, but watch build outputs.
-- **metiscard precompiled LLMs = llama-3.1-8b (1c+4c) + phi3-mini (512/1024/2048)** — not the llama-3.2-1b/3b the earlier investigation used. Re-fetch those if the end-to-end sweep needs them.
-- Several board introspection commands (`lspci`, `lsmod`, rknpu debug) need `sudo` (password auth available); SDK/device presence already confirmed without it.
+Both Metis cards were found in **bad states and recovered** — always run `axdevice` (in the SDK env) to confirm a card responds **before** measuring:
+- **aetina (Alpha)** had dropped off the PCIe bus (slot showed garbage `16c3:abcd`, no `/dev/metis`, `metis.ko` unloaded). Recovered via PCIe `remove`+`rescan`+`modprobe metis`, then recreate the SDK container. Now: `metis-0:1:0 1GiB m2 flver=1.3.0 clock=800MHz`. (Procedure in `docs/voyager-sdk.md` §11.)
+- **metiscard (production)** card was present but **not responding** (comm timeout, `board_type=unknown`). Recovered via `axdevice --reboot`. Now: `metis-0:7:0 **16 GiB** pcie flver=1.4.0 clock=800MHz`. (16 GB → holds 8B + longer ctx; check whether power telemetry is readable — possible M7 bonus.)
+
+Toolchain availability:
+- **aetina**: SDK v1.3.1 docker ✓; Mali OpenCL + gcc + CL headers ✓ (custom matmul kernel buildable); CPU gcc ✓. **RKNPU2: `librknnrt.so` + `rknn_server` present but NO rknn Python toolkit (rknnlite / rknn-toolkit2) — must install before the RKNPU2 matmul micro-bench** (rknnlite on-board + a pre-converted `.rknn`, or convert on an x86 host).
+- **metiscard**: SDK venv `~/tundergod/voyager-sdk/axelera-env`, `axllm` ✓ (Gradio absent — UI only, irrelevant); **all target precompiled LLMs present** — llama-3.2-1b/3b, llama-3.1-8b, phi3-mini 512/1024/2048, velvet-2b (each 1c+4c). RTX 3090 ✓.
+
+## Caveats
+
+- aetina `/userdata`: cleaned 2026-06-03 (94% → 49%, 7.2 GB free); Voyager builds still target `/userdata/voyager-sdk/build`.
+- aetina PCIe recovery, build cleanup, and some introspection (`lspci`/`lsmod`/rknpu debug) need `sudo` (password auth available).

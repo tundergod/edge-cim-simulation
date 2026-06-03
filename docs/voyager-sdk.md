@@ -307,6 +307,7 @@ Known per-unit pathologies to expect `[MEASURED]` (from Step-1, see [papers/meti
 
 ## 11. Gotchas that corrupt measurements (check before trusting a number)
 
+- **Metis Alpha can drop off the PCIe bus** `[MEASURED 2026-06-03]` — the card may vanish from `lspci` (slot `0000:01:00.0` re-enumerates as garbage `16c3:abcd`, no `/dev/metis` node, `metis.ko` auto-unloaded); `axdevice` then errors `No target device found in lspci`. Recover from the host: `echo 1 | sudo tee /sys/bus/pci/devices/0000:01:00.0/remove` → `echo 1 | sudo tee /sys/bus/pci/rescan` (re-enumerates as `1f9d:1100`) → `sudo modprobe metis` (→ `/dev/metis-0:1:0` returns). **Then recreate the SDK docker container** (`docker rm -f axelera-sdk; ~/start-sdk-bg.sh`) — it maps `/dev/metis` at creation, so a container started while the card was absent won't see it. `~/reset_device.sh` automates the rescan. **Always run `axdevice` to confirm presence before a measurement session.**
 - **DMA opts off by default in direct AxRuntime** (§4.1) — 30–90% under-report. Enable double_buffer + dmabuf.
 - **`dma_poll=1` mandatory on Aetina** — interrupt mode 2 s-timeouts (community-confirmed) `[MEASURED]`.
 - **`--mode PREQUANTIZED` does NOT skip calibration** — a 3-knob compile still ran ~60 min of 200-image calibration `[MEASURED]`.
