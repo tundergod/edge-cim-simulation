@@ -18,6 +18,13 @@ Full text: `/karpathy-guidelines`. The four rules, applied here:
 3. **Surgical changes.** Touch only what the task requires. Match existing style. Don't refactor or "improve" adjacent code; mention unrelated dead code, don't delete it.
 4. **Goal-driven execution.** Turn each task into a verifiable check and loop until it passes. For module work, that means: validate against `validation/contracts/*` and the `measurements/` ground truth.
 
+### Process precedence (multiple skill packs are installed)
+
+This repo has several process-skill sources: **this file's per-phase workflow** (authoritative), `karpathy-guidelines`, matt-pocock skills (`tdd`/`diagnose`/`to-issues`), and the `superpowers` plugin (`writing-plans`, `test-driven-development`, `systematic-debugging`, `verification-before-completion`, `requesting-code-review`, `subagent-driven-development`, …). They don't change the simulator design (that's the ADRs) — only how you work.
+
+- **This file's per-phase workflow is authoritative.** Use the skill packs as a *toolbox* where they fit: TDD when implementing M-modules, `systematic-debugging` when a validation fails, `verification-before-completion` before claiming a phase done, `subagent-driven-development` for parallel module work.
+- **On conflict, CLAUDE.md + karpathy simplicity win.** Don't pile on ceremony or invoke many overlapping skills for one small task. Plans always use the action-only format below, regardless of what a plan-writing skill suggests.
+
 ## Per-phase workflow (required)
 
 Phases are defined in [overall.md](overall.md) § 階段總覽 (Phase 0.1, 0.2, 0.3, 1, 2). **Every phase follows this loop. Do not skip the gates.**
