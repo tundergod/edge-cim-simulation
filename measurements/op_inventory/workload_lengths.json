@@ -1,0 +1,234 @@
+{
+ "sharegpt": {
+  "llama-3.2-1b": {
+   "prefill": {
+    "mean": 174.7,
+    "median": 24.5,
+    "p95": 1200,
+    "n": 300
+   },
+   "decode": {
+    "mean": 344.1,
+    "median": 307.5,
+    "p95": 767,
+    "n": 300
+   }
+  },
+  "llama-3.2-3b": {
+   "prefill": {
+    "mean": 174.7,
+    "median": 24.5,
+    "p95": 1200,
+    "n": 300
+   },
+   "decode": {
+    "mean": 344.1,
+    "median": 307.5,
+    "p95": 767,
+    "n": 300
+   }
+  },
+  "llama-3.1-8b": {
+   "prefill": {
+    "mean": 174.7,
+    "median": 24.5,
+    "p95": 1200,
+    "n": 300
+   },
+   "decode": {
+    "mean": 344.1,
+    "median": 307.5,
+    "p95": 767,
+    "n": 300
+   }
+  },
+  "qwen2.5-7b": {
+   "prefill": {
+    "mean": 181.0,
+    "median": 24.0,
+    "p95": 1203,
+    "n": 300
+   },
+   "decode": {
+    "mean": 348.8,
+    "median": 314.0,
+    "p95": 768,
+    "n": 300
+   }
+  }
+ },
+ "gsm8k": {
+  "llama-3.2-1b": {
+   "prefill": {
+    "mean": 59.3,
+    "median": 55.0,
+    "p95": 99,
+    "n": 300
+   },
+   "decode": {
+    "mean": 101.6,
+    "median": 92.0,
+    "p95": 187,
+    "n": 300
+   }
+  },
+  "llama-3.2-3b": {
+   "prefill": {
+    "mean": 59.3,
+    "median": 55.0,
+    "p95": 99,
+    "n": 300
+   },
+   "decode": {
+    "mean": 101.6,
+    "median": 92.0,
+    "p95": 187,
+    "n": 300
+   }
+  },
+  "llama-3.1-8b": {
+   "prefill": {
+    "mean": 59.3,
+    "median": 55.0,
+    "p95": 99,
+    "n": 300
+   },
+   "decode": {
+    "mean": 101.6,
+    "median": 92.0,
+    "p95": 187,
+    "n": 300
+   }
+  },
+  "qwen2.5-7b": {
+   "prefill": {
+    "mean": 60.6,
+    "median": 56.0,
+    "p95": 101,
+    "n": 300
+   },
+   "decode": {
+    "mean": 123.4,
+    "median": 112.0,
+    "p95": 221,
+    "n": 300
+   }
+  }
+ },
+ "longbench-triviaqa": {
+  "llama-3.2-1b": {
+   "prefill": {
+    "mean": 11752.7,
+    "median": 11777.0,
+    "p95": 20868,
+    "n": 200
+   },
+   "decode": {
+    "mean": 4.3,
+    "median": 4.0,
+    "p95": 8,
+    "n": 200
+   }
+  },
+  "llama-3.2-3b": {
+   "prefill": {
+    "mean": 11752.7,
+    "median": 11777.0,
+    "p95": 20868,
+    "n": 200
+   },
+   "decode": {
+    "mean": 4.3,
+    "median": 4.0,
+    "p95": 8,
+    "n": 200
+   }
+  },
+  "llama-3.1-8b": {
+   "prefill": {
+    "mean": 11752.7,
+    "median": 11777.0,
+    "p95": 20868,
+    "n": 200
+   },
+   "decode": {
+    "mean": 4.3,
+    "median": 4.0,
+    "p95": 8,
+    "n": 200
+   }
+  },
+  "qwen2.5-7b": {
+   "prefill": {
+    "mean": 12180.0,
+    "median": 12211.5,
+    "p95": 21662,
+    "n": 200
+   },
+   "decode": {
+    "mean": 4.4,
+    "median": 4.0,
+    "p95": 8,
+    "n": 200
+   }
+  }
+ },
+ "humaneval": {
+  "llama-3.2-1b": {
+   "prefill": {
+    "mean": 132.3,
+    "median": 118.0,
+    "p95": 272,
+    "n": 164
+   },
+   "decode": {
+    "mean": 53.8,
+    "median": 45.5,
+    "p95": 120,
+    "n": 164
+   }
+  },
+  "llama-3.2-3b": {
+   "prefill": {
+    "mean": 132.3,
+    "median": 118.0,
+    "p95": 272,
+    "n": 164
+   },
+   "decode": {
+    "mean": 53.8,
+    "median": 45.5,
+    "p95": 120,
+    "n": 164
+   }
+  },
+  "llama-3.1-8b": {
+   "prefill": {
+    "mean": 132.3,
+    "median": 118.0,
+    "p95": 272,
+    "n": 164
+   },
+   "decode": {
+    "mean": 53.8,
+    "median": 45.5,
+    "p95": 120,
+    "n": 164
+   }
+  },
+  "qwen2.5-7b": {
+   "prefill": {
+    "mean": 134.1,
+    "median": 118.0,
+    "p95": 274,
+    "n": 164
+   },
+   "decode": {
+    "mean": 54.1,
+    "median": 45.5,
+    "p95": 120,
+    "n": 164
+   }
+  }
+ }
+}
