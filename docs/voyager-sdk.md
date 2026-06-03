@@ -303,6 +303,12 @@ Known per-unit pathologies to expect `[MEASURED]` (from Step-1, see [papers/meti
 - **RKNPU2:** latency-bound at b=1, scales 5–10× with batching; **EfficientNet-B0 collapses on depthwise+Swish**.
 - **Mali:** compute/bandwidth-bound, 10–25× slower than Metis, batching doesn't help; realistic role = preprocessing offload only.
 
+**Phase 0.2 capability verification** `[MEASURED 2026-06-04]` (smoke-tested on the real boards):
+- **CIM matmul micro-bench = 1×1 conv proxy.** Raw standalone `MatMul`/`Gemm` ONNX **fails to compile** (`ONNXGraphCleanerError` on the MatMul node — confirms general MatMul is not a clean compile path). A **1×1 `Conv2d` (mathematically = matmul)** compiles cleanly: `compile --input x.onnx --input-shape 1,C,1,1 --output DIR` (auto-calibrates with 100 random samples, no imageset needed, ~7 s) → `axrunmodel DIR/compiled_model/model.json --seconds N` returns dev/host/system FPS. **Use 1×1 conv as the GEMM/GEMV primitive** for the sweep-matrix shapes.
+- **End-to-end LLM (metiscard):** `axllm <model> --prompt "…" --show-stats` verified — emits Tokenization / Prefill / TTFT / Gen tok/s (llama-3.2-1b ≈ 11 tok/s on the 16 GB card, fw v1.6.0).
+- **RKNPU2:** `rknn-toolkit-lite2` (on-board inference runtime) installs on aarch64 ✓; **`rknn-toolkit2` (ONNX→`.rknn` converter) fails to build on aarch64** (`onnxoptimizer` wheel) → convert on an x86 host (metiscard) then run on-board via rknnlite, or install the C/C++ build deps and retry.
+- `compile --log-level` requires UPPERCASE (`WARNING`, not `warning`).
+
 ---
 
 ## 11. Gotchas that corrupt measurements (check before trusting a number)
