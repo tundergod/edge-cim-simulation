@@ -1,9 +1,10 @@
 {
  "note": "distinct (op, in_shapes, out_shape) to micro-benchmark in Phase 0.2; unambiguous ops bucketed by name, overloaded ops by source origin (#5); host-side ops excluded",
  "counts": {
-  "attention": 104,
+  "attention": 95,
   "embedding": 20,
   "ffn": 30,
+  "kv_cache": 9,
   "matmul": 105,
   "norm": 90,
   "residual": 20,
@@ -314,29 +315,6 @@
     ]
    },
    {
-    "op": "aten.cat.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      128,
-      128
-     ],
-     [
-      1,
-      8,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     129,
-     128
-    ]
-   },
-   {
     "op": "aten.bmm.default",
     "in_shapes": [
      [
@@ -417,29 +395,6 @@
     ]
    },
    {
-    "op": "aten.cat.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      512,
-      128
-     ],
-     [
-      1,
-      8,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     513,
-     128
-    ]
-   },
-   {
     "op": "aten.bmm.default",
     "in_shapes": [
      [
@@ -516,29 +471,6 @@
     "out_shape": [
      32,
      1,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1024,
-      128
-     ],
-     [
-      1,
-      8,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1025,
      128
     ]
    },
@@ -783,29 +715,6 @@
     ]
    },
    {
-    "op": "aten.cat.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      128,
-      64
-     ],
-     [
-      1,
-      8,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     129,
-     64
-    ]
-   },
-   {
     "op": "aten.bmm.default",
     "in_shapes": [
      [
@@ -846,29 +755,6 @@
     ]
    },
    {
-    "op": "aten.cat.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      512,
-      64
-     ],
-     [
-      1,
-      8,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     513,
-     64
-    ]
-   },
-   {
     "op": "aten.bmm.default",
     "in_shapes": [
      [
@@ -905,29 +791,6 @@
     "out_shape": [
      32,
      1,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1024,
-      64
-     ],
-     [
-      1,
-      8,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1025,
      64
     ]
    },
@@ -1812,29 +1675,6 @@
     ]
    },
    {
-    "op": "aten.cat.default",
-    "in_shapes": [
-     [
-      1,
-      4,
-      128,
-      128
-     ],
-     [
-      1,
-      4,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     129,
-     128
-    ]
-   },
-   {
     "op": "aten.bmm.default",
     "in_shapes": [
      [
@@ -1915,29 +1755,6 @@
     ]
    },
    {
-    "op": "aten.cat.default",
-    "in_shapes": [
-     [
-      1,
-      4,
-      512,
-      128
-     ],
-     [
-      1,
-      4,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     513,
-     128
-    ]
-   },
-   {
     "op": "aten.bmm.default",
     "in_shapes": [
      [
@@ -2014,29 +1831,6 @@
     "out_shape": [
      28,
      1,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [
-     [
-      1,
-      4,
-      1024,
-      128
-     ],
-     [
-      1,
-      4,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     1025,
      128
     ]
    },
@@ -3007,6 +2801,215 @@
      1,
      1,
      18944
+    ]
+   }
+  ],
+  "kv_cache": [
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     129,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     513,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1025,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     129,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     513,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1025,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      128,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     129,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      512,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     513,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1024,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     1025,
+     128
     ]
    }
   ],

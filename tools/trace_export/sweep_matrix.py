@@ -35,12 +35,14 @@ OVERLOADED = {"aten.bmm.default", "aten.add.Tensor", "aten.mul.Tensor",
               "aten.cat.default", "aten.sub.Tensor"}
 
 
-def src_category(src):
+def src_category(op, src):
     if not src:
         return None
+    if op == "aten.cat.default" and src.endswith("Attention.forward"):
+        return "kv_cache"  # KV-cache append (DynamicCache.update) = memory movement, not attention compute (#6)
     if src.endswith("RotaryEmbedding.forward") or src in ("apply_rotary_pos_emb", "rotate_half"):
         return "rope"
-    if src == "eager_attention_forward" or src.endswith("Attention.forward"):  # QK^T/SV/scale/mask-add + KV-cache cat
+    if src == "eager_attention_forward" or src.endswith("Attention.forward"):  # QK^T / S·V / scale / mask-add
         return "attention"
     if src.endswith("RMSNorm.forward"):
         return "norm"
@@ -56,7 +58,7 @@ def categorize(r):
     if op in BY_NAME:
         return BY_NAME[op]
     if op in OVERLOADED:
-        return src_category(r.get("src"))
+        return src_category(op, r.get("src"))
     return None  # housekeeping aten ops -> excluded
 
 
