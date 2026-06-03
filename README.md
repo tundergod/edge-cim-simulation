@@ -6,7 +6,7 @@
 
 - **[overall.md](overall.md)** — 專案綱要：目標、Phase 0.1/0.2/0.3/1/2、6-box 架構（M1–M8）、驗證層（L1–L6）。
 - **[docs/adr/](docs/adr/)** — 核心設計決策（ADR-0001…0007）。
-- **[voyager-sdk.md](voyager-sdk.md)** — Metis/SDK 量測參考（給 agent，英文）。
+- **[docs/voyager-sdk.md](docs/voyager-sdk.md)** — Metis/SDK 量測參考（給 agent，英文）。
 - **[papers/](papers/)** — 文獻 + 真實晶片筆記（16 篇 + 原始 PDF）。
 - **[CLAUDE.md](CLAUDE.md)** — agent 工作守則（per-phase workflow + karpathy）。
 

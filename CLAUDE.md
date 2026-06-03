@@ -1,11 +1,11 @@
 # CLAUDE.md
 
-Guidance for any agent working in this repo. Read this first, then [overall.md](overall.md) (project brief + phases) and [voyager-sdk.md](voyager-sdk.md) (Metis/SDK measurement reference).
+Guidance for any agent working in this repo. Read this first, then [overall.md](overall.md) (project brief + phases) and [docs/voyager-sdk.md](docs/voyager-sdk.md) (Metis/SDK measurement reference).
 
 ## Orientation
 
 - **What this is:** a real-silicon-calibrated simulator of LLM inference on a CIM-enabled heterogeneous mobile SoC, calibrated against two Axelera Metis boards. Goal, phases, modules (M1–M8), validation layers (L1–L6): [overall.md](overall.md).
-- **Authoritative docs (don't re-derive):** [overall.md](overall.md) = plan & phases (preliminary — revise freely). [voyager-sdk.md](voyager-sdk.md) = how to measure Metis (tagged `[DOC]`/`[FORUM]`/`[MEASURED]`/`[GAP]`). [papers/](papers/) = literature + real-silicon notes (16 curated). [CONTEXT.md](CONTEXT.md) = domain glossary.
+- **Authoritative docs (don't re-derive):** [overall.md](overall.md) = plan & phases (preliminary — revise freely). [docs/voyager-sdk.md](docs/voyager-sdk.md) = how to measure Metis (tagged `[DOC]`/`[FORUM]`/`[MEASURED]`/`[GAP]`). [papers/](papers/) = literature + real-silicon notes (16 curated). [CONTEXT.md](CONTEXT.md) = domain glossary.
 - **Hard scope:** dense Llama-3 / Qwen-2.5, 1B–8B, INT8, batch=1, prefill+decode. See `overall.md` § 範圍外 for what's excluded.
 - **Secrets:** never commit tokens/keys. The HF token lives in the user's environment (`HF_TOKEN`), not in the repo.
 

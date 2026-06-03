@@ -14,7 +14,7 @@
 - **Metis Alpha（Aetina）：** 在 CNN/matmul workload 上提供 CIM 計算原語＋PCIe 行為。
 - **量產 Metis Card：** 提供 on-card-DRAM 拓樸下、INT8 的真實 LLM 行為。
 
-真實晶片細節見 [papers/metis-silicon/](papers/metis-silicon/)；SDK 量測面見 [voyager-sdk.md](voyager-sdk.md)。
+真實晶片細節見 [papers/metis-silicon/](papers/metis-silicon/)；SDK 量測面見 [docs/voyager-sdk.md](docs/voyager-sdk.md)。
 
 ## 問題
 
@@ -286,7 +286,6 @@ while not all_modules_passed:
 ```
 edge-cim-simulation/
 ├── overall.md                  # 本綱要
-├── voyager-sdk.md              # SDK 特性量測參考（給所有 agent；英文）
 ├── README.md
 ├── program.md                  # agent 主指令（範本見下）
 ├── HANDOFF.md                  # 跨 session 狀態
@@ -424,4 +423,4 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 - **真實晶片校準來源：** [papers/metis-silicon/](papers/metis-silicon/) — Step-1 CNN 特性量測（L6）、Metis Card LLM 調查（L4）、Aetina 板稽核
 - **平台：** [papers/platforms/](papers/platforms/) — Aetina RKC-A02、Axelera Metis Card
 - **校準來源構想：** [cnn-dnn-edge-memory-wall-metis-embedded](papers/ideas/cnn-dnn-edge-memory-wall-metis-embedded.md)、來源構想頁 [cim-centric-llm-mobile-soc](papers/ideas/cim-centric-llm-mobile-soc.md)
-- **SDK 量測面：** [voyager-sdk.md](voyager-sdk.md)
+- **SDK 量測面：** [docs/voyager-sdk.md](docs/voyager-sdk.md)

@@ -1,6 +1,6 @@
 # CONTEXT
 
-Domain glossary for this repo. When naming a concept in an issue, plan, test, or proposal, use the term as defined here. Authoritative detail lives in [overall.md](overall.md) and [voyager-sdk.md](voyager-sdk.md).
+Domain glossary for this repo. When naming a concept in an issue, plan, test, or proposal, use the term as defined here. Authoritative detail lives in [overall.md](overall.md) and [docs/voyager-sdk.md](docs/voyager-sdk.md).
 
 ## Glossary
 
