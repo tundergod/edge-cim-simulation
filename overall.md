@@ -69,16 +69,16 @@
 
 「模型」只是哪顆網路；「工作負載」是實際餵進去的輸入，決定 prefill/decode 長度與 op×shape 流。參考同類 paper 的做法（**NeuPIMs** 用 ShareGPT + Alpaca；**HPIM** 與我方 [Metis 研究](papers/metis-silicon/metis-llm-investigation-desktop-2026-05-19.md) 用合成 (prefill, decode) 長度掃描；**HeteroInfer** 聚焦 decode-bound 行動工作負載）。分兩層：
 
-**Layer A — 真實任務工作負載：直接採用 HeteroInfer（Table 4）的三類任務。** 它刻意鋪滿 prefill-heavy ↔ decode-heavy 光譜（正對應 CIM 的 compute-bound vs memory-bound 分界），且 batch=1 與我們一致：
+**Layer A — 真實任務工作負載：以 HeteroInfer（Table 4）三類為骨幹，再加程式碼一類。** 刻意鋪滿 prefill-heavy ↔ decode-heavy 光譜（正對應 CIM 的 compute-bound vs memory-bound 分界），batch=1：
 
-| 任務 | 資料集（HeteroInfer Table 4） | mean prefill | mean decode | 特性 |
+| 任務 | 資料集 | mean prefill | mean decode | 特性 |
 | --- | --- | --- | --- | --- |
-| 多輪對話 | **BELLE multiturn chat**（或改用更通用的 **ShareGPT**） | 54 | 374 | **decode 主導** |
+| 多輪對話 | **ShareGPT**（英文） | （Phase 0.1 tokenize 統計） | （同左） | **decode 主導** |
 | 簡單 QA / 推理 | **GSM8K** | 296 | 340 | **平衡**（prefill≈decode） |
 | 長文本處理 | **LongBench-TriviaQA** | 1787 | 5 | **prefill 主導** |
-| （選用）程式碼補全 | **HumanEval** | 中 | 中–長 | HeteroInfer 未涵蓋；op 種類**無新增**，僅多一應用情境 |
+| 程式碼補全 | **HumanEval** | （Phase 0.1 tokenize 統計） | （同左） | 補 on-device 程式助理情境 |
 
-> **能否完全照 HeteroInfer 的 workload？** 大致可以、且建議照做——三類正好鋪滿 prefill↔decode 光譜。**唯一缺的是程式碼任務**（HeteroInfer 無 code）；但 code 在 op 層級不帶來新 op 種類，只多一個應用情境，故列為選用。注意 HeteroInfer 用 **W4A16**（這是*精度*選擇，非 workload；我們用 Metis INT8）——與 workload 無關。
+> 前三類採 HeteroInfer 的選擇（chat 改用更通用的英文 **ShareGPT** 取代其 BELLE 多輪中文）；第四類 **HumanEval** 是我們加上的，補上 on-device 程式助理（op 層級不增新 op 種類，只多一應用情境）。GSM8K / LongBench-TriviaQA 的 token 數取自 HeteroInfer Table 4；ShareGPT / HumanEval 的實際 (prefill, decode) 長度於 Phase 0.1 由 tokenize 統計得出。注意 HeteroInfer 用 **W4A16**（*精度*選擇，非 workload；我們用 Metis INT8）。
 
 **Layer B — 合成長度掃描**（控制變因、做 roofline / scaling）：照 HeteroInfer 的 prefill fixed ∈ {64, 256, 1024}（Fig 13）+ dynamic/未對齊長度 {128…1024}（Fig 14，測 padding/動態圖）+ decode @ prompt 256（Fig 15）；再加 2048（, 8192 stretch）對齊 Metis 靜態 bucket（512/1024/2048）。我方 Metis 研究即用此法（prompt 32→1024、output 1→256）。
 
