@@ -33,6 +33,8 @@ def _shapes(xs):
     for a in xs:
         if isinstance(a, torch.Tensor):
             out.append(list(a.shape))
+        elif isinstance(a, (list, tuple)):  # e.g. torch.cat([a,b],dim) passes operands as a list
+            out += [list(t.shape) for t in a if isinstance(t, torch.Tensor)]
     return out
 
 

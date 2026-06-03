@@ -42,7 +42,7 @@ Both Metis cards were found in **bad states and recovered** — always run `axde
 - **metiscard (production)** card was present but **not responding** (comm timeout, `board_type=unknown`). Recovered via `axdevice --reboot`. Now: `metis-0:7:0 **16 GiB** pcie flver=1.4.0 clock=800MHz`. (16 GB → holds 8B + longer ctx; check whether power telemetry is readable — possible M7 bonus.)
 
 Toolchain availability:
-- **aetina**: SDK v1.3.1 docker ✓; Mali OpenCL + gcc + CL headers ✓ (custom matmul kernel buildable); CPU gcc ✓. **RKNPU2: `librknnrt.so` + `rknn_server` present but NO rknn Python toolkit (rknnlite / rknn-toolkit2) — must install before the RKNPU2 matmul micro-bench** (rknnlite on-board + a pre-converted `.rknn`, or convert on an x86 host).
+- **aetina**: SDK v1.3.1 docker ✓; Mali OpenCL + gcc + CL headers ✓ (custom matmul kernel buildable); CPU gcc ✓. **RKNPU2:** `librknnrt.so` + `rknn_server` ✓; `rknn-toolkit-lite2` (on-board inference) **installed** at `~/edge-cim-simulation/.rknnvenv` ✓. `rknn-toolkit2` (ONNX→`.rknn` converter) fails to build on aarch64 → convert on an x86 host (metiscard) then run on-board via rknnlite.
 - **metiscard**: SDK venv `~/tundergod/voyager-sdk/axelera-env`, `axllm` ✓ (Gradio absent — UI only, irrelevant); **all target precompiled LLMs present** — llama-3.2-1b/3b, llama-3.1-8b, phi3-mini 512/1024/2048, velvet-2b (each 1c+4c). RTX 3090 ✓.
 
 ## Caveats

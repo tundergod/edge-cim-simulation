@@ -7,10 +7,10 @@
   "matmul": 105,
   "norm": 90,
   "residual": 20,
-  "rope": 135,
+  "rope": 190,
   "softmax": 21
  },
- "total": 525,
+ "total": 580,
  "matrix": {
   "attention": [
    {
@@ -315,7 +315,20 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -405,7 +418,20 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -495,7 +521,20 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -745,7 +784,20 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -795,7 +847,20 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -845,7 +910,20 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -1735,7 +1813,20 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      4,
+      128,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      4,
@@ -1825,7 +1916,20 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      4,
+      512,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      4,
@@ -1915,7 +2019,20 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      4,
+      1024,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      4,
@@ -6647,7 +6764,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      128,
+      64
+     ],
+     [
+      1,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      128,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      128,
@@ -6656,6 +6799,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -6693,8 +6851,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      64
+     ],
+     [
+      1,
+      32,
+      128,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -6749,8 +6937,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     128,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      64
+     ],
+     [
+      1,
+      8,
+      128,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -6803,7 +7021,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      256,
+      64
+     ],
+     [
+      1,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      256,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      256,
@@ -6812,6 +7056,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -6849,8 +7108,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      64
+     ],
+     [
+      1,
+      32,
+      256,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -6905,8 +7194,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     256,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      64
+     ],
+     [
+      1,
+      8,
+      256,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -6959,7 +7278,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      512,
+      64
+     ],
+     [
+      1,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      512,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      512,
@@ -6968,6 +7313,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -7005,8 +7365,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     512,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      64
+     ],
+     [
+      1,
+      32,
+      512,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -7061,8 +7451,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     512,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      64
+     ],
+     [
+      1,
+      8,
+      512,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -7115,7 +7535,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      1024,
+      64
+     ],
+     [
+      1,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      1024,
@@ -7124,6 +7570,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -7161,8 +7622,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1024,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      64
+     ],
+     [
+      1,
+      32,
+      1024,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -7217,8 +7708,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1024,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      64
+     ],
+     [
+      1,
+      8,
+      1024,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -7271,7 +7792,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      1,
+      64
+     ],
+     [
+      1,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      1,
+      128
+     ]
+    ],
     "out_shape": [
      1,
      1,
@@ -7280,6 +7827,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -7317,8 +7879,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      64
+     ],
+     [
+      1,
+      32,
+      1,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -7373,8 +7965,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -7427,7 +8049,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      128,
+      32
+     ],
+     [
+      1,
+      128,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      128,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      128,
@@ -7436,6 +8084,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -7473,8 +8136,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      32
+     ],
+     [
+      1,
+      32,
+      128,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -7529,8 +8222,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     128,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      32
+     ],
+     [
+      1,
+      8,
+      128,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -7583,7 +8306,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      256,
+      32
+     ],
+     [
+      1,
+      256,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      256,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      256,
@@ -7592,6 +8341,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -7629,8 +8393,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      32
+     ],
+     [
+      1,
+      32,
+      256,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -7685,8 +8479,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     256,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      32
+     ],
+     [
+      1,
+      8,
+      256,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -7739,7 +8563,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      512,
+      32
+     ],
+     [
+      1,
+      512,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      512,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      512,
@@ -7748,6 +8598,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -7785,8 +8650,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     512,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      32
+     ],
+     [
+      1,
+      32,
+      512,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -7841,8 +8736,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     512,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      32
+     ],
+     [
+      1,
+      8,
+      512,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -7895,7 +8820,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      1024,
+      32
+     ],
+     [
+      1,
+      1024,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      1024,
@@ -7904,6 +8855,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -7941,8 +8907,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1024,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      32
+     ],
+     [
+      1,
+      32,
+      1024,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -7997,8 +8993,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1024,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      32
+     ],
+     [
+      1,
+      8,
+      1024,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -8051,7 +9077,33 @@
    },
    {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      1,
+      32
+     ],
+     [
+      1,
+      1,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      1,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      1,
@@ -8060,6 +9112,21 @@
    },
    {
     "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
     "in_shapes": [
      [
       1,
@@ -8097,8 +9164,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      32
+     ],
+     [
+      1,
+      32,
+      1,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      32,
@@ -8153,8 +9250,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1,
+     32
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      32
+     ],
+     [
+      1,
+      8,
+      1,
+      32
+     ]
+    ],
     "out_shape": [
      1,
      8,
@@ -8209,8 +9336,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      24,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     128,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      24,
+      128,
+      64
+     ],
+     [
+      1,
+      24,
+      128,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      24,
@@ -8265,8 +9422,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      24,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     256,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      24,
+      256,
+      64
+     ],
+     [
+      1,
+      24,
+      256,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      24,
@@ -8321,8 +9508,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      24,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     512,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      24,
+      512,
+      64
+     ],
+     [
+      1,
+      24,
+      512,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      24,
@@ -8377,8 +9594,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1024,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      24,
+      1024,
+      64
+     ],
+     [
+      1,
+      24,
+      1024,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      24,
@@ -8433,8 +9680,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      24,
+      1,
+      64
+     ],
+     [
+      1,
+      24,
+      1,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      24,
@@ -8489,8 +9766,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      28,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     128,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      28,
+      128,
+      64
+     ],
+     [
+      1,
+      28,
+      128,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      28,
@@ -8545,8 +9852,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     128,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      4,
+      128,
+      64
+     ],
+     [
+      1,
+      4,
+      128,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      4,
@@ -8601,8 +9938,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      28,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     256,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      28,
+      256,
+      64
+     ],
+     [
+      1,
+      28,
+      256,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      28,
@@ -8657,8 +10024,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     256,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      4,
+      256,
+      64
+     ],
+     [
+      1,
+      4,
+      256,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      4,
@@ -8713,8 +10110,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      28,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     512,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      28,
+      512,
+      64
+     ],
+     [
+      1,
+      28,
+      512,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      28,
@@ -8769,8 +10196,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     512,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      4,
+      512,
+      64
+     ],
+     [
+      1,
+      4,
+      512,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      4,
@@ -8825,8 +10282,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1024,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      28,
+      1024,
+      64
+     ],
+     [
+      1,
+      28,
+      1024,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      28,
@@ -8881,8 +10368,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     1024,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      4,
+      1024,
+      64
+     ],
+     [
+      1,
+      4,
+      1024,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      4,
@@ -8937,8 +10454,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      28,
+      1,
+      64
+     ],
+     [
+      1,
+      28,
+      1,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      28,
@@ -8993,8 +10540,38 @@
     ]
    },
    {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     1,
+     64
+    ]
+   },
+   {
     "op": "aten.cat.default",
-    "in_shapes": [],
+    "in_shapes": [
+     [
+      1,
+      4,
+      1,
+      64
+     ],
+     [
+      1,
+      4,
+      1,
+      64
+     ]
+    ],
     "out_shape": [
      1,
      4,

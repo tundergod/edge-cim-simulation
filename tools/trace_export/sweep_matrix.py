@@ -28,6 +28,7 @@ BY_NAME = {
     "aten.embedding.default": "embedding",
     "aten.silu.default": "ffn",                                        # SwiGLU activation
     "aten.rsqrt.default": "norm", "aten.mean.dim": "norm", "aten.pow.Tensor_Scalar": "norm",
+    "aten.cos.default": "rope", "aten.sin.default": "rope", "aten.neg.default": "rope",  # single-origin RoPE prims
 }
 # overloaded ops: categorize by source origin (src) instead of name
 OVERLOADED = {"aten.bmm.default", "aten.add.Tensor", "aten.mul.Tensor",
