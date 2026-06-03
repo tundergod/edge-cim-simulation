@@ -29,11 +29,15 @@ This repo has several process-skill sources: **this file's per-phase workflow** 
 
 Phases are defined in [overall.md](overall.md) § 階段總覽 (Phase 0.1, 0.2, 0.3, 1, 2). **Every phase follows this loop. Do not skip the gates.**
 
+0. **Branch.** Before starting a phase, create branch `phase-<id>` off `main`. The phase's plan + code all live on it.
 1. **Write the plan** → `plans/phase-<id>.md` (e.g. `plans/phase-0.1.md`). **Action-only**: list the steps to take, files to create/edit, commands to run, outputs to produce, and a one-line verification check per step. **No purpose, motivation, background, or rationale** — those live in `overall.md`.
 2. **Plan review by subagent.** Spawn a subagent to review the plan. Apply its findings, re-review, and **loop (fix → review) until the reviewer reports no issues.**
 3. **User approval gate.** Present the clean plan to the user. **Wait for explicit approval. Do not start executing before the user approves.**
-4. **Execute** the phase exactly per the approved plan.
-5. **Code review by subagent.** After execution, spawn a subagent to code-review the result. Address its findings, then report.
+4. **Execute** the phase exactly per the approved plan (on the phase branch).
+5. **Code review by subagent.** After execution, spawn a subagent to code-review the result; address its findings.
+6. **Open a PR.** `gh pr create` from `phase-<id>` → `main`, summarizing what was done + the verify results.
+7. **Notify the user.** Tell the user the PR is up; **the user does an additional code review.**
+8. **Merge.** Only after the user's explicit confirmation, merge the PR into `main` (the repo's default branch; the user's "master").
 
 Plan file shape (action-only):
 
