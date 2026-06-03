@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metis AIPU LLM Investigation — Report</title>
+<style>
+  :root{--bg:#0f1115;--panel:#181b22;--fg:#e6e8eb;--mut:#9aa3b2;--acc:#4ea1ff;--aipu:#ff7a45;--gpu:#4ea1ff;--cpu:#9aa3b2;--io:#ff7a45;--cmp:#3ddc97;--grid:#2a2f3a}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.6 -apple-system,Segoe UI,Roboto,"Noto Sans CJK TC",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:32px 20px 80px}
+  h1{font-size:26px;margin:0 0 4px}
+  h2{font-size:20px;margin:38px 0 6px;border-left:4px solid var(--acc);padding-left:10px}
+  .sub{color:var(--mut);margin:0 0 24px;font-size:13px}
+  .card{background:var(--panel);border:1px solid var(--grid);border-radius:10px;padding:18px 20px;margin:14px 0}
+  .card p{margin:8px 0;color:var(--mut)}
+  .card p b{color:var(--fg)}
+  table{border-collapse:collapse;width:100%;margin:10px 0;font-size:13.5px}
+  th,td{border:1px solid var(--grid);padding:6px 10px;text-align:right}
+  th:first-child,td:first-child{text-align:left}
+  th{background:#20242d;color:var(--fg)}
+  td{color:var(--mut)}
+  .verdict{background:#13261d;border-left:4px solid var(--cmp);padding:10px 14px;border-radius:6px;margin:10px 0;color:#cdeede}
+  svg{display:block;width:100%;height:auto}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;font-size:12.5px;color:var(--mut);margin:6px 0 0}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .sw{width:12px;height:12px;border-radius:3px;display:inline-block}
+  ol{color:var(--mut)} ol li{margin:6px 0} ol li b{color:var(--fg)}
+  .foot{color:var(--mut);font-size:12px;margin-top:30px;border-top:1px solid var(--grid);padding-top:14px}
+  code{background:#20242d;padding:1px 5px;border-radius:4px;font-size:12.5px;color:#cdd6e3}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Metis AIPU — LLM 推論瓶頸調查報告</h1>
+  <p class="sub">
+    Host: wei-tmp-ubuntu · Ubuntu 24.04.4 / kernel 6.8.0-117 · voyager-sdk v1.6 · axelera-llm 1.6.0<br>
+    主模型 Llama-3.2-1B-Instruct（4-core static, max_seq=1024）· 產出日期 2026-05-19 · 資料源 <code>results/*.json</code>
+  </p>
+
+  <div class="verdict">
+    <b>核心結論：</b>Metis 在 batch-1 decode 階段是<b>純粹 on-card DDR 權重串流受限（memory-wall）</b>。
+    decode 時間 ∝ 模型位元組，跨 1B→8B 線性 r²=0.997，有效 DDR 頻寬恆定 ≈ <b>24.2 GB/s</b>（CV 4.6%）。
+    MAC 陣列在每個 decode step ≈99% 閒置；增加核心數幾乎無幫助（4×核心僅 1.32× 加速）。
+  </div>
+
+  <h2>0 — Metis AIPU 架構與 host 互動（調查前提）</h2>
+  <div class="card">
+    <p>後續所有結論都建立在這個架構上,先講清楚。Metis 是一顆 <b>quad-core AIPU</b>:四個同構 AI core
+       + 一顆 application-class <b>RISC-V 控制核</b>(跑 RTOS,負責 boot/周邊/編排)。AI core 採
+       <b>SRAM-based 數位記憶體內運算(D-IMC)</b>:INT8 權重/激活、INT32 累加,計算直接發生在記憶體陣列內以減少資料搬移。</p>
+
+    <p><b>記憶體階層(關鍵):on-chip 容量 ≪ LLM 權重。</b>
+       每 core:1 MiB 計算記憶體(D-IMC matrix-vector,tens-of-Tb/s)+ 4 MiB L1 = 5 MiB;
+       SoC 共享 32 MiB L2;<b>全晶片 on-chip 高速記憶體 &gt;52 MiB</b>。
+       但模型權重是 <b>1.2 GB(1B)~7 GB(8B)</b>,放不進 52 MiB → 權重只能常駐 <b>板載 LPDDR4x</b>,
+       每步推論再串進 core。<b>這就是 memory-wall 的架構根因</b>:on-chip SRAM 裝不下權重,batch-1 decode
+       每 token 都得從 LPDDR 重新串幾乎全部權重,D-IMC 算力(53.5 TOPS/core,共 214 TOPS)被餓著 ≈99% 閒置。</p>
+
+    <div id="c_arch"></div>
+
+    <p style="margin-top:12px"><b>Host ↔ Device 分工</b>(經本研究實測確認):</p>
+    <table>
+      <tr><th>階段</th><th>在 Host(CPU/Python)</th><th>在 Device(AIPU)</th><th>跨 PCIe 傳輸</th></tr>
+      <tr><td>輸入</td><td>tokenizer、<b>embedding lookup</b>(embeddings.npz,vocab 128256×dim 2048)</td><td>—</td><td>embedding 向量 → device</td></tr>
+      <tr><td>Prefill</td><td>編排</td><td><code>const_dpu_kernel_prefill_L</code> Megakernel(整窗 GEMM)</td><td>啟動/同步</td></tr>
+      <tr><td>Decode(每 token)</td><td>取樣 sampling、detokenize、迴圈控制</td><td><code>const_dpu_kernel_gen_L</code>:LPDDR 權重串流 → D-IMC,算 1 token;KV-cache 駐 LPDDR</td><td>logits ← device;新 token embedding → device</td></tr>
+    </table>
+    <div class="verdict">
+      架構要點對應本報告:① 權重常駐板載 LPDDR4x、on-chip 僅 52 MiB → decode 必然 memory-bound(E-B/E1/E2);
+      ② D-IMC 為 INT8 → 解釋 artifact 是 int8、int4 可望 decode ×2(B1);③ tokenizer/embedding/sampling 在
+       host、Megakernel 在 device、走 PCIe → E1 的 host/IO ~19% 來源;④ 四 core 共享同一 LPDDR →
+       加 core 不增頻寬,decode 不 scale(E-C 1.32×/4×)。<b>測試板為 PCIe Rev1、無功耗遙測</b>(故功耗為估算)。
+      規格來源見頁尾;LPDDR 實際頻寬原廠未公布 → 本報告實測 <b>~24 GB/s 有效(decode 權重串流)</b>為主要量化貢獻。
+    </div>
+  </div>
+
+  <h2>E0 — 三平台吞吐對照（Llama-3.2-1B）</h2>
+  <div class="card">
+    <p>相同 3 prompts / greedy / warmup1+3reps。GPU ≈ 12.5× AIPU ≈ 279× CPU。tok/s 對數軸。</p>
+    <div id="c_e0"></div>
+    <div class="legend"><span><i class="sw" style="background:var(--gpu)"></i>GPU RTX3090</span><span><i class="sw" style="background:var(--aipu)"></i>AIPU Metis</span><span><i class="sw" style="background:var(--cpu)"></i>CPU</span></div>
+    <table><tr><th>裝置</th><th>tok/s</th><th>TTFT (ms)</th></tr>
+    <tr><td>GPU RTX 3090 (fp16)</td><td>187.1</td><td>14.2</td></tr>
+    <tr><td>AIPU Metis (axllm)</td><td>15.0</td><td>267.9</td></tr>
+    <tr><td>CPU (HF)</td><td>0.67</td><td>4228</td></tr></table>
+  </div>
+
+  <h2>E1 / E2 — 時間去向：device vs host，IO vs compute</h2>
+  <div class="card">
+    <p>E1（893-tok run）：on-die <b>80.7%</b> / host+IO 19.3% → decode 是 device-bound。
+       E2：把 device 時間再拆，依靜態 graph 長度 L 解 <code>d=W+c</code>，
+       decode <b>98.5–99.6% 是 DDR 權重串流 I/O</b>，MAC compute 僅 0.4–1.5%。</p>
+    <div id="c_e12"></div>
+    <div class="legend"><span><i class="sw" style="background:var(--io)"></i>DDR weight-stream I/O</span><span><i class="sw" style="background:var(--cmp)"></i>MAC compute</span><span><i class="sw" style="background:var(--cpu)"></i>host + PCIe I/O</span></div>
+  </div>
+
+  <h2>E3 — 靜態 padded graph:prefill 平坦・padding 浪費・桶長</h2>
+  <div class="card">
+    <p><b>(a) 平坦性</b>:llama-1024,9 點 n_prompt 109→941（8.6×），device 恆定 ~311.3 ms,
+       slope <b>0.019 ± 0.043 µs/tok ≈ 0</b>,R²=0.03。<b>於 phi3-2048 桶獨立複驗</b>:
+       n_prompt 115→1815（16× 跨度）device 恆定 <b>2751 ms</b>,slope 0.025 µs/tok,
+       <b>R²=0.004</b> → 靜態圖平坦性在 L=2048 同樣成立(桶內平坦・跨桶 ∝ L,故事閉合)。
+       &gt;桶上限靜默回傳 0 token(無 exception,SDK 缺輸入驗證)。</p>
+    <div id="c_e3"></div>
+    <p style="margin-top:14px"><b>(b) Padding 浪費</b>:若 prefill 成本能隨真實長度 N 線性縮放只需
+       <code>311.3 × N/1024</code> ms;靜態圖強制付滿 311.3 ms,差額即純 padding 稅。</p>
+    <div id="c_pad"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--cmp)"></i>有用(∝ 真實 prompt 長度)</span>
+      <span><i class="sw" style="background:var(--io)"></i>padding 浪費(算 0…1024 空位)</span>
+    </div>
+    <p style="margin-top:14px"><b>(c) 桶長 = 編譯期窗框</b>:同模型 phi3-mini(權重三桶完全相同 3.61 GiB)。
+       <b>decode 與桶長無關</b>(4-core:1024→183、2048→193 ms,≈恆定);
+       <b>prefill device ∝ 桶長</b>(4-core 對:1024→1023 ms、2048→<b>2752 ms</b>,2× 桶長 ≈ 2.7× prefill)。
+       512 桶 1127 ms 偏高僅因它是 1-core artifact(單核扛全部 prefill),非反例。</p>
+    <div id="c_bucket"></div>
+    <div class="legend"><span><i class="sw" style="background:var(--io)"></i>prefill device ms</span><span><i class="sw" style="background:var(--cmp)"></i>decode ms/tok</span></div>
+    <div class="verdict">
+      <b>VERDICT:FLAT 且 padding 為真浪費。</b>靜態 padded graph → prefill compute 不隨 prompt
+      長度變化(70-tok prompt 僅 ~6.8% 有用,93% 在算 padding);跨桶則 prefill ∝ L。
+      <b>但 decode 幾乎不被 padding 浪費</b> — decode memory-bound,串的權重位元組與序列長度無關;
+      decode 真正的浪費是 batch=1 → MAC ~99% 閒置,只有 batching 能解。
+    </div>
+  </div>
+
+  <h2>E-B — 模型大小掃描・有效 DDR 頻寬・Roofline ★ headline</h2>
+  <div class="card">
+    <p style="background:#1f2630;border-left:4px solid var(--acc);padding:8px 12px;border-radius:6px;color:#cdd6e3">
+      <b>階段歸屬(務必看清):(a) 頻寬律量的是 DECODE 階段</b>(自回歸每 token 的邊際 device 時間,
+      Method-B);<b>(b) Roofline 是 DECODE vs PREFILL 兩階段的對比</b>。E-B 的 24 GB/s headline
+      結論<b>僅針對 decode</b>;prefill 不受此頻寬律支配(prefill 為 compute 區,見 (b))。</p>
+    <p><b>(a) DECODE DDR 頻寬律</b>:Llama 族 4-core static 各尺寸,<b>decode</b> device-µs/token vs 權重位元組。
+       線性擬合 <b>r²=0.997</b>,斜率 → 有效 DDR BW <b>24.23 GB/s</b>,CV 4.6%。
+       <b>跨架構檢驗</b>:phi3-mini(不同架構,3.61 GiB)三桶權重<b>完全相同</b>,decode 跨桶
+       ≈ 恆定 → 確認 memory-bound 同律(decode ∝ 權重、與序列長度無關);惟有效 BW
+       <b>~20 GB/s 略低於 Llama 24</b>,同 regime、常數隨架構/權重佈局微調,<b>非精確同線</b>。</p>
+    <div id="c_eb"></div>
+    <div class="legend"><span><i class="sw" style="background:var(--gpu)"></i>Llama 1/2/3/8B</span><span><i class="sw" style="background:var(--cmp)"></i>phi3-mini(~20 GB/s)</span><span><i class="sw" style="background:var(--aipu)"></i>24 GB/s 擬合線</span></div>
+    <table><tr><th>Model</th><th>weights (GiB)</th><th>decode ms/tok</th><th>implied DDR GB/s</th><th>device %</th></tr>
+    <tr><td>1B</td><td>1.175</td><td>53.48</td><td>23.59</td><td>81.1</td></tr>
+    <tr><td>2B</td><td>1.870</td><td>85.53</td><td>23.48</td><td>87.3</td></tr>
+    <tr><td>3B</td><td>2.992</td><td>122.46</td><td>26.23</td><td>87.8</td></tr>
+    <tr><td>8B</td><td>6.989</td><td>310.82</td><td>24.14</td><td>92.7</td></tr>
+    <tr><td>phi3-mini (4c,1024)</td><td>3.609</td><td>183.3</td><td>21.1</td><td>—</td></tr>
+    <tr><td>phi3-mini (4c,2048)</td><td>3.609</td><td>193.4</td><td>20.0</td><td>—</td></tr>
+    <tr><td>phi3-mini (1c,512)</td><td>3.609</td><td>207.3</td><td>18.7</td><td>1-core</td></tr></table>
+
+    <p style="margin-top:14px"><b>(b) Roofline:把兩個階段放回同一張圖對比</b>
+       — 工作點①=<b>DECODE</b>(batch-1,每 token);工作點②=<b>PREFILL</b>(靜態 padded L=1024,
+       一次處理整窗)。同硬體、同權重,2P FLOP/token,P≈1.235B;prefill device 311.3 ms。
+       兩階段落在 roofline <b>相反區域</b>:decode 在記憶體屋頂、prefill 在 compute 區。</p>
+    <div id="c_roof"></div>
+    <div class="legend">
+      <span><i class="sw" style="background:var(--aipu)"></i>24 GB/s 記憶體屋頂</span>
+      <span><i class="sw" style="background:var(--cmp)"></i>compute 天花板(prefill 下界)</span>
+      <span><i class="sw" style="background:var(--gpu)"></i>實測工作點</span>
+    </div>
+    <table><tr><th>Workload</th><th>device</th><th>AI</th><th>有效算力</th><th>位置</th></tr>
+    <tr><td>decode(batch-1,/token)</td><td>53.48 ms</td><td>1.96 FLOP/B</td><td>46.2 GFLOP/s</td><td>釘記憶體斜坡(離脊點 ~173×)</td></tr>
+    <tr><td>prefill(padded L=1024)</td><td>311.3 ms</td><td>2005 FLOP/B</td><td>8.12 TFLOP/s</td><td>compute 區(脊點右側)</td></tr></table>
+    <div class="verdict">
+      <b>VERDICT:純 on-card DDR weight-streaming / IO-BOUND。</b>decode = 模型位元組 ÷ ~24 GB/s,
+      MAC 可忽略;device% 隨尺寸 81→93 上升。Roofline:prefill 有效算力是 decode 的 <b>176×</b>,
+      decode 在脊點左側約 <b>173×</b>(實測 46.2 vs 屋頂預測 47.0 GF/s,貼線 98%),記憶體受限有極大安全邊際。
+      <b>誠實邊界</b>:compute 天花板是 prefill 自身反推的下界(P_peak≳8.1 TFLOP/s,非 datasheet 峰值;
+      無 HW 算力計數器),故「prefill 在 compute 區」支持度高但不宣稱打滿 MAC;真正 roofline 轉折點需掃
+      batch(AI≈2B),被 batch=1 artifact 擋死、不可測。</div>
+  </div>
+
+  <h2>E-C — 核心數（1-core vs 4-core 1B artifact）</h2>
+  <div class="card">
+    <p>唯一可行的有效對比（precompiled N-kernel + manifest <code>batch==cores</code> 斷言）。
+       4-core/1-core 加速 = <b>1.32×</b>（compute-bound 應為 4×）。</p>
+    <div id="c_ec"></div>
+    <div class="legend"><span><i class="sw" style="background:var(--aipu)"></i>decode ms/tok</span><span><i class="sw" style="background:var(--cmp)"></i>device %</span></div>
+    <div class="verdict">VERDICT：DDR-bandwidth-bound — 權重從共享 on-card DDR 串流一次，與核心數無關，加核心幾乎無感。</div>
+  </div>
+
+  <h2>E-GPU — RTX 3090 模型尺寸梯度（ungated 公開模型）</h2>
+  <div class="card">
+    <p>Llama/Velvet 為 gated repo（無 HF_TOKEN），GPU 參考改用 Qwen2.5 階梯 + Phi-3-mini。
+       實測功耗（nvidia-smi 取樣）。tok/s 隨尺寸單調下降但 7B 仍 47 tok/s——
+       對比 AIPU 8B 崩到 3.2 tok/s，凸顯 AIPU 的記憶體頻寬牆。</p>
+    <div id="c_gpu"></div>
+    <div class="legend"><span><i class="sw" style="background:var(--gpu)"></i>tok/s</span><span><i class="sw" style="background:var(--aipu)"></i>power (W)</span><span><i class="sw" style="background:var(--cmp)"></i>peak mem (GB)</span></div>
+    <table><tr><th>Model</th><th>tok/s</th><th>TTFT ms</th><th>peak MB</th><th>power W</th></tr>
+    <tr><td>Qwen2.5-0.5B</td><td>155.5</td><td>11.2</td><td>962</td><td>185</td></tr>
+    <tr><td>Qwen2.5-1.5B</td><td>129.3</td><td>12.0</td><td>2960</td><td>272</td></tr>
+    <tr><td>Qwen2.5-3B</td><td>83.0</td><td>17.5</td><td>6011</td><td>315</td></tr>
+    <tr><td>Phi-3-mini-3.8B</td><td>73.1</td><td>19.7</td><td>7366</td><td>324</td></tr>
+    <tr><td>Qwen2.5-7B</td><td>47.3</td><td>26.4</td><td>14588</td><td>359</td></tr></table>
+  </div>
+
+  <h2>實驗 A — Prefill 攤提曲線（實測,三模型/桶對照）</h2>
+  <div class="card">
+    <p>固定 prompt,強制掃輸出長度 G;eff end-to-end tok/s = gen_tokens ÷ generation_wall
+       (含 i=0 的固定 prefill)。曲線漸近於穩態 decode 率,轉折點即「固定 prefill 稅攤掉」的損益點。
+       三條對照:llama-1B(1024桶)、phi3-mini(2048桶,大 prefill 稅)、llama-8B(1024桶,大模型)。</p>
+    <div id="c_amort"></div>
+    <table><tr><th>模型/桶</th><th>漸近 tok/s</th><th>90% 損益</th><th>95% 損益</th><th>固定 prefill</th></tr>
+    <tr><td>llama-1B / 1024</td><td>14.98</td><td>33 tok</td><td>64 tok</td><td>~0.27 s</td></tr>
+    <tr><td>llama-8B / 1024</td><td>2.92</td><td>32 tok</td><td>64 tok</td><td>~1 s</td></tr>
+    <tr><td>phi3-mini / 2048</td><td>4.69</td><td>128 tok</td><td>128 tok</td><td>~2.75 s</td></tr></table>
+    <div class="verdict">
+      llama-1B 漸近 <b>14.98</b>(與 E0 15.0 自洽)。<b>桶/模型越大 → 漸近越低、損益點右移</b>:
+      phi3-2048 因固定 prefill 達 2.75 s,需 <b>≥128 token 輸出</b>才攤平(vs 1B 的 64);
+      8B 漸近僅 2.92 tok/s。<b>決策含意:大桶 artifact 必須搭配長輸出;短回覆場景用最小夠用桶。</b>
+      8B device% 補測 = <b>93.1%</b>(@G=64,decode 326 ms/tok),與 E-B 表 92.7 自洽,印證大模型更深記憶體牆。
+    </div>
+  </div>
+
+  <h2>Recommendations — 把限制用到極致(A / B1 / B2)</h2>
+  <div class="card">
+    <p><b>兩個浪費源頭、兩套對策。</b>外部佐證:Axelera 自家 Metis M.2 Max 的官方解法就是
+       「記憶體頻寬 ×2 → LLM tok/s ×2」,精準命中本報告的 roofline。</p>
+
+    <p><b>A. Prefill padding 稅(今天就能做,不需廠商):</b></p>
+    <table><tr><th>策略</th><th>做法</th><th>依據</th></tr>
+    <tr><td>① Prefill 攤提</td><td>一次 prefill、KV-cache 保留、最大化每次輸出長度;多輪不重 prefill</td><td>實驗 A:≥64 token 後 prefill 稅 &lt;5%</td></tr>
+    <tr><td>② 把 padding 換成價值</td><td>短 prompt 零延遲懲罰到 ~896 token → 主動塞 few-shot/RAG context</td><td>E3:64→896 token prefill 全平</td></tr>
+    <tr><td>③ 桶右切</td><td>prompt 短時用更小 max_seq artifact</td><td>phi3 1024→1608 vs 2048→2063 ms;惟僅 phi3 有多桶,llama 需向 Axelera 要</td></tr></table>
+
+    <p><b>B1. 低位元權重(量化外推,vendor 需求):</b>現 artifact = int8(實測 1.022 bytes/param)。
+       套已驗證線性模型(decode ∝ weight_bytes, r²=0.997):</p>
+    <table><tr><th>精度</th><th>weights</th><th>decode ms/tok</th><th>~tok/s</th><th>vs 現況</th></tr>
+    <tr><td>int8(現況)</td><td>1.24 GB</td><td>51.5</td><td>~16</td><td>1.0×</td></tr>
+    <tr><td>int4</td><td>0.62 GB</td><td>25.7</td><td>~31</td><td><b>2.04×</b></td></tr>
+    <tr><td>int3</td><td>0.46 GB</td><td>19.3</td><td>~42</td><td>2.7×</td></tr></table>
+    <p>→ int4 artifact 預測 decode 翻倍,零工程。zoo 無 int4 → 對 Axelera 的量化需求。</p>
+
+    <p><b>B2. Speculative decoding(SDK 實查:目前不可行):</b>
+       <code>axelera.llm</code> 全包無 speculative/draft/assisted API;decode 走單 token
+       <code>const_dpu_kernel_gen_1024</code> kernel,生成迴圈強制 shape (1,1),結構上無法一次驗多 token。
+       需 Axelera 提供 multi-token-verify 圖 + draft 整合,<b>非現可跑實驗</b>。</p>
+
+    <p><b>自編譯可行性(關鍵調查結論):公開 compiler ≠ LLM 編譯器。</b>
+       Voyager SDK 的 <code>axcompile</code>(CLI/API)是 <b>ONNX→int8→Metis 的視覺/CNN 編譯器</b>:
+       輸入範例 <code>--input-shape 1,3,224,224</code>、用 image data 量化;ONNX 算子支援表將
+       attention/Matmul/Softmax <b>僅 whitelist 給 YOLO11</b>,通用 LLM decoder attention/RoPE/KV-cache
+       不支援;<code>compiler_configs</code> 無任何 sequence_length/prefill/kv-cache 旋鈕;
+       llm.md 明載「all models precompiled <i>for now</i>」。LLM 的雙-kernel(prefill+gen)
+       自回歸 artifact <b>只有 Axelera 內部 toolchain 能產</b> — 自己編 2048 桶 / int4 / batched
+       這條路在現有公開工具下走不通。</p>
+
+    <div class="verdict">
+      <b>限制邊界(誠實標註):</b>功耗為 nameplate-TDP 估算(PCIe Rev1 無遙測);
+      GPU 用 ungated 模型為趨勢參考;roofline compute 天花板為 prefill 反推下界(非矽峰值);
+      真 roofline 轉折點需掃 batch,被 batch=1 artifact 擋死不可測。<br>
+      <b>對 Axelera 的優先需求(依天花板,因自編譯不可行故全為 vendor-only):</b>
+      ① batched / 動態形狀編譯圖(破 decode memory-wall,AI≈2B)·
+      ② int4 artifact(預測 decode ×2)·③ 更短 seq 桶 256/512(短 prompt prefill ×4)·
+      ④ Metis M.2 Max(BW×2 → tok/s×2,官方已驗)·⑤ 開放 LLM 編譯路徑。<br>
+      <b>不需廠商、立即可做:</b>策略 ①②(prefill 攤提 + 填滿 context 預算)。
+    </div>
+  </div>
+
+  <h2>整體結論</h2>
+  <div class="card"><ol>
+    <li>AIPU LLM 可運作，1B 模型上 ≈ <b>12.5× 慢於 RTX 3090</b>。</li>
+    <li>瓶頸是 <b>batch-1 decode 的 on-card DDR 權重串流</b>（E1 80.7% device；其中 ~99% 為 weight I/O）。</li>
+    <li>平坦的 prefill vs 長度 = <b>靜態 padded graph</b>（E3），非 GEMM 性質。</li>
+    <li>decode_µs ∝ 模型位元組，r²=0.997、恆定 <b>~24 GB/s</b>（CV 4.6%）— 量化證實 memory-wall。</li>
+    <li>加核心無解（1.32× / 4×）；概念解是 batching，但此 artifact 編譯為 batch=1 / static seq=1024，無法做。</li>
+    <li>限制（已誠實標註）：功耗為 nameplate-TDP 估算（PCIe Rev1 板無遙測）；GPU 用 ungated 模型，為趨勢參考非同權重對照。</li>
+  </ol></div>
+
+  <div class="foot">
+    自包含離線報告，無外部資源。資料交叉核對自
+    <code>aipu_breakdown.json</code> · <code>aipu_io_compute.json</code> · <code>aipu_prefill_sweep.json</code> ·
+    <code>aipu_model_sweep.json</code> · <code>aipu_core_count.json</code> · <code>gpu_model_sweep.json</code> ·
+    <code>aipu_amortization.json</code> · <code>aipu_phi3_buckets.json</code>。
+    headline 線性擬合經獨立重算驗證（r²=0.99733，有效 BW 24.23 GB/s）。
+    phi3 跨架構:同律 memory-bound、有效 BW ~20 GB/s(略低於 Llama 24,如實標註)。<br>
+    架構規格來源:Axelera Metis 技術深潛(quad-core D-IMC、52 MiB on-chip、LPDDR4x、RISC-V、214 TOPS)
+    + voyager-sdk docs;LPDDR 實際頻寬原廠未公布,本報告 ~24 GB/s 為實測有效值。
+  </div>
+</div>
+
+<script>
+const NS="http://www.w3.org/2000/svg";
+function el(t,a){const e=document.createElementNS(NS,t);for(const k in a)e.setAttribute(k,a[k]);return e;}
+function svg(id,w,h){const s=el("svg",{viewBox:`0 0 ${w} ${h}`});document.getElementById(id).appendChild(s);return s;}
+function txt(s,x,y,t,a){const e=el("text",{x,y,fill:a&&a.fill||"#9aa3b2","font-size":a&&a.fs||12,"text-anchor":a&&a.ta||"start"});e.textContent=t;s.appendChild(e);return e;}
+const C={gpu:"#4ea1ff",aipu:"#ff7a45",cpu:"#9aa3b2",io:"#ff7a45",cmp:"#3ddc97",grid:"#2a2f3a"};
+
+/* 0 — Metis architecture block diagram */
+(function(){const s=svg("c_arch",720,330);
+ function box(x,y,w,h,fill,stroke){s.appendChild(el("rect",{x,y,width:w,height:h,rx:6,fill:fill,stroke:stroke||C.grid,"stroke-width":1}));}
+ function lbl(x,y,t,o){txt(s,x,y,t,Object.assign({fill:"#e6e8eb",fs:12},o||{}));}
+ // HOST
+ box(20,40,170,250,"#181b22",C.cpu);
+ lbl(105,60,"HOST (CPU / Python)",{ta:"middle",fill:C.cpu,fs:13});
+ ["tokenizer","embedding lookup","(embeddings.npz)","sampling / detokenize","loop 控制 + 編排"].forEach((t,i)=>lbl(105,90+i*30,t,{ta:"middle",fs:11}));
+ // PCIe link
+ s.appendChild(el("line",{x1:190,y1:165,x2:250,y2:165,stroke:C.acc||"#4ea1ff","stroke-width":2}));
+ s.appendChild(el("line",{x1:190,y1:165,x2:250,y2:165,stroke:"#4ea1ff","stroke-width":2,"marker-end":""}));
+ lbl(220,155,"PCIe",{ta:"middle",fill:"#4ea1ff",fs:11});
+ lbl(220,182,"emb→ / ←logits",{ta:"middle",fs:9,fill:"#9aa3b2"});
+ // AIPU
+ box(250,20,450,295,"#161a21","#4ea1ff");
+ lbl(475,40,"Metis AIPU  (quad-core, 214 TOPS, D-IMC INT8)",{ta:"middle",fill:"#4ea1ff",fs:13});
+ // 4 cores
+ for(let i=0;i<4;i++){const cx=268+i*106;box(cx,55,96,72,"#1f2630",C.cmp);
+   lbl(cx+48,73,"AI core "+i,{ta:"middle",fs:11,fill:C.cmp});
+   lbl(cx+48,91,"D-IMC 1MiB",{ta:"middle",fs:9});
+   lbl(cx+48,107,"L1 4MiB",{ta:"middle",fs:9});}
+ // shared L2
+ box(268,140,414,34,"#1f2630",C.grid);lbl(475,162,"shared on-chip L2 SRAM 32 MiB  (全晶片 >52 MiB)",{ta:"middle",fs:11});
+ // RISC-V controller
+ box(268,184,150,30,"#1f2630",C.grid);lbl(343,204,"RISC-V 控制核 (RTOS)",{ta:"middle",fs:10});
+ // LPDDR
+ box(268,224,414,72,"#2a1d16",C.aipu);
+ lbl(475,244,"板載 LPDDR4x DRAM",{ta:"middle",fill:C.aipu,fs:12});
+ lbl(475,263,"權重常駐 1.2–7 GB  ·  KV-cache",{ta:"middle",fs:11});
+ lbl(475,281,"實測有效 ~24 GB/s(decode 權重串流)",{ta:"middle",fs:10,fill:C.aipu});
+ // bottleneck arrow LPDDR -> cores
+ s.appendChild(el("line",{x1:475,y1:224,x2:475,y2:174,stroke:C.aipu,"stroke-width":3}));
+ s.appendChild(el("polygon",{points:"469,180 481,180 475,168",fill:C.aipu}));
+ lbl(545,205,"每 token 重串全部權重",{fs:10,fill:C.aipu});
+ lbl(545,219,"= memory-wall 瓶頸",{fs:10,fill:C.aipu});
+ lbl(360,322,"on-chip SRAM(52 MiB)≪ 權重(GB)→ decode 必然從 LPDDR 串權重,D-IMC ≈99% 閒置",{ta:"middle",fs:11,fill:"#9aa3b2"});})();
+
+/* E0 — log-scale horizontal bars */
+(function(){const s=svg("c_e0",720,180);const d=[["GPU RTX3090",187.1,C.gpu],["AIPU Metis",15.0,C.aipu],["CPU",0.67,C.cpu]];
+ const x0=110,x1=690,lo=Math.log10(0.5),hi=Math.log10(300);const X=v=>x0+(Math.log10(v)-lo)/(hi-lo)*(x1-x0);
+ [1,10,100].forEach(g=>{const x=X(g);s.appendChild(el("line",{x1:x,y1:20,x2:x,y2:150,stroke:C.grid}));txt(s,x,168,g+" tok/s",{ta:"middle"});});
+ d.forEach((r,i)=>{const y=30+i*42;s.appendChild(el("rect",{x:x0,y,width:X(r[1])-x0,height:26,rx:4,fill:r[2]}));
+  txt(s,x0-8,y+18,r[0],{ta:"end",fill:"#e6e8eb"});txt(s,X(r[1])+6,y+18,r[1]+"",{fill:"#e6e8eb",fs:13});});})();
+
+/* E1/E2 — stacked horizontal bars */
+(function(){const s=svg("c_e12",720,210);const x0=150,x1=690,W=x1-x0;
+ const rows=[["E1 全步驟",[["host + PCIe I/O",19.3,C.cpu],["DDR weight I/O",80.7*0.99,C.io],["MAC",80.7*0.01,C.cmp]]],
+  ["E2 decode L=256",[["DDR weight I/O",98.5,C.io],["MAC",1.5,C.cmp]]],
+  ["E2 decode L=512",[["DDR weight I/O",99.25,C.io],["MAC",0.75,C.cmp]]],
+  ["E2 decode L=1024",[["DDR weight I/O",99.63,C.io],["MAC",0.37,C.cmp]]]];
+ rows.forEach((r,i)=>{const y=20+i*45;let cx=x0;txt(s,x0-8,y+19,r[0],{ta:"end",fill:"#e6e8eb"});
+  r[1].forEach(seg=>{const w=seg[1]/100*W;s.appendChild(el("rect",{x:cx,y,width:w,height:28,fill:seg[2]}));
+   if(w>34)txt(s,cx+w/2,y+19,seg[1].toFixed(seg[1]<5?1:0)+"%",{ta:"middle",fill:"#0f1115",fs:12});cx+=w;});});
+ txt(s,x0,205,"0%",{});txt(s,x1,205,"100%",{ta:"end"});})();
+
+/* E3 — flat scatter */
+(function(){const s=svg("c_e3",720,260);const pts=[[109,311334.9],[173,311336.4],[237,311368.3],[301,311303.7],[429,311326.7],[557,311308.4],[685,311399.6],[813,311378.3],[941,311312.8]];
+ const x0=70,x1=690,y0=210,y1=30;const xmn=80,xmx=1000,ymn=311200,ymx=311500;
+ const X=v=>x0+(v-xmn)/(xmx-xmn)*(x1-x0),Y=v=>y0+(v-ymn)/(ymx-ymn)*(y1-y0);
+ [311200,311300,311400,311500].forEach(g=>{const y=Y(g);s.appendChild(el("line",{x1:x0,y1:y,x2:x1,y2:y,stroke:C.grid}));txt(s,x0-8,y+4,(g/1000).toFixed(1),{ta:"end"});});
+ [100,400,700,1000].forEach(g=>txt(s,X(g),232,g+"",{ta:"middle"}));
+ const yf=Y(311332);s.appendChild(el("line",{x1:X(80),y1:yf,x2:X(1000),y2:yf,stroke:C.aipu,"stroke-dasharray":"6 4","stroke-width":2}));
+ pts.forEach(p=>s.appendChild(el("circle",{cx:X(p[0]),cy:Y(p[1]),r:5,fill:C.gpu})));
+ txt(s,360,252,"n_prompt (tokens)",{ta:"middle"});txt(s,20,130,"device ms",{ta:"middle",fill:"#9aa3b2"}).setAttribute("transform","rotate(-90 20 130)");
+ txt(s,X(520),Y(311332)-10,"fit slope ≈ 0  (R²=0.03)",{fill:C.aipu,ta:"middle"});})();
+
+/* E-B — scatter + fit line, weight bytes vs decode ms */
+(function(){const s=svg("c_eb",720,300);const d=[["1B",1.175,53.48],["2B",1.870,85.53],["3B",2.992,122.46],["8B",6.989,310.82]];
+ const x0=70,x1=690,y0=250,y1=30;const xmx=7.5,ymx=340;
+ const X=v=>x0+v/xmx*(x1-x0),Y=v=>y0-v/ymx*(y0-y1);
+ [0,2,4,6].forEach(g=>{const x=X(g);s.appendChild(el("line",{x1:x,y1:y1,x2:x,y2:y0,stroke:C.grid}));txt(s,x,270,g+" GiB",{ta:"middle"});});
+ [0,100,200,300].forEach(g=>{const y=Y(g);s.appendChild(el("line",{x1:x0,y1:y,x2:x1,y2:y,stroke:C.grid}));txt(s,x0-8,y+4,g+"",{ta:"end"});});
+ // fit: ms = 24.23 GB/s -> ms/GiB slope; line through origin per implied BW (~ 1.073741824e9 bytes/GiB / 24.23e9 *1000 ms)
+ const slopeMsPerGiB=1.073741824/24.23*1000;
+ s.appendChild(el("line",{x1:X(0),y1:Y(0),x2:X(7.5),y2:Y(7.5*slopeMsPerGiB),stroke:C.aipu,"stroke-width":2,"stroke-dasharray":"6 4"}));
+ d.forEach(p=>{s.appendChild(el("circle",{cx:X(p[1]),cy:Y(p[2]),r:6,fill:C.gpu}));txt(s,X(p[1])+10,Y(p[2])+4,p[0]+"  "+p[2]+"ms",{fill:"#e6e8eb"});});
+ // phi3-mini cross-arch (same 3.609 GiB weights, 3 buckets) — ~20 GB/s, above the 24 line
+ const ph=[["4c·1024",3.609,183.3],["4c·2048",3.609,193.4],["1c·512",3.609,207.3]];
+ ph.forEach(p=>s.appendChild(el("circle",{cx:X(p[1]),cy:Y(p[2]),r:5,fill:C.cmp})));
+ txt(s,X(3.609)+10,Y(193)+4,"phi3-mini ~20 GB/s",{fill:C.cmp});
+ txt(s,360,292,"model weights (GiB)",{ta:"middle"});
+ txt(s,20,140,"decode ms/tok",{ta:"middle"}).setAttribute("transform","rotate(-90 20 140)");
+ txt(s,X(4.3),Y(110),"Llama fit r²=0.997 → 24.23 GB/s",{fill:C.aipu});})();
+
+/* E-C — grouped bars */
+(function(){const s=svg("c_ec",720,230);const d=[["1-core static",70.32,95.6],["4-core static",53.20,81.0]];
+ const x0=120,x1=620,y0=180,y1=30;const Ym=v=>y0-v/80*(y0-y1),Yp=v=>y0-v/100*(y0-y1);
+ s.appendChild(el("line",{x1:x0,y1:y0,x2:x1,y2:y0,stroke:C.grid}));
+ d.forEach((r,i)=>{const cx=x0+90+i*240;
+  s.appendChild(el("rect",{x:cx,y:Ym(r[1]),width:60,height:y0-Ym(r[1]),fill:C.aipu,rx:3}));
+  txt(s,cx+30,Ym(r[1])-6,r[1]+" ms",{ta:"middle",fill:"#e6e8eb"});
+  s.appendChild(el("rect",{x:cx+70,y:Yp(r[2]),width:60,height:y0-Yp(r[2]),fill:C.cmp,rx:3}));
+  txt(s,cx+100,Yp(r[2])-6,r[2]+"%",{ta:"middle",fill:"#e6e8eb"});
+  txt(s,cx+65,200,r[0],{ta:"middle",fill:"#e6e8eb"});});
+ txt(s,360,222,"4× 核心 → 僅 1.32× decode 加速（compute-bound 應為 4×）",{ta:"middle",fill:C.aipu});})();
+
+/* E-GPU — tok/s bars + power & mem lines */
+(function(){const s=svg("c_gpu",720,300);
+ const d=[["0.5B",155.5,185,0.96],["1.5B",129.3,272,2.96],["3.8B*",73.1,324,7.37],["3B",83.0,315,6.01],["7B",47.3,359,14.59]];
+ d.sort((a,b)=>a[3]-b[3]);
+ const x0=60,x1=680,y0=240,y1=30;const n=d.length;const bw=70;
+ const Yt=v=>y0-v/170*(y0-y1),Yp=v=>y0-v/400*(y0-y1),Ym=v=>y0-v/16*(y0-y1);
+ [0,50,100,150].forEach(g=>{const y=Yt(g);s.appendChild(el("line",{x1:x0,y1:y,x2:x1,y2:y,stroke:C.grid}));txt(s,x0-8,y+4,g+"",{ta:"end"});});
+ const cx=i=>x0+50+i*((x1-x0-60)/(n-1));
+ d.forEach((r,i)=>{const c=cx(i);s.appendChild(el("rect",{x:c-22,y:Yt(r[1]),width:44,height:y0-Yt(r[1]),fill:C.gpu,rx:3}));
+  txt(s,c,Yt(r[1])-6,r[1]+"",{ta:"middle",fill:"#e6e8eb",fs:11});txt(s,c,262,r[0],{ta:"middle",fill:"#e6e8eb"});});
+ function poly(Yf,col){let p="";d.forEach((r,i)=>{p+=(i?"L":"M")+cx(i)+" "+Yf(r[i==0?2:2])+" ";});}
+ [["pw",2,Yp,C.aipu],["mem",3,Ym,C.cmp]].forEach(L=>{let pts=d.map((r,i)=>cx(i)+","+L[2](r[L[1]])).join(" ");
+  s.appendChild(el("polyline",{points:pts,fill:"none",stroke:L[3],"stroke-width":2}));
+  d.forEach((r,i)=>s.appendChild(el("circle",{cx:cx(i),cy:L[2](r[L[1]]),r:4,fill:L[3]})));});
+ txt(s,360,284,"模型尺寸（依 peak memory 排序）·  *=Phi-3-mini",{ta:"middle"});
+ txt(s,20,140,"tok/s",{ta:"middle"}).setAttribute("transform","rotate(-90 20 140)");})();
+
+/* E-B (b) — log-log roofline */
+(function(){const s=svg("c_roof",720,340);
+ const x0=70,x1=690,y0=290,y1=30;
+ const Lx=4 /*AI 1..1e4*/, ly0=10,ly1=13.2 /*FLOP/s 1e10..~1.6e13*/;
+ const X=ai=>x0+(Math.log10(ai))/Lx*(x1-x0);
+ const Y=f=>y0-(Math.log10(f)-ly0)/(ly1-ly0)*(y0-y1);
+ // grid
+ [1,10,100,1000,10000].forEach(g=>{const x=X(g);s.appendChild(el("line",{x1:x,y1:y1,x2:x,y2:y0,stroke:C.grid}));txt(s,x,y0+18,g+"",{ta:"middle"});});
+ [1e10,1e11,1e12,1e13].forEach(g=>{const y=Y(g);s.appendChild(el("line",{x1:x0,y1:y,x2:x1,y2:y,stroke:C.grid}));txt(s,x0-8,y+4,"1e"+Math.round(Math.log10(g)),{ta:"end"});});
+ const BW=24e9, ridge=339, peak=8.12e12;
+ // memory roof: F=BW*AI for AI<ridge
+ s.appendChild(el("line",{x1:X(1),y1:Y(BW*1),x2:X(ridge),y2:Y(BW*ridge),stroke:C.aipu,"stroke-width":2.5}));
+ // compute ceiling
+ s.appendChild(el("line",{x1:X(ridge),y1:Y(peak),x2:X(1e4),y2:Y(peak),stroke:C.cmp,"stroke-width":2.5}));
+ // ridge marker
+ s.appendChild(el("line",{x1:X(ridge),y1:y1,x2:X(ridge),y2:y0,stroke:C.cmp,"stroke-dasharray":"4 4"}));
+ txt(s,X(ridge)+6,y1+14,"ridge AI* ≳ 339 (下界)",{fill:C.cmp,fs:11});
+ // points
+ const pts=[["decode  46 GF/s",1.96,4.62e10,"#4ea1ff"],["prefill  8.1 TF/s",2005,8.12e12,"#4ea1ff"]];
+ pts.forEach(p=>{s.appendChild(el("circle",{cx:X(p[1]),cy:Y(p[2]),r:6,fill:p[3]}));
+   txt(s,X(p[1])+(p[1]<10?10:-10),Y(p[2])+(p[1]<10?16:-12),p[0],{fill:"#e6e8eb",fs:12,ta:p[1]<10?"start":"end"});});
+ // 173x annotation between decode and the roof-at-ridge
+ s.appendChild(el("line",{x1:X(1.96),y1:Y(4.62e10),x2:X(1.96),y2:Y(peak),stroke:"#9aa3b2","stroke-dasharray":"2 3"}));
+ txt(s,X(1.96)+8,(Y(4.62e10)+Y(peak))/2,"decode 離天花板 ~173×",{fill:"#9aa3b2",fs:11});
+ txt(s,360,330,"算術強度 AI (FLOP / weight-byte) — log",{ta:"middle"});
+ txt(s,18,160,"有效算力 (FLOP/s) — log",{ta:"middle"}).setAttribute("transform","rotate(-90 18 160)");})();
+
+/* Padding waste — stacked bars, prefill device-ms split useful vs padding */
+(function(){const s=svg("c_pad",720,300);const N=[109,173,237,301,429,557,685,813,941];const T=311.3,L=1024;
+ const x0=70,x1=690,y0=240,y1=30;const Ymax=320;const Y=v=>y0-v/Ymax*(y0-y1);
+ [0,100,200,300].forEach(g=>{const y=Y(g);s.appendChild(el("line",{x1:x0,y1:y,x2:x1,y2:y,stroke:C.grid}));txt(s,x0-8,y+4,g+"",{ta:"end"});});
+ const bw=(x1-x0)/N.length*0.62;
+ N.forEach((n,i)=>{const cx=x0+(i+0.5)*((x1-x0)/N.length);const use=T*n/L,wst=T-use;
+  s.appendChild(el("rect",{x:cx-bw/2,y:Y(use),width:bw,height:y0-Y(use),fill:C.cmp}));
+  s.appendChild(el("rect",{x:cx-bw/2,y:Y(T),width:bw,height:Y(use)-Y(T),fill:C.io}));
+  txt(s,cx,y0+16,n+"",{ta:"middle",fs:11});
+  txt(s,cx,Y(T)-5,Math.round(n/L*100)+"%",{ta:"middle",fill:"#e6e8eb",fs:10});});
+ txt(s,360,282,"n_prompt (真實 prompt token 數) — 標籤=有用佔比",{ta:"middle"});
+ txt(s,18,140,"prefill device 時間 (ms)",{ta:"middle"}).setAttribute("transform","rotate(-90 18 140)");
+ const yT=Y(T);s.appendChild(el("line",{x1:x0,y1:yT,x2:x1,y2:yT,stroke:"#e6e8eb","stroke-dasharray":"4 4"}));
+ txt(s,x1,yT-6,"靜態圖固定 311.3 ms",{ta:"end",fill:"#e6e8eb",fs:11});})();
+
+/* phi3-mini bucket sweep — prefill device ms (bars) + decode ms/tok (line) vs bucket */
+(function(){const s=svg("c_bucket",720,280);
+ const d=[["512\n(1-core)",512,1127.1,207.3],["1024\n(4-core)",1024,1022.6,183.3],["2048\n(4-core)",2048,2751.5,193.4]];
+ const x0=80,x1=660,y0=210,y1=30;const Pmax=3000,Dmax=260;
+ const Yp=v=>y0-v/Pmax*(y0-y1),Yd=v=>y0-v/Dmax*(y0-y1);
+ [0,1000,2000,3000].forEach(g=>{const y=Yp(g);s.appendChild(el("line",{x1:x0,y1:y,x2:x1,y2:y,stroke:C.grid}));txt(s,x0-8,y+4,g+"",{ta:"end"});});
+ const cx=i=>x0+90+i*200;
+ d.forEach((r,i)=>{const c=cx(i);
+   s.appendChild(el("rect",{x:c-34,y:Yp(r[2]),width:68,height:y0-Yp(r[2]),fill:C.io,rx:3}));
+   txt(s,c,Yp(r[2])-6,r[2].toFixed(0)+" ms",{ta:"middle",fill:"#e6e8eb",fs:11});
+   txt(s,c,y0+16,"L="+r[1],{ta:"middle",fs:11});
+   txt(s,c,y0+30,i==0?"1-core":"4-core",{ta:"middle",fs:10,fill:i==0?C.io:"#9aa3b2"});});
+ // decode line (4-core pair flat; 512 1-core higher)
+ let pl=d.map((r,i)=>cx(i)+","+Yd(r[3])).join(" ");
+ s.appendChild(el("polyline",{points:pl,fill:"none",stroke:C.cmp,"stroke-width":2,"stroke-dasharray":"5 4"}));
+ d.forEach((r,i)=>{s.appendChild(el("circle",{cx:cx(i),cy:Yd(r[3]),r:4,fill:C.cmp}));txt(s,cx(i)+8,Yd(r[3])-6,r[3].toFixed(0)+" ms/tok",{fill:C.cmp,fs:10});});
+ // annotate 4-core pair ∝L
+ s.appendChild(el("line",{x1:cx(1),y1:Yp(1022.6),x2:cx(2),y2:Yp(2751.5),stroke:"#e6e8eb","stroke-dasharray":"2 3"}));
+ txt(s,(cx(1)+cx(2))/2,Yp(1900)-4,"4-core: 2× L → 2.7× prefill",{ta:"middle",fill:"#e6e8eb",fs:11});
+ txt(s,360,262,"phi3-mini 桶長(權重三桶相同 3.61 GiB)",{ta:"middle"});
+ txt(s,18,130,"prefill device ms",{ta:"middle"}).setAttribute("transform","rotate(-90 18 130)");})();
+
+/* Experiment A — amortization curve, eff e2e tok/s vs output tokens (log x) */
+(function(){const s=svg("c_amort",720,300);
+ // 3 series: [label, color, asym, 95%@, points[[tok,eff]...]]
+ const S=[
+  ["llama-1B (1024桶)",C.gpu,14.98,64,[[4,8.59],[8,10.96],[18,12.96],[33,13.87],[64,14.47],[128,14.77],[257,14.91],[385,14.95],[512,14.98]]],
+  ["phi3-mini (2048桶)",C.cmp,4.69,128,[[4,1.26],[8,2.01],[19,3.05],[32,3.61],[64,4.16],[128,4.50],[256,4.69]]],
+  ["llama-8B (1024桶)",C.io,2.92,64,[[4,1.72],[8,2.19],[16,2.53],[32,2.74],[64,2.86],[128,2.92]]]];
+ const x0=70,x1=690,y0=240,y1=30;
+ const X=v=>x0+(Math.log10(v)-Math.log10(3))/(Math.log10(600)-Math.log10(3))*(x1-x0);
+ const Y=v=>y0-(v-0)/(16-0)*(y0-y1);
+ [0,4,8,12,16].forEach(g=>{const y=Y(g);s.appendChild(el("line",{x1:x0,y1:y,x2:x1,y2:y,stroke:C.grid}));txt(s,x0-8,y+4,g+"",{ta:"end"});});
+ [4,8,16,32,64,128,256,512].forEach(g=>txt(s,X(g),y0+16,g+"",{ta:"middle",fs:11}));
+ S.forEach((ser,si)=>{const col=ser[1];
+   const ya=Y(ser[2]);s.appendChild(el("line",{x1:x0,y1:ya,x2:x1,y2:ya,stroke:col,"stroke-dasharray":"4 4","stroke-width":1}));
+   let pts=ser[4].map(p=>X(p[0])+","+Y(p[1])).join(" ");
+   s.appendChild(el("polyline",{points:pts,fill:"none",stroke:col,"stroke-width":2.5}));
+   ser[4].forEach(p=>s.appendChild(el("circle",{cx:X(p[0]),cy:Y(p[1]),r:4,fill:col})));
+   txt(s,x1-4,ya-5,ser[0]+" → 漸近 "+ser[2]+" tok/s (95%@"+ser[3]+")",{ta:"end",fill:col,fs:11});});
+ txt(s,360,282,"輸出 token 數(log) — 固定 prompt;大模型/大桶 → 低漸近且損益點右移",{ta:"middle"});
+ txt(s,18,150,"eff end-to-end tok/s",{ta:"middle"}).setAttribute("transform","rotate(-90 18 150)");})();
+</script>
+</body>
+</html>

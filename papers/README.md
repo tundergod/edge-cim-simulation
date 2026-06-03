@@ -1,58 +1,72 @@
-# Literature & Real-Silicon Notes
+# 文獻與真實晶片筆記
 
-Curated paper notes and real-silicon investigation reports for the CIM-centric LLM-on-mobile-SoC simulator. These are structured reading notes (TL;DR, claims, method, simulator/D4 posture, "why it matters to us") — not the original PDFs. Cross-references between notes use `[[wikilink]]` syntax (Obsidian origin); resolve them by filename within `papers/`.
+本目錄收錄與「CIM-centric LLM-on-mobile-SoC 模擬器」**實作**直接相關的論文筆記與真實晶片量測報告。
 
-Start with [hpim-arxiv2025](pim-llm-accelerators/hpim-arxiv2025.md) (closest competitor), [characterizing-mobile-soc-heterogeneous-llm-inference-sosp2025](methodology-and-simulators/characterizing-mobile-soc-heterogeneous-llm-inference-sosp2025.md) (HeteroInfer — our methodology template), and the two `metis-silicon/` investigation reports (the calibration ground truth).
+> **篩選原則（依使用者要求嚴格執行）**：只保留「對模擬器*實作*有幫助」的文獻——亦即能直接驅動某個模組（M1–M7）、提供建模/設計決策、或作為校準 ground truth 的資料。純粹用於論文「related work / 定位」的文獻已移除。經一個 subagent 逐篇稽核後，**從 46 篇縮減為 16 篇**（移除 30 篇）。
+>
+> 每篇含：結構化筆記（`.md`，英文，給實作 agent 看的參考）＋ 原始論文（`.pdf`/`.html`，若取得）。筆記內的 `[[wikilink]]` 為 Obsidian 來源語法，請以 `papers/` 內的檔名解析。
+
+**建議起點**：[hpim-arxiv2025](pim-llm-accelerators/hpim-arxiv2025.md)（最接近的競品）、[characterizing-mobile-soc...sosp2025](methodology-and-simulators/characterizing-mobile-soc-heterogeneous-llm-inference-sosp2025.md)（HeteroInfer，我們的方法論模板）、以及 `metis-silicon/` 兩份調查報告（校準 ground truth）。
 
 ---
 
-## pim-llm-accelerators/ — PIM/CIM LLM accelerators (prior art & competitors)
-- [hpim-arxiv2025](pim-llm-accelerators/hpim-arxiv2025.md) — **Closest competitor.** Heterogeneous SRAM-PIM + HBM-PIM, single-batch, simulator-only/FP16-only (its D4 gap = our strength)
-- [papi-asplos2025](pim-llm-accelerators/papi-asplos2025.md) — Dynamic GPU+PIM decoding parallelism (FC-PIM/Attn-PIM split)
-- [specpim-asplos2024](pim-llm-accelerators/specpim-asplos2024.md) — Speculative inference on PIM, architecture-dataflow co-exploration
-- [neupims-asplos2024](pim-llm-accelerators/neupims-asplos2024.md) — NPU-PIM heterogeneous, batched LLM
-- [ianus-asplos2024](pim-llm-accelerators/ianus-asplos2024.md) — NPU-PIM unified memory system
-- [cent-asplos2025](pim-llm-accelerators/cent-asplos2025.md) — CXL-enabled GPU-free all-PIM LLM inference
-- [lp-spec-arxiv2025](pim-llm-accelerators/lp-spec-arxiv2025.md) — LPDDR-PIM mobile speculative inference (mobile sibling)
-- [cxl-pnm-lpddr-hpca2024](pim-llm-accelerators/cxl-pnm-lpddr-hpca2024.md) — LPDDR-based CXL-PNM transformer inference
-- [lincoln-hpca2025](pim-llm-accelerators/lincoln-hpca2025.md) — 50–100B LLM on consumer devices via compute-enabled flash
-- [cambricon-llm-micro2024](pim-llm-accelerators/cambricon-llm-micro2024.md) — Chiplet NPU + flash-PIM, on-device 70B
-- [duplex-moe-pim-isca2024](pim-llm-accelerators/duplex-moe-pim-isca2024.md) — MoE + GQA + continuous batching device
-- [l3-dimm-pim-longcontext-arxiv2025](pim-llm-accelerators/l3-dimm-pim-longcontext-arxiv2025.md) — DIMM-PIM long-context coordination
-- [pimphony-lolpim-longcontext-hpca2026](pim-llm-accelerators/pimphony-lolpim-longcontext-hpca2026.md) — Bandwidth/capacity for PIM long-context
-- [repa-kvcache-pim-asplos2026](pim-llm-accelerators/repa-kvcache-pim-asplos2026.md) — Reconfigurable PIM for KV-cache offload+processing
-- [starc-sparse-attention-pim-arxiv2025](pim-llm-accelerators/starc-sparse-attention-pim-arxiv2025.md) — Sparse-attention remapping for PIM decoding
-- [mi-llm-multiplier-free-pim-tc2026](pim-llm-accelerators/mi-llm-multiplier-free-pim-tc2026.md) — Multiplier-free LLM on commodity PIM
-- [pim-llm-pgemmlib-cgo2025](pim-llm-accelerators/pim-llm-pgemmlib-cgo2025.md) — GEMM library + target-aware opts on real PIM
-- [context-aware-moe-cxl-ndp-arxiv2025](pim-llm-accelerators/context-aware-moe-cxl-ndp-arxiv2025.md) — Context-aware MoE on CXL GPU-NDP
-- [sieve-moe-pim-arxiv2026](pim-llm-accelerators/sieve-moe-pim-arxiv2026.md) — Dynamic expert-aware PIM for evolving MoE
+## 保留清單（16 篇）
 
-## methodology-and-simulators/ — simulation & validation methodology
-- [characterizing-mobile-soc-heterogeneous-llm-inference-sosp2025](methodology-and-simulators/characterizing-mobile-soc-heterogeneous-llm-inference-sosp2025.md) — **HeteroInfer.** The characterization-driven methodology template (per-unit characteristic curves decide the op split)
-- [neurosim-validation-frontiers2021](methodology-and-simulators/neurosim-validation-frontiers2021.md) — CIM-simulator validation against silicon (the D4 pattern; <1% chip error citation)
-- [dnn-neurosim-v1-iedm2019](methodology-and-simulators/dnn-neurosim-v1-iedm2019.md) — CIM benchmarking framework (inference)
-- [dnn-neurosim-v2-tcad2021](methodology-and-simulators/dnn-neurosim-v2-tcad2021.md) — CIM benchmarking framework (on-chip training)
-- [gem5-salam-merge-2025](methodology-and-simulators/gem5-salam-merge-2025.md) — Full-system heterogeneous simulation (option assessed, not chosen)
+圖例：📄 = 已附原始 PDF／HTML；🔗 = 原始檔僅有網址（未附本地檔）。每篇標注**對實作的用途**。
 
-## on-device-llm/ — on-device / mobile LLM inference systems
-- [powerinfer2-smartphone-2024](on-device-llm/powerinfer2-smartphone-2024.md) — Fast LLM inference on a smartphone
-- [fast-ondevice-llm-npu-asplos2025](on-device-llm/fast-ondevice-llm-npu-asplos2025.md) — On-device LLM with NPU acceleration
-- [llm-in-a-flash-apple-2023](on-device-llm/llm-in-a-flash-apple-2023.md) — LLM inference with limited memory (flash offload)
-- [kvswap-ondevice-2025](on-device-llm/kvswap-ondevice-2025.md) — On-device long-context via KV-cache swapping
+### pim-llm-accelerators/ — PIM/CIM LLM 加速器（競品與可借用機制）
+| 筆記 | 原始檔 | 對實作的用途 |
+|---|---|---|
+| [hpim-arxiv2025](pim-llm-accelerators/hpim-arxiv2025.md) | 📄 pdf | **最接近競品。** SRAM-PIM(attention)+HBM-PIM(FFN) 分工＋intra-token decode pipeline → 直接啟發 **M6**（op→unit 分工、pipeline 設計）；也是論文差異化錨點 |
+| [papi-asplos2025](pim-llm-accelerators/papi-asplos2025.md) | 📄 pdf | 以「算術強度門檻」動態決定 FC↔Attn 走哪個單元 → 可借用為 **M6** 的 mapping heuristic |
+| [lp-spec-arxiv2025](pim-llm-accelerators/lp-spec-arxiv2025.md) | 📄 pdf | 平台最接近（mobile NPU+PIM）；GEMV→PIM / GEMM→NPU 動態分派建模 → 啟發 **M6**（即使 substrate 不同） |
+| [neupims-asplos2024](pim-llm-accelerators/neupims-asplos2024.md) | 📄 pdf | sub-batch interleaving、GEMM/GEMV 並行 → 可重用的 **M6** pipeline 原語；其 ONNXim+DRAMsim3 方法亦對應我們的 **M2/M4** |
+| [ianus-asplos2024](pim-llm-accelerators/ianus-asplos2024.md) | 📄 pdf | unified-memory 上的 PIM access scheduling（共享記憶體競爭）→ 啟發 **M2/M6**（我們的 MMIO-unified host memory 競爭模型） |
 
-## metis-silicon/ — our real-silicon investigations (calibration ground truth)
-- [metis-exp-board-rkc-a02-2026-05-18](metis-silicon/metis-exp-board-rkc-a02-2026-05-18.md) — Aetina board architecture + modifiability map; the `-1301` LLM wall
-- [metis-llm-investigation-desktop-2026-05-19](metis-silicon/metis-llm-investigation-desktop-2026-05-19.md) — Production card LLM bottleneck (~24 GB/s decode memory wall) — **L4 anchor**
-- [metis-step1-cnn-characterization-2026-05-23](metis-silicon/metis-step1-cnn-characterization-2026-05-23.md) — 225-cell CNN characterization (5 models × 3 units) — **L6 anchor**
-- [metis-aipu-nn-v2-2026-05-21](metis-silicon/metis-aipu-nn-v2-2026-05-21.md) — Research-direction synthesis report
+### methodology-and-simulators/ — 模擬與驗證方法論
+| 筆記 | 原始檔 | 對實作的用途 |
+|---|---|---|
+| [characterizing-mobile-soc...sosp2025](methodology-and-simulators/characterizing-mobile-soc-heterogeneous-llm-inference-sosp2025.md) | 📄 pdf | **HeteroInfer。** 我們整套照搬的方法論（先量測各單元、再決定分工；NPU stage/order/shape 敏感度）→ 驅動 Phase 0 掃描設計與 **M6** |
+| [neurosim-validation-frontiers2021](methodology-and-simulators/neurosim-validation-frontiers2021.md) | 🔗 [URL](https://pmc.ncbi.nlm.nih.gov/articles/PMC8219932/) | D4 驗證範式（對真實晶片校準、<1% 誤差）→ **L1** 交叉驗證與 **M1** 可信度所複製的樣板 |
+| [dnn-neurosim-v1-iedm2019](methodology-and-simulators/dnn-neurosim-v1-iedm2019.md) | 📄 pdf | CIM tile 的 timing/energy 模型 → **M1** 的選用性物理交叉檢查（NeuroSim cross-check） |
+| [gem5-salam-merge-2025](methodology-and-simulators/gem5-salam-merge-2025.md) | 🔗 [URL](https://www.gem5.org/2025/07/30/gem5AccHetSimBlog.html) | 評估後未採用的建構路徑 → 影響 **M3** event-engine 架構決策（含 risk #1 的退路選項） |
 
-## platforms/ — hardware platform entity pages
-- [system-aetina-rkc-a02](platforms/system-aetina-rkc-a02.md) — RK3588 + Metis Alpha M.2 (Phase 0 Machine 1)
-- [system-axelera-metis-card](platforms/system-axelera-metis-card.md) — Production Metis card + RTX 3090 host (Phase 0 Machine 2)
+### metis-silicon/ — 我方真實晶片調查（校準 ground truth）
+| 筆記 | 原始檔 | 對實作的用途 |
+|---|---|---|
+| [metis-exp-board-rkc-a02-2026-05-18](metis-silicon/metis-exp-board-rkc-a02-2026-05-18.md) | 📄 html | Aetina 板可改性稽核（L1/L2 編譯期、IOMMU window、DMA tunables）→ **M2** 記憶體模型直接輸入＋Phase 0 可行性 |
+| [metis-llm-investigation-desktop-2026-05-19](metis-silicon/metis-llm-investigation-desktop-2026-05-19.md) | 📄 html | **L4** 端到端 LLM 校準錨點（15 tok/s、24.23 GB/s decode wall、prefill TFLOP/s）→ **M2/M4/M7** ground truth |
+| [metis-step1-cnn-characterization-2026-05-23](metis-silicon/metis-step1-cnn-characterization-2026-05-23.md) | 📄 pdf | **L6** CNN 校準錨點（225 cells、DMA round-trip floor、三模式資料）→ **M1/M2** ground truth |
 
-## ideas/ — project idea pages
-- [cim-centric-llm-mobile-soc](ideas/cim-centric-llm-mobile-soc.md) — This project's source idea page
-- [cnn-dnn-edge-memory-wall-metis-embedded](ideas/cnn-dnn-edge-memory-wall-metis-embedded.md) — Calibration-source idea (Step-1 data feeds L6)
+### platforms/ — 硬體平台規格頁（vault 原生筆記，無外部 raw）
+| 筆記 | 對實作的用途 |
+|---|---|
+| [system-aetina-rkc-a02](platforms/system-aetina-rkc-a02.md) | 直接寫入模擬器的平台規格（核數、L1/L2 大小、PCIe BW、TOPS、IOMMU）→ **M1/M2/M4/M7** 常數 |
+| [system-axelera-metis-card](platforms/system-axelera-metis-card.md) | 量產卡規格＋實測 LLM 內部 IO 分解（98.5% weight-stream、MAC idle）→ **L4** 錨點常數（M2/M7） |
 
-## concepts/ — background concept notes
-CIM/PIM and LLM-systems primers: [compute-in-memory](concepts/compute-in-memory.md), [in-memory-computing](concepts/in-memory-computing.md), [sram-imc](concepts/sram-imc.md), [processing-in-memory-llm](concepts/processing-in-memory-llm.md), [memory-centric-computing](concepts/memory-centric-computing.md), [on-device-llm-inference](concepts/on-device-llm-inference.md), [llm-serving](concepts/llm-serving.md), [llm-weight-quantization](concepts/llm-weight-quantization.md), [kv-cache-management](concepts/kv-cache-management.md), [speculative-decoding](concepts/speculative-decoding.md)
+### ideas/ — 專案構想頁（vault 原生筆記，無外部 raw）
+| 筆記 | 對實作的用途 |
+|---|---|
+| [cim-centric-llm-mobile-soc](ideas/cim-centric-llm-mobile-soc.md) | **這就是本專案的規格書**（定義 M1–M7、Phase 0、L1–L6）；`overall.md` 的來源構想頁 |
+| [cnn-dnn-edge-memory-wall-metis-embedded](ideas/cnn-dnn-edge-memory-wall-metis-embedded.md) | 校準來源構想：其 Step-1 計畫與 A1/A2/A3 子實驗即 Phase 0 / L6 流程，餵給 M1/M2 |
+
+---
+
+## 移除清單（30 篇，可由 git 還原）
+
+依嚴格標準移除——皆屬「僅 related-work 定位」或「substrate/workload 不符（不影響我們的建模）」：
+
+- **MoE 專屬**（我們 workload 是 dense Llama/Qwen，batch=1）：duplex-moe-pim、context-aware-moe-cxl-ndp、sieve-moe-pim
+- **長上下文 / 稀疏注意力 / KV-PIM**（超出 dense batch=1 範圍，且多為 UPMEM/DRAM-PIM 定位）：l3-dimm-pim-longcontext、pimphony-lolpim-longcontext、repa-kvcache-pim、starc-sparse-attention-pim
+- **不同 substrate / 伺服器級**（無可轉用機制）：cent-asplos2025（CXL all-PIM）、cxl-pnm-lpddr（datacenter CXL-PNM）、cambricon-llm（flash-PIM 70B）、lincoln-hpca2025（flash-PIM 50–100B）、specpim（speculative decode，明確 out-of-scope）、mi-llm（UPMEM）、pim-llm-pgemmlib（UPMEM GEMM lib）
+- **on-device LLM（整個資料夾移除，皆屬 related-work / 稀疏或 flash 機制）**：powerinfer2-smartphone、fast-ondevice-llm-npu、llm-in-a-flash、kvswap-ondevice
+- **methodology**：dnn-neurosim-v2（on-chip *training*，我們只做 inference）
+- **metis-silicon**：metis-aipu-nn-v2（內部方向/策略報告，非校準資料或建模輸入）
+- **concepts（整個資料夾移除，皆為背景概念入門，非實作輸入）**：compute-in-memory、in-memory-computing、sram-imc、memory-centric-computing、processing-in-memory-llm、kv-cache-management、llm-serving、llm-weight-quantization、on-device-llm-inference、speculative-decoding
+
+> **可能想覆寫的邊界判斷**（若您不同意，告知即可還原）：
+> - `processing-in-memory-llm`（concept）是唯一含實質工程內容（PIM-LLM substrate 分類表）的概念頁——若想保留一份做論文定位，這是首選。
+> - `neupims`/`ianus`（保留）vs `cent`（移除）：三者皆伺服器級 HBM/CXL-PIM；保留前兩者因其 *機制*（sub-batch interleaving、unified-memory access scheduling）可映射到 M6/M2，移除 cent 因無可轉用之 mobile 技術。
+> - `dnn-neurosim-v1`（保留）：若最終走純 trace-driven lookup（risk #1 退路），其角色從必需降為選用，但仍建議保留。
+> - `gem5-salam`（保留）：屬「評估後未採用」的路徑；若視為純 related-work 可移除。
+> - `lp-spec`（保留）：mobile 平台最接近競品，但其具體技術（LPDDR-PIM 上的 speculative decode）超出我們範圍；保留主要取其 mobile NPU+PIM 分派建模。
