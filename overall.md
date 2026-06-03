@@ -69,16 +69,18 @@
 
 「模型」只是哪顆網路；「工作負載」是實際餵進去的輸入，決定 prefill/decode 長度與 op×shape 流。參考同類 paper 的做法（**NeuPIMs** 用 ShareGPT + Alpaca；**HPIM** 與我方 [Metis 研究](papers/metis-silicon/metis-llm-investigation-desktop-2026-05-19.md) 用合成 (prefill, decode) 長度掃描；**HeteroInfer** 聚焦 decode-bound 行動工作負載）。分兩層：
 
-**Layer A — 真實任務工作負載**（最終要報告；刻意涵蓋 prefill-heavy ↔ decode-heavy 光譜，正對應 CIM 的 compute-bound vs memory-bound 分界）：
+**Layer A — 真實任務工作負載：直接採用 HeteroInfer（Table 4）的三類任務。** 它刻意鋪滿 prefill-heavy ↔ decode-heavy 光譜（正對應 CIM 的 compute-bound vs memory-bound 分界），且 batch=1 與我們一致：
 
-| 任務 | 有名資料集 | prefill | decode | 為何選 |
+| 任務 | 資料集（HeteroInfer Table 4） | mean prefill | mean decode | 特性 |
 | --- | --- | --- | --- | --- |
-| 聊天 / 指令 | **ShareGPT** | 中 | 中–長（decode 主導） | serving 事實標準（vLLM / SGLang / NeuPIMs 皆用） |
-| 摘要 / 長上下文 QA | **LongBench**（v1/v2） | 長 4K–8K+ | 短（prefill 主導） | 壓 KV cache + prefill 計算；對應 8K stretch |
-| 程式碼補全 | **HumanEval** | 中 | 中–長 | 程式生成 |
-| 數學 / 推理（CoT） | **GSM8K** | 短 | 長（decode 主導） | 長鏈輸出，最極端 decode-bound |
+| 多輪對話 | **BELLE multiturn chat**（或改用更通用的 **ShareGPT**） | 54 | 374 | **decode 主導** |
+| 簡單 QA / 推理 | **GSM8K** | 296 | 340 | **平衡**（prefill≈decode） |
+| 長文本處理 | **LongBench-TriviaQA** | 1787 | 5 | **prefill 主導** |
+| （選用）程式碼補全 | **HumanEval** | 中 | 中–長 | HeteroInfer 未涵蓋；op 種類**無新增**，僅多一應用情境 |
 
-**Layer B — 合成長度掃描**（控制變因、做 roofline / scaling，最乾淨）：prefill ∈ {128, 256, 512, 1024, 2048（, 8192 stretch）} × decode ∈ {1, 64, 128, 256, 512}。對齊 Metis 靜態 bucket（512/1024/2048）；我方 Metis 研究即用此法（prompt 32→1024、output 1→256）。
+> **能否完全照 HeteroInfer 的 workload？** 大致可以、且建議照做——三類正好鋪滿 prefill↔decode 光譜。**唯一缺的是程式碼任務**（HeteroInfer 無 code）；但 code 在 op 層級不帶來新 op 種類，只多一個應用情境，故列為選用。注意 HeteroInfer 用 **W4A16**（這是*精度*選擇，非 workload；我們用 Metis INT8）——與 workload 無關。
+
+**Layer B — 合成長度掃描**（控制變因、做 roofline / scaling）：照 HeteroInfer 的 prefill fixed ∈ {64, 256, 1024}（Fig 13）+ dynamic/未對齊長度 {128…1024}（Fig 14，測 padding/動態圖）+ decode @ prompt 256（Fig 15）；再加 2048（, 8192 stretch）對齊 Metis 靜態 bucket（512/1024/2048）。我方 Metis 研究即用此法（prompt 32→1024、output 1→256）。
 
 **（選用 / 未來）真實到達 trace**：**Azure LLM Inference Trace**（HPCA'25 DynamoLLM 用）或 **BurstGPT**（Azure OpenAI 213 天、10.3M 筆，含 request/response 長度分佈 + 到達時間）。batch=1 行動情境下到達模式較不關鍵，先放 `batch` hook；未來 batched 情境再用。
 
@@ -101,7 +103,11 @@
 
 ## Phase 0.1 — 生成 trace 與 op inventory
 
-**純軟體階段，不需上板**——從 HF 模型 + workload 定義（見 § 工作負載）導出每個 (model, prefill_len, decode_len) 實際執行的 op×shape 流。這既是 **M5 trace 生成的前半段**，也是後面量測的前置（**回答「我們是否已知 LLM 實際用到哪些 operation？」：尚未，且必須先知道才能正確量測**——micro-benchmark 的掃描矩陣要對準 LLM 真正會跑的 op 與形狀，而非任意挑）。
+**純軟體階段，不需上板、也不需 GPU**——從 HF 模型 + workload 定義（見 § 工作負載）導出每個 (model, prefill_len, decode_len) 實際執行的 op×shape 流。這既是 **M5 trace 生成的前半段**，也是後面量測的前置（**回答「我們是否已知 LLM 實際用到哪些 operation？」：尚未，且必須先知道才能正確量測**——micro-benchmark 的掃描矩陣要對準 LLM 真正會跑的 op 與形狀，而非任意挑）。
+
+> **Q：Phase 0.1 需要 GPU 嗎？不需要。** op 種類與形狀由模型架構 + 選定的 (prefill, decode) 長度**決定（deterministic）**，與執行裝置無關；在 CPU 上 trace **一次 prefill + 一次 decode step** 即可（不必真的生成整段），甚至可由 config 純算術列舉。唯一要求是足夠 host RAM——大模型可用 meta-device／只導出圖結構不實體化權重來避開。（我們 SoC 裡的 GPU 是 Mali，在 Phase 0.2 於 Aetina 板上量測，不在這裡。）
+>
+> **Q：要在 0.1 收集「所有」workload 的 trace 嗎？不必。** Phase 0.1 只產出 (a) 每模型的 **op inventory**（op 種類 + 形狀參數化，小而有界）、(b) Phase 0.2 要量的 **(op, shape, precision) 掃描矩陣**、(c) 一組**代表性 traces**（每個 (model, task) 在資料集平均長度 + Layer B 掃描點各一條，用來驗證 M5 並描出端到端）。**完整、逐 prompt 的 trace 既 deterministic 又龐大**，由 M5 在 **Phase 2 按需生成**，不在 0.1 全部物化。
 
 做法：
 - 對每個目標模型（Llama-3.2-1B/3B/8B、Qwen-2.5-7B）做 `torch.onnx.export` 或追蹤一次 prefill + 一次 decode step。
