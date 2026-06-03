@@ -78,7 +78,7 @@ Authoritative op matrix: `docs/reference/onnx-opset17-support.md` (v1.6) `[DOC]`
 - **INT8 is the execution precision** `[DOC]`/`[FORUM]`. `compiler.quantize()` does INT8 PTQ with calibration data.
 - Quantization schemes (`quantization_scheme`, default `per_tensor_histogram`): `per_tensor_histogram` / `per_tensor_min_max` / `hybrid_per_tensor_per_channel` `[DOC]`.
 - **AxMO** (Axelera Model Optimizer): separate FP32→INT8 PTQ tool, **ViT-only** support, only knob `smooth_quant_alpha` (default 0.5) `[DOC]`.
-- **INT4: `[GAP]`** — not documented anywhere (op matrix, AxMO, compiler configs all silent); no community confirmation of INT4 on current silicon `[FORUM]`. LLM zoo models are tagged `*-static` with **no stated bit-width** — likely INT8, possibly mixed. **For the simulator: model INT8 as native; treat INT4 as out-of-scope unless a vendor artifact appears** (matches `overall.md` Out-of-scope). Our int4 decode projection (~2.04×) is a *linear extrapolation, not measured* `[MEASURED]`.
+- **INT4: `[GAP]`** — not documented anywhere (op matrix, AxMO, compiler configs all silent); no community confirmation of INT4 on current silicon `[FORUM]`. LLM zoo models are tagged `*-static` with **no stated bit-width** — likely INT8, possibly mixed. **For the simulator: model INT8 as native; treat INT4 as out-of-scope unless a vendor artifact appears** (matches `OVERALL.md` Out-of-scope). Our int4 decode projection (~2.04×) is a *linear extrapolation, not measured* `[MEASURED]`.
 
 ---
 
@@ -211,7 +211,7 @@ Two paths: high-level `deploy.py` (YAML in → deployed model + pipeline) and lo
 | `cooperative` | ❌/model-dependent | ❌ "Unsupported" | **declared but NOT implemented** in v1.3.1 |
 | `pipeline` | ❌ "Unsupported" | ❌ | **declared but NOT implemented** in v1.3.1 |
 
-**Consequence:** in v1.3.1, **no intra-frame parallelism is exposed** — `cooperative`/`pipeline` are walled off at validation. Matches `overall.md` Out-of-scope. The working 4-core trio is exactly `{aipu_cores: 4, resources: 1.0, multicore_mode: batch}`:
+**Consequence:** in v1.3.1, **no intra-frame parallelism is exposed** — `cooperative`/`pipeline` are walled off at validation. Matches `OVERALL.md` Out-of-scope. The working 4-core trio is exactly `{aipu_cores: 4, resources: 1.0, multicore_mode: batch}`:
 ```yaml
 extra_kwargs:
   compilation_config:
@@ -262,7 +262,7 @@ Frozen fields (e.g. `aipu_cores_max`) reject overrides at validation (~7–10 s 
 - **DVFS knobs:** `axdevice --set-clock {100,200,400,600,700,800 MHz}`, `--set-core-clock`, `--set-mvm-limitation <1-100%>`; compiler `frequency` + `mvm_utilization_limit` `[DOC]`.
 - **Specs:** 15 TOPS/W INT8; Metis 1-chip card ~8–15 W typical; M.2 Max ~6.5 W avg; 4-chip PCIe 30–58 W `[DOC]`/vendor.
 
-**Implication for the simulator's energy layer (box ⑤):** energy must be **spec-based + activity-factor estimated**, not measured — this matches `overall.md` M7 and Out-of-scope ("Energy as measurement" excluded). The only trustworthy on-silicon energy lever is whole-board INA delta on M.2 Max, or a wall-plug/rail delta against a fixed workload loop elsewhere.
+**Implication for the simulator's energy layer (box ⑤):** energy must be **spec-based + activity-factor estimated**, not measured — this matches `OVERALL.md` M7 and Out-of-scope ("Energy as measurement" excluded). The only trustworthy on-silicon energy lever is whole-board INA delta on M.2 Max, or a wall-plug/rail delta against a fixed workload loop elsewhere.
 
 ---
 
@@ -286,7 +286,7 @@ Frozen fields (e.g. `aipu_cores_max`) reject overrides at validation (~7–10 s 
 
 ## 10. Per-unit characterization recipes → Phase 0 output files
 
-Maps the toolchain above to the `measurements/` files `overall.md` Phase 0 needs. **All ground-truth lives in `measurements/`; this table is the "how".**
+Maps the toolchain above to the `measurements/` files `OVERALL.md` Phase 0 needs. **All ground-truth lives in `measurements/`; this table is the "how".**
 
 | Unit / target | Tool & method | Sweep | Output |
 |---|---|---|---|

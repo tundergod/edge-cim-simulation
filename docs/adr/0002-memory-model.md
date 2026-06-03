@@ -11,4 +11,4 @@ Memory access is the crux (decode memory wall). The subfield standard backend is
 Representative-iteration preserves full memory fidelity (every simulated token is full cacheline-level); a literal full-run would force coarser (tile) granularity and *lower* fidelity.
 
 ## Consequences
-M2 budgets Ramulator2 LPDDR5/PIM config + Python co-sim (overall.md risk #6). The per-token-smoothness assumption is validated once against silicon. The swappable interface is also what enables the L4 validate-then-swap bridging (ADR-0006).
+M2 budgets Ramulator2 LPDDR5/PIM config + Python co-sim (OVERALL.md risk #6). The per-token-smoothness assumption is validated once against silicon. The swappable interface is also what enables the L4 validate-then-swap bridging (ADR-0006).

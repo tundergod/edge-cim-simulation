@@ -1,12 +1,12 @@
 # CLAUDE.md
 
-Guidance for any agent working in this repo. Read this first, then [overall.md](overall.md) (project brief + phases) and [docs/voyager-sdk.md](docs/voyager-sdk.md) (Metis/SDK measurement reference).
+Guidance for any agent working in this repo. Read this first, then [OVERALL.md](OVERALL.md) (project brief + phases) and [docs/voyager-sdk.md](docs/voyager-sdk.md) (Metis/SDK measurement reference).
 
 ## Orientation
 
-- **What this is:** a real-silicon-calibrated simulator of LLM inference on a CIM-enabled heterogeneous mobile SoC, calibrated against two Axelera Metis boards. Goal, phases, modules (M1–M8), validation layers (L1–L6): [overall.md](overall.md).
-- **Authoritative docs (don't re-derive):** [overall.md](overall.md) = plan & phases (preliminary — revise freely). [docs/voyager-sdk.md](docs/voyager-sdk.md) = how to measure Metis (tagged `[DOC]`/`[FORUM]`/`[MEASURED]`/`[GAP]`). [papers/](papers/) = literature + real-silicon notes (16 curated). [CONTEXT.md](CONTEXT.md) = domain glossary.
-- **Hard scope:** dense Llama-3 / Qwen-2.5, 1B–8B, INT8, batch=1, prefill+decode. See `overall.md` § 範圍外 for what's excluded.
+- **What this is:** a real-silicon-calibrated simulator of LLM inference on a CIM-enabled heterogeneous mobile SoC, calibrated against two Axelera Metis boards. Goal, phases, modules (M1–M8), validation layers (L1–L6): [OVERALL.md](OVERALL.md).
+- **Authoritative docs (don't re-derive):** [OVERALL.md](OVERALL.md) = plan & phases (preliminary — revise freely). [docs/voyager-sdk.md](docs/voyager-sdk.md) = how to measure Metis (tagged `[DOC]`/`[FORUM]`/`[MEASURED]`/`[GAP]`). [papers/](papers/) = literature + real-silicon notes (16 curated). [CONTEXT.md](CONTEXT.md) = domain glossary.
+- **Hard scope:** dense Llama-3 / Qwen-2.5, 1B–8B, INT8, batch=1, prefill+decode. See `OVERALL.md` § 範圍外 for what's excluded.
 - **Secrets:** never commit tokens/keys. The HF token lives in the user's environment (`HF_TOKEN`), not in the repo.
 
 ## How to work (Karpathy guidelines)
@@ -27,10 +27,10 @@ This repo has several process-skill sources: **this file's per-phase workflow** 
 
 ## Per-phase workflow (required)
 
-Phases are defined in [overall.md](overall.md) § 階段總覽 (Phase 0.1, 0.2, 0.3, 1, 2). **Every phase follows this loop. Do not skip the gates.**
+Phases are defined in [OVERALL.md](OVERALL.md) § 階段總覽 (Phase 0.1, 0.2, 0.3, 0.4, 1, 2). **Every phase follows this loop. Do not skip the gates.**
 
 0. **Branch.** Before starting a phase, create branch `phase-<id>` off `main`. The phase's plan + code all live on it.
-1. **Write the plan** → `plans/phase-<id>.md` (e.g. `plans/phase-0.1.md`). **Action-only**: list the steps to take, files to create/edit, commands to run, outputs to produce, and a one-line verification check per step. **No purpose, motivation, background, or rationale** — those live in `overall.md`.
+1. **Write the plan** → `plans/phase-<id>.md` (e.g. `plans/phase-0.1.md`). **Action-only**: list the steps to take, files to create/edit, commands to run, outputs to produce, and a one-line verification check per step. **No purpose, motivation, background, or rationale** — those live in `OVERALL.md`.
 2. **Plan review by subagent.** Spawn a subagent to review the plan. Apply its findings, re-review, and **loop (fix → review) until the reviewer reports no issues.**
 3. **User approval gate.** Present the clean plan to the user. **Wait for explicit approval. Do not start executing before the user approves.**
 4. **Execute** the phase exactly per the approved plan (on the phase branch).

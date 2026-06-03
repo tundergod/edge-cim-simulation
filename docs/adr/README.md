@@ -1,6 +1,6 @@
 # Architecture Decision Records
 
-Each ADR records **one** significant design decision: `context` (problem + forces) → `decision` → `consequences`, plus a `status`. ADRs are the "why we decided X" log; `overall.md` is the "what to build" brief.
+Each ADR records **one** significant design decision: `context` (problem + forces) → `decision` → `consequences`, plus a `status`. ADRs are the "why we decided X" log; `OVERALL.md` is the "what to build" brief.
 
 ## Convention
 

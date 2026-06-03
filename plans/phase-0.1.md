@@ -19,7 +19,7 @@ op inventory 抽 decode op 時的代表點以 `kv_len ∈ {128,512,1024}` 表示
 
 5. 寫 `tools/trace_export/workload_stats.py` → 載入 4 個 dataset，用各模型 tokenizer 算 prefill/decode 長度 mean/median/p95。decode 欄位定義：**ShareGPT** = 取首個 user→assistant 配對（user 串為 prefill、assistant turn 為 decode）；**GSM8K** = `answer`（含 CoT 與 `#### N`）；**LongBench-TriviaQA** = `answers`；**HumanEval** = `canonical_solution`。輸出 `measurements/op_inventory/workload_lengths.json`。→ verify：4 任務 × 4 模型統計齊全；GSM8K ≈ (296,340)、LongBench-TriviaQA ≈ (1787,5) 與 HeteroInfer Table 4 同數量級。
 
-6. 產生代表性 traces → 用 step 2 的 tracer，對每個模型 ×（Layer A 任務的平均長度點 + Layer B 掃描點）產生有序 op×shape 流，輸出 `traces/{model}_{label}.json`（Layer B：label = `{prefill}x{decode}`，對齊 overall.md；Layer A：label = 任務名）。→ verify：每個目標 (model, point) 都有一個非空 trace；隨機抽一條，其 op×shape 與該模型的 op_inventory 一致。
+6. 產生代表性 traces → 用 step 2 的 tracer，對每個模型 ×（Layer A 任務的平均長度點 + Layer B 掃描點）產生有序 op×shape 流，輸出 `traces/{model}_{label}.json`（Layer B：label = `{prefill}x{decode}`，對齊 OVERALL.md；Layer A：label = 任務名）。→ verify：每個目標 (model, point) 都有一個非空 trace；隨機抽一條，其 op×shape 與該模型的 op_inventory 一致。
 
 7. 匯出 Phase 0.2 掃描矩陣 → 從所有 op_inventory 抽出去重後的 `(op_type, shape, 候選 precision)` 集合，輸出 `measurements/op_inventory/sweep_matrix.json`。→ verify：sweep_matrix 非空、已去重，且涵蓋 matmul / attention(QK^T,S·V) / norm / rope / elementwise 各類。
 
