@@ -35,6 +35,11 @@ def _shapes(xs):
     return out
 
 
+def _in_shapes(args, kwargs):
+    # positional + kwargs tensor args (issue #3: don't silently drop kwargs operands)
+    return _shapes(args) + _shapes(kwargs.values())
+
+
 def _out_shape(rv):
     if isinstance(rv, torch.Tensor):
         return list(rv.shape)
@@ -53,7 +58,7 @@ class Recorder(TorchDispatchMode):
         self.records.append(
             {
                 "op": str(func),
-                "in_shapes": _shapes(args),
+                "in_shapes": _in_shapes(args, kwargs),
                 "out_shape": _out_shape(rv),
             }
         )

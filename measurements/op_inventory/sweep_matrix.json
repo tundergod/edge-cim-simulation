@@ -6,10 +6,10 @@
   "softmax": 21,
   "norm": 45,
   "rope": 113,
-  "elementwise": 230,
+  "elementwise": 225,
   "embedding": 20
  },
- "total": 597,
+ "total": 592,
  "matrix": {
   "matmul": [
    {
@@ -5598,36 +5598,6 @@
     ]
    },
    {
-    "op": "aten.sub.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1
-    ]
-   },
-   {
-    "op": "aten.sub.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128
-     ],
-     [
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     128
-    ]
-   },
-   {
     "op": "aten.mul.Tensor",
     "in_shapes": [
      [
@@ -5890,23 +5860,6 @@
      ]
     ],
     "out_shape": [
-     256
-    ]
-   },
-   {
-    "op": "aten.sub.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256
-     ],
-     [
-      1,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
      256
     ]
    },
@@ -6177,23 +6130,6 @@
     ]
    },
    {
-    "op": "aten.sub.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512
-     ],
-     [
-      1,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     512
-    ]
-   },
-   {
     "op": "aten.mul.Tensor",
     "in_shapes": [
      [
@@ -6456,23 +6392,6 @@
      ]
     ],
     "out_shape": [
-     1024
-    ]
-   },
-   {
-    "op": "aten.sub.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024
-     ],
-     [
-      1,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
      1024
     ]
    },

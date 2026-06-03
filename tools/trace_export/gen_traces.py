@@ -61,7 +61,11 @@ def main():
                 K = min(P + max(D // 2, 1), CAP)
                 prefill, decode = trace_point(model, P, K)
                 payload = {"model": repo, "task": task, "prefill_len": P, "kv_len": K, "cap": CAP,
-                           "note": "compact [op,in_shapes,out_shape]; capped to CAP; "
+                           # issue #4: prefill_len = mean (avg-case compute); record median too
+                           # since some tasks (ShareGPT) are right-skewed (mean >> median).
+                           "prefill_stat": "mean",
+                           "prefill_mean": m["prefill"]["mean"], "prefill_median": m["prefill"]["median"],
+                           "note": "compact [op,in_shapes,out_shape]; prefill_len=mean (capped to CAP); "
                                    "long-context/full traces on-demand in Phase 2",
                            "prefill_ops": prefill, "decode_ops": decode}
                 # gzip: traces are ~98% redundant layer-replicated ops (~12MB raw -> ~0.2MB)

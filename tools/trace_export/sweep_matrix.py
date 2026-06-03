@@ -23,7 +23,9 @@ CATEGORY = {
     "softmax": {"aten._softmax.default"},
     "norm": {"aten.rsqrt.default", "aten.mean.dim", "aten.pow.Tensor_Scalar"},
     "rope": {"aten.cos.default", "aten.sin.default", "aten.neg.default", "aten.cat.default"},
-    "elementwise": {"aten.mul.Tensor", "aten.add.Tensor", "aten.silu.default", "aten.sub.Tensor"},
+    # sub is causal-mask/position construction (host-side) -> excluded, matching the
+    # whitelist in expected_ops.py (issue #2)
+    "elementwise": {"aten.mul.Tensor", "aten.add.Tensor", "aten.silu.default"},
     "embedding": {"aten.embedding.default"},
 }
 OP2CAT = {op: cat for cat, ops in CATEGORY.items() for op in ops}

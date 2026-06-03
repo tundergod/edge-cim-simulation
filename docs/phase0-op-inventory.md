@@ -53,7 +53,7 @@ Op-inventory decode traced at `kv_len ∈ {128,512,1024}` (ADR-0002). Silicon an
 
 ## Sweep matrix (→ Phase 0.2)
 
-`sweep_matrix.json`: **597** distinct `(op, in_shapes, out_shape)` signatures — matmul 105, attention 63, softmax 21, norm 45, rope 113, elementwise 230, embedding 20. Housekeeping excluded. This is the op×shape set Phase 0.2 micro-benchmarks per unit.
+`sweep_matrix.json`: **592** distinct `(op, in_shapes, out_shape)` signatures — matmul 105, attention 63, softmax 21, norm 45, rope 113, elementwise 225, embedding 20. Housekeeping excluded (incl. host-side `sub`/causal-mask, issue #2). This is the op×shape set Phase 0.2 micro-benchmarks per unit.
 
 ## Deviations from plan
 
