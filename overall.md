@@ -99,6 +99,8 @@
 | **Phase 2** | 模擬器實作（整合）：把校好的 component 整合成端到端 event-driven 模擬器，跑完整 prefill+decode，做 L4/L6 端到端驗證、L5 敏感度、混合精度。 | 完整模擬器 |
 | **（深入討論）** | 完成上述後，針對 Phase 0/1 做更深入的架構與實作確認（見文末檢查點）。 | 確認方向正確再大量實作 |
 
+> **核心設計決策已定案，見 [docs/adr/](docs/adr/)**：ADR-0001 引擎 fidelity（輕量 event-driven + 頻寬競爭）· 0002 記憶體（Ramulator2 + 代表性 iteration，可替換）· 0003 scheduler（靜態優先、op/tensor 粒度、validation-first）· 0004 混合精度 · 0005 能耗 · 0006 驗證合約/L4 橋接/外推 · 0007 op inventory 抽取。
+
 ---
 
 ## Phase 0.1 — 生成 trace 與 op inventory
@@ -110,11 +112,11 @@
 > **Q：要在 0.1 收集「所有」workload 的 trace 嗎？不必。** Phase 0.1 只產出 (a) 每模型的 **op inventory**（op 種類 + 形狀參數化，小而有界）、(b) Phase 0.2 要量的 **(op, shape, precision) 掃描矩陣**、(c) 一組**代表性 traces**（每個 (model, task) 在資料集平均長度 + Layer B 掃描點各一條，用來驗證 M5 並描出端到端）。**完整、逐 prompt 的 trace 既 deterministic 又龐大**，由 M5 在 **Phase 2 按需生成**，不在 0.1 全部物化。
 
 做法：
-- 對每個目標模型（Llama-3.2-1B/3B/8B、Qwen-2.5-7B）做 `torch.onnx.export` 或追蹤一次 prefill + 一次 decode step。
+- 對每個目標模型（Llama-3.2-1B/3B/8B、Qwen-2.5-7B）用 **PyTorch runtime tracer（meta/FakeTensor + dispatch/FX hook）** 在 dev 機（這台 Mac，CPU）追蹤一次 prefill + 幾個 KV 長度的 decode step——shape 會傳播但不載權重、不需 GPU、不需 Metis 板；並以**架構解析式列舉**交叉檢查完整性。ONNX export 僅為 ONNXim NPU 路徑的次要產物、有 fallback。（見 ADR-0007）
 - 列舉「每個 token 實際執行」的 distinct op 類型與張量形狀分佈（prefill vs decode 分開）。預期集合：QKV/O/FFN 的 MatMul/GEMV、attention 的 QK^T 與 S·V、RMSNorm、RoPE、SwiGLU/SiLU、Softmax、residual add、embedding gather、sampling。
 - 套上 Layer A/B 的 (prefill, decode) 長度，產生完整 op×shape 流（= Phase 0.2 micro-benchmark 的掃描矩陣，取代憑經驗挑的 hidden/seq 值；也是 Phase 2 模擬器的輸入 trace）。
 - 來源是**開放的 HF 模型匯出**（workload 定義），不是 Metis 封閉預編譯成品（其 op DAG 不可見）；封閉成品只提供 L4 端到端 tok/s 錨點。
-- 風險：HF ONNX export 雜亂（見 risk #5），需先驗證 export 是否涵蓋 decode 的動態形狀。
+- 風險已降低：op inventory 用 runtime tracer 不靠 ONNX export（ADR-0007）；ONNX 亂象只影響次要的 ONNXim NPU 路徑、且有 fallback（見 risk #5）。
 - **產出**：`measurements/op_inventory/{model}.json`（op 類型、形狀分佈、prefill/decode 標記）、`traces/{model}_{prefill}x{decode}.json` + `docs/phase0-op-inventory.md`。完成後即可定出 Phase 0.2 掃描矩陣。
 
 ---
@@ -243,7 +245,7 @@ while not all_modules_passed:
 
 ```
 ① Workload generator (M5)
-   HuggingFace model → torch.onnx.export → per-token op DAG
+   HuggingFace model → PyTorch runtime tracer（meta/FakeTensor）→ per-token op DAG
    Llama-3 / Qwen-2.5 1B–8B（13B stretch）；prefill+decode；batch=1；對齊 ONNXim trace
             │ op stream + tensor metadata
             ▼
@@ -345,7 +347,7 @@ git add measurements/aetina/ && git commit -m "char: new shapes" && git push
    若否：把分析 append 到 log.jsonl，提假設，修改，重試（每 session 上限 20 次）。
 ## Module dependency graph
 M1(CIM tile)←metis_alpha_*  ·  M2(memory)←metis_alpha_pcie+Ramulator2  ·  M3(event engine)←M1+M2
-M4(NPU/GPU/CPU)←rknpu2+mali+cpu_ops  ·  M5(workload)←HF+torch.onnx.export  ·  M6(scheduler)←M3+M4+M5  ·  M7(energy)←M1..M6
+M4(NPU/GPU/CPU)←rknpu2+mali+cpu_ops  ·  M5(workload)←HF runtime tracer(meta/FakeTensor)  ·  M6(scheduler)←M3+M4+M5  ·  M7(energy)←M1..M6
 ## End-of-session：更新 HANDOFF.md（模組、最後狀態、blockers、下一步）。
 ```
 
@@ -371,18 +373,18 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 | M2 | Memory hierarchy | Ramulator2 LPDDR5 + Metis Alpha PCIe DMA | PCIe/DMA 以擬合方程式表示；記憶體容量為參數；TLB-miss penalty 參數化（預設 0） |
 | M3 | Event-driven engine | M1 + M2 | Python event loop；把 op stream 串過各單元 + 記憶體 |
 | M4 | NPU / GPU / CPU traces | RKNPU2 matmul、Mali OpenCL matmul、CPU A76 | 各單元擬合方程式；NPU = ONNXim fork + 方程式/lookup override |
-| M5 | LLM workload generator | HF Llama-3 / Qwen-2.5 → torch.onnx.export → per-token op DAG | 前半段即 Phase 0.1 op inventory + trace 生成；trace 格式對齊 ONNXim 輸入 |
+| M5 | LLM workload generator | HF Llama-3 / Qwen-2.5 → PyTorch runtime tracer（meta/FakeTensor）→ per-token op DAG | 前半段即 Phase 0.1 op inventory + trace 生成（ADR-0007）；給 ONNXim 的 ONNX 為次要產物、有 fallback |
 | M6 | Scheduler / Mapper | M3 + M4 + M5 | Plugin：op→unit + 記憶體 + dataflow + pipeline + 精度邊界插入。**貢獻在此。** |
 | M7 | Energy estimation | 廠商規格（Metis 15 TOPS/W）、ARM datasheet、INA-delta 或 tech-node | 規格 + activity-factor 估算 |
 | **M8** | **Thermal（選用）** | Phase 0.2 熱量測 | **事後附加層**：從活動/功耗 timeline 估溫度；v1 不做閉環 throttling；Phase 0.2 後才加入 |
 
 ## 開放風險
 
-1. **NeuroSim 整合成本超出估計** — M1 退路：直接用 Metis Alpha 量測（Phase 1 擬合方程式，必要時退回 lookup）。NeuroSim 由必需降為選用；驗證方法論的引用（NeuroSim <1% 晶片誤差）即使不用其程式碼仍成立。
+1. **NeuroSim 整合成本超出估計** — M1 退路：直接用 Metis Alpha 量測（Phase 1 擬合方程式，必要時退回 lookup）。NeuroSim 由必需降為選用；其方法論引用（對 40nm **RRAM**-CIM macro **校準後** <1% 晶片誤差）即使不用其程式碼仍成立——但注意 Metis 是 **digital SRAM-CIM**，與 analog RRAM 不同，故 NeuroSim 僅作「CIM 能耗/延遲**模型形式**的交叉檢查」，非我們係數的 silicon-grade 來源。
 2. **橋接假設：Metis Card on-card DRAM ≠ 模擬器的 host-MMIO 拓樸** — L4 錨定「CIM + on-card-DRAM」；模擬器以 host-LPDDR + PCIe 替代。需做兩種拓樸下的敏感度子實驗。
 3. **HPIM 搶先在頂會發表**（最接近競品，[筆記](papers/pim-llm-accelerators/hpim-arxiv2025.md)）。即使 HPIM 先落地，我們的差異化（mobile-SoC、真實晶片校準、混合精度、特性量測驅動分工）仍成立。
 4. **agent 自主性在模擬器規模未經驗證** — 第一次 M1 迭代才是真正的考驗。緩解：若 agent 多個 session 仍不收斂，退回人工開發。
-5. **HuggingFace ONNX export 品質** — `torch.onnx.export(Llama-3 / Qwen-2.5)` 出了名地亂（custom op、dynamic shape）。M5 可能需要人工後處理或換工具。依賴前先驗證。
+5. **HuggingFace ONNX export 品質（已大幅降風險，見 ADR-0007）** — op inventory 改用 PyTorch runtime tracer（meta/FakeTensor），不靠 `torch.onnx.export`，故主路徑不受其 custom-op/dynamic-shape 亂象影響。ONNX export 只剩 ONNXim NPU 路徑會用到，且有 fallback（從 traced graph 組 ONNXim 輸入 / M4 lookup-override）。
 6. **Ramulator2 LPDDR5 + PIM-like 延伸覆蓋度** — 我們的 LPDDR5-PIM-like 用法非 Ramulator2 預設；可能需自寫 plug-in。M2 要預留。
 7. **ONNXim 對 RKNPU2 的契合度** — ONNXim 建模通用 systolic NPU；RKNPU2 有 Rockchip 特有行為（op-mix 敏感、depthwise+Swish 弱項 — Step-1 資料）。Plan B：lookup-table override（已在 M4 設計內）。
 8. **Aetina 的 SSH 可用性** — 整個 sim 開發期間須可達。若離線，標記 blocker 並用快取量測繼續。
