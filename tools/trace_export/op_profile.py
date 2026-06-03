@@ -12,9 +12,9 @@ Design (see plans/phase-0.2.md):
   inventory points (lo, hi); a differing scalar fits value = a*L + b (integers).
   Invariant scalars (incl. head_dim that coincidentally equals a seq point) stay
   fixed because they are equal across the two well-separated points.
-- VALIDATION: templates built from {128,1024} must reproduce the held-out
-  inventory points {256,512} (prefill) and {512} (decode) EXACTLY (sig+count),
-  for every model. main() runs this and refuses to emit on mismatch.
+- VALIDATION: templates built from the anchors (prefill 256/1024, decode 512/1024)
+  must reproduce the held-out inventory points (prefill 128/512, decode 128) EXACTLY
+  (sig+count), for every model. main() runs this and refuses to emit on mismatch.
 
 Run: ./.venv/bin/python tools/trace_export/op_profile.py            # self-validate
      (importable: build_model(model) -> profile(P, D))
@@ -286,7 +286,7 @@ def main():
             cats[r["category"]] = cats.get(r["category"], 0) + 1
         print(f"{m}: templates pre={len(M.pre)} dec={len(M.dec)}  "
               f"held-out validation PASS  | profile(128,4) rows={len(rows)} cats={cats}")
-    print("\nALL MODELS: held-out (256/512 prefill, 512 decode) reproduced exactly.")
+    print("\nALL MODELS: held-out (prefill 128/512, decode 128) reproduced exactly.")
 
 
 if __name__ == "__main__":

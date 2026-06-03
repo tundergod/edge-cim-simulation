@@ -52,6 +52,7 @@ def save(fig, path_noext, dpi=600):
     from pathlib import Path
     Path(path_noext).parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(f"{path_noext}.png", dpi=dpi, bbox_inches="tight")
-    fig.savefig(f"{path_noext}.pdf", bbox_inches="tight")
-    fig.savefig(f"{path_noext}.svg", bbox_inches="tight")
+    # suppress the embedded creation timestamp so vector exports are byte-stable across regens
+    fig.savefig(f"{path_noext}.pdf", bbox_inches="tight", metadata={"CreationDate": None})
+    fig.savefig(f"{path_noext}.svg", bbox_inches="tight", metadata={"Date": None})
     plt.close(fig)

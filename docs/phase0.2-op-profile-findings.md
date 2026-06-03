@@ -34,7 +34,7 @@ they are the predicted side of the roofline.
 ## Headline findings
 
 **1. Weight-stationary matmul dominates compute in every workload.** matmul is ≥0.86 of
-prefill FLOPs and ≥0.58 of decode FLOPs across all 16 (model, task) cells; for the four
+prefill FLOPs and ≥0.575 of decode FLOPs across all 16 (model, task) cells; for the four
 short/medium tasks it is ≥0.99 of both. This is the structural reason a **CIM-centric**
 design — which excels precisely at weight-stationary GEMM/GEMV — is well-matched to LLM
 inference, with the non-matmul remainder offloaded.
