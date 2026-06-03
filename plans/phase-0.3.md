@@ -7,6 +7,7 @@
 **每個 op 量測重複**：warmup 次數丟棄 → N 次 timed iteration × cold-start 重複；**報 median + p95 + CoV（非裸 average，抗 jitter；median 為主值）**，N 由 Stage-0 CoV 決定（範本 `cold_starts=3, iterations_per_run=300`）。
 **HeteroInfer 特性圖對應**：A5(Mali)→Fig 1（TFLOPS vs tensor-size）；A4(RKNPU2)→Fig 3（stage 階梯）+ Fig 4（order/shape 敏感度）；A3(contention)→Fig 5（single vs concurrent 總頻寬）。圖在 Phase 0.3 findings 繪出。
 **CIM 矩陣原語 = 1×1 conv proxy**（已驗證 M=1 GEMV 與 M>1 prefill 皆可編：8B QKV `[128,4096]×[4096,4096]` 編譯 52.9 s、EXIT=0；raw matmul 編不過）。
+**量測優先序（Phase 0.2 profile）+ CIM-deep 主軸（user 定 A+C）**：fine-sweep 預算給 **lm_head / gate-up / down GEMV**（decode+prefill 雙佔 count×FLOPs/bytes 之首）+ **kv_proj 窄-N（GQA exemplar）**；decode GEMV(M=1) 皆 on-grid（measured=true）；唯一要緊的 off-grid 外推 = **LongBench prefill M≈11.8k（grid 上限 1024 的 11×）** → 加 M∈{2048,4096} spot-anchor 驗 roofline 線性，不全展開。kv_cache（decode bytes 22–28%）= 純頻寬 op → A2/A3。**CIM 是論文主軸**：A1d 對 CIM 做 HeteroInfer-風格深掃 + CIM 限制軸（A）；C4 組合式 attention 估計（C）；C5 micro→end-to-end 兩支柱連結。
 
 ## A. Machine 1 — aetina
 
@@ -19,6 +20,15 @@ A1. CIM 矩陣（matmul + attention）→ 寫 `characterization/aetina/run_metis
   - 風險（execution 早期先 smoke-test）：lm_head 形狀 N=128256（out-channels 極大）是 conv-proxy 未測極端，可能壓垮/OOM 編譯器；若失敗則沿 out-channel 分塊（tile）量測再分析組合。已驗證上界為 N=4096。
   - 輸出 `measurements/aetina/metis_alpha_matmul.json`；conv-proxy↔matmul 對應 + bias/head 處理寫 `metis_alpha_cnn_proxy.json`。
   → verify：每 matmul 形狀 + 每 attention 單-head 形狀都有 dev latency；l2/ddr 兩組齊；抽一筆 dev FPS>0。
+
+A1d. **CIM 深度特性（A 主軸；conv-proxy 忠實域；焦點 = Phase 0.2 主導 op）** → 擴充 `run_metis_cim.py`，焦點 = lm_head / gate-up / down GEMV（×4 模型，dims H∈{2048,3072,3584,4096}、F∈{8192,8192,14336,18944}、V∈{128256,152064}）+ kv_proj 窄-N（kv_w∈{512,1024}）：
+  - **A1d.1 roofline-knee**：FFN/lm_head/q-o 三族在 decode(M=1) + grid prefill M 掃，記 dev FPS→有效 GB/s 與 GFLOP/s。→ verify：有效吞吐 vs (K·N bytes) 曲線顯 memory→compute knee；M=1 點落 memory-bound(intensity≈2) 端。
+  - **A1d.2 channel-64 階梯**：M=1、K=H、N 由 64 到 F 每 64 一步（+ 幾個 off-64 如 512±32 確認 SDK pad-up，channel%64==0，voyager-sdk §3）。→ verify：latency-vs-N 階梯、risers 在 64 倍數；N=512(kv_w) 低利用 vs N=14336。
+  - **A1d.3 (M,K,N) aspect 敏感度**：等 MAC 不同長寬（down [F→H] vs gate/up [H→F] vs q/o [H→H]；decode M=1 vs prefill M∈{128,1024}）。→ verify：等 MAC latency 不同 → 量化 aspect 敏感（CIM 版 Fig 4）。
+  - **A1d.4 l2 vs ddr 殘留**（每 A1d.1 shape 兩編）：標 L2-spill 門檻（gate/up [4096×14336]≈59 MB > 32 MB L2 → 強制 DDR；1B kv/q 合身）。**Alpha 無 on-card DRAM，"ddr"=host LPDDR over PCIe，l2/ddr gap 高估 production card（其真 on-card LPDDR ~24 GB/s）→ 只取殘留「敏感形狀」，絕對值不外推到 production**。→ verify：每 shape l2/ddr dev-latency 齊；l2 失效 byte 門檻 ≈32 MB L2。
+  - **A1d.5 per-call PCIe/DMA fixed-overhead**：用 A2 4-way toggle 跨 3+ 計算量級（kv_proj N=512 → lm_head N≈128k）線性擬合 `latency = fixed + bytes/BW`。→ verify：intercept(固定 floor ms) + slope(有效 GB/s,對照 ~3.9) 抽出；floor 跨 shape 一致。
+  - **A1d.6 GQA 窄-N 浪費**：kv_proj [H→512]/[H→1024] vs 寬投影。→ verify：N=512 crossbar 利用率明顯低於 N≥4096。
+  - 輸出併入 `metis_alpha_matmul.json` 的 `cim_deep` 區段。**lm_head N≈128k/152k 為 OOM 最高風險（A1 已標）→ 先 smoke-test，失敗則 out-channel 64-對齊分塊量再加總（分塊本身即 A1d.2 資料）。**
 
 A2. PCIe / DMA → 寫 `run_metis_pcie.py`：對一個代表性 compiled model 跑 `axrunmodel`，`--double-buffer/--no-double-buffer` × `--input-dmabuf/--no-input-dmabuf` 四組合，記 Device vs System FPS 差（= 傳輸成本）。輸出 `measurements/aetina/metis_alpha_pcie.json`。→ verify：四組 latency 齊；推得 PCIe 有效 BW（對照 ~3.9 GB/s Gen3×4）。
 
@@ -54,10 +64,12 @@ B3. 寫 `characterization/metis_card/README.md`（harness 呼叫說明）。→ 
 
 C1. 寫 `docs/phase0-aetina-findings.md` + `docs/phase0-metis-card-findings.md`：各單元 latency 摘要、l2 vs ddr、contention 拐點、sweep_matrix 形狀覆蓋率、SDK 意外；**繪 HeteroInfer 風格圖**：Fig 1（Mali TFLOPS-vs-size）、Fig 3/4（RKNPU2 stage / order-shape）、Fig 5（contention 總頻寬）+ 各單元 roofline。→ verify：每節有內容；四張圖的底層資料齊。
 C2. 寫 `docs/phase0-L1-L6-mapping.md`：哪個 measurement 檔餵哪個 L1–L6 驗證列（L6 = 重用 Step-1，不重量測）。→ verify：L1–L6 每列都有來源檔。
-C3. commit → `measurements/aetina/*` + `measurements/metis_card/*` + `characterization/*` + `docs/phase0-*`。→ verify：`git ls-files` 列出，tree 乾淨。
+C4. **組合式 CIM attention 估計（C；analysis，feeds off A1+A2/A3）** → `T_attn_CIM(kv) = T_convproxy_floor(kv) + T_kvreload(kv)`，`T_kvreload = kv_bytes(kv)/BW_eff + n_dma·fixed_overhead`，`kv_bytes = 2·kv·kv_heads·head_dim·1B`；`BW_eff` 取 A2(PCIe)/A3(contended)、`fixed_overhead` 取 A1d.5。在 profile 真實 kv（ShareGPT≈530、LongBench≈11.8k）+ on-grid kv∈{129,513,1025} 求值。→ verify：每 kv 同報 floor(A1) 與 composed(floor+reload)，reload 份額隨 kv 升；標「CIM attention penalty」並對照 A4/A5 原生 attention 更快（佐證 offload）。輸出 `measurements/aetina/cim_attention_composed.json`。
+C5. **兩根支柱連結（micro→end-to-end；L1→L4）** → 由 Alpha op latency × Phase 0.2 counts 預測 production card decode tok/s：`t_step = Σ_proj count·lat_CIM(proj) + Σ_attn count·T_attn_CIM(kv) + Σ_support count·lat_support + overhead`，`tok_s_pred = 1/t_step`（D steps 平均）。對 llama-3.2-1b/3b、llama-3.1-8b（B1 slug、1c/4c、ctx 1024）。**接受帶 ±25%**（decode 近純 weight-streaming、~24.2 GB/s、r²=0.997）；sanity floor `tok_s_pred ≈ 24.2 GB/s ÷ weight_bytes_per_token` 應近 B 的 ~11–15 tok/s(1B)。**bandwidth 項用 production card ~24 GB/s（B 量）、Alpha 只供相對 op 成本結構**。→ verify：三模型 `|pred−meas|/meas ≤ 0.25`；隱含 BW 對上 B 的 ~24 GB/s。輸出 `measurements/metis_card/twopillar_prediction.json`。
+C6. commit → `measurements/aetina/*` + `measurements/metis_card/*` + `characterization/*` + `docs/phase0-*`。→ verify：`git ls-files` 列出，tree 乾淨。
 
 ## Outputs（對齊 OVERALL.md §Phase 0.3 完成標準）
-- `measurements/aetina/{metis_alpha_matmul, metis_alpha_cnn_proxy, metis_alpha_pcie, rknpu2_matmul, mali_matmul, cpu_ops, variance_profile}.json`
-- `measurements/metis_card/{vendor_llm_int8, variance_profile}.json`
+- `measurements/aetina/{metis_alpha_matmul（含 cim_deep 區段）, metis_alpha_cnn_proxy, metis_alpha_pcie, rknpu2_matmul, mali_matmul, cpu_ops, cim_attention_composed, variance_profile}.json`
+- `measurements/metis_card/{vendor_llm_int8, twopillar_prediction, variance_profile}.json`
 - `characterization/aetina/{run_metis_cim.py, run_metis_pcie.py, run_contention.py, run_rknpu2_matmul.py, run_mali_matmul/, run_cpu_ops/, README.md}`、`characterization/metis_card/{run_vendor_llm.py, README.md}`
 - `docs/phase0-aetina-findings.md`、`docs/phase0-metis-card-findings.md`、`docs/phase0-L1-L6-mapping.md`
