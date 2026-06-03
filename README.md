@@ -22,7 +22,7 @@
 
 ## 狀態
 
-Bootstrap 階段。文獻語料、SDK 參考、專案綱要已就位。下一步：Phase 0 真實板特性量測（見 [overall.md](overall.md) § Phase 0）→ 接著 M1–M7 模擬器建構。`overall.md` 所述的 `simulator/`、`measurements/`、`characterization/`、`validation/`、`tools/`、`docs/` 目錄為規劃版面，待工作開始時建立。
+Bootstrap 階段。文獻語料、SDK 參考、專案綱要已就位。階段規劃：**Phase 0.1**（真實板特性量測，不含溫度；先做 LLM op inventory）→ **Phase 1**（每個 component 擬合方程式 + 驗證）→ **Phase 2**（模擬器整合）；**Phase 0.2**（溫度量測）與熱模組 M8 可後續並行加入。詳見 [overall.md](overall.md)。`overall.md` 所述的 `simulator/`、`measurements/`、`characterization/`、`validation/`、`tools/`、`docs/` 目錄為規劃版面，待工作開始時建立。
 
 ## 主要外部參考
 

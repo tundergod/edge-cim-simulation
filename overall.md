@@ -3,7 +3,7 @@
 > **狀態：初步專案綱要。** 以下的計畫、模組拆分與架構皆為*初步*設計，並非定案——可隨特性量測資料與實作現實自由修改。固定不變的只有：**研究目標**（一個以真實晶片校準的「CIM-enabled 異質行動 SoC 上 LLM 推論」模擬器）與我們用來校準的**兩塊真實板子**。
 
 **Workload：** LLM 推論（Llama-3 + Qwen-2.5 系列，1B–8B，stretch 至 13B；prefill + decode）。
-**平台：** **模擬的** CIM-enabled 異質行動 SoC（CIM 掛在 PCIe 上，搭配 16 GB MMIO unified host memory），以真實 Metis Alpha（Aetina RKC-A02）＋量產 Metis Card 作交叉驗證。未來平台錨點：**Axelera Europa**（2026 H1 — 128 MB L2 SRAM + LPDDR5 + unified architecture，約 629 TOPS @ 45 W）。
+**平台：** **模擬的** CIM-enabled 異質行動 SoC（CIM 掛在 PCIe 上，搭配 MMIO unified host memory，**其容量為可調參數**），以真實 Metis Alpha（Aetina RKC-A02）＋量產 Metis Card 作交叉驗證。
 **貢獻：** 待特性量測後確定；預期為 **CIM-centric**——CIM 快又省電但有諸多限制，因此系統設計「先繞著 CIM 的限制走」。
 
 ---
@@ -18,7 +18,7 @@
 
 ## 問題
 
-商用的離散 CIM 加速器（Axelera Metis、Hailo-8/10、Mythic、Untether）一律以 PCIe / M.2 介面卡形式出貨。行動 SoC 則各自把 NPU + GPU + CPU 整合在共享 LPDDR 周邊。這兩者的結合——**CIM 作為異質行動 SoC 上、可存取 unified memory 的對等計算單元**——正是**架構走向**（Axelera Europa 2026 H1 已證實：128 MB L2 SRAM + LPDDR5 + 「unified architecture」+ 內建 decoder），但**文獻上幾乎沒有**在這種組合上跑 LLM 的工作。
+商用的離散 CIM 加速器（Axelera Metis、Hailo-8/10、Mythic、Untether）一律以 PCIe / M.2 介面卡形式出貨。行動 SoC 則各自把 NPU + GPU + CPU 整合在共享 LPDDR 周邊。這兩者的結合——**CIM 作為異質行動 SoC 上、可存取 unified memory 的對等計算單元**——正是**架構走向**（業界正朝「CIM/加速器 + LPDDR + unified 記憶體」整合前進），但**文獻上幾乎沒有**在這種組合上跑 LLM 的工作。
 
 相鄰的先前工作只存在於片段中（筆記見 [papers/pim-llm-accelerators/](papers/pim-llm-accelerators/)）：
 - HBM-PIM / GDDR-PIM 的 LLM 加速器（NeuPIMs、IANUS、AttAcc、CENT、HPIM、PAPI）— 伺服器級；非 mobile、非 SRAM-CIM
@@ -43,11 +43,10 @@
 
 ## 平台假設
 
-**立場：operational + descriptive。** 把「CIM-on-PCIe + MMIO unified host memory」當作模擬器既定的平台假設。
+**立場：operational + descriptive。** 把「CIM-on-PCIe + MMIO unified host memory」當作模擬器既定的平台假設，其中 **unified memory 容量是可調參數，而非固定值**。
 
 - **描述性證據：** Metis Alpha 已在 1 GB 實作 MMIO 統一（IOMMU window 把 host LPDDR4 映射成 CIM core 可見）；Voyager 已用 `dma-buf` + `cl_khr_external_memory_dma_buf` 做免拷貝 buffer 共享。
-- **前瞻錨點：** Axelera Europa（2026 H1）— 128 MB on-chip L2 SRAM、LPDDR5 256-bit @ ~200 GB/s、含 RISC-V vector cores + HEVC265 decoder 的「unified architecture」。
-- **保守容量：** 16 GB unified，足以放下 7B INT8 + KV cache + activations；低於 Axelera M.2 Max（已 16 GB on-card）。
+- **記憶體容量是參數，不是假設：** 真實平台讓我們在約 **1–16 GB** 範圍內驗證行為*趨勢*的正確性（Metis Alpha 的 1 GB IOMMU window、量產卡的 on-card DRAM）；確認趨勢無誤後，模擬器再把記憶體容量參數**往上外推**（例如 32 GB+）。模擬器介面把容量做成顯式參數，不把任何單一容量寫死。
 - **社群訊號：** Axelera 論壇確認「已知悉更大 unified memory 的需求」（但無承諾 roadmap）。注意：**現行 Metis 並無 unified host-device memory** — 這是前瞻假設，非當前能力。
 
 寫進 Method 段的橋接假設：*「CIM-tile 的計算 timing 在更換記憶體基底時不變，只有資料搬移 timing 改變。量產 Metis Card 的廠商 LLM 量測驗證了 CIM + on-card-DRAM 拓樸；我們的模擬器把 on-card DRAM 換成由 Metis Alpha 量測參數化的 host-LPDDR + PCIe 模型。」*
@@ -64,11 +63,35 @@
 | **Context 長度** | 2K 基準 + 8K stretch |
 | **Batch** | **batch=1，AIPU Mode 1**（單實例）。模擬器介面保留 `batch` hook 以利擴充。 |
 
-## Phase 0 — 真實板特性量測
+## 階段總覽
 
-**Phase 0 先在量產 Metis Card + Aetina 上跑；只有當 Phase 0 量測 commit 進 repo 後，模擬器實作才開始。** 本階段產出模擬器要驗證的所有 ground-truth 資料（下方 L1–L6），因此交叉驗證的可行性是在 *Phase 0 就確定*，而非押注在模擬器完成後。
+| 階段 | 內容 | 完成後可做什麼 |
+| --- | --- | --- |
+| **Phase 0.1** | 真實板特性量測（**不含溫度**）：先做 LLM op inventory → 各單元 micro-benchmark → variance。產出 `measurements/`。 | 即可開始 Phase 1 / Phase 2 建模擬器 |
+| **Phase 0.2** | 溫度／熱特性量測（兩平台；耗時較久）。可與 Phase 1/2 並行。 | 熱模組（M8，選用）才加入 |
+| **Phase 1** | 每個 component 的建模與驗證：對每組 micro-benchmark 擬合**方程式**（取代龐大 lookup table）；逐一驗證各 component（含非 micro-benchmark 的 M3/M5/M6/M7）準確度與需調參數。 | 得到校好的 component 模型 |
+| **Phase 2** | 模擬器實作（整合）：把校好的 component 整合成端到端 event-driven 模擬器，跑完整 prefill+decode，做 L4/L6 端到端驗證、L5 敏感度、混合精度。 | 完整模擬器 |
+| **（深入討論）** | 完成上述後，針對 Phase 0/1 做更深入的架構與實作確認（見文末檢查點）。 | 確認方向正確再大量實作 |
 
-**做法：拆解為 chip-level invariants + workload-level translations。** Phase 0 分到兩台機器、兩個獨立的 agent 交接。各機器段落自成一體（工具、目標、輸出檔、掃描矩陣）。
+---
+
+## Phase 0.1 — 真實板特性量測（不含溫度）
+
+**先在量產 Metis Card + Aetina 上跑；量測 commit 進 repo 後即可開始建模擬器。** 本階段產出模擬器要驗證的所有 ground-truth 資料（下方 L1–L6），因此交叉驗證的可行性在 *Phase 0.1 就確定*，而非押注在模擬器完成後。**所有非熱量測須在散熱受控下進行**（避免 throttling 污染——未散熱時 core 會到 106–110 °C 並降頻）；溫度本身的量測移到 Phase 0.2。
+
+**做法：拆解為 chip-level invariants + workload-level translations。** 分到兩台機器、兩個獨立的 agent 交接。各機器段落自成一體（工具、目標、輸出檔、掃描矩陣）。
+
+### Phase 0.1.0 — LLM operation inventory（量測前置；與 trace 生成共用）
+
+> **回答「我們是否已知 LLM 實際用到哪些 operation？」：尚未，且必須先知道才能正確量測。** micro-benchmark 的 op×shape 掃描矩陣應對準 LLM 真正會跑的 op 與張量形狀，而非任意挑。
+
+取得方式（**正是 M5 trace 生成的前半段**，故 op inventory 與 trace 生成是同一件事）：
+- 對每個目標模型（Llama-3.2-1B/3B/8B、Qwen-2.5-7B）做 `torch.onnx.export` 或追蹤一次 prefill + 一次 decode step。
+- 列舉「每個 token 實際執行」的 distinct op 類型與張量形狀分佈（prefill vs decode 分開）。預期集合：QKV/O/FFN 的 MatMul/GEMV、attention 的 QK^T 與 S·V、RMSNorm、RoPE、SwiGLU/SiLU、Softmax、residual add、embedding gather、sampling。
+- 這份 op×shape 清單**即定義** A/C/D/E micro-benchmark 的掃描矩陣（取代目前憑經驗挑的 hidden/seq 值）。
+- 來源是**開放的 HF 模型匯出**（workload 定義），不是 Metis 封閉預編譯成品（其 op DAG 不可見）；封閉成品只提供 L4 端到端 tok/s 錨點。
+- 風險：HF ONNX export 雜亂（見 risk #5），需先驗證 export 是否涵蓋 decode 的動態形狀。
+- 產出：`measurements/op_inventory/{model}.json`（op 類型、形狀分佈、prefill/decode 標記）+ `docs/phase0-op-inventory.md`。
 
 ### Machine 1 — Aetina RKC-A02（RK3588 + Metis Alpha）
 
@@ -83,7 +106,7 @@
 | **D. Mali** | 自寫 OpenCL matmul kernel（避開 framework 雜訊），FP16 為主 + FP32 參考 | `mali_matmul.json` |
 | **E. CPU（RK3588 A76）** | 在板上 micro-benchmark LLM 的 CPU 支援 op（sampling、RoPE 控制、KV-cache append/evict、token/quantization 邊界）。`taskset -c 4-7 chrt -f 50`；`clock_gettime` + `perf stat` | `cpu_ops.json` |
 
-每單元特性掃描（HeteroInfer Fig 2-4 風格）：tile/channel 大小錯配（ch ∈ {64…1024}）、batch（Metis 固定 1；RKNPU2/Mali 1/4/16/32）、weight residency（`l2` vs `ddr`）、op 類型敏感度、精度、sequence 維變化（hidden × seq，seq 1→2048）。
+每單元特性掃描（HeteroInfer Fig 2-4 風格；**形狀範圍由 Phase 0.1.0 op inventory 界定**）：tile/channel 大小錯配（ch ∈ {64…1024}）、batch（Metis 固定 1；RKNPU2/Mali 1/4/16/32）、weight residency（`l2` vs `ddr`）、op 類型敏感度、精度、sequence 維變化（hidden × seq，seq 1→2048）。
 
 **交付物：** 四個 `measurements/aetina/*.json`；`variance_profile.json`；`characterization/aetina/README.md`（腳本→檔案對應）；最終報告 `docs/phase0-aetina-findings.md`（SDK 意外、op 覆蓋缺口、對模擬器的建議）。
 
@@ -104,30 +127,67 @@
 - **Stage 0**（變異特性，半天）：每單元挑代表性 op，cold-start 重複 × 每次多 iteration；算 Coefficient of Variation（CoV）；存 `measurements/{unit}/variance_profile.json`。
 - **Stage 1**（正式特性）：用 Stage-0 推導的取樣計畫，套用到完整的 op × shape × precision × batch 掃描；取樣量記入 `validation/contracts/m{M}.yaml`。
 
-### Phase 0 產出的交叉驗證矩陣（L1–L6）
+### Phase 0.1 產出的交叉驗證矩陣（L1–L6）
 
-| L | 模擬器驗證對象 | Phase 0 資料來源 |
+| L | 模擬器驗證對象 | Phase 0.1 資料來源 |
 | --- | --- | --- |
-| L1 | CIM tile 每 op 延遲 | Metis Alpha 上 A1 + A4 + Stage 掃描（trace-driven lookup 為主；NeuroSim physics 交叉檢查為選用） |
+| L1 | CIM tile 每 op 延遲 | Metis Alpha 上 A1 + A4 + Stage 掃描（Phase 1 擬合**參數方程式**為主、lookup 為 fallback；NeuroSim physics 交叉檢查為選用） |
 | L2 | DRAM / PCIe 來回 | A2 + A3（PCIe + DMA 模式 timing） |
 | L3 | NPU / GPU 每 op | C + D matmul micro-benchmark |
 | L4 | 端到端 LLM（INT8） | B Metis Card 廠商 INT8 LLM tok/s。注意：on-card DRAM ≠ 模擬器的 host-MMIO 拓樸（橋接假設在 Method 明寫） |
 | L5 | 敏感度（任一參數 ±20%） | 於 sim 跑時對 L1–L4 計算 — 非獨立量測 |
 | **L6** | 端到端 CNN | [metis-step1-cnn-characterization](papers/metis-silicon/metis-step1-cnn-characterization-2026-05-23.md) — 225 cells 已擷取；**重用，免重量測** |
 
-**Roofline 作為驗證視覺化**（L1/L3/L6）：每單元疊出 measured-roofline 與 simulator-predicted-roofline；knee 位置 + 斜率 + 觀測點分佈是否吻合，即同時對 compute + memory 原語做 2D 一致性檢查。資料點於 Phase 0 從同一批 run 抽出。
+**Roofline 作為驗證視覺化**（L1/L3/L6）：每單元疊出 measured-roofline 與 simulator-predicted-roofline；knee 位置 + 斜率 + 觀測點分佈是否吻合，即同時對 compute + memory 原語做 2D 一致性檢查。資料點於 Phase 0.1 從同一批 run 抽出。
 
 **混合精度驗證：** 只做最單純的直接案例（如某一模型上 CIM INT8 + GPU FP16 分工）。混合精度本身是方法/貢獻；其驗證刻意簡化。
 
-### Phase 0 完成標準
+### Phase 0.1 完成標準
 
-當**兩台**機器都 commit 後即為完成：所有 `measurements/aetina/*`（4 檔）+ `measurements/metis_card/*`（1 檔）；各機 `variance_profile.json`；各機 `characterization/{aetina,metis_card}/README.md`；各機 `docs/phase0-{aetina,metis_card}-findings.md`；以及一份綜合 `docs/phase0-L1-L6-mapping.md`。兩份報告都 commit 後，**模擬器實作於 Metis Card 機器啟動**。
+當**兩台**機器都 commit 後即為完成：`measurements/op_inventory/*`；所有 `measurements/aetina/*`（4 檔）+ `measurements/metis_card/*`（1 檔）；各機 `variance_profile.json`；各機 `characterization/{aetina,metis_card}/README.md`；各機 `docs/phase0-{aetina,metis_card}-findings.md`；以及綜合 `docs/phase0-op-inventory.md` 與 `docs/phase0-L1-L6-mapping.md`。**Phase 0.1 commit 後即可進入 Phase 1 / Phase 2**（不必等 Phase 0.2）。
 
 ---
 
-## 模擬器實作
+## Phase 0.2 — 溫度／熱特性量測（可與 Phase 1/2 並行）
 
-**前置：Phase 0 量測已 commit。** 以下是「在 Phase 0 ground truth 之上建模擬器」的操作交接，設計成初始設定後可（大致）交給自主 agent。
+**可行性結論：你的 0.1 / 0.2 切分可行，但有兩個前提以維持模組化。**
+
+1. **溫度可量測**：Metis 有 5 個溫度 sensor（board + 4 core），可經 `axlogdevice --slog`（`core_temps=[…]`）、`inference.py` 自動顯示、或 app tracer `core_temp` 讀取；Aetina 的 RK3588 也有標準 thermal zone（sysfs）。⚠ **待確認**：量產 Metis Card（PCIe Rev1 測試板、無 power telemetry）是否一樣能讀 core temp——需先驗證；若不能，Metis 端熱資料只能來自 Aetina Alpha。
+2. **熱模組設計成「事後附加層」**：v1 把熱模型做成讀取 Phase 2 已算出的 per-op 活動/功耗 timeline → 估算溫度（升溫/降溫曲線），**不**把 throttling 回饋進 timing。如此熱模組與 M1–M7 完全解耦，可在 Phase 0.2 結束後才以獨立模組（命名 **M8，選用**）加入，不動既有模組。閉環 throttling（溫度→降頻→影響 timing）會耦合進 M1/M3，列為 v1 之後的 stretch。
+
+**為什麼分出來**：(a) 熱特性需持續負載到穩態 + 擷取暫態，耗時遠長於單點 latency 量測；(b) 反過來，Phase 0.1 的非熱量測本來就**必須在散熱受控下**進行（否則 throttling 污染數據）。兩者天生該分開。
+
+**量測內容（兩平台）**：固定負載下的穩態溫度、升溫/降溫時間常數、throttling 觸發門檻與降頻幅度、不同 clock / mvm-limit 下的溫度。
+**產出**：`measurements/{aetina,metis_card}/thermal_*.json` + `docs/phase0.2-thermal-findings.md`。
+**結論**：Phase 0.1 完成即可開始建模擬器；熱模組 M8 等 Phase 0.2 結束再插入——模組化成立。
+
+---
+
+## Phase 1 — 每個 component 的建模與驗證
+
+**前置：Phase 0.1 量測已 commit。** 本階段把「資料」變成「模型」，並逐一驗證每個 component；目標是讓模擬器用**方程式**而非龐大 lookup table。
+
+### 1a. Micro-benchmark → 方程式擬合
+
+對每組 micro-benchmark 數據，嘗試擬合一條 closed-form / 參數化方程式來代表整組數據：
+- CIM tile（M1）、RKNPU2/Mali matmul（M4）、PCIe/DMA（M2）：以 roofline 形式的參數模型為起點，例如 `latency ≈ max(compute_time(shape), mem_time(bytes)) + fixed_overhead`，或對特性曲線做分段回歸。
+- 每條方程式記錄擬合誤差（median / p95 相對誤差）；對擬合不佳的區段保留 lookup 作為 **fallback**（混合策略）。
+- 好處：模擬器體積小、可外推（呼應「記憶體容量往上外推」）、參數可解釋、避免巨大 lookup table。
+
+### 1b. 非 micro-benchmark component 的驗證
+
+對不是直接來自單點 micro-benchmark 的 component（M3 event engine、M5 workload/trace、M6 scheduler、M7 energy），逐一測試準確度：
+- 在已知輸入/預期輸出上驗證行為正確（event engine 在 toy op stream 上的時序、trace 生成 vs HF 模型、energy 對規格、scheduler 在已知 mapping 上）。
+- 找出「要調哪些參數，才能讓 component 與 Metis 板子行為一致」。
+- 產出：每 component 的方程式 + 參數 + 驗證報告（置於 `validation/`）。
+
+> **Phase 1 與 Phase 2 的關係**：Phase 1 在 *component 層級* 把每個模型校到對（方程式 + 參數）；Phase 2 把校好的 component 整合成端到端模擬器。兩者邊界（尤其 M3/M6 這種「需先實作才能測」的 component）是文末深入討論要敲定的點之一。
+
+---
+
+## Phase 2 — 模擬器實作（整合）
+
+**前置：Phase 0.1 + Phase 1 已完成。** 以下是「把校好的 component 整合成端到端模擬器」的操作交接，設計成初始設定後可（大致）交給自主 agent。
 
 ### 做法 — autoresearch 模式、最小基礎設施
 
@@ -162,9 +222,9 @@ while not all_modules_passed:
             │ (op, target_unit, precision) tuples
             ▼
 ③ Per-unit timing models (M1 + M4)   event-driven、並行
-   CIM (Metis)：自 Metis Alpha 量測做 trace-driven lookup
-   NPU (RKNPU2)：ONNXim fork + 對偏離 shape 的 lookup override
-   GPU (Mali)：自 Mali OpenCL 量測做 trace-driven lookup
+   CIM (Metis)：Phase 1 擬合的參數方程式為主（lookup 為 fallback）
+   NPU (RKNPU2)：ONNXim fork + 擬合方程式 / lookup override
+   GPU (Mali)：自 Mali OpenCL 量測擬合的參數方程式
    CPU：ARM A76 instruction-count 模型
    （保留 `gpu_backend` plugin 槽給 Accel-Sim）
             │ memory access pattern + latency
@@ -199,13 +259,15 @@ edge-cim-simulation/
 ├── log.jsonl                   # 每迭代 log（append-only）
 ├── papers/                     # 文獻 + 真實晶片筆記（本 commit）
 ├── simulator/
-│   ├── modules/                # M1–M7（m1_cim_tile.py … m7_energy.py）
+│   ├── modules/                # M1–M7（m1_cim_tile.py … m7_energy.py）+ M8 thermal（選用，Phase 0.2 後加入）
+│   ├── models/                 # Phase 1 擬合的參數方程式 + 參數（取代龐大 lookup table）
 │   ├── runner.py               # 入口：python runner.py --module M
 │   ├── validator.py            # 比對輸出與 measurements
 │   └── lib/
 ├── measurements/               # ground truth，納入版控
-│   ├── aetina/                 # metis_alpha_{cnn_proxy,matmul,pcie}, rknpu2_matmul, mali_matmul, cpu_ops
-│   └── metis_card/             # vendor_llm_int8.json
+│   ├── op_inventory/           # Phase 0.1.0：各模型 op×shape 清單
+│   ├── aetina/                 # metis_alpha_{cnn_proxy,matmul,pcie}, rknpu2_matmul, mali_matmul, cpu_ops, thermal_*
+│   └── metis_card/             # vendor_llm_int8.json, thermal_*
 ├── characterization/           # 重新擷取量測的腳本（aetina/, metis_card/）
 ├── validation/contracts/       # 每模組驗證規格 YAML（m1.yaml …）
 ├── tools/                      # analysis/, plotting/（roofline）, trace_export/
@@ -217,15 +279,15 @@ edge-cim-simulation/
 
 | 階段 | 機器 | Agent 角色 |
 | --- | --- | --- |
-| Phase 0 — Aetina | Aetina RKC-A02 | A/C/D/E 量測 → `measurements/aetina/*` + findings |
-| Phase 0 — Metis Card | Ubuntu + Metis Card | B 量測 → `measurements/metis_card/*` + findings |
-| 模擬器實作 | Ubuntu + Metis Card | autoresearch 迴圈：M1–M7。拉 Phase 0 資料；對 `validation/contracts/*` 迭代。需要時 SSH 回 Aetina 重新擷取 |
+| Phase 0.1/0.2 — Aetina | Aetina RKC-A02 | op inventory + A/C/D/E 量測（+ 熱量測 0.2）→ `measurements/aetina/*` + findings |
+| Phase 0.1/0.2 — Metis Card | Ubuntu + Metis Card | B 量測（+ 熱量測 0.2，待確認可讀性）→ `measurements/metis_card/*` + findings |
+| Phase 1 + Phase 2 | Ubuntu + Metis Card | 方程式擬合 + component 驗證（Phase 1）→ autoresearch 整合 M1–M7（Phase 2）。對 `validation/contracts/*` 迭代；需要時 SSH 回 Aetina 重新擷取 |
 
-兩個 Phase 0 agent 可並行（不同機器/領域、無即時耦合）。模擬器實作只在兩份 Phase 0 報告都 commit 後才開始。以 git push/pull 在共享 repo 同步。
+兩個 Phase 0.1 agent 可並行（不同機器/領域、無即時耦合）。Phase 1/2 只在 Phase 0.1 兩份報告都 commit 後才開始（不必等 0.2）。以 git push/pull 在共享 repo 同步。
 
 ### SSH 存取 — 模擬器 agent → Aetina（僅重新擷取路徑）
 
-模擬器實作期間，若需要 `measurements/aetina/` 沒有的 shape/precision/config，就觸發遠端重新擷取：
+Phase 2 期間，若需要 `measurements/aetina/` 沒有的 shape/precision/config，就觸發遠端重新擷取：
 ```bash
 ssh aetina 'cd ~/repo/characterization/aetina && ./run_metis_matmul.py --config tier1'
 rsync aetina:~/repo/measurements/aetina/ ./measurements/aetina/
@@ -271,17 +333,18 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 
 | M | 模組 | 主要量測來源 | 備註 |
 | --- | --- | --- | --- |
-| M1 | CIM tile timing | Metis Alpha CNN + matmul micro-benchmark | trace-driven lookup 為主；NeuroSim 選用交叉檢查 |
-| M2 | Memory hierarchy | Ramulator2 LPDDR5 + Metis Alpha PCIe DMA | TLB-miss penalty 參數化（預設 0） |
+| M1 | CIM tile timing | Metis Alpha CNN + matmul micro-benchmark | Phase 1 擬合**參數方程式**為主、lookup fallback；NeuroSim 選用交叉檢查 |
+| M2 | Memory hierarchy | Ramulator2 LPDDR5 + Metis Alpha PCIe DMA | PCIe/DMA 以擬合方程式表示；記憶體容量為參數；TLB-miss penalty 參數化（預設 0） |
 | M3 | Event-driven engine | M1 + M2 | Python event loop；把 op stream 串過各單元 + 記憶體 |
-| M4 | NPU / GPU / CPU traces | RKNPU2 matmul、Mali OpenCL matmul、CPU A76 | NPU = ONNXim fork + lookup override；GPU/CPU = 僅 lookup |
-| M5 | LLM workload generator | HF Llama-3 / Qwen-2.5 → torch.onnx.export → per-token op DAG | trace 格式對齊 ONNXim 輸入 |
+| M4 | NPU / GPU / CPU traces | RKNPU2 matmul、Mali OpenCL matmul、CPU A76 | 各單元擬合方程式；NPU = ONNXim fork + 方程式/lookup override |
+| M5 | LLM workload generator | HF Llama-3 / Qwen-2.5 → torch.onnx.export → per-token op DAG | 前半段即 Phase 0.1.0 op inventory；trace 格式對齊 ONNXim 輸入 |
 | M6 | Scheduler / Mapper | M3 + M4 + M5 | Plugin：op→unit + 記憶體 + dataflow + pipeline + 精度邊界插入。**貢獻在此。** |
 | M7 | Energy estimation | 廠商規格（Metis 15 TOPS/W）、ARM datasheet、INA-delta 或 tech-node | 規格 + activity-factor 估算 |
+| **M8** | **Thermal（選用）** | Phase 0.2 熱量測 | **事後附加層**：從活動/功耗 timeline 估溫度；v1 不做閉環 throttling；Phase 0.2 後才加入 |
 
 ## 開放風險
 
-1. **NeuroSim 整合成本超出估計** — M1 退路：純 trace-driven lookup Metis Alpha 量測。NeuroSim 由必需降為選用；驗證方法論的引用（NeuroSim <1% 晶片誤差）即使不用其程式碼仍成立。
+1. **NeuroSim 整合成本超出估計** — M1 退路：直接用 Metis Alpha 量測（Phase 1 擬合方程式，必要時退回 lookup）。NeuroSim 由必需降為選用；驗證方法論的引用（NeuroSim <1% 晶片誤差）即使不用其程式碼仍成立。
 2. **橋接假設：Metis Card on-card DRAM ≠ 模擬器的 host-MMIO 拓樸** — L4 錨定「CIM + on-card-DRAM」；模擬器以 host-LPDDR + PCIe 替代。需做兩種拓樸下的敏感度子實驗。
 3. **HPIM 搶先在頂會發表**（最接近競品，[筆記](papers/pim-llm-accelerators/hpim-arxiv2025.md)）。即使 HPIM 先落地，我們的差異化（mobile-SoC、真實晶片校準、混合精度、特性量測驅動分工）仍成立。
 4. **agent 自主性在模擬器規模未經驗證** — 第一次 M1 迭代才是真正的考驗。緩解：若 agent 多個 session 仍不收斂，退回人工開發。
@@ -293,12 +356,25 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 ## 範圍外（v1 論文）
 
 - **Metis CIM 上的 INT4** — Voyager 公開文件未開放使用者控制的 INT4。未來工作（若 SDK 開放或出現廠商 INT4 成品）。
-- **AIPU Mode 2（4-instance）/ Mode 3（compiler-batched）** — 需 4× weight footprint 或 static-shape batched compile；不符 16 GB unified 上的單 batch dynamic-shape LLM。未來工作（伺服器式 batched 情境）。
+- **AIPU Mode 2（4-instance）/ Mode 3（compiler-batched）** — 需 4× weight footprint 或 static-shape batched compile；不符 unified memory 上的單 batch dynamic-shape LLM。未來工作（伺服器式 batched 情境）。
 - **batch > 1** — mobile 單 batch 是論文範圍。模擬器保留 `batch` hook。
 - **NVIDIA GPU baseline（Accel-Sim）/ Jetson Orin / Nano** — 對 M4 的介面化延伸；保留 `gpu_backend` plugin 槽。未來泛化研究。
-- **熱建模** — device-dependent、不可泛化；板子缺 on-board 功耗儀表。
-- **能量以量測取得** — 改以規格估算（M7），同樣是儀表問題。
+- **閉環熱 throttling（溫度→降頻→影響 timing）** — 會耦合進 M1/M3。v1 只做 Phase 0.2 熱量測 + M8 開環溫度估算（事後附加層）；閉環為 v1 之後 stretch。（注意：熱*建模*已從原本的「範圍外」改列為 Phase 0.2 + 選用 M8。）
+- **能量以量測取得** — 改以規格估算（M7），因板子缺 on-board 功耗儀表（M.2 Max 才有 INA236 可讀）。
 - **Intra-frame multi-core CIM 平行** — Voyager v1.3.1 未實作 `cooperative` / `pipeline` 模式。未來 SDK 可能開放。
+
+---
+
+## 下一步：Phase 0 / Phase 1 深入討論（檢查點）
+
+完成上述修訂後，依規劃下一步是針對 **Phase 0 與 Phase 1** 做更深入的討論，確認整體模擬器架構與實作想法正確，**避免大量實作後才發現錯誤**。建議優先釐清的開放點：
+
+1. **Phase 1（component 驗證）與 Phase 2（整合）的邊界** — M3 event engine、M6 scheduler 這類「需先實作才能測」的 component，要怎麼在 Phase 1 就驗證？
+2. **方程式擬合的形式與可接受誤差** — 哪些 op 適合 roofline 參數式、哪些得退回 lookup fallback？誤差門檻訂多少？
+3. **op inventory 完整性** — HF export 是否涵蓋 decode 的動態形狀與所有 op？是否需要實跑一次才算數？
+4. **記憶體往上外推的有效邊界** — 趨勢在多大容量仍成立？如何用 1–16 GB 的量測證明外推可信？
+5. **熱模組「事後附加層」是否足夠** — 哪些情境（持續高負載）非得閉環 throttling 不可？
+6. **L4 橋接假設的驗證強度** — on-card-DRAM vs host-MMIO 拓樸差異，敏感度實驗怎麼設計才有說服力？
 
 ---
 
