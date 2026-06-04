@@ -95,17 +95,12 @@ def fig_cim_vs_gpu_attn(c4, mali):
     ax.plot(kv, floor, "-o", color=BLUE, ms=4, lw=1, label="CIM conv-proxy floor")
     ax.plot(kv, comp, "-s", color=ORANGE, ms=4, lw=1, label="CIM composed (+KV reload)")
     if mali:
-        ma = {}
-        for r in mali["results"]:
-            if r["group"] == "attn" and "dec" in r["tag"]:
-                k = r["K"] if "qkT" in r["tag"] else r["N"]
-                ma[k + 1 if "qkT" in r["tag"] else k] = ma.get(k, 0)  # rough kv key
-        # map mali decode attn (qkT+sv) sum per kv if available
+        # GPU native decode attention = qkT_dec (N=kv) + sv_dec (K=kv) FP16, summed per kv
         gpu = []
         for r in c4["rows"]:
-            tot = sum(x["f16_ms"] * 1000 for x in mali["results"]
-                      if x["group"] == "attn" and "dec" in x["tag"]
-                      and (x["N"] == r["kv"] or x["K"] == r["kv"]))
+            kvv = r["kv"]
+            tot = sum(x["f16_ms"] * 1000 for x in mali["results"] if x["group"] == "attn"
+                      and ((x["tag"] == "qkT_dec" and x["N"] == kvv) or (x["tag"] == "sv_dec" and x["K"] == kvv)))
             gpu.append(tot if tot > 0 else np.nan)
         ax.plot(kv, gpu, "-^", color=GREEN, ms=4, lw=1, label="GPU (Mali) native FP16")
     ax.set_yscale("log"); ax.set_xlabel("kv length"); ax.set_ylabel("single-head attention latency (µs)")

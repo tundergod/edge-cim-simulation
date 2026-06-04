@@ -18,18 +18,19 @@ AET = Path("measurements/aetina")
 MC = Path("measurements/metis_card")
 OP = Path("measurements/op_profile")
 
-MODELS = {
-    "llama-3.2-1b": dict(H=2048, F=8192, kv=512,  V=128256, hd=64,  heads=32, kvh=8, L=16),
-    "llama-3.2-3b": dict(H=3072, F=8192, kv=1024, V=128256, hd=128, heads=24, kvh=8, L=28),
-    "llama-3.1-8b": dict(H=4096, F=14336, kv=1024, V=128256, hd=128, heads=32, kvh=8, L=32),
-    "qwen2.5-7b":   dict(H=3584, F=18944, kv=512,  V=152064, hd=128, heads=28, kvh=4, L=28),
+MODELS = {  # tied = tie_word_embeddings (embed & lm_head share one V*H table)
+    "llama-3.2-1b": dict(H=2048, F=8192, kv=512,  V=128256, hd=64,  heads=32, kvh=8, L=16, tied=True),
+    "llama-3.2-3b": dict(H=3072, F=8192, kv=1024, V=128256, hd=128, heads=24, kvh=8, L=28, tied=True),
+    "llama-3.1-8b": dict(H=4096, F=14336, kv=1024, V=128256, hd=128, heads=32, kvh=8, L=32, tied=False),
+    "qwen2.5-7b":   dict(H=3584, F=18944, kv=512,  V=152064, hd=128, heads=28, kvh=4, L=28, tied=False),
 }
 
 
-def weight_bytes(c):  # INT8 = 1 byte/param; per-layer projections x L + embed + lm_head
+def weight_bytes(c):  # INT8 = 1 byte/param; per-layer projections x L + embed (+ lm_head if untied)
     H, F, kv, V, L = c["H"], c["F"], c["kv"], c["V"], c["L"]
     per_layer = H * H + 2 * (H * kv) + H * H + 2 * (H * F) + F * H  # q,k,v,o,gate,up,down
-    return per_layer * L + V * H + H * V
+    embed_lmhead = V * H if c["tied"] else 2 * V * H               # tied models share the table
+    return per_layer * L + embed_lmhead
 
 
 def structure_cim(raw):

@@ -18,16 +18,18 @@ All figures regenerable from committed JSON (`tools/plotting/phase03_figs.py`,
    conv-proxy attention *compute floor* is tiny (~20 µs single-head), but it ignores the per-decode-step
    reload of the growing KV-cache into the crossbar. Composing in the measured reload
    (`T_attn = floor + n_dma·DMA_floor`, n_dma = layers) gives **~29 ms/token (99 % reload)** —
-   ~**60–300× slower than GPU-native FP16 attention (80–500 µs, Mali)** (C4, Fig 7). This is an
+   ~**62–351× slower than GPU-native FP16 attention (80–500 µs, Mali)** (C4, Fig 7). This is an
    Alpha-topology **upper-bound estimate**, but the order of magnitude is the point: dynamic
    activation×activation attention violates CIM's weight-stationary premise and must go to GPU/NPU.
    This is the empirical basis for the CIM-centric "design around CIM, offload attention" thesis.
 
-3. **Micro→end-to-end bridge validates (2 % hold-out error).** Fitting the effective decode
-   bandwidth on **1B+3B only** and predicting the held-out **8B** decode tok/s (ADR-0006 hold-out)
-   gives **2.65 vs measured 2.70 tok/s (2 % error)** (C5, Fig 6). Implied bandwidth 19.6 / 23.0 /
-   21.7 GB/s (1B/3B/8B) ≈ the documented ~24 GB/s production decode wall. So op-level structure +
-   Phase-0.2 counts compose into the real LLM's throughput — the L1→L4 link.
+3. **Micro→end-to-end bridge validates (16 % hold-out error).** Fitting the effective decode
+   bandwidth on **1B+3B only** (with tied-embedding weight counts) and predicting the held-out **8B**
+   decode tok/s (ADR-0006 hold-out) gives **2.28 vs measured 2.70 tok/s (16 % error, within the ≤25 %
+   gate)** (C5, Fig 6). Implied bandwidth **16.2 / 20.5 / 21.7 GB/s** (1B/3B/8B) shows a clear size
+   trend — smaller models stream their weights less efficiently — bracketing the documented ~24 GB/s
+   production wall. So op-level structure + Phase-0.2 counts compose into the real LLM's throughput
+   (the L1→L4 link), and the residual error is genuine size-dependence, not a fit artifact.
 
 ## CIM micro-characterization (A1 / A1d)
 
@@ -72,3 +74,6 @@ thermal readout is a confirmed **Phase 0.4 gap** (Alpha RK3588 thermal zones rem
   per-call floor (dev-vs-system) rather than a separate concurrency sweep; large-M (≥2048) prefill
   conv-proxy tiles fail device allocation (LongBench M≈11.8k stays analytic, Phase 1); l2/ddr is a
   null axis on Alpha (above). The C4 composed attention is an Alpha-topology upper-bound estimate.
+  Tiled-op GFLOP/s for non-2048-aligned dims (Qwen H=3584, F=18944) is biased **low** — true FLOPs
+  over padded-tile latency (the 2048-grid over-covers K·N by ~1.24×); the 1B/3B/8B dims are
+  2048-multiples and unaffected, so no headline rests on the Qwen throughput figure.
