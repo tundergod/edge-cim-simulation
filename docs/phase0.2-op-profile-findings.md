@@ -28,8 +28,13 @@ they are the predicted side of the roofline.
   addmm `[[N],[M,K],[K,N]]`, bmm `[[B,M,K],[B,K,N]]`). bytes = (in + weight + out elements)
   × dtype; **GEMM operands INT8 (1 B)** (Metis scope), **non-GEMM FP16 (2 B)** (vendor actual);
   weights counted once per token (streamed, non-resident). `embedding` is a gather (touches
-  only the gathered rows, no arithmetic). intensity = FLOPs/bytes is **predicted-side** — the
-  measured roofline knee is Phase 0.3 / Phase 1.
+  only the gathered rows, no arithmetic; bytes = 2× read+write, FP16 table assumed). intensity =
+  FLOPs/bytes is **predicted-side** — the measured roofline knee is Phase 0.3 / Phase 1.
+  - **Caveat (issue #10, deferred):** non-GEMM FLOPs use **1 flop/output-element — a deliberate
+    lower bound** (softmax ≈5, silu/norm/rope a few flops/elem). This affects only the predicted-side
+    position of non-GEMM ops on the roofline (all far in the memory-bound region, none near the knee),
+    not any headline; the simulator uses the **measured A6 (A76)** non-GEMM latencies, not these.
+    Per-op flop weights are left for when simulator-performance calibration needs them.
 
 ## Headline findings
 

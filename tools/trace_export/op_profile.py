@@ -245,7 +245,9 @@ def _prod(shape):
 def _flops_bytes(sig):
     op, ins, out = sig["op"], sig["in_shapes"], sig["out_shape"]
     if op == "aten.embedding.default":
-        # gather: touches only the selected rows (out elems), not the full table; no arithmetic
+        # gather: touches only the selected rows (out elems), not the full table; no arithmetic.
+        # bytes = 2x (read gathered rows + write output) x ELT_BYTES; FP16 table assumed (an INT8
+        # table would halve it). Undocumented-assumption note — issue #10 (deferred).
         nout = _prod(out) if out else 0
         return 0, 2 * nout * ELT_BYTES
     if op in GEMM_OPS:
@@ -261,7 +263,11 @@ def _flops_bytes(sig):
             flops = 2 * B * M * K * N
         by = (sum(_prod(s) for s in ins) + _prod(out)) * GEMM_BYTES
         return flops, by
-    # non-GEMM: FLOPs ~ output elements (low intensity); bytes at FP16
+    # non-GEMM: FLOPs = 1 flop/output-element — a deliberate LOWER BOUND (softmax ~5, silu/norm/
+    # rope are a few flops/elem). Predicted-side intensity only; the real non-GEMM cost is the
+    # Phase 0.3 A6 (A76) measurement that the simulator uses, not this approximation. These ops sit
+    # far in the memory-bound region, so the under-count never crosses a roofline knee. Per-op flop
+    # weights deferred until simulator-perf calibration needs them — issue #10 (kept open).
     nout = _prod(out) if out else 0
     nin = sum(_prod(s) for s in ins)
     return nout, (nin + nout) * ELT_BYTES
