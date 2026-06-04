@@ -118,9 +118,9 @@
     is attention-memory-bound. Phase 0.3 measures the real silicon: the Compute-in-Memory unit (Metis
     Alpha, via a weight-stationary 1×1-conv proxy) is fast on matmul but pays a <strong>~911 µs
     per-call DMA floor</strong> and, for dynamic attention it cannot keep stationary, a
-    <strong>~29 ms/token reload penalty — 62–351× slower than GPU-native</strong> — the empirical basis
+    <strong>~31–46 ms/token reload penalty — 97–376× slower than GPU-native</strong> — the empirical basis
     for a CIM-centric design that offloads attention. A micro→end-to-end bridge fit on 1B/3B predicts
-    the held-out 8B decode throughput to <strong>16 %</strong>, with an effective bandwidth (16–22 GB/s)
+    the held-out 8B decode throughput to <strong>10 %</strong>, with an effective bandwidth (16–21 GB/s)
     that tracks the production card's documented ~24 GB/s decode wall.</p>
   </div>
 
@@ -236,8 +236,8 @@
 
   <div class="keys">
     <div class="key"><div class="n">911 µs</div><div class="l">per-call host↔device DMA floor — dominates small decode GEMVs (A1d.5)</div></div>
-    <div class="key v"><div class="n">62–351×</div><div class="l">CIM composed attention slower than GPU-native → offload (C4)</div></div>
-    <div class="key g"><div class="n">16 %</div><div class="l">8B decode tok/s hold-out error from a 1B/3B fit (C5)</div></div>
+    <div class="key v"><div class="n">97–376×</div><div class="l">CIM composed attention slower than GPU-native → offload (C4)</div></div>
+    <div class="key g"><div class="n">10 %</div><div class="l">8B decode tok/s hold-out error from a 1B/3B fit (C5)</div></div>
   </div>
 
   <h3 class="sub">5.1 CIM is fast on matmul but gated by the round trip</h3>
@@ -269,9 +269,9 @@
   <h3 class="sub">5.2 CIM cannot keep attention stationary — the offload argument</h3>
   <p>The conv-proxy attention compute floor is tiny (~20 µs single-head), but it ignores the
   per-decode-step reload of the growing KV-cache into the crossbar. Composing the measured reload
-  (<code>T = floor + layers · DMA_floor</code>) gives ~29 ms/token, <strong>99 % of it the per-layer
+  (<code>T = floor + layers · DMA_floor</code>) gives ~31–46 ms/token, <strong>99 % of it the per-layer
   reload</strong> — an Alpha-topology <em>upper bound</em>, but the order of magnitude is the point:
-  CIM is 62–351× slower than GPU-native attention (Figure 4). Dynamic activation×activation attention
+  CIM is 97–376× slower than GPU-native attention (Figure 4). Dynamic activation×activation attention
   violates CIM's weight-stationary premise; it must be offloaded. This is the empirical heart of the
   CIM-centric thesis.</p>
 
@@ -279,7 +279,7 @@
     <img src="../figures/phase0.3/fig7_cim_vs_gpu_attn.png" alt="cim vs gpu attention" style="max-width:62%">
     <figcaption><b>Figure 4.</b> Single-head attention latency vs kv length: CIM conv-proxy
     <span style="color:var(--blue)"><b>floor</b></span> (compute only, misleadingly fast),
-    CIM <span style="color:var(--verm)"><b>composed</b></span> (+KV reload, the real ~29 ms penalty),
+    CIM <span style="color:var(--verm)"><b>composed</b></span> (+KV reload, the real ~31–46 ms penalty),
     and <span style="color:var(--green)"><b>GPU-native FP16</b></span> (Mali, 80–500 µs). The two-order-of-magnitude
     gap motivates assigning attention to GPU/NPU.</figcaption>
   </figure>
@@ -288,7 +288,7 @@
   <p>The production Metis Card runs the vendor INT8 LLMs end-to-end (the L4 anchor). Decode is a
   near-pure weight-streaming memory wall, so we fit an effective decode bandwidth on 1B + 3B and
   predict the <em>held-out</em> 8B throughput (an ADR-0006 size-invariance test). The prediction lands
-  at 2.28 vs measured 2.70 tok/s — 16 % error — and the implied bandwidth (16.2 / 20.5 / 21.7 GB/s)
+  at 2.44 vs measured 2.70 tok/s — 10 % error — and the implied bandwidth (16.2 / 20.5 / 20.3 GB/s)
   shows a genuine size trend bracketing the ~24 GB/s wall (Figure 5). Op-level structure plus Phase-0.2
   counts compose into the real LLM's throughput: the L1→L4 link holds.</p>
 
@@ -296,7 +296,7 @@
     <img src="../figures/phase0.3/fig6_twopillar.png" alt="two-pillar prediction" style="max-width:58%">
     <figcaption><b>Figure 5.</b> Two-pillar hold-out. Effective decode bandwidth fit on
     <span style="color:var(--blue)"><b>1B and 3B</b></span> predicts the held-out
-    <span style="color:var(--green)"><b>8B</b></span> decode tok/s within 16 % of the
+    <span style="color:var(--green)"><b>8B</b></span> decode tok/s within 10 % of the
     <span style="color:var(--verm)"><b>measurement</b></span>. The residual is real size-dependence
     (smaller models stream weights less efficiently), not a fit artifact.</figcaption>
   </figure>
@@ -320,13 +320,13 @@
     FLOPs for short/medium workloads (long-context prefill the exception, attention 0.26–0.39); decode is
     uniformly memory-bound (intensity 2.0), exactly where CIM weight-residency pays off — provided the
     per-call DMA floor is amortized (large ops, batched calls).</li>
-    <li><strong>Offload attention.</strong> CIM's ~29 ms/token attention penalty (62–351× GPU) is the
+    <li><strong>Offload attention.</strong> CIM's ~31–46 ms/token attention penalty (97–376× GPU) is the
     quantified cost of dynamic activation×activation on a weight-stationary crossbar. The heterogeneous
     split is not a design choice but a measured necessity.</li>
     <li><strong>Mind the tile and the round trip.</strong> Channel-64 alignment, GQA-narrow underfill
     (55 % utilization), and the 911 µs floor are the CIM-specific knobs the simulator's M1/M2 must model.</li>
     <li><strong>The bridge is real.</strong> A bytes-driven, op-count-weighted model fit on small models
-    predicts the large model's measured throughput to 16 % — evidence the per-op calibration composes
+    predicts the large model's measured throughput to 10 % — evidence the per-op calibration composes
     into faithful end-to-end behavior.</li>
   </ul>
 

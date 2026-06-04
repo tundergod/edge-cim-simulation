@@ -14,19 +14,20 @@ All figures regenerable from committed JSON (`tools/plotting/phase03_figs.py`,
    Fig 3) is the structural CIM cost the simulator must model: CIM wins on compute, loses on the
    round trip.
 
-2. **CIM cannot keep attention stationary → a ~29 ms/token attention penalty → offload.** The
+2. **CIM cannot keep attention stationary → a ~31–46 ms/token attention penalty → offload.** The
    conv-proxy attention *compute floor* is tiny (~20 µs single-head), but it ignores the per-decode-step
    reload of the growing KV-cache into the crossbar. Composing in the measured reload
-   (`T_attn = floor + n_dma·DMA_floor`, n_dma = layers) gives **~29 ms/token (99 % reload)** —
-   ~**62–351× slower than GPU-native FP16 attention (80–500 µs, Mali)** (C4, Fig 7). This is an
+   (`T_attn = L·(kv_bytes/BW + DMA_floor)`, over all L layers) gives **~31–46 ms/token (≥99 % reload,
+   rising with kv)** — ~**97–376× slower than GPU-native FP16 attention (80–500 µs, Mali)** (C4, Fig 7). This is an
    Alpha-topology **upper-bound estimate**, but the order of magnitude is the point: dynamic
    activation×activation attention violates CIM's weight-stationary premise and must go to GPU/NPU.
    This is the empirical basis for the CIM-centric "design around CIM, offload attention" thesis.
 
-3. **Micro→end-to-end bridge validates (16 % hold-out error).** Fitting the effective decode
-   bandwidth on **1B+3B only** (with tied-embedding weight counts) and predicting the held-out **8B**
-   decode tok/s (ADR-0006 hold-out) gives **2.28 vs measured 2.70 tok/s (16 % error, within the ≤25 %
-   gate)** (C5, Fig 6). Implied bandwidth **16.2 / 20.5 / 21.7 GB/s** (1B/3B/8B) shows a clear size
+3. **Micro→end-to-end bridge validates (10 % hold-out error).** Fitting the effective decode
+   bandwidth on **1B+3B only** (streamed weight bytes = projections + lm_head; the input embedding is
+   a decode gather, not streamed) and predicting the held-out **8B** decode tok/s (ADR-0006 hold-out)
+   gives **2.44 vs measured 2.70 tok/s (10 % error)** (C5, Fig 6). Implied bandwidth
+   **16.2 / 20.5 / 20.3 GB/s** (1B/3B/8B) shows a clear size
    trend — smaller models stream their weights less efficiently — bracketing the documented ~24 GB/s
    production wall. So op-level structure + Phase-0.2 counts compose into the real LLM's throughput
    (the L1→L4 link), and the residual error is genuine size-dependence, not a fit artifact.

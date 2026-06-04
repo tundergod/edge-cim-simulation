@@ -26,11 +26,12 @@ MODELS = {  # tied = tie_word_embeddings (embed & lm_head share one V*H table)
 }
 
 
-def weight_bytes(c):  # INT8 = 1 byte/param; per-layer projections x L + embed (+ lm_head if untied)
+def weight_bytes(c):  # bytes STREAMED per decode token (INT8 = 1 byte/param): projections x L + lm_head
     H, F, kv, V, L = c["H"], c["F"], c["kv"], c["V"], c["L"]
     per_layer = H * H + 2 * (H * kv) + H * H + 2 * (H * F) + F * H  # q,k,v,o,gate,up,down
-    embed_lmhead = V * H if c["tied"] else 2 * V * H               # tied models share the table
-    return per_layer * L + embed_lmhead
+    # lm_head [H,V] is streamed (logits); the input embedding is a 1-row gather in decode
+    # (negligible), so V*H once for both tied AND untied models (issue #11).
+    return per_layer * L + V * H
 
 
 def structure_cim(raw):
@@ -69,13 +70,14 @@ def c4_composed_attention(struct, pcie):
         if "dev_lat_us" in r:
             floor.setdefault(r["N"] if r["family"].startswith("qkT") else r["K"], {})[r["family"]] = r["dev_lat_us"]
     BW_pcie_GBs = 3.9  # A2 PCIe Gen3x4 (Alpha host link)
-    out = {"note": "Alpha-topology penalty estimate (NOT production absolute). kv_bytes=2*kv*kvh*hd INT8; "
-                   "reload = kv_bytes/BW + n_dma*fixed_overhead; n_dma = L (KV-reload per step).",
+    out = {"note": "Alpha-topology penalty estimate (NOT production absolute). kv_bytes=2*kv*kvh*hd INT8 "
+                   "(one layer); reload = L*(kv_bytes/BW + fixed_overhead): each of L layers reloads its "
+                   "own KV per decode step (both bandwidth and fixed terms x L).",
            "BW_pcie_GBs": BW_pcie_GBs, "fixed_overhead_us": fixed, "rows": []}
     for kv in sorted(floor):
         f = sum(floor[kv].values())  # QK^T + SV single-head dev floor
-        kv_bytes = 2 * kv * c["kvh"] * c["hd"]
-        reload_us = kv_bytes / (BW_pcie_GBs * 1e9) * 1e6 + c["L"] * fixed
+        kv_bytes = 2 * kv * c["kvh"] * c["hd"]                              # one layer's KV (K+V)
+        reload_us = c["L"] * (kv_bytes / (BW_pcie_GBs * 1e9) * 1e6 + fixed)  # x L layers (issue #12)
         out["rows"].append({"kv": kv, "floor_us": round(f, 2), "kv_bytes": kv_bytes,
                             "reload_us": round(reload_us, 1), "composed_us": round(f + reload_us, 1),
                             "reload_share": round(reload_us / (f + reload_us), 3)})
