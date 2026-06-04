@@ -1,0 +1,10860 @@
+{
+ "model": "llama-3.1-8b",
+ "task": "humaneval",
+ "dataset": "HumanEval",
+ "prefill_len": 132,
+ "decode_len": 54,
+ "config": {
+  "n_layers": 32,
+  "hidden": 4096,
+  "heads": 32,
+  "kv_heads": 8,
+  "head_dim": 128,
+  "intermediate": 14336,
+  "vocab": 128256
+ },
+ "dtype": {
+  "gemm_bytes": 1,
+  "elt_bytes": 2,
+  "note": "bytes: INT8 (1B) for matmul/bmm operands, FP16 (2B) for non-GEMM; weights counted once per token (streamed, non-resident). intensity is predicted-side (measured roofline/knee = Phase 0.3/1)."
+ },
+ "scope_flag": null,
+ "totals": {
+  "by_category": {
+   "matmul": {
+    "count": 12375,
+    "flops": 2791732936704,
+    "bytes": 413268419072,
+    "rows": 10
+   },
+   "attention": {
+    "count": 7040,
+    "flops": 13704210432,
+    "bytes": 2609493312,
+    "rows": 220
+   },
+   "ffn": {
+    "count": 3520,
+    "flops": 170655744,
+    "bytes": 853278720,
+    "rows": 4
+   },
+   "norm": {
+    "count": 21450,
+    "flops": 148598190,
+    "bytes": 722720440,
+    "rows": 12
+   },
+   "softmax": {
+    "count": 1760,
+    "flops": 26661888,
+    "bytes": 106647552,
+    "rows": 55
+   },
+   "rope": {
+    "count": 17930,
+    "flops": 137276928,
+    "bytes": 616071418,
+    "rows": 26
+   },
+   "residual": {
+    "count": 3520,
+    "flops": 48758784,
+    "bytes": 292552704,
+    "rows": 2
+   },
+   "kv_cache": {
+    "count": 3456,
+    "flops": 564461568,
+    "bytes": 2257846272,
+    "rows": 54
+   },
+   "embedding": {
+    "count": 55,
+    "flops": 0,
+    "bytes": 3047424,
+    "rows": 2
+   }
+  },
+  "by_phase": {
+   "prefill": {
+    "embedding": {
+     "count": 1,
+     "flops": 0,
+     "bytes": 2162688
+    },
+    "rope": {
+     "count": 326,
+     "flops": 97422336,
+     "bytes": 437209540
+    },
+    "norm": {
+     "count": 390,
+     "flops": 105456780,
+     "bytes": 492646960
+    },
+    "matmul": {
+     "count": 225,
+     "flops": 1981229826048,
+     "bytes": 7868158976
+    },
+    "attention": {
+     "count": 128,
+     "flops": 9170878464,
+     "bytes": 248742912
+    },
+    "softmax": {
+     "count": 32,
+     "flops": 17842176,
+     "bytes": 71368704
+    },
+    "residual": {
+     "count": 64,
+     "flops": 34603008,
+     "bytes": 207618048
+    },
+    "ffn": {
+     "count": 64,
+     "flops": 121110528,
+     "bytes": 605552640
+    }
+   },
+   "decode": {
+    "embedding": {
+     "count": 54,
+     "flops": 0,
+     "bytes": 884736
+    },
+    "rope": {
+     "count": 17604,
+     "flops": 39854592,
+     "bytes": 178861878
+    },
+    "norm": {
+     "count": 21060,
+     "flops": 43141410,
+     "bytes": 230073480
+    },
+    "matmul": {
+     "count": 12150,
+     "flops": 810503110656,
+     "bytes": 405400260096
+    },
+    "kv_cache": {
+     "count": 3456,
+     "flops": 564461568,
+     "bytes": 2257846272
+    },
+    "attention": {
+     "count": 6912,
+     "flops": 4533331968,
+     "bytes": 2360750400
+    },
+    "softmax": {
+     "count": 1728,
+     "flops": 8819712,
+     "bytes": 35278848
+    },
+    "residual": {
+     "count": 3456,
+     "flops": 14155776,
+     "bytes": 84934656
+    },
+    "ffn": {
+     "count": 3456,
+     "flops": 49545216,
+     "bytes": 247726080
+    }
+   }
+  },
+  "total_flops": 2806533560238,
+  "total_bytes": 420730076914,
+  "total_rows": 385,
+  "measured_rows": 28
+ },
+ "rows": [
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     1,
+     4096
+    ],
+    [
+     4096,
+     14336
+    ]
+   ],
+   "out_shape": [
+    1,
+    14336
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "matmul",
+   "phase": "decode",
+   "count": 3456,
+   "flops": 117440512,
+   "bytes": 58738688,
+   "intensity": 1.999372406819846,
+   "measured": true
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     1,
+     14336
+    ],
+    [
+     14336,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    4096
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "matmul",
+   "phase": "decode",
+   "count": 1728,
+   "flops": 117440512,
+   "bytes": 58738688,
+   "intensity": 1.999372406819846,
+   "measured": true
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     1,
+     4096
+    ],
+    [
+     4096,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    4096
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "matmul",
+   "phase": "decode",
+   "count": 3456,
+   "flops": 33554432,
+   "bytes": 16785408,
+   "intensity": 1.9990239141044412,
+   "measured": true
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     1,
+     4096
+    ],
+    [
+     4096,
+     128256
+    ]
+   ],
+   "out_shape": [
+    1,
+    128256
+   ],
+   "src": "LlamaForCausalLM.forward",
+   "category": "matmul",
+   "phase": "decode",
+   "count": 54,
+   "flops": 1050673152,
+   "bytes": 525468928,
+   "intensity": 1.9994962518506898,
+   "measured": true
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     1,
+     4096
+    ],
+    [
+     4096,
+     1024
+    ]
+   ],
+   "out_shape": [
+    1,
+    1024
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "matmul",
+   "phase": "decode",
+   "count": 3456,
+   "flops": 8388608,
+   "bytes": 4199424,
+   "intensity": 1.9975615703486955,
+   "measured": true
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     186
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    186
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1523712,
+   "bytes": 771904,
+   "intensity": 1.9739656744880192,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     186
+    ],
+    [
+     32,
+     186,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1523712,
+   "bytes": 771904,
+   "intensity": 1.9739656744880192,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     185
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    185
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1515520,
+   "bytes": 767776,
+   "intensity": 1.9739090568082358,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     185
+    ],
+    [
+     32,
+     185,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1515520,
+   "bytes": 767776,
+   "intensity": 1.9739090568082358,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     184
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    184
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1507328,
+   "bytes": 763648,
+   "intensity": 1.9738518270197787,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     184
+    ],
+    [
+     32,
+     184,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1507328,
+   "bytes": 763648,
+   "intensity": 1.9738518270197787,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     183
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    183
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1499136,
+   "bytes": 759520,
+   "intensity": 1.9737939751421951,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     183
+    ],
+    [
+     32,
+     183,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1499136,
+   "bytes": 759520,
+   "intensity": 1.9737939751421951,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     182
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    182
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1490944,
+   "bytes": 755392,
+   "intensity": 1.9737354909768703,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     182
+    ],
+    [
+     32,
+     182,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1490944,
+   "bytes": 755392,
+   "intensity": 1.9737354909768703,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     181
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    181
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1482752,
+   "bytes": 751264,
+   "intensity": 1.973676364101035,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     181
+    ],
+    [
+     32,
+     181,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1482752,
+   "bytes": 751264,
+   "intensity": 1.973676364101035,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     180
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    180
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1474560,
+   "bytes": 747136,
+   "intensity": 1.9736165838615727,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     180
+    ],
+    [
+     32,
+     180,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1474560,
+   "bytes": 747136,
+   "intensity": 1.9736165838615727,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     179
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    179
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1466368,
+   "bytes": 743008,
+   "intensity": 1.9735561393686205,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     179
+    ],
+    [
+     32,
+     179,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1466368,
+   "bytes": 743008,
+   "intensity": 1.9735561393686205,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     178
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    178
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1458176,
+   "bytes": 738880,
+   "intensity": 1.9734950194889562,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     178
+    ],
+    [
+     32,
+     178,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1458176,
+   "bytes": 738880,
+   "intensity": 1.9734950194889562,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     177
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    177
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1449984,
+   "bytes": 734752,
+   "intensity": 1.973433212839162,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     177
+    ],
+    [
+     32,
+     177,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1449984,
+   "bytes": 734752,
+   "intensity": 1.973433212839162,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     176
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    176
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1441792,
+   "bytes": 730624,
+   "intensity": 1.9733707077785565,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     176
+    ],
+    [
+     32,
+     176,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1441792,
+   "bytes": 730624,
+   "intensity": 1.9733707077785565,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     175
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    175
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1433600,
+   "bytes": 726496,
+   "intensity": 1.9733074924018852,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     175
+    ],
+    [
+     32,
+     175,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1433600,
+   "bytes": 726496,
+   "intensity": 1.9733074924018852,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     174
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    174
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1425408,
+   "bytes": 722368,
+   "intensity": 1.9732435545317621,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     174
+    ],
+    [
+     32,
+     174,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1425408,
+   "bytes": 722368,
+   "intensity": 1.9732435545317621,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     173
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    173
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1417216,
+   "bytes": 718240,
+   "intensity": 1.9731788817108487,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     173
+    ],
+    [
+     32,
+     173,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1417216,
+   "bytes": 718240,
+   "intensity": 1.9731788817108487,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     172
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    172
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1409024,
+   "bytes": 714112,
+   "intensity": 1.9731134611937624,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     172
+    ],
+    [
+     32,
+     172,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1409024,
+   "bytes": 714112,
+   "intensity": 1.9731134611937624,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     171
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    171
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1400832,
+   "bytes": 709984,
+   "intensity": 1.9730472799387029,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     171
+    ],
+    [
+     32,
+     171,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1400832,
+   "bytes": 709984,
+   "intensity": 1.9730472799387029,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     170
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    170
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1392640,
+   "bytes": 705856,
+   "intensity": 1.972980324598785,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     170
+    ],
+    [
+     32,
+     170,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1392640,
+   "bytes": 705856,
+   "intensity": 1.972980324598785,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     169
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    169
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1384448,
+   "bytes": 701728,
+   "intensity": 1.9729125815130648,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     169
+    ],
+    [
+     32,
+     169,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1384448,
+   "bytes": 701728,
+   "intensity": 1.9729125815130648,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     168
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    168
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1376256,
+   "bytes": 697600,
+   "intensity": 1.9728440366972477,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     168
+    ],
+    [
+     32,
+     168,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1376256,
+   "bytes": 697600,
+   "intensity": 1.9728440366972477,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     167
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    167
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1368064,
+   "bytes": 693472,
+   "intensity": 1.9727746758340639,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     167
+    ],
+    [
+     32,
+     167,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1368064,
+   "bytes": 693472,
+   "intensity": 1.9727746758340639,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     166
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    166
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1359872,
+   "bytes": 689344,
+   "intensity": 1.9727044842632997,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     166
+    ],
+    [
+     32,
+     166,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1359872,
+   "bytes": 689344,
+   "intensity": 1.9727044842632997,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     165
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    165
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1351680,
+   "bytes": 685216,
+   "intensity": 1.972633446971466,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     165
+    ],
+    [
+     32,
+     165,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1351680,
+   "bytes": 685216,
+   "intensity": 1.972633446971466,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     164
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    164
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1343488,
+   "bytes": 681088,
+   "intensity": 1.9725615485810937,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     164
+    ],
+    [
+     32,
+     164,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1343488,
+   "bytes": 681088,
+   "intensity": 1.9725615485810937,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     163
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    163
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1335296,
+   "bytes": 676960,
+   "intensity": 1.9724887733396361,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     163
+    ],
+    [
+     32,
+     163,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1335296,
+   "bytes": 676960,
+   "intensity": 1.9724887733396361,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     162
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    162
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1327104,
+   "bytes": 672832,
+   "intensity": 1.9724151051079615,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     162
+    ],
+    [
+     32,
+     162,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1327104,
+   "bytes": 672832,
+   "intensity": 1.9724151051079615,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     161
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    161
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1318912,
+   "bytes": 668704,
+   "intensity": 1.9723405273484231,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     161
+    ],
+    [
+     32,
+     161,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1318912,
+   "bytes": 668704,
+   "intensity": 1.9723405273484231,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     160
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    160
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1310720,
+   "bytes": 664576,
+   "intensity": 1.9722650231124808,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     160
+    ],
+    [
+     32,
+     160,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1310720,
+   "bytes": 664576,
+   "intensity": 1.9722650231124808,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     159
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    159
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1302528,
+   "bytes": 660448,
+   "intensity": 1.9721885750278598,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     159
+    ],
+    [
+     32,
+     159,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1302528,
+   "bytes": 660448,
+   "intensity": 1.9721885750278598,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     158
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    158
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1294336,
+   "bytes": 656320,
+   "intensity": 1.9721111652852268,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     158
+    ],
+    [
+     32,
+     158,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1294336,
+   "bytes": 656320,
+   "intensity": 1.9721111652852268,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     157
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    157
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1286144,
+   "bytes": 652192,
+   "intensity": 1.972032775624356,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     157
+    ],
+    [
+     32,
+     157,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1286144,
+   "bytes": 652192,
+   "intensity": 1.972032775624356,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     156
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    156
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1277952,
+   "bytes": 648064,
+   "intensity": 1.971953387319771,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     156
+    ],
+    [
+     32,
+     156,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1277952,
+   "bytes": 648064,
+   "intensity": 1.971953387319771,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     155
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    155
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1269760,
+   "bytes": 643936,
+   "intensity": 1.9718729811658302,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     155
+    ],
+    [
+     32,
+     155,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1269760,
+   "bytes": 643936,
+   "intensity": 1.9718729811658302,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     154
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    154
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1261568,
+   "bytes": 639808,
+   "intensity": 1.9717915374612385,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     154
+    ],
+    [
+     32,
+     154,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1261568,
+   "bytes": 639808,
+   "intensity": 1.9717915374612385,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     153
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    153
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1253376,
+   "bytes": 635680,
+   "intensity": 1.9717090359929523,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     153
+    ],
+    [
+     32,
+     153,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1253376,
+   "bytes": 635680,
+   "intensity": 1.9717090359929523,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     152
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    152
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1245184,
+   "bytes": 631552,
+   "intensity": 1.9716254560194568,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     152
+    ],
+    [
+     32,
+     152,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1245184,
+   "bytes": 631552,
+   "intensity": 1.9716254560194568,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     151
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    151
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1236992,
+   "bytes": 627424,
+   "intensity": 1.971540776253379,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     151
+    ],
+    [
+     32,
+     151,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1236992,
+   "bytes": 627424,
+   "intensity": 1.971540776253379,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     150
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    150
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1228800,
+   "bytes": 623296,
+   "intensity": 1.9714549748434131,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     150
+    ],
+    [
+     32,
+     150,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1228800,
+   "bytes": 623296,
+   "intensity": 1.9714549748434131,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     149
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    149
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1220608,
+   "bytes": 619168,
+   "intensity": 1.9713680293555222,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     149
+    ],
+    [
+     32,
+     149,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1220608,
+   "bytes": 619168,
+   "intensity": 1.9713680293555222,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     148
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    148
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1212416,
+   "bytes": 615040,
+   "intensity": 1.9712799167533819,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     148
+    ],
+    [
+     32,
+     148,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1212416,
+   "bytes": 615040,
+   "intensity": 1.9712799167533819,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     147
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    147
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1204224,
+   "bytes": 610912,
+   "intensity": 1.9711906133780315,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     147
+    ],
+    [
+     32,
+     147,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1204224,
+   "bytes": 610912,
+   "intensity": 1.9711906133780315,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     146
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    146
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1196032,
+   "bytes": 606784,
+   "intensity": 1.9711000949266955,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     146
+    ],
+    [
+     32,
+     146,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1196032,
+   "bytes": 606784,
+   "intensity": 1.9711000949266955,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     145
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    145
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1187840,
+   "bytes": 602656,
+   "intensity": 1.9710083364307334,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     145
+    ],
+    [
+     32,
+     145,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1187840,
+   "bytes": 602656,
+   "intensity": 1.9710083364307334,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     144
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    144
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1179648,
+   "bytes": 598528,
+   "intensity": 1.9709153122326775,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     144
+    ],
+    [
+     32,
+     144,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1179648,
+   "bytes": 598528,
+   "intensity": 1.9709153122326775,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     143
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    143
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1171456,
+   "bytes": 594400,
+   "intensity": 1.9708209959623149,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     143
+    ],
+    [
+     32,
+     143,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1171456,
+   "bytes": 594400,
+   "intensity": 1.9708209959623149,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     142
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    142
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1163264,
+   "bytes": 590272,
+   "intensity": 1.970725360511764,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     142
+    ],
+    [
+     32,
+     142,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1163264,
+   "bytes": 590272,
+   "intensity": 1.970725360511764,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     141
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    141
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1155072,
+   "bytes": 586144,
+   "intensity": 1.9706283780094993,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     141
+    ],
+    [
+     32,
+     141,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1155072,
+   "bytes": 586144,
+   "intensity": 1.9706283780094993,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     140
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    140
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1146880,
+   "bytes": 582016,
+   "intensity": 1.9705300197932702,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     140
+    ],
+    [
+     32,
+     140,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1146880,
+   "bytes": 582016,
+   "intensity": 1.9705300197932702,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     139
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    139
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1138688,
+   "bytes": 577888,
+   "intensity": 1.9704302563818594,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     139
+    ],
+    [
+     32,
+     139,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1138688,
+   "bytes": 577888,
+   "intensity": 1.9704302563818594,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     138
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    138
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1130496,
+   "bytes": 573760,
+   "intensity": 1.9703290574456218,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     138
+    ],
+    [
+     32,
+     138,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1130496,
+   "bytes": 573760,
+   "intensity": 1.9703290574456218,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     137
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    137
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1122304,
+   "bytes": 569632,
+   "intensity": 1.970226391775743,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     137
+    ],
+    [
+     32,
+     137,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1122304,
+   "bytes": 569632,
+   "intensity": 1.970226391775743,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     136
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    136
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1114112,
+   "bytes": 565504,
+   "intensity": 1.9701222272521504,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     136
+    ],
+    [
+     32,
+     136,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1114112,
+   "bytes": 565504,
+   "intensity": 1.9701222272521504,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     135
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    135
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1105920,
+   "bytes": 561376,
+   "intensity": 1.9700165308100097,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     135
+    ],
+    [
+     32,
+     135,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1105920,
+   "bytes": 561376,
+   "intensity": 1.9700165308100097,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     134
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    134
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1097728,
+   "bytes": 557248,
+   "intensity": 1.969909268404732,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     134
+    ],
+    [
+     32,
+     134,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1097728,
+   "bytes": 557248,
+   "intensity": 1.969909268404732,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     128
+    ],
+    [
+     32,
+     128,
+     133
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    133
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1089536,
+   "bytes": 553120,
+   "intensity": 1.9698004049754123,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     1,
+     133
+    ],
+    [
+     32,
+     133,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    1,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 1089536,
+   "bytes": 553120,
+   "intensity": 1.9698004049754123,
+   "measured": false
+  },
+  {
+   "op": "aten.silu.default",
+   "in_shapes": [
+    [
+     1,
+     1,
+     14336
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    14336
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "ffn",
+   "phase": "decode",
+   "count": 1728,
+   "flops": 14336,
+   "bytes": 57344,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     1,
+     14336
+    ],
+    [
+     1,
+     1,
+     14336
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    14336
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "ffn",
+   "phase": "decode",
+   "count": 1728,
+   "flops": 14336,
+   "bytes": 86016,
+   "intensity": 0.16666666666666666,
+   "measured": true
+  },
+  {
+   "op": "aten.pow.Tensor_Scalar",
+   "in_shapes": [
+    [
+     1,
+     1,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    4096
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "decode",
+   "count": 3510,
+   "flops": 4096,
+   "bytes": 16384,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     1,
+     4096
+    ],
+    [
+     1,
+     1,
+     1
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    4096
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "decode",
+   "count": 3510,
+   "flops": 4096,
+   "bytes": 16386,
+   "intensity": 0.2499694861467106,
+   "measured": true
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     4096
+    ],
+    [
+     1,
+     1,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    4096
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "decode",
+   "count": 3510,
+   "flops": 4096,
+   "bytes": 24576,
+   "intensity": 0.16666666666666666,
+   "measured": true
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     128
+    ],
+    [
+     1,
+     1,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    128
+   ],
+   "src": "apply_rotary_pos_emb",
+   "category": "rope",
+   "phase": "decode",
+   "count": 3456,
+   "flops": 4096,
+   "bytes": 16640,
+   "intensity": 0.24615384615384617,
+   "measured": true
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     1,
+     4096
+    ],
+    [
+     1,
+     1,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    4096
+   ],
+   "src": "LlamaDecoderLayer.forward",
+   "category": "residual",
+   "phase": "decode",
+   "count": 3456,
+   "flops": 4096,
+   "bytes": 24576,
+   "intensity": 0.16666666666666666,
+   "measured": true
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     185,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    186,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 190464,
+   "bytes": 761856,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     184,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    185,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 189440,
+   "bytes": 757760,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     183,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    184,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 188416,
+   "bytes": 753664,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     182,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    183,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 187392,
+   "bytes": 749568,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     181,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    182,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 186368,
+   "bytes": 745472,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     180,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    181,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 185344,
+   "bytes": 741376,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     179,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    180,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 184320,
+   "bytes": 737280,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     178,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    179,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 183296,
+   "bytes": 733184,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     177,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    178,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 182272,
+   "bytes": 729088,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     176,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    177,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 181248,
+   "bytes": 724992,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     175,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    176,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 180224,
+   "bytes": 720896,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     174,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    175,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 179200,
+   "bytes": 716800,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     173,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    174,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 178176,
+   "bytes": 712704,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     172,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    173,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 177152,
+   "bytes": 708608,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     171,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    172,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 176128,
+   "bytes": 704512,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     170,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    171,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 175104,
+   "bytes": 700416,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     169,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    170,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 174080,
+   "bytes": 696320,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     168,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    169,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 173056,
+   "bytes": 692224,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     167,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    168,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 172032,
+   "bytes": 688128,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     166,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    167,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 171008,
+   "bytes": 684032,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     165,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    166,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 169984,
+   "bytes": 679936,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     164,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    165,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 168960,
+   "bytes": 675840,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     163,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    164,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 167936,
+   "bytes": 671744,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     162,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    163,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 166912,
+   "bytes": 667648,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     161,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    162,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 165888,
+   "bytes": 663552,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     160,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    161,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 164864,
+   "bytes": 659456,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     159,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    160,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 163840,
+   "bytes": 655360,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     158,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    159,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 162816,
+   "bytes": 651264,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     157,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    158,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 161792,
+   "bytes": 647168,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     156,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    157,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 160768,
+   "bytes": 643072,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     155,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    156,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 159744,
+   "bytes": 638976,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     154,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    155,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 158720,
+   "bytes": 634880,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     153,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    154,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 157696,
+   "bytes": 630784,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     152,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    153,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 156672,
+   "bytes": 626688,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     151,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    152,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 155648,
+   "bytes": 622592,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     150,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    151,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 154624,
+   "bytes": 618496,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     149,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    150,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 153600,
+   "bytes": 614400,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     148,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    149,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 152576,
+   "bytes": 610304,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     147,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    148,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 151552,
+   "bytes": 606208,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     146,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    147,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 150528,
+   "bytes": 602112,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     145,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    146,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 149504,
+   "bytes": 598016,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     144,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    145,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 148480,
+   "bytes": 593920,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     143,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    144,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 147456,
+   "bytes": 589824,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     142,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    143,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 146432,
+   "bytes": 585728,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     141,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    142,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 145408,
+   "bytes": 581632,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     140,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    141,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 144384,
+   "bytes": 577536,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     139,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    140,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 143360,
+   "bytes": 573440,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     138,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    139,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 142336,
+   "bytes": 569344,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     137,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    138,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 141312,
+   "bytes": 565248,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     136,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    137,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 140288,
+   "bytes": 561152,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     135,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    136,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 139264,
+   "bytes": 557056,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     134,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    135,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 138240,
+   "bytes": 552960,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     133,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    134,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 137216,
+   "bytes": 548864,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     132,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    133,
+    128
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "kv_cache",
+   "phase": "decode",
+   "count": 64,
+   "flops": 136192,
+   "bytes": 544768,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     64
+    ],
+    [
+     1,
+     32,
+     1,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    128
+   ],
+   "src": "rotate_half",
+   "category": "rope",
+   "phase": "decode",
+   "count": 1728,
+   "flops": 4096,
+   "bytes": 16384,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     128
+    ],
+    [
+     1,
+     32,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    128
+   ],
+   "src": "apply_rotary_pos_emb",
+   "category": "rope",
+   "phase": "decode",
+   "count": 1728,
+   "flops": 4096,
+   "bytes": 24576,
+   "intensity": 0.16666666666666666,
+   "measured": true
+  },
+  {
+   "op": "aten.neg.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    64
+   ],
+   "src": "rotate_half",
+   "category": "rope",
+   "phase": "decode",
+   "count": 1728,
+   "flops": 2048,
+   "bytes": 8192,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     8,
+     1,
+     128
+    ],
+    [
+     1,
+     1,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    1,
+    128
+   ],
+   "src": "apply_rotary_pos_emb",
+   "category": "rope",
+   "phase": "decode",
+   "count": 3456,
+   "flops": 1024,
+   "bytes": 4352,
+   "intensity": 0.23529411764705882,
+   "measured": true
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     1,
+     64
+    ],
+    [
+     1,
+     8,
+     1,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    1,
+    128
+   ],
+   "src": "rotate_half",
+   "category": "rope",
+   "phase": "decode",
+   "count": 1728,
+   "flops": 1024,
+   "bytes": 4096,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     8,
+     1,
+     128
+    ],
+    [
+     1,
+     8,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    1,
+    128
+   ],
+   "src": "apply_rotary_pos_emb",
+   "category": "rope",
+   "phase": "decode",
+   "count": 1728,
+   "flops": 1024,
+   "bytes": 6144,
+   "intensity": 0.16666666666666666,
+   "measured": true
+  },
+  {
+   "op": "aten.neg.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     1,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    1,
+    64
+   ],
+   "src": "rotate_half",
+   "category": "rope",
+   "phase": "decode",
+   "count": 1728,
+   "flops": 512,
+   "bytes": 2048,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     186
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    186
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5952,
+   "bytes": 23808,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     186
+    ],
+    [
+     1,
+     1,
+     1,
+     186
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    186
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5952,
+   "bytes": 24180,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     186
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    186
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5952,
+   "bytes": 23808,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     185
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    185
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5920,
+   "bytes": 23680,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     185
+    ],
+    [
+     1,
+     1,
+     1,
+     185
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    185
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5920,
+   "bytes": 24050,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     185
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    185
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5920,
+   "bytes": 23680,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     184
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    184
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5888,
+   "bytes": 23552,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     184
+    ],
+    [
+     1,
+     1,
+     1,
+     184
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    184
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5888,
+   "bytes": 23920,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     184
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    184
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5888,
+   "bytes": 23552,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     183
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    183
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5856,
+   "bytes": 23424,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     183
+    ],
+    [
+     1,
+     1,
+     1,
+     183
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    183
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5856,
+   "bytes": 23790,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     183
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    183
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5856,
+   "bytes": 23424,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     182
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    182
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5824,
+   "bytes": 23296,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     182
+    ],
+    [
+     1,
+     1,
+     1,
+     182
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    182
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5824,
+   "bytes": 23660,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     182
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    182
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5824,
+   "bytes": 23296,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     181
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    181
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5792,
+   "bytes": 23168,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     181
+    ],
+    [
+     1,
+     1,
+     1,
+     181
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    181
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5792,
+   "bytes": 23530,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     181
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    181
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5792,
+   "bytes": 23168,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     180
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    180
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5760,
+   "bytes": 23040,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     180
+    ],
+    [
+     1,
+     1,
+     1,
+     180
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    180
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5760,
+   "bytes": 23400,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     180
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    180
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5760,
+   "bytes": 23040,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     179
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    179
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5728,
+   "bytes": 22912,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     179
+    ],
+    [
+     1,
+     1,
+     1,
+     179
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    179
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5728,
+   "bytes": 23270,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     179
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    179
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5728,
+   "bytes": 22912,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     178
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    178
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5696,
+   "bytes": 22784,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     178
+    ],
+    [
+     1,
+     1,
+     1,
+     178
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    178
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5696,
+   "bytes": 23140,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     178
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    178
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5696,
+   "bytes": 22784,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     177
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    177
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5664,
+   "bytes": 22656,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     177
+    ],
+    [
+     1,
+     1,
+     1,
+     177
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    177
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5664,
+   "bytes": 23010,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     177
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    177
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5664,
+   "bytes": 22656,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     176
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    176
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5632,
+   "bytes": 22528,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     176
+    ],
+    [
+     1,
+     1,
+     1,
+     176
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    176
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5632,
+   "bytes": 22880,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     176
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    176
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5632,
+   "bytes": 22528,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     175
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    175
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5600,
+   "bytes": 22400,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     175
+    ],
+    [
+     1,
+     1,
+     1,
+     175
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    175
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5600,
+   "bytes": 22750,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     175
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    175
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5600,
+   "bytes": 22400,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     174
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    174
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5568,
+   "bytes": 22272,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     174
+    ],
+    [
+     1,
+     1,
+     1,
+     174
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    174
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5568,
+   "bytes": 22620,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     174
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    174
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5568,
+   "bytes": 22272,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     173
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    173
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5536,
+   "bytes": 22144,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     173
+    ],
+    [
+     1,
+     1,
+     1,
+     173
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    173
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5536,
+   "bytes": 22490,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     173
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    173
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5536,
+   "bytes": 22144,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     172
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    172
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5504,
+   "bytes": 22016,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     172
+    ],
+    [
+     1,
+     1,
+     1,
+     172
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    172
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5504,
+   "bytes": 22360,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     172
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    172
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5504,
+   "bytes": 22016,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     171
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    171
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5472,
+   "bytes": 21888,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     171
+    ],
+    [
+     1,
+     1,
+     1,
+     171
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    171
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5472,
+   "bytes": 22230,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     171
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    171
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5472,
+   "bytes": 21888,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     170
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    170
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5440,
+   "bytes": 21760,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     170
+    ],
+    [
+     1,
+     1,
+     1,
+     170
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    170
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5440,
+   "bytes": 22100,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     170
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    170
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5440,
+   "bytes": 21760,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     169
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    169
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5408,
+   "bytes": 21632,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     169
+    ],
+    [
+     1,
+     1,
+     1,
+     169
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    169
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5408,
+   "bytes": 21970,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     169
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    169
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5408,
+   "bytes": 21632,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     168
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    168
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5376,
+   "bytes": 21504,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     168
+    ],
+    [
+     1,
+     1,
+     1,
+     168
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    168
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5376,
+   "bytes": 21840,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     168
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    168
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5376,
+   "bytes": 21504,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     167
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    167
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5344,
+   "bytes": 21376,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     167
+    ],
+    [
+     1,
+     1,
+     1,
+     167
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    167
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5344,
+   "bytes": 21710,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     167
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    167
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5344,
+   "bytes": 21376,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     166
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    166
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5312,
+   "bytes": 21248,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     166
+    ],
+    [
+     1,
+     1,
+     1,
+     166
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    166
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5312,
+   "bytes": 21580,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     166
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    166
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5312,
+   "bytes": 21248,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     165
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    165
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5280,
+   "bytes": 21120,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     165
+    ],
+    [
+     1,
+     1,
+     1,
+     165
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    165
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5280,
+   "bytes": 21450,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     165
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    165
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5280,
+   "bytes": 21120,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     164
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    164
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5248,
+   "bytes": 20992,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     164
+    ],
+    [
+     1,
+     1,
+     1,
+     164
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    164
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5248,
+   "bytes": 21320,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     164
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    164
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5248,
+   "bytes": 20992,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     163
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    163
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5216,
+   "bytes": 20864,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     163
+    ],
+    [
+     1,
+     1,
+     1,
+     163
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    163
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5216,
+   "bytes": 21190,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     163
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    163
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5216,
+   "bytes": 20864,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     162
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    162
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5184,
+   "bytes": 20736,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     162
+    ],
+    [
+     1,
+     1,
+     1,
+     162
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    162
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5184,
+   "bytes": 21060,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     162
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    162
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5184,
+   "bytes": 20736,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     161
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    161
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5152,
+   "bytes": 20608,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     161
+    ],
+    [
+     1,
+     1,
+     1,
+     161
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    161
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5152,
+   "bytes": 20930,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     161
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    161
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5152,
+   "bytes": 20608,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     160
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    160
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5120,
+   "bytes": 20480,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     160
+    ],
+    [
+     1,
+     1,
+     1,
+     160
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    160
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5120,
+   "bytes": 20800,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     160
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    160
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5120,
+   "bytes": 20480,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     159
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    159
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5088,
+   "bytes": 20352,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     159
+    ],
+    [
+     1,
+     1,
+     1,
+     159
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    159
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5088,
+   "bytes": 20670,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     159
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    159
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5088,
+   "bytes": 20352,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     158
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    158
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5056,
+   "bytes": 20224,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     158
+    ],
+    [
+     1,
+     1,
+     1,
+     158
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    158
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5056,
+   "bytes": 20540,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     158
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    158
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5056,
+   "bytes": 20224,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     157
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    157
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5024,
+   "bytes": 20096,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     157
+    ],
+    [
+     1,
+     1,
+     1,
+     157
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    157
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5024,
+   "bytes": 20410,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     157
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    157
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 5024,
+   "bytes": 20096,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     156
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    156
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4992,
+   "bytes": 19968,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     156
+    ],
+    [
+     1,
+     1,
+     1,
+     156
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    156
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4992,
+   "bytes": 20280,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     156
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    156
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4992,
+   "bytes": 19968,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     155
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    155
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4960,
+   "bytes": 19840,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     155
+    ],
+    [
+     1,
+     1,
+     1,
+     155
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    155
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4960,
+   "bytes": 20150,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     155
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    155
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4960,
+   "bytes": 19840,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     154
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    154
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4928,
+   "bytes": 19712,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     154
+    ],
+    [
+     1,
+     1,
+     1,
+     154
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    154
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4928,
+   "bytes": 20020,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     154
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    154
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4928,
+   "bytes": 19712,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     153
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    153
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4896,
+   "bytes": 19584,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     153
+    ],
+    [
+     1,
+     1,
+     1,
+     153
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    153
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4896,
+   "bytes": 19890,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     153
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    153
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4896,
+   "bytes": 19584,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     152
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    152
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4864,
+   "bytes": 19456,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     152
+    ],
+    [
+     1,
+     1,
+     1,
+     152
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    152
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4864,
+   "bytes": 19760,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     152
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    152
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4864,
+   "bytes": 19456,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     151
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    151
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4832,
+   "bytes": 19328,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     151
+    ],
+    [
+     1,
+     1,
+     1,
+     151
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    151
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4832,
+   "bytes": 19630,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     151
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    151
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4832,
+   "bytes": 19328,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     150
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    150
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4800,
+   "bytes": 19200,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     150
+    ],
+    [
+     1,
+     1,
+     1,
+     150
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    150
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4800,
+   "bytes": 19500,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     150
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    150
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4800,
+   "bytes": 19200,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     149
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    149
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4768,
+   "bytes": 19072,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     149
+    ],
+    [
+     1,
+     1,
+     1,
+     149
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    149
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4768,
+   "bytes": 19370,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     149
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    149
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4768,
+   "bytes": 19072,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     148
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    148
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4736,
+   "bytes": 18944,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     148
+    ],
+    [
+     1,
+     1,
+     1,
+     148
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    148
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4736,
+   "bytes": 19240,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     148
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    148
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4736,
+   "bytes": 18944,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     147
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    147
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4704,
+   "bytes": 18816,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     147
+    ],
+    [
+     1,
+     1,
+     1,
+     147
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    147
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4704,
+   "bytes": 19110,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     147
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    147
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4704,
+   "bytes": 18816,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     146
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    146
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4672,
+   "bytes": 18688,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     146
+    ],
+    [
+     1,
+     1,
+     1,
+     146
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    146
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4672,
+   "bytes": 18980,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     146
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    146
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4672,
+   "bytes": 18688,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     145
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    145
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4640,
+   "bytes": 18560,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     145
+    ],
+    [
+     1,
+     1,
+     1,
+     145
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    145
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4640,
+   "bytes": 18850,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     145
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    145
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4640,
+   "bytes": 18560,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     144
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    144
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4608,
+   "bytes": 18432,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     144
+    ],
+    [
+     1,
+     1,
+     1,
+     144
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    144
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4608,
+   "bytes": 18720,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     144
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    144
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4608,
+   "bytes": 18432,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     143
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    143
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4576,
+   "bytes": 18304,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     143
+    ],
+    [
+     1,
+     1,
+     1,
+     143
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    143
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4576,
+   "bytes": 18590,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     143
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    143
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4576,
+   "bytes": 18304,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     142
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    142
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4544,
+   "bytes": 18176,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     142
+    ],
+    [
+     1,
+     1,
+     1,
+     142
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    142
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4544,
+   "bytes": 18460,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     142
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    142
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4544,
+   "bytes": 18176,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     141
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    141
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4512,
+   "bytes": 18048,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     141
+    ],
+    [
+     1,
+     1,
+     1,
+     141
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    141
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4512,
+   "bytes": 18330,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     141
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    141
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4512,
+   "bytes": 18048,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     140
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    140
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4480,
+   "bytes": 17920,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     140
+    ],
+    [
+     1,
+     1,
+     1,
+     140
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    140
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4480,
+   "bytes": 18200,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     140
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    140
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4480,
+   "bytes": 17920,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     139
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    139
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4448,
+   "bytes": 17792,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     139
+    ],
+    [
+     1,
+     1,
+     1,
+     139
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    139
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4448,
+   "bytes": 18070,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     139
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    139
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4448,
+   "bytes": 17792,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     138
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    138
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4416,
+   "bytes": 17664,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     138
+    ],
+    [
+     1,
+     1,
+     1,
+     138
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    138
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4416,
+   "bytes": 17940,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     138
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    138
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4416,
+   "bytes": 17664,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     137
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    137
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4384,
+   "bytes": 17536,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     137
+    ],
+    [
+     1,
+     1,
+     1,
+     137
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    137
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4384,
+   "bytes": 17810,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     137
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    137
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4384,
+   "bytes": 17536,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     136
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    136
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4352,
+   "bytes": 17408,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     136
+    ],
+    [
+     1,
+     1,
+     1,
+     136
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    136
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4352,
+   "bytes": 17680,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     136
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    136
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4352,
+   "bytes": 17408,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     135
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    135
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4320,
+   "bytes": 17280,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     135
+    ],
+    [
+     1,
+     1,
+     1,
+     135
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    135
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4320,
+   "bytes": 17550,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     135
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    135
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4320,
+   "bytes": 17280,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     134
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    134
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4288,
+   "bytes": 17152,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     134
+    ],
+    [
+     1,
+     1,
+     1,
+     134
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    134
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4288,
+   "bytes": 17420,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     134
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    134
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4288,
+   "bytes": 17152,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     133
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    133
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4256,
+   "bytes": 17024,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     133
+    ],
+    [
+     1,
+     1,
+     1,
+     133
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    133
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4256,
+   "bytes": 17290,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     1,
+     133
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    1,
+    133
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "decode",
+   "count": 32,
+   "flops": 4256,
+   "bytes": 17024,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    128
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "decode",
+   "count": 108,
+   "flops": 128,
+   "bytes": 512,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     1,
+     64,
+     1
+    ],
+    [
+     1,
+     1,
+     1
+    ]
+   ],
+   "out_shape": [
+    1,
+    64,
+    1
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "decode",
+   "count": 54,
+   "flops": 128,
+   "bytes": 129,
+   "intensity": 0.9922480620155039,
+   "measured": true
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     1,
+     64
+    ],
+    [
+     1,
+     1,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    128
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "decode",
+   "count": 54,
+   "flops": 128,
+   "bytes": 512,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.cos.default",
+   "in_shapes": [
+    [
+     1,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    128
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "decode",
+   "count": 54,
+   "flops": 128,
+   "bytes": 512,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.sin.default",
+   "in_shapes": [
+    [
+     1,
+     1,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    128
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "decode",
+   "count": 54,
+   "flops": 128,
+   "bytes": 512,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.mean.dim",
+   "in_shapes": [
+    [
+     1,
+     1,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    1
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "decode",
+   "count": 3510,
+   "flops": 1,
+   "bytes": 8194,
+   "intensity": 0.000122040517451794,
+   "measured": true
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     1,
+     1
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    1
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "decode",
+   "count": 3510,
+   "flops": 1,
+   "bytes": 4,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.rsqrt.default",
+   "in_shapes": [
+    [
+     1,
+     1,
+     1
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    1
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "decode",
+   "count": 3510,
+   "flops": 1,
+   "bytes": 4,
+   "intensity": 0.25,
+   "measured": true
+  },
+  {
+   "op": "aten.embedding.default",
+   "in_shapes": [
+    [
+     128256,
+     4096
+    ],
+    [
+     1,
+     1
+    ]
+   ],
+   "out_shape": [
+    1,
+    1,
+    4096
+   ],
+   "src": "LlamaModel.forward",
+   "category": "embedding",
+   "phase": "decode",
+   "count": 54,
+   "flops": 0,
+   "bytes": 16384,
+   "intensity": 0.0,
+   "measured": true
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     132,
+     4096
+    ],
+    [
+     4096,
+     14336
+    ]
+   ],
+   "out_shape": [
+    132,
+    14336
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "matmul",
+   "phase": "prefill",
+   "count": 64,
+   "flops": 15502147584,
+   "bytes": 61153280,
+   "intensity": 253.49658405894172,
+   "measured": false
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     132,
+     14336
+    ],
+    [
+     14336,
+     4096
+    ]
+   ],
+   "out_shape": [
+    132,
+    4096
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "matmul",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 15502147584,
+   "bytes": 61153280,
+   "intensity": 253.49658405894172,
+   "measured": false
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     132,
+     4096
+    ],
+    [
+     4096,
+     4096
+    ]
+   ],
+   "out_shape": [
+    132,
+    4096
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "matmul",
+   "phase": "prefill",
+   "count": 64,
+   "flops": 4429185024,
+   "bytes": 17858560,
+   "intensity": 248.01467889908258,
+   "measured": false
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     132,
+     4096
+    ],
+    [
+     4096,
+     128256
+    ]
+   ],
+   "out_shape": [
+    132,
+    128256
+   ],
+   "src": "LlamaForCausalLM.forward",
+   "category": "matmul",
+   "phase": "prefill",
+   "count": 1,
+   "flops": 138688856064,
+   "bytes": 542807040,
+   "intensity": 255.5030532839073,
+   "measured": false
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     132,
+     4096
+    ],
+    [
+     4096,
+     1024
+    ]
+   ],
+   "out_shape": [
+    132,
+    1024
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "matmul",
+   "phase": "prefill",
+   "count": 64,
+   "flops": 1107296256,
+   "bytes": 4870144,
+   "intensity": 227.36417157275022,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     132,
+     128
+    ],
+    [
+     32,
+     128,
+     132
+    ]
+   ],
+   "out_shape": [
+    32,
+    132,
+    132
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 142737408,
+   "bytes": 1638912,
+   "intensity": 87.09278350515464,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     32,
+     132,
+     132
+    ],
+    [
+     32,
+     132,
+     128
+    ]
+   ],
+   "out_shape": [
+    32,
+    132,
+    128
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 142737408,
+   "bytes": 1638912,
+   "intensity": 87.09278350515464,
+   "measured": false
+  },
+  {
+   "op": "aten.silu.default",
+   "in_shapes": [
+    [
+     1,
+     132,
+     14336
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    14336
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "ffn",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 1892352,
+   "bytes": 7569408,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     132,
+     14336
+    ],
+    [
+     1,
+     132,
+     14336
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    14336
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "ffn",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 1892352,
+   "bytes": 11354112,
+   "intensity": 0.16666666666666666,
+   "measured": false
+  },
+  {
+   "op": "aten.pow.Tensor_Scalar",
+   "in_shapes": [
+    [
+     1,
+     132,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    4096
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "prefill",
+   "count": 65,
+   "flops": 540672,
+   "bytes": 2162688,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     132,
+     4096
+    ],
+    [
+     1,
+     132,
+     1
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    4096
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "prefill",
+   "count": 65,
+   "flops": 540672,
+   "bytes": 2162952,
+   "intensity": 0.2499694861467106,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     4096
+    ],
+    [
+     1,
+     132,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    4096
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "prefill",
+   "count": 65,
+   "flops": 540672,
+   "bytes": 2170880,
+   "intensity": 0.2490566037735849,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     132,
+     128
+    ],
+    [
+     1,
+     1,
+     132,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    132,
+    128
+   ],
+   "src": "apply_rotary_pos_emb",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 64,
+   "flops": 540672,
+   "bytes": 2196480,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     132,
+     4096
+    ],
+    [
+     1,
+     132,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    4096
+   ],
+   "src": "LlamaDecoderLayer.forward",
+   "category": "residual",
+   "phase": "prefill",
+   "count": 64,
+   "flops": 540672,
+   "bytes": 3244032,
+   "intensity": 0.16666666666666666,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     132,
+     132
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    132,
+    132
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 557568,
+   "bytes": 2230272,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     132,
+     132
+    ],
+    [
+     1,
+     1,
+     132,
+     132
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    132,
+    132
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 557568,
+   "bytes": 2265120,
+   "intensity": 0.24615384615384617,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     132,
+     132
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    132,
+    132
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 557568,
+   "bytes": 2230272,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     132,
+     64
+    ],
+    [
+     1,
+     32,
+     132,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    132,
+    128
+   ],
+   "src": "rotate_half",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 540672,
+   "bytes": 2162688,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     32,
+     132,
+     128
+    ],
+    [
+     1,
+     32,
+     132,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    132,
+    128
+   ],
+   "src": "apply_rotary_pos_emb",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 540672,
+   "bytes": 3244032,
+   "intensity": 0.16666666666666666,
+   "measured": false
+  },
+  {
+   "op": "aten.neg.default",
+   "in_shapes": [
+    [
+     1,
+     32,
+     132,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    32,
+    132,
+    64
+   ],
+   "src": "rotate_half",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 270336,
+   "bytes": 1081344,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     8,
+     132,
+     128
+    ],
+    [
+     1,
+     1,
+     132,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    132,
+    128
+   ],
+   "src": "apply_rotary_pos_emb",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 64,
+   "flops": 135168,
+   "bytes": 574464,
+   "intensity": 0.23529411764705882,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     132,
+     64
+    ],
+    [
+     1,
+     8,
+     132,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    132,
+    128
+   ],
+   "src": "rotate_half",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 135168,
+   "bytes": 540672,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     8,
+     132,
+     128
+    ],
+    [
+     1,
+     8,
+     132,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    132,
+    128
+   ],
+   "src": "apply_rotary_pos_emb",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 135168,
+   "bytes": 811008,
+   "intensity": 0.16666666666666666,
+   "measured": false
+  },
+  {
+   "op": "aten.neg.default",
+   "in_shapes": [
+    [
+     1,
+     8,
+     132,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    8,
+    132,
+    64
+   ],
+   "src": "rotate_half",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 32,
+   "flops": 67584,
+   "bytes": 270336,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     132,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    128
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 2,
+   "flops": 16896,
+   "bytes": 67584,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.bmm.default",
+   "in_shapes": [
+    [
+     1,
+     64,
+     1
+    ],
+    [
+     1,
+     1,
+     132
+    ]
+   ],
+   "out_shape": [
+    1,
+    64,
+    132
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 1,
+   "flops": 16896,
+   "bytes": 8644,
+   "intensity": 1.954650624710782,
+   "measured": false
+  },
+  {
+   "op": "aten.cat.default",
+   "in_shapes": [
+    [
+     1,
+     132,
+     64
+    ],
+    [
+     1,
+     132,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    128
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 1,
+   "flops": 16896,
+   "bytes": 67584,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.cos.default",
+   "in_shapes": [
+    [
+     1,
+     132,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    128
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 1,
+   "flops": 16896,
+   "bytes": 67584,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.sin.default",
+   "in_shapes": [
+    [
+     1,
+     132,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    128
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 1,
+   "flops": 16896,
+   "bytes": 67584,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mean.dim",
+   "in_shapes": [
+    [
+     1,
+     132,
+     4096
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    1
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "prefill",
+   "count": 65,
+   "flops": 132,
+   "bytes": 1081608,
+   "intensity": 0.000122040517451794,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     132,
+     1
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    1
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "prefill",
+   "count": 65,
+   "flops": 132,
+   "bytes": 528,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.rsqrt.default",
+   "in_shapes": [
+    [
+     1,
+     132,
+     1
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    1
+   ],
+   "src": "LlamaRMSNorm.forward",
+   "category": "norm",
+   "phase": "prefill",
+   "count": 65,
+   "flops": 132,
+   "bytes": 528,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.embedding.default",
+   "in_shapes": [
+    [
+     128256,
+     4096
+    ],
+    [
+     1,
+     132
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    4096
+   ],
+   "src": "LlamaModel.forward",
+   "category": "embedding",
+   "phase": "prefill",
+   "count": 1,
+   "flops": 0,
+   "bytes": 2162688,
+   "intensity": 0.0,
+   "measured": false
+  }
+ ]
+}

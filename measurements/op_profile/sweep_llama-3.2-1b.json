@@ -1,0 +1,6249 @@
+{
+ "model": "llama-3.2-1b",
+ "config": {
+  "n_layers": 16,
+  "hidden": 2048,
+  "heads": 32,
+  "kv_heads": 8,
+  "head_dim": 64,
+  "intermediate": 8192,
+  "vocab": 128256
+ },
+ "dtype": {
+  "gemm_bytes": 1,
+  "elt_bytes": 2,
+  "note": "bytes: INT8 (1B) for matmul/bmm operands, FP16 (2B) for non-GEMM; weights counted once per token (streamed, non-resident). intensity is predicted-side (measured roofline/knee = Phase 0.3/1)."
+ },
+ "note": "on-grid Layer-B scaling: single-forward sigs at prefill {128,256,512,1024} and decode kv {128,512,1024}; all measured=true (sweep_matrix grid).",
+ "grid": {
+  "prefill": {
+   "128": [
+    {
+     "op": "aten.embedding.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ],
+      [
+       1,
+       128
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      2048
+     ],
+     "src": "LlamaModel.forward",
+     "category": "embedding",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 0,
+     "bytes": 1048576,
+     "intensity": 0.0,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1
+      ],
+      [
+       1,
+       1,
+       128
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      128
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 8192,
+     "bytes": 4256,
+     "intensity": 1.9248120300751879,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       32
+      ],
+      [
+       1,
+       128,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 8192,
+     "bytes": 32768,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cos.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 8192,
+     "bytes": 32768,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       128,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 2,
+     "flops": 8192,
+     "bytes": 32768,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.sin.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 8192,
+     "bytes": 32768,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.pow.Tensor_Scalar",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 262144,
+     "bytes": 1048576,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mean.dim",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 128,
+     "bytes": 524544,
+     "intensity": 0.0002440214738897023,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       128,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 128,
+     "bytes": 512,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.rsqrt.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 128,
+     "bytes": 512,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ],
+      [
+       1,
+       128,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 262144,
+     "bytes": 1048832,
+     "intensity": 0.2499389797412741,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       2048
+      ],
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 262144,
+     "bytes": 1052672,
+     "intensity": 0.2490272373540856,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       128,
+       2048
+      ],
+      [
+       2048,
+       2048
+      ]
+     ],
+     "out_shape": [
+      128,
+      2048
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 1073741824,
+     "bytes": 4718592,
+     "intensity": 227.55555555555554,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       128,
+       2048
+      ],
+      [
+       2048,
+       512
+      ]
+     ],
+     "out_shape": [
+      128,
+      512
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 268435456,
+     "bytes": 1376256,
+     "intensity": 195.04761904761904,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       64
+      ],
+      [
+       1,
+       1,
+       128,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      128,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 262144,
+     "bytes": 1064960,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      128,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 131072,
+     "bytes": 524288,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       32
+      ],
+      [
+       1,
+       32,
+       128,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      128,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 262144,
+     "bytes": 1048576,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       64
+      ],
+      [
+       1,
+       32,
+       128,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      128,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 262144,
+     "bytes": 1572864,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       128,
+       64
+      ],
+      [
+       1,
+       1,
+       128,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      128,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 65536,
+     "bytes": 278528,
+     "intensity": 0.23529411764705882,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       128,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      128,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 32768,
+     "bytes": 131072,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       128,
+       32
+      ],
+      [
+       1,
+       8,
+       128,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      128,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 65536,
+     "bytes": 262144,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       128,
+       64
+      ],
+      [
+       1,
+       8,
+       128,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      128,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 65536,
+     "bytes": 393216,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       128,
+       64
+      ],
+      [
+       32,
+       64,
+       128
+      ]
+     ],
+     "out_shape": [
+      32,
+      128,
+      128
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 67108864,
+     "bytes": 1048576,
+     "intensity": 64.0,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       128
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      128,
+      128
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 524288,
+     "bytes": 2097152,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       128
+      ],
+      [
+       1,
+       1,
+       128,
+       128
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      128,
+      128
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 524288,
+     "bytes": 2129920,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten._softmax.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       128,
+       128
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      128,
+      128
+     ],
+     "src": "eager_attention_forward",
+     "category": "softmax",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 524288,
+     "bytes": 2097152,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       128,
+       128
+      ],
+      [
+       32,
+       128,
+       64
+      ]
+     ],
+     "out_shape": [
+      32,
+      128,
+      64
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 67108864,
+     "bytes": 1048576,
+     "intensity": 64.0,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       128,
+       2048
+      ],
+      [
+       1,
+       128,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      2048
+     ],
+     "src": "LlamaDecoderLayer.forward",
+     "category": "residual",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 262144,
+     "bytes": 1572864,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       128,
+       2048
+      ],
+      [
+       2048,
+       8192
+      ]
+     ],
+     "out_shape": [
+      128,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 4294967296,
+     "bytes": 18087936,
+     "intensity": 237.44927536231884,
+     "measured": true
+    },
+    {
+     "op": "aten.silu.default",
+     "in_shapes": [
+      [
+       1,
+       128,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 1048576,
+     "bytes": 4194304,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       128,
+       8192
+      ],
+      [
+       1,
+       128,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      128,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 1048576,
+     "bytes": 6291456,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       128,
+       8192
+      ],
+      [
+       8192,
+       2048
+      ]
+     ],
+     "out_shape": [
+      128,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 4294967296,
+     "bytes": 18087936,
+     "intensity": 237.44927536231884,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       128,
+       2048
+      ],
+      [
+       2048,
+       128256
+      ]
+     ],
+     "out_shape": [
+      128,
+      128256
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 67243081728,
+     "bytes": 279347200,
+     "intensity": 240.715073313783,
+     "measured": true
+    }
+   ],
+   "256": [
+    {
+     "op": "aten.embedding.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ],
+      [
+       1,
+       256
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      2048
+     ],
+     "src": "LlamaModel.forward",
+     "category": "embedding",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 0,
+     "bytes": 2097152,
+     "intensity": 0.0,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1
+      ],
+      [
+       1,
+       1,
+       256
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      256
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 16384,
+     "bytes": 8480,
+     "intensity": 1.9320754716981132,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       32
+      ],
+      [
+       1,
+       256,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 16384,
+     "bytes": 65536,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cos.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 16384,
+     "bytes": 65536,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       256,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 2,
+     "flops": 16384,
+     "bytes": 65536,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.sin.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 16384,
+     "bytes": 65536,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.pow.Tensor_Scalar",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 524288,
+     "bytes": 2097152,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mean.dim",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 256,
+     "bytes": 1049088,
+     "intensity": 0.0002440214738897023,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       256,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 256,
+     "bytes": 1024,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.rsqrt.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 256,
+     "bytes": 1024,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ],
+      [
+       1,
+       256,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 524288,
+     "bytes": 2097664,
+     "intensity": 0.2499389797412741,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       2048
+      ],
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 524288,
+     "bytes": 2101248,
+     "intensity": 0.24951267056530213,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       256,
+       2048
+      ],
+      [
+       2048,
+       2048
+      ]
+     ],
+     "out_shape": [
+      256,
+      2048
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 2147483648,
+     "bytes": 5242880,
+     "intensity": 409.6,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       256,
+       2048
+      ],
+      [
+       2048,
+       512
+      ]
+     ],
+     "out_shape": [
+      256,
+      512
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 536870912,
+     "bytes": 1703936,
+     "intensity": 315.0769230769231,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       64
+      ],
+      [
+       1,
+       1,
+       256,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      256,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 524288,
+     "bytes": 2129920,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      256,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 262144,
+     "bytes": 1048576,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       32
+      ],
+      [
+       1,
+       32,
+       256,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      256,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 524288,
+     "bytes": 2097152,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       64
+      ],
+      [
+       1,
+       32,
+       256,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      256,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 524288,
+     "bytes": 3145728,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       256,
+       64
+      ],
+      [
+       1,
+       1,
+       256,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      256,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 131072,
+     "bytes": 557056,
+     "intensity": 0.23529411764705882,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       256,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      256,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 65536,
+     "bytes": 262144,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       256,
+       32
+      ],
+      [
+       1,
+       8,
+       256,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      256,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 131072,
+     "bytes": 524288,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       256,
+       64
+      ],
+      [
+       1,
+       8,
+       256,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      256,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 131072,
+     "bytes": 786432,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       256,
+       64
+      ],
+      [
+       32,
+       64,
+       256
+      ]
+     ],
+     "out_shape": [
+      32,
+      256,
+      256
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 268435456,
+     "bytes": 3145728,
+     "intensity": 85.33333333333333,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       256
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      256,
+      256
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 2097152,
+     "bytes": 8388608,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       256
+      ],
+      [
+       1,
+       1,
+       256,
+       256
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      256,
+      256
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 2097152,
+     "bytes": 8519680,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten._softmax.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       256,
+       256
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      256,
+      256
+     ],
+     "src": "eager_attention_forward",
+     "category": "softmax",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 2097152,
+     "bytes": 8388608,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       256,
+       256
+      ],
+      [
+       32,
+       256,
+       64
+      ]
+     ],
+     "out_shape": [
+      32,
+      256,
+      64
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 268435456,
+     "bytes": 3145728,
+     "intensity": 85.33333333333333,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       256,
+       2048
+      ],
+      [
+       1,
+       256,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      2048
+     ],
+     "src": "LlamaDecoderLayer.forward",
+     "category": "residual",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 524288,
+     "bytes": 3145728,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       256,
+       2048
+      ],
+      [
+       2048,
+       8192
+      ]
+     ],
+     "out_shape": [
+      256,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 8589934592,
+     "bytes": 19398656,
+     "intensity": 442.81081081081084,
+     "measured": true
+    },
+    {
+     "op": "aten.silu.default",
+     "in_shapes": [
+      [
+       1,
+       256,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 2097152,
+     "bytes": 8388608,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       256,
+       8192
+      ],
+      [
+       1,
+       256,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      256,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 2097152,
+     "bytes": 12582912,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       256,
+       8192
+      ],
+      [
+       8192,
+       2048
+      ]
+     ],
+     "out_shape": [
+      256,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 8589934592,
+     "bytes": 19398656,
+     "intensity": 442.81081081081084,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       256,
+       2048
+      ],
+      [
+       2048,
+       128256
+      ]
+     ],
+     "out_shape": [
+      256,
+      128256
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 134486163456,
+     "bytes": 296026112,
+     "intensity": 454.3050697365508,
+     "measured": true
+    }
+   ],
+   "512": [
+    {
+     "op": "aten.embedding.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ],
+      [
+       1,
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      2048
+     ],
+     "src": "LlamaModel.forward",
+     "category": "embedding",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 0,
+     "bytes": 4194304,
+     "intensity": 0.0,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1
+      ],
+      [
+       1,
+       1,
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      512
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 32768,
+     "bytes": 16928,
+     "intensity": 1.9357277882797732,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       32
+      ],
+      [
+       1,
+       512,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 32768,
+     "bytes": 131072,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cos.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 32768,
+     "bytes": 131072,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       512,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 2,
+     "flops": 32768,
+     "bytes": 131072,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.sin.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 32768,
+     "bytes": 131072,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.pow.Tensor_Scalar",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 1048576,
+     "bytes": 4194304,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mean.dim",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 512,
+     "bytes": 2098176,
+     "intensity": 0.0002440214738897023,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       512,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 512,
+     "bytes": 2048,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.rsqrt.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 512,
+     "bytes": 2048,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ],
+      [
+       1,
+       512,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 1048576,
+     "bytes": 4195328,
+     "intensity": 0.2499389797412741,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       2048
+      ],
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 1048576,
+     "bytes": 4198400,
+     "intensity": 0.2497560975609756,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       512,
+       2048
+      ],
+      [
+       2048,
+       2048
+      ]
+     ],
+     "out_shape": [
+      512,
+      2048
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 4294967296,
+     "bytes": 6291456,
+     "intensity": 682.6666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       512,
+       2048
+      ],
+      [
+       2048,
+       512
+      ]
+     ],
+     "out_shape": [
+      512,
+      512
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 1073741824,
+     "bytes": 2359296,
+     "intensity": 455.1111111111111,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       64
+      ],
+      [
+       1,
+       1,
+       512,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      512,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 1048576,
+     "bytes": 4259840,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      512,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 524288,
+     "bytes": 2097152,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       32
+      ],
+      [
+       1,
+       32,
+       512,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      512,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 1048576,
+     "bytes": 4194304,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       64
+      ],
+      [
+       1,
+       32,
+       512,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      512,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 1048576,
+     "bytes": 6291456,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       512,
+       64
+      ],
+      [
+       1,
+       1,
+       512,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      512,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 262144,
+     "bytes": 1114112,
+     "intensity": 0.23529411764705882,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       512,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      512,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 131072,
+     "bytes": 524288,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       512,
+       32
+      ],
+      [
+       1,
+       8,
+       512,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      512,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 262144,
+     "bytes": 1048576,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       512,
+       64
+      ],
+      [
+       1,
+       8,
+       512,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      512,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 262144,
+     "bytes": 1572864,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       512,
+       64
+      ],
+      [
+       32,
+       64,
+       512
+      ]
+     ],
+     "out_shape": [
+      32,
+      512,
+      512
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 1073741824,
+     "bytes": 10485760,
+     "intensity": 102.4,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      512,
+      512
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 8388608,
+     "bytes": 33554432,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       512
+      ],
+      [
+       1,
+       1,
+       512,
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      512,
+      512
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 8388608,
+     "bytes": 34078720,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten._softmax.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       512,
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      512,
+      512
+     ],
+     "src": "eager_attention_forward",
+     "category": "softmax",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 8388608,
+     "bytes": 33554432,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       512,
+       512
+      ],
+      [
+       32,
+       512,
+       64
+      ]
+     ],
+     "out_shape": [
+      32,
+      512,
+      64
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 1073741824,
+     "bytes": 10485760,
+     "intensity": 102.4,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       512,
+       2048
+      ],
+      [
+       1,
+       512,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      2048
+     ],
+     "src": "LlamaDecoderLayer.forward",
+     "category": "residual",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 1048576,
+     "bytes": 6291456,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       512,
+       2048
+      ],
+      [
+       2048,
+       8192
+      ]
+     ],
+     "out_shape": [
+      512,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 17179869184,
+     "bytes": 22020096,
+     "intensity": 780.1904761904761,
+     "measured": true
+    },
+    {
+     "op": "aten.silu.default",
+     "in_shapes": [
+      [
+       1,
+       512,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 4194304,
+     "bytes": 16777216,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       512,
+       8192
+      ],
+      [
+       1,
+       512,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      512,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 4194304,
+     "bytes": 25165824,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       512,
+       8192
+      ],
+      [
+       8192,
+       2048
+      ]
+     ],
+     "out_shape": [
+      512,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 17179869184,
+     "bytes": 22020096,
+     "intensity": 780.1904761904761,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       512,
+       2048
+      ],
+      [
+       2048,
+       128256
+      ]
+     ],
+     "out_shape": [
+      512,
+      128256
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 268972326912,
+     "bytes": 329383936,
+     "intensity": 816.5921209709511,
+     "measured": true
+    }
+   ],
+   "1024": [
+    {
+     "op": "aten.embedding.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ],
+      [
+       1,
+       1024
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      2048
+     ],
+     "src": "LlamaModel.forward",
+     "category": "embedding",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 0,
+     "bytes": 8388608,
+     "intensity": 0.0,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1
+      ],
+      [
+       1,
+       1,
+       1024
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1024
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 65536,
+     "bytes": 33824,
+     "intensity": 1.9375591296121097,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       32
+      ],
+      [
+       1,
+       1024,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 65536,
+     "bytes": 262144,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cos.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 65536,
+     "bytes": 262144,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 2,
+     "flops": 65536,
+     "bytes": 262144,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.sin.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 65536,
+     "bytes": 262144,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.pow.Tensor_Scalar",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 2097152,
+     "bytes": 8388608,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mean.dim",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 1024,
+     "bytes": 4196352,
+     "intensity": 0.0002440214738897023,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 1024,
+     "bytes": 4096,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.rsqrt.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 1024,
+     "bytes": 4096,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ],
+      [
+       1,
+       1024,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 2097152,
+     "bytes": 8390656,
+     "intensity": 0.2499389797412741,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       2048
+      ],
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "prefill",
+     "count": 33,
+     "flops": 2097152,
+     "bytes": 8392704,
+     "intensity": 0.24987798926305516,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1024,
+       2048
+      ],
+      [
+       2048,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1024,
+      2048
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 8589934592,
+     "bytes": 8388608,
+     "intensity": 1024.0,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1024,
+       2048
+      ],
+      [
+       2048,
+       512
+      ]
+     ],
+     "out_shape": [
+      1024,
+      512
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 2147483648,
+     "bytes": 3670016,
+     "intensity": 585.1428571428571,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       64
+      ],
+      [
+       1,
+       1,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1024,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 2097152,
+     "bytes": 8519680,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1024,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 1048576,
+     "bytes": 4194304,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       32
+      ],
+      [
+       1,
+       32,
+       1024,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1024,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 2097152,
+     "bytes": 8388608,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       64
+      ],
+      [
+       1,
+       32,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1024,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 2097152,
+     "bytes": 12582912,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1024,
+       64
+      ],
+      [
+       1,
+       1,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1024,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 524288,
+     "bytes": 2228224,
+     "intensity": 0.23529411764705882,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1024,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1024,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 262144,
+     "bytes": 1048576,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1024,
+       32
+      ],
+      [
+       1,
+       8,
+       1024,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1024,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 524288,
+     "bytes": 2097152,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1024,
+       64
+      ],
+      [
+       1,
+       8,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1024,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 524288,
+     "bytes": 3145728,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       1024,
+       64
+      ],
+      [
+       32,
+       64,
+       1024
+      ]
+     ],
+     "out_shape": [
+      32,
+      1024,
+      1024
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 4294967296,
+     "bytes": 37748736,
+     "intensity": 113.77777777777777,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       1024
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1024,
+      1024
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 33554432,
+     "bytes": 134217728,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       1024
+      ],
+      [
+       1,
+       1,
+       1024,
+       1024
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1024,
+      1024
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 33554432,
+     "bytes": 136314880,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten._softmax.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1024,
+       1024
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1024,
+      1024
+     ],
+     "src": "eager_attention_forward",
+     "category": "softmax",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 33554432,
+     "bytes": 134217728,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       1024,
+       1024
+      ],
+      [
+       32,
+       1024,
+       64
+      ]
+     ],
+     "out_shape": [
+      32,
+      1024,
+      64
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 4294967296,
+     "bytes": 37748736,
+     "intensity": 113.77777777777777,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       2048
+      ],
+      [
+       1,
+       1024,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      2048
+     ],
+     "src": "LlamaDecoderLayer.forward",
+     "category": "residual",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 2097152,
+     "bytes": 12582912,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1024,
+       2048
+      ],
+      [
+       2048,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1024,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 32,
+     "flops": 34359738368,
+     "bytes": 27262976,
+     "intensity": 1260.3076923076924,
+     "measured": true
+    },
+    {
+     "op": "aten.silu.default",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 8388608,
+     "bytes": 33554432,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1024,
+       8192
+      ],
+      [
+       1,
+       1024,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      1024,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 8388608,
+     "bytes": 50331648,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1024,
+       8192
+      ],
+      [
+       8192,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1024,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 16,
+     "flops": 34359738368,
+     "bytes": 27262976,
+     "intensity": 1260.3076923076924,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1024,
+       2048
+      ],
+      [
+       2048,
+       128256
+      ]
+     ],
+     "out_shape": [
+      1024,
+      128256
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "category": "matmul",
+     "phase": "prefill",
+     "count": 1,
+     "flops": 537944653824,
+     "bytes": 396099584,
+     "intensity": 1358.1045665122435,
+     "measured": true
+    }
+   ]
+  },
+  "decode": {
+   "128": [
+    {
+     "op": "aten.embedding.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ],
+      [
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaModel.forward",
+     "category": "embedding",
+     "phase": "decode",
+     "count": 1,
+     "flops": 0,
+     "bytes": 8192,
+     "intensity": 0.0,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1
+      ],
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 65,
+     "intensity": 0.9846153846153847,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       32
+      ],
+      [
+       1,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cos.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 2,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.sin.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.pow.Tensor_Scalar",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 2048,
+     "bytes": 8192,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mean.dim",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 1,
+     "bytes": 4098,
+     "intensity": 0.0002440214738897023,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 1,
+     "bytes": 4,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.rsqrt.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 1,
+     "bytes": 4,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ],
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 2048,
+     "bytes": 8194,
+     "intensity": 0.2499389797412741,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       2048
+      ],
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 2048,
+     "bytes": 12288,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 32,
+     "flops": 8388608,
+     "bytes": 4198400,
+     "intensity": 1.9980487804878049,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      512
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 32,
+     "flops": 2097152,
+     "bytes": 1051136,
+     "intensity": 1.995129079396006,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ],
+      [
+       1,
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 32,
+     "flops": 2048,
+     "bytes": 8320,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 1024,
+     "bytes": 4096,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       32
+      ],
+      [
+       1,
+       32,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 2048,
+     "bytes": 8192,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ],
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 2048,
+     "bytes": 12288,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ],
+      [
+       1,
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 32,
+     "flops": 512,
+     "bytes": 2176,
+     "intensity": 0.23529411764705882,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 256,
+     "bytes": 1024,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       32
+      ],
+      [
+       1,
+       8,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 512,
+     "bytes": 2048,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ],
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 512,
+     "bytes": 3072,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       128,
+       64
+      ],
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      129,
+      64
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "kv_cache",
+     "phase": "decode",
+     "count": 32,
+     "flops": 66048,
+     "bytes": 264192,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       1,
+       64
+      ],
+      [
+       32,
+       64,
+       129
+      ]
+     ],
+     "out_shape": [
+      32,
+      1,
+      129
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 528384,
+     "bytes": 270368,
+     "intensity": 1.954314120014203,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       129
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      129
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 4128,
+     "bytes": 16512,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       129
+      ],
+      [
+       1,
+       1,
+       1,
+       129
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      129
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 4128,
+     "bytes": 16770,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten._softmax.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       129
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      129
+     ],
+     "src": "eager_attention_forward",
+     "category": "softmax",
+     "phase": "decode",
+     "count": 16,
+     "flops": 4128,
+     "bytes": 16512,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       1,
+       129
+      ],
+      [
+       32,
+       129,
+       64
+      ]
+     ],
+     "out_shape": [
+      32,
+      1,
+      64
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 528384,
+     "bytes": 270368,
+     "intensity": 1.954314120014203,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ],
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaDecoderLayer.forward",
+     "category": "residual",
+     "phase": "decode",
+     "count": 32,
+     "flops": 2048,
+     "bytes": 12288,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 32,
+     "flops": 33554432,
+     "bytes": 16787456,
+     "intensity": 1.9987800414785897,
+     "measured": true
+    },
+    {
+     "op": "aten.silu.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "decode",
+     "count": 16,
+     "flops": 8192,
+     "bytes": 32768,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       8192
+      ],
+      [
+       1,
+       1,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "decode",
+     "count": 16,
+     "flops": 8192,
+     "bytes": 49152,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       8192
+      ],
+      [
+       8192,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 16,
+     "flops": 33554432,
+     "bytes": 16787456,
+     "intensity": 1.9987800414785897,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       128256
+      ]
+     ],
+     "out_shape": [
+      1,
+      128256
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 1,
+     "flops": 525336576,
+     "bytes": 262798592,
+     "intensity": 1.9990083356306567,
+     "measured": true
+    }
+   ],
+   "512": [
+    {
+     "op": "aten.embedding.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ],
+      [
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaModel.forward",
+     "category": "embedding",
+     "phase": "decode",
+     "count": 1,
+     "flops": 0,
+     "bytes": 8192,
+     "intensity": 0.0,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1
+      ],
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 65,
+     "intensity": 0.9846153846153847,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       32
+      ],
+      [
+       1,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cos.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 2,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.sin.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.pow.Tensor_Scalar",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 2048,
+     "bytes": 8192,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mean.dim",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 1,
+     "bytes": 4098,
+     "intensity": 0.0002440214738897023,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 1,
+     "bytes": 4,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.rsqrt.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 1,
+     "bytes": 4,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ],
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 2048,
+     "bytes": 8194,
+     "intensity": 0.2499389797412741,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       2048
+      ],
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 2048,
+     "bytes": 12288,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 32,
+     "flops": 8388608,
+     "bytes": 4198400,
+     "intensity": 1.9980487804878049,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      512
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 32,
+     "flops": 2097152,
+     "bytes": 1051136,
+     "intensity": 1.995129079396006,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ],
+      [
+       1,
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 32,
+     "flops": 2048,
+     "bytes": 8320,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 1024,
+     "bytes": 4096,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       32
+      ],
+      [
+       1,
+       32,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 2048,
+     "bytes": 8192,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ],
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 2048,
+     "bytes": 12288,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ],
+      [
+       1,
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 32,
+     "flops": 512,
+     "bytes": 2176,
+     "intensity": 0.23529411764705882,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 256,
+     "bytes": 1024,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       32
+      ],
+      [
+       1,
+       8,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 512,
+     "bytes": 2048,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ],
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 512,
+     "bytes": 3072,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       512,
+       64
+      ],
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      513,
+      64
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "kv_cache",
+     "phase": "decode",
+     "count": 32,
+     "flops": 262656,
+     "bytes": 1050624,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       1,
+       64
+      ],
+      [
+       32,
+       64,
+       513
+      ]
+     ],
+     "out_shape": [
+      32,
+      1,
+      513
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 2101248,
+     "bytes": 1069088,
+     "intensity": 1.9654584094106378,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       513
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      513
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 16416,
+     "bytes": 65664,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       513
+      ],
+      [
+       1,
+       1,
+       1,
+       513
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      513
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 16416,
+     "bytes": 66690,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten._softmax.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       513
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      513
+     ],
+     "src": "eager_attention_forward",
+     "category": "softmax",
+     "phase": "decode",
+     "count": 16,
+     "flops": 16416,
+     "bytes": 65664,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       1,
+       513
+      ],
+      [
+       32,
+       513,
+       64
+      ]
+     ],
+     "out_shape": [
+      32,
+      1,
+      64
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 2101248,
+     "bytes": 1069088,
+     "intensity": 1.9654584094106378,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ],
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaDecoderLayer.forward",
+     "category": "residual",
+     "phase": "decode",
+     "count": 32,
+     "flops": 2048,
+     "bytes": 12288,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 32,
+     "flops": 33554432,
+     "bytes": 16787456,
+     "intensity": 1.9987800414785897,
+     "measured": true
+    },
+    {
+     "op": "aten.silu.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "decode",
+     "count": 16,
+     "flops": 8192,
+     "bytes": 32768,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       8192
+      ],
+      [
+       1,
+       1,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "decode",
+     "count": 16,
+     "flops": 8192,
+     "bytes": 49152,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       8192
+      ],
+      [
+       8192,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 16,
+     "flops": 33554432,
+     "bytes": 16787456,
+     "intensity": 1.9987800414785897,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       128256
+      ]
+     ],
+     "out_shape": [
+      1,
+      128256
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 1,
+     "flops": 525336576,
+     "bytes": 262798592,
+     "intensity": 1.9990083356306567,
+     "measured": true
+    }
+   ],
+   "1024": [
+    {
+     "op": "aten.embedding.default",
+     "in_shapes": [
+      [
+       128256,
+       2048
+      ],
+      [
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaModel.forward",
+     "category": "embedding",
+     "phase": "decode",
+     "count": 1,
+     "flops": 0,
+     "bytes": 8192,
+     "intensity": 0.0,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1
+      ],
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 65,
+     "intensity": 0.9846153846153847,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       32
+      ],
+      [
+       1,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cos.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 2,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.sin.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      64
+     ],
+     "src": "LlamaRotaryEmbedding.forward",
+     "category": "rope",
+     "phase": "decode",
+     "count": 1,
+     "flops": 64,
+     "bytes": 256,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.pow.Tensor_Scalar",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 2048,
+     "bytes": 8192,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mean.dim",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 1,
+     "bytes": 4098,
+     "intensity": 0.0002440214738897023,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 1,
+     "bytes": 4,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.rsqrt.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      1
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 1,
+     "bytes": 4,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ],
+      [
+       1,
+       1,
+       1
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 2048,
+     "bytes": 8194,
+     "intensity": 0.2499389797412741,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       2048
+      ],
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaRMSNorm.forward",
+     "category": "norm",
+     "phase": "decode",
+     "count": 33,
+     "flops": 2048,
+     "bytes": 12288,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 32,
+     "flops": 8388608,
+     "bytes": 4198400,
+     "intensity": 1.9980487804878049,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       512
+      ]
+     ],
+     "out_shape": [
+      1,
+      512
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 32,
+     "flops": 2097152,
+     "bytes": 1051136,
+     "intensity": 1.995129079396006,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ],
+      [
+       1,
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 32,
+     "flops": 2048,
+     "bytes": 8320,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 1024,
+     "bytes": 4096,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       32
+      ],
+      [
+       1,
+       32,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 2048,
+     "bytes": 8192,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       64
+      ],
+      [
+       1,
+       32,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 2048,
+     "bytes": 12288,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ],
+      [
+       1,
+       1,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 32,
+     "flops": 512,
+     "bytes": 2176,
+     "intensity": 0.23529411764705882,
+     "measured": true
+    },
+    {
+     "op": "aten.neg.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      32
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 256,
+     "bytes": 1024,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       32
+      ],
+      [
+       1,
+       8,
+       1,
+       32
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      64
+     ],
+     "src": "rotate_half",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 512,
+     "bytes": 2048,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1,
+       64
+      ],
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1,
+      64
+     ],
+     "src": "apply_rotary_pos_emb",
+     "category": "rope",
+     "phase": "decode",
+     "count": 16,
+     "flops": 512,
+     "bytes": 3072,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.cat.default",
+     "in_shapes": [
+      [
+       1,
+       8,
+       1024,
+       64
+      ],
+      [
+       1,
+       8,
+       1,
+       64
+      ]
+     ],
+     "out_shape": [
+      1,
+      8,
+      1025,
+      64
+     ],
+     "src": "LlamaAttention.forward",
+     "category": "kv_cache",
+     "phase": "decode",
+     "count": 32,
+     "flops": 524800,
+     "bytes": 2099200,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       1,
+       64
+      ],
+      [
+       32,
+       64,
+       1025
+      ]
+     ],
+     "out_shape": [
+      32,
+      1,
+      1025
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 4198400,
+     "bytes": 2134048,
+     "intensity": 1.967340940784837,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       1025
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      1025
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 32800,
+     "bytes": 131200,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       1025
+      ],
+      [
+       1,
+       1,
+       1,
+       1025
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      1025
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 32800,
+     "bytes": 133250,
+     "intensity": 0.24615384615384617,
+     "measured": true
+    },
+    {
+     "op": "aten._softmax.default",
+     "in_shapes": [
+      [
+       1,
+       32,
+       1,
+       1025
+      ]
+     ],
+     "out_shape": [
+      1,
+      32,
+      1,
+      1025
+     ],
+     "src": "eager_attention_forward",
+     "category": "softmax",
+     "phase": "decode",
+     "count": 16,
+     "flops": 32800,
+     "bytes": 131200,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.bmm.default",
+     "in_shapes": [
+      [
+       32,
+       1,
+       1025
+      ],
+      [
+       32,
+       1025,
+       64
+      ]
+     ],
+     "out_shape": [
+      32,
+      1,
+      64
+     ],
+     "src": "eager_attention_forward",
+     "category": "attention",
+     "phase": "decode",
+     "count": 16,
+     "flops": 4198400,
+     "bytes": 2134048,
+     "intensity": 1.967340940784837,
+     "measured": true
+    },
+    {
+     "op": "aten.add.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       2048
+      ],
+      [
+       1,
+       1,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      2048
+     ],
+     "src": "LlamaDecoderLayer.forward",
+     "category": "residual",
+     "phase": "decode",
+     "count": 32,
+     "flops": 2048,
+     "bytes": 12288,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 32,
+     "flops": 33554432,
+     "bytes": 16787456,
+     "intensity": 1.9987800414785897,
+     "measured": true
+    },
+    {
+     "op": "aten.silu.default",
+     "in_shapes": [
+      [
+       1,
+       1,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "decode",
+     "count": 16,
+     "flops": 8192,
+     "bytes": 32768,
+     "intensity": 0.25,
+     "measured": true
+    },
+    {
+     "op": "aten.mul.Tensor",
+     "in_shapes": [
+      [
+       1,
+       1,
+       8192
+      ],
+      [
+       1,
+       1,
+       8192
+      ]
+     ],
+     "out_shape": [
+      1,
+      1,
+      8192
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "ffn",
+     "phase": "decode",
+     "count": 16,
+     "flops": 8192,
+     "bytes": 49152,
+     "intensity": 0.16666666666666666,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       8192
+      ],
+      [
+       8192,
+       2048
+      ]
+     ],
+     "out_shape": [
+      1,
+      2048
+     ],
+     "src": "LlamaMLP.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 16,
+     "flops": 33554432,
+     "bytes": 16787456,
+     "intensity": 1.9987800414785897,
+     "measured": true
+    },
+    {
+     "op": "aten.mm.default",
+     "in_shapes": [
+      [
+       1,
+       2048
+      ],
+      [
+       2048,
+       128256
+      ]
+     ],
+     "out_shape": [
+      1,
+      128256
+     ],
+     "src": "LlamaForCausalLM.forward",
+     "category": "matmul",
+     "phase": "decode",
+     "count": 1,
+     "flops": 525336576,
+     "bytes": 262798592,
+     "intensity": 1.9990083356306567,
+     "measured": true
+    }
+   ]
+  }
+ }
+}

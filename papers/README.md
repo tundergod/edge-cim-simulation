@@ -47,7 +47,7 @@
 ### ideas/ — 專案構想頁（vault 原生筆記，無外部 raw）
 | 筆記 | 對實作的用途 |
 |---|---|
-| [cim-centric-llm-mobile-soc](ideas/cim-centric-llm-mobile-soc.md) | **這就是本專案的規格書**（定義 M1–M7、Phase 0、L1–L6）；`overall.md` 的來源構想頁 |
+| [cim-centric-llm-mobile-soc](ideas/cim-centric-llm-mobile-soc.md) | **這就是本專案的規格書**（定義 M1–M7、Phase 0、L1–L6）；`OVERALL.md` 的來源構想頁 |
 | [cnn-dnn-edge-memory-wall-metis-embedded](ideas/cnn-dnn-edge-memory-wall-metis-embedded.md) | 校準來源構想：其 Step-1 計畫與 A1/A2/A3 子實驗即 Phase 0 / L6 流程，餵給 M1/M2 |
 
 ---

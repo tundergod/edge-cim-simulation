@@ -53,7 +53,7 @@ Op-inventory decode traced at `kv_len ∈ {128,512,1024}` (ADR-0002). Silicon an
 
 ## Sweep matrix (→ Phase 0.2)
 
-`sweep_matrix.json`: **592** distinct `(op, in_shapes, out_shape)` signatures — matmul 105, attention 63, softmax 21, norm 45, rope 113, elementwise 225, embedding 20. Housekeeping excluded (incl. host-side `sub`/causal-mask, issue #2). This is the op×shape set Phase 0.2 micro-benchmarks per unit.
+`sweep_matrix.json`: **580** distinct `(op, in_shapes, out_shape)` signatures, categorized by **semantic origin** — unambiguous ops by name, **overloaded ops (bmm/add/mul/cat/sub) by the emitting transformers module** the tracer records as `src` (issue #5; the #2 `sub` patch generalized to all overloaded ops). Counts: matmul 105, attention 95, rope 190, norm 90, ffn 30, residual 20, softmax 21, embedding 20, **kv_cache 9**. Host-side mask/position ops excluded; RoPE-frequency `bmm` separated from attention `bmm`; `cat` operands captured; cos/sin/neg in `rope`; **KV-cache `cat` split into a dedicated `kv_cache` (memory-movement) category, not attention compute (#6)**. This is the op×shape set Phase 0.2 micro-benchmarks per unit.
 
 ## Deviations from plan
 

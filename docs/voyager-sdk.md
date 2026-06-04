@@ -78,7 +78,7 @@ Authoritative op matrix: `docs/reference/onnx-opset17-support.md` (v1.6) `[DOC]`
 - **INT8 is the execution precision** `[DOC]`/`[FORUM]`. `compiler.quantize()` does INT8 PTQ with calibration data.
 - Quantization schemes (`quantization_scheme`, default `per_tensor_histogram`): `per_tensor_histogram` / `per_tensor_min_max` / `hybrid_per_tensor_per_channel` `[DOC]`.
 - **AxMO** (Axelera Model Optimizer): separate FP32→INT8 PTQ tool, **ViT-only** support, only knob `smooth_quant_alpha` (default 0.5) `[DOC]`.
-- **INT4: `[GAP]`** — not documented anywhere (op matrix, AxMO, compiler configs all silent); no community confirmation of INT4 on current silicon `[FORUM]`. LLM zoo models are tagged `*-static` with **no stated bit-width** — likely INT8, possibly mixed. **For the simulator: model INT8 as native; treat INT4 as out-of-scope unless a vendor artifact appears** (matches `overall.md` Out-of-scope). Our int4 decode projection (~2.04×) is a *linear extrapolation, not measured* `[MEASURED]`.
+- **INT4: `[GAP]`** — not documented anywhere (op matrix, AxMO, compiler configs all silent); no community confirmation of INT4 on current silicon `[FORUM]`. LLM zoo models are tagged `*-static` with **no stated bit-width** — likely INT8, possibly mixed. **For the simulator: model INT8 as native; treat INT4 as out-of-scope unless a vendor artifact appears** (matches `OVERALL.md` Out-of-scope). Our int4 decode projection (~2.04×) is a *linear extrapolation, not measured* `[MEASURED]`.
 
 ---
 
@@ -211,7 +211,7 @@ Two paths: high-level `deploy.py` (YAML in → deployed model + pipeline) and lo
 | `cooperative` | ❌/model-dependent | ❌ "Unsupported" | **declared but NOT implemented** in v1.3.1 |
 | `pipeline` | ❌ "Unsupported" | ❌ | **declared but NOT implemented** in v1.3.1 |
 
-**Consequence:** in v1.3.1, **no intra-frame parallelism is exposed** — `cooperative`/`pipeline` are walled off at validation. Matches `overall.md` Out-of-scope. The working 4-core trio is exactly `{aipu_cores: 4, resources: 1.0, multicore_mode: batch}`:
+**Consequence:** in v1.3.1, **no intra-frame parallelism is exposed** — `cooperative`/`pipeline` are walled off at validation. Matches `OVERALL.md` Out-of-scope. The working 4-core trio is exactly `{aipu_cores: 4, resources: 1.0, multicore_mode: batch}`:
 ```yaml
 extra_kwargs:
   compilation_config:
@@ -262,7 +262,7 @@ Frozen fields (e.g. `aipu_cores_max`) reject overrides at validation (~7–10 s 
 - **DVFS knobs:** `axdevice --set-clock {100,200,400,600,700,800 MHz}`, `--set-core-clock`, `--set-mvm-limitation <1-100%>`; compiler `frequency` + `mvm_utilization_limit` `[DOC]`.
 - **Specs:** 15 TOPS/W INT8; Metis 1-chip card ~8–15 W typical; M.2 Max ~6.5 W avg; 4-chip PCIe 30–58 W `[DOC]`/vendor.
 
-**Implication for the simulator's energy layer (box ⑤):** energy must be **spec-based + activity-factor estimated**, not measured — this matches `overall.md` M7 and Out-of-scope ("Energy as measurement" excluded). The only trustworthy on-silicon energy lever is whole-board INA delta on M.2 Max, or a wall-plug/rail delta against a fixed workload loop elsewhere.
+**Implication for the simulator's energy layer (box ⑤):** energy must be **spec-based + activity-factor estimated**, not measured — this matches `OVERALL.md` M7 and Out-of-scope ("Energy as measurement" excluded). The only trustworthy on-silicon energy lever is whole-board INA delta on M.2 Max, or a wall-plug/rail delta against a fixed workload loop elsewhere.
 
 ---
 
@@ -271,7 +271,7 @@ Frozen fields (e.g. `aipu_cores_max`) reject overrides at validation (~7–10 s 
 **Experimental, precompiled-only, memory-wall-bound** `[DOC]`/`[FORUM]`/`[MEASURED]`.
 
 - **Component:** AxLLM / `axllm` CLI (`--prompt`, interactive, `--rich-cli`, `--ui` Gradio). Pipelines `transformers-aipu` (default) vs `transformers` (CPU/GPU dev fallback). Aux: `axextractembeddings`.
-- **Precompiled zoo (7, all `*-static`):** `phi3-mini-{512,1024,2048}-static`, `llama-3-2-1b-1024-4core-static`, `llama-3-2-3b-1024-4core-static`, `llama-3-1-8b-1024-4core-static`, `velvet-2b-1024-4core-static`. Slug = context length + core count. Min card RAM: 4 GB (≤3B), 16 GB (8B / phi3-2048).
+- **Precompiled zoo (7, all `*-static`):** `phi3-mini-{512,1024,2048}-static`, `llama-3-2-1b-1024-4core-static`, `llama-3-2-3b-1024-4core-static`, `llama-3-1-8b-1024-4core-static`, `velvet-2b-1024-4core-static`. Slug = context length + core count. Min card RAM: 4 GB (≤3B), 16 GB (8B / phi3-2048). `[MEASURED 2026-06-04]` the production metiscard `build/` carries **both** 1-core (`…-1024-static`) and 4-core (`…-1024-4core-static`) artifacts for llama-3.2-1b/3b and llama-3.1-8b (the 1c slug is runnable — verified via `axllm llama-3-2-1b-1024-static --show-stats`). **llama context is fixed at 1024** (baked into the slug); only phi3 ships 512/1024/2048 — so a context sweep is phi3-only.
 - **Cannot self-compile an LLM** `[FORUM]`/`[MEASURED]`: no public LLM compiler; you reference Axelera-hosted `precompiled_url`, not arbitrary HF URLs. Public `axcompile` is a vision/CNN ONNX→INT8 compiler lacking RMSNorm/RoPE/Attention/Embedding/GELU/dynamic-shapes. The prefill+gen dual-megakernel artifact comes only from Axelera's internal toolchain.
 - **Measured LLM behavior (production card, Llama-3.2-1B)** `[MEASURED]`:
   - Throughput: GPU RTX 3090 (fp16) **187 tok/s** · AIPU **15.0 tok/s** · CPU 0.67 tok/s.
@@ -286,7 +286,7 @@ Frozen fields (e.g. `aipu_cores_max`) reject overrides at validation (~7–10 s 
 
 ## 10. Per-unit characterization recipes → Phase 0 output files
 
-Maps the toolchain above to the `measurements/` files `overall.md` Phase 0 needs. **All ground-truth lives in `measurements/`; this table is the "how".**
+Maps the toolchain above to the `measurements/` files `OVERALL.md` Phase 0 needs. **All ground-truth lives in `measurements/`; this table is the "how".**
 
 | Unit / target | Tool & method | Sweep | Output |
 |---|---|---|---|
@@ -303,10 +303,17 @@ Known per-unit pathologies to expect `[MEASURED]` (from Step-1, see [papers/meti
 - **RKNPU2:** latency-bound at b=1, scales 5–10× with batching; **EfficientNet-B0 collapses on depthwise+Swish**.
 - **Mali:** compute/bandwidth-bound, 10–25× slower than Metis, batching doesn't help; realistic role = preprocessing offload only.
 
+**Phase 0.2 capability verification** `[MEASURED 2026-06-04]` (smoke-tested on the real boards):
+- **CIM matmul micro-bench = 1×1 conv proxy.** Raw standalone `MatMul`/`Gemm` ONNX **fails to compile** (`ONNXGraphCleanerError` on the MatMul node — confirms general MatMul is not a clean compile path). A **1×1 `Conv2d` (mathematically = matmul)** compiles cleanly: `compile --input x.onnx --input-shape 1,C,1,1 --output DIR` (auto-calibrates with 100 random samples, no imageset needed, ~7 s) → `axrunmodel DIR/compiled_model/model.json --seconds N` returns dev/host/system FPS. **Use 1×1 conv as the GEMM/GEMV primitive** for the sweep-matrix shapes.
+- **End-to-end LLM (metiscard):** `axllm <model> --prompt "…" --show-stats` verified — emits Tokenization / Prefill / TTFT / Gen tok/s (llama-3.2-1b ≈ 11 tok/s on the 16 GB card, fw v1.6.0).
+- **RKNPU2:** `rknn-toolkit-lite2` (on-board inference runtime) installs on aarch64 ✓; **`rknn-toolkit2` (ONNX→`.rknn` converter) fails to build on aarch64** (`onnxoptimizer` wheel) → convert on an x86 host (metiscard) then run on-board via rknnlite, or install the C/C++ build deps and retry.
+- `compile --log-level` requires UPPERCASE (`WARNING`, not `warning`).
+
 ---
 
 ## 11. Gotchas that corrupt measurements (check before trusting a number)
 
+- **Metis Alpha can drop off the PCIe bus** `[MEASURED 2026-06-03]` — the card may vanish from `lspci` (slot `0000:01:00.0` re-enumerates as garbage `16c3:abcd`, no `/dev/metis` node, `metis.ko` auto-unloaded); `axdevice` then errors `No target device found in lspci`. Recover from the host: `echo 1 | sudo tee /sys/bus/pci/devices/0000:01:00.0/remove` → `echo 1 | sudo tee /sys/bus/pci/rescan` (re-enumerates as `1f9d:1100`) → `sudo modprobe metis` (→ `/dev/metis-0:1:0` returns). **Then recreate the SDK docker container** (`docker rm -f axelera-sdk; ~/start-sdk-bg.sh`) — it maps `/dev/metis` at creation, so a container started while the card was absent won't see it. `~/reset_device.sh` automates the rescan. **Always run `axdevice` to confirm presence before a measurement session.**
 - **DMA opts off by default in direct AxRuntime** (§4.1) — 30–90% under-report. Enable double_buffer + dmabuf.
 - **`dma_poll=1` mandatory on Aetina** — interrupt mode 2 s-timeouts (community-confirmed) `[MEASURED]`.
 - **`--mode PREQUANTIZED` does NOT skip calibration** — a 3-knob compile still ran ~60 min of 200-image calibration `[MEASURED]`.

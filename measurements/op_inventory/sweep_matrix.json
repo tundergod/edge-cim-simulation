@@ -1,16 +1,3018 @@
 {
- "note": "distinct (op, in_shapes, out_shape) to micro-benchmark in Phase 0.2; housekeeping aten ops excluded; operands not activation/weight-tagged",
+ "note": "distinct (op, in_shapes, out_shape) to micro-benchmark in Phase 0.2; unambiguous ops bucketed by name, overloaded ops by source origin (#5); host-side ops excluded",
  "counts": {
+  "attention": 95,
+  "embedding": 20,
+  "ffn": 30,
+  "kv_cache": 9,
   "matmul": 105,
-  "attention": 63,
-  "softmax": 21,
-  "norm": 45,
-  "rope": 113,
-  "elementwise": 225,
-  "embedding": 20
+  "norm": 90,
+  "residual": 20,
+  "rope": 190,
+  "softmax": 21
  },
- "total": 592,
+ "total": 580,
  "matrix": {
+  "attention": [
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      128,
+      128
+     ],
+     [
+      32,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     32,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      128
+     ],
+     [
+      1,
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      256,
+      128
+     ],
+     [
+      32,
+      128,
+      256
+     ]
+    ],
+    "out_shape": [
+     32,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      256
+     ],
+     [
+      1,
+      1,
+      256,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      256,
+      256
+     ],
+     [
+      32,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     32,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      512,
+      128
+     ],
+     [
+      32,
+      128,
+      512
+     ]
+    ],
+    "out_shape": [
+     32,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      512
+     ],
+     [
+      1,
+      1,
+      512,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      512,
+      512
+     ],
+     [
+      32,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     32,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1024,
+      128
+     ],
+     [
+      32,
+      128,
+      1024
+     ]
+    ],
+    "out_shape": [
+     32,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      1024
+     ],
+     [
+      1,
+      1,
+      1024,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1024,
+      1024
+     ],
+     [
+      32,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     32,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      128
+     ],
+     [
+      32,
+      128,
+      129
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      129
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      129
+     ],
+     [
+      1,
+      1,
+      1,
+      129
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      129
+     ],
+     [
+      32,
+      129,
+      128
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      128
+     ],
+     [
+      32,
+      128,
+      513
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      513
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      513
+     ],
+     [
+      1,
+      1,
+      1,
+      513
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      513
+     ],
+     [
+      32,
+      513,
+      128
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      128
+     ],
+     [
+      32,
+      128,
+      1025
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      1025
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      1025
+     ],
+     [
+      1,
+      1,
+      1,
+      1025
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      1025
+     ],
+     [
+      32,
+      1025,
+      128
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      128,
+      64
+     ],
+     [
+      32,
+      64,
+      128
+     ]
+    ],
+    "out_shape": [
+     32,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      128,
+      128
+     ],
+     [
+      32,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     32,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      256,
+      64
+     ],
+     [
+      32,
+      64,
+      256
+     ]
+    ],
+    "out_shape": [
+     32,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      256,
+      256
+     ],
+     [
+      32,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     32,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      512,
+      64
+     ],
+     [
+      32,
+      64,
+      512
+     ]
+    ],
+    "out_shape": [
+     32,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      512,
+      512
+     ],
+     [
+      32,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     32,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1024,
+      64
+     ],
+     [
+      32,
+      64,
+      1024
+     ]
+    ],
+    "out_shape": [
+     32,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1024,
+      1024
+     ],
+     [
+      32,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     32,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      64
+     ],
+     [
+      32,
+      64,
+      129
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      129
+     ],
+     [
+      32,
+      129,
+      64
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      64
+     ],
+     [
+      32,
+      64,
+      513
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      513
+     ],
+     [
+      32,
+      513,
+      64
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      64
+     ],
+     [
+      32,
+      64,
+      1025
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      32,
+      1,
+      1025
+     ],
+     [
+      32,
+      1025,
+      64
+     ]
+    ],
+    "out_shape": [
+     32,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      128,
+      128
+     ],
+     [
+      24,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     24,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      128,
+      128
+     ],
+     [
+      1,
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      256,
+      128
+     ],
+     [
+      24,
+      128,
+      256
+     ]
+    ],
+    "out_shape": [
+     24,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      256,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      256,
+      256
+     ],
+     [
+      1,
+      1,
+      256,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      256,
+      256
+     ],
+     [
+      24,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     24,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      512,
+      128
+     ],
+     [
+      24,
+      128,
+      512
+     ]
+    ],
+    "out_shape": [
+     24,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      512,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      512,
+      512
+     ],
+     [
+      1,
+      1,
+      512,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      512,
+      512
+     ],
+     [
+      24,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     24,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      1024,
+      128
+     ],
+     [
+      24,
+      128,
+      1024
+     ]
+    ],
+    "out_shape": [
+     24,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1024,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1024,
+      1024
+     ],
+     [
+      1,
+      1,
+      1024,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      1024,
+      1024
+     ],
+     [
+      24,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     24,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      1,
+      128
+     ],
+     [
+      24,
+      128,
+      129
+     ]
+    ],
+    "out_shape": [
+     24,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1,
+      129
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1,
+      129
+     ],
+     [
+      1,
+      1,
+      1,
+      129
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      1,
+      129
+     ],
+     [
+      24,
+      129,
+      128
+     ]
+    ],
+    "out_shape": [
+     24,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      1,
+      128
+     ],
+     [
+      24,
+      128,
+      513
+     ]
+    ],
+    "out_shape": [
+     24,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1,
+      513
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1,
+      513
+     ],
+     [
+      1,
+      1,
+      1,
+      513
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      1,
+      513
+     ],
+     [
+      24,
+      513,
+      128
+     ]
+    ],
+    "out_shape": [
+     24,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      1,
+      128
+     ],
+     [
+      24,
+      128,
+      1025
+     ]
+    ],
+    "out_shape": [
+     24,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1,
+      1025
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1,
+      1025
+     ],
+     [
+      1,
+      1,
+      1,
+      1025
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      24,
+      1,
+      1025
+     ],
+     [
+      24,
+      1025,
+      128
+     ]
+    ],
+    "out_shape": [
+     24,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      128,
+      128
+     ],
+     [
+      28,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     28,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      128,
+      128
+     ],
+     [
+      1,
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      256,
+      128
+     ],
+     [
+      28,
+      128,
+      256
+     ]
+    ],
+    "out_shape": [
+     28,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      256,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      256,
+      256
+     ],
+     [
+      1,
+      1,
+      256,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     256,
+     256
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      256,
+      256
+     ],
+     [
+      28,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     28,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      512,
+      128
+     ],
+     [
+      28,
+      128,
+      512
+     ]
+    ],
+    "out_shape": [
+     28,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      512,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      512,
+      512
+     ],
+     [
+      1,
+      1,
+      512,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     512,
+     512
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      512,
+      512
+     ],
+     [
+      28,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     28,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      1024,
+      128
+     ],
+     [
+      28,
+      128,
+      1024
+     ]
+    ],
+    "out_shape": [
+     28,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1024,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1024,
+      1024
+     ],
+     [
+      1,
+      1,
+      1024,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1024,
+     1024
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      1024,
+      1024
+     ],
+     [
+      28,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     28,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      1,
+      128
+     ],
+     [
+      28,
+      128,
+      129
+     ]
+    ],
+    "out_shape": [
+     28,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1,
+      129
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1,
+      129
+     ],
+     [
+      1,
+      1,
+      1,
+      129
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1,
+     129
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      1,
+      129
+     ],
+     [
+      28,
+      129,
+      128
+     ]
+    ],
+    "out_shape": [
+     28,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      1,
+      128
+     ],
+     [
+      28,
+      128,
+      513
+     ]
+    ],
+    "out_shape": [
+     28,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1,
+      513
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1,
+      513
+     ],
+     [
+      1,
+      1,
+      1,
+      513
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1,
+     513
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      1,
+      513
+     ],
+     [
+      28,
+      513,
+      128
+     ]
+    ],
+    "out_shape": [
+     28,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      1,
+      128
+     ],
+     [
+      28,
+      128,
+      1025
+     ]
+    ],
+    "out_shape": [
+     28,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1,
+      1025
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1,
+      1025
+     ],
+     [
+      1,
+      1,
+      1,
+      1025
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     1,
+     1025
+    ]
+   },
+   {
+    "op": "aten.bmm.default",
+    "in_shapes": [
+     [
+      28,
+      1,
+      1025
+     ],
+     [
+      28,
+      1025,
+      128
+     ]
+    ],
+    "out_shape": [
+     28,
+     1,
+     128
+    ]
+   }
+  ],
+  "embedding": [
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      4096
+     ],
+     [
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     4096
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      4096
+     ],
+     [
+      1,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     4096
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      4096
+     ],
+     [
+      1,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     4096
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      4096
+     ],
+     [
+      1,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     4096
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      4096
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     4096
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      2048
+     ],
+     [
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     2048
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      2048
+     ],
+     [
+      1,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     2048
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      2048
+     ],
+     [
+      1,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     2048
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      2048
+     ],
+     [
+      1,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     2048
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      2048
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     2048
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      3072
+     ],
+     [
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3072
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      3072
+     ],
+     [
+      1,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3072
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      3072
+     ],
+     [
+      1,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3072
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      3072
+     ],
+     [
+      1,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3072
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      128256,
+      3072
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3072
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      152064,
+      3584
+     ],
+     [
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3584
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      152064,
+      3584
+     ],
+     [
+      1,
+      256
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3584
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      152064,
+      3584
+     ],
+     [
+      1,
+      512
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3584
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      152064,
+      3584
+     ],
+     [
+      1,
+      1024
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3584
+    ]
+   },
+   {
+    "op": "aten.embedding.default",
+    "in_shapes": [
+     [
+      152064,
+      3584
+     ],
+     [
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3584
+    ]
+   }
+  ],
+  "ffn": [
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      128,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     14336
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      14336
+     ],
+     [
+      1,
+      128,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     14336
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      256,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     14336
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      14336
+     ],
+     [
+      1,
+      256,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     14336
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      512,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     14336
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      14336
+     ],
+     [
+      1,
+      512,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     14336
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     14336
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      14336
+     ],
+     [
+      1,
+      1024,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     14336
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      1,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     14336
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      14336
+     ],
+     [
+      1,
+      1,
+      14336
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     14336
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      128,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     8192
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      8192
+     ],
+     [
+      1,
+      128,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     8192
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      256,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     8192
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      8192
+     ],
+     [
+      1,
+      256,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     8192
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      512,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     8192
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      8192
+     ],
+     [
+      1,
+      512,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     8192
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     8192
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      8192
+     ],
+     [
+      1,
+      1024,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     8192
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      1,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     8192
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      8192
+     ],
+     [
+      1,
+      1,
+      8192
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     8192
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      128,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     18944
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      18944
+     ],
+     [
+      1,
+      128,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     18944
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      256,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     18944
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      18944
+     ],
+     [
+      1,
+      256,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     18944
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      512,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     18944
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      18944
+     ],
+     [
+      1,
+      512,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     18944
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     18944
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      18944
+     ],
+     [
+      1,
+      1024,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     18944
+    ]
+   },
+   {
+    "op": "aten.silu.default",
+    "in_shapes": [
+     [
+      1,
+      1,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     18944
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      18944
+     ],
+     [
+      1,
+      1,
+      18944
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     18944
+    ]
+   }
+  ],
+  "kv_cache": [
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     129,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     513,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1025,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     129,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     513,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1025,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      128,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     129,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      512,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     513,
+     128
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1024,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     1025,
+     128
+    ]
+   }
+  ],
   "matmul": [
    {
     "op": "aten.mm.default",
@@ -1828,7 +4830,1921 @@
     ]
    }
   ],
-  "attention": [
+  "norm": [
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      128,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      128,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     1
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     1
+    ]
+   },
+   {
+    "op": "aten.rsqrt.default",
+    "in_shapes": [
+     [
+      1,
+      128,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      4096
+     ],
+     [
+      1,
+      128,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      4096
+     ],
+     [
+      1,
+      128,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     4096
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      256,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      256,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     1
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     1
+    ]
+   },
+   {
+    "op": "aten.rsqrt.default",
+    "in_shapes": [
+     [
+      1,
+      256,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      4096
+     ],
+     [
+      1,
+      256,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      4096
+     ],
+     [
+      1,
+      256,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     4096
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      512,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      512,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     1
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     1
+    ]
+   },
+   {
+    "op": "aten.rsqrt.default",
+    "in_shapes": [
+     [
+      1,
+      512,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      4096
+     ],
+     [
+      1,
+      512,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      4096
+     ],
+     [
+      1,
+      512,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     4096
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     1
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     1
+    ]
+   },
+   {
+    "op": "aten.rsqrt.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      4096
+     ],
+     [
+      1,
+      1024,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      4096
+     ],
+     [
+      1,
+      1024,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     4096
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      1,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      1,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "op": "aten.rsqrt.default",
+    "in_shapes": [
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      4096
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     4096
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      4096
+     ],
+     [
+      1,
+      1,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     4096
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      128,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      128,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      2048
+     ],
+     [
+      1,
+      128,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      2048
+     ],
+     [
+      1,
+      128,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     2048
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      256,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      256,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      2048
+     ],
+     [
+      1,
+      256,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      2048
+     ],
+     [
+      1,
+      256,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     2048
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      512,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      512,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      2048
+     ],
+     [
+      1,
+      512,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      2048
+     ],
+     [
+      1,
+      512,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     2048
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      2048
+     ],
+     [
+      1,
+      1024,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      2048
+     ],
+     [
+      1,
+      1024,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     2048
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      1,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      1,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      2048
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     2048
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      2048
+     ],
+     [
+      1,
+      1,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     2048
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      128,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      128,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      3072
+     ],
+     [
+      1,
+      128,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3072
+     ],
+     [
+      1,
+      128,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3072
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      256,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      256,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      3072
+     ],
+     [
+      1,
+      256,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3072
+     ],
+     [
+      1,
+      256,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3072
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      512,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      512,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      3072
+     ],
+     [
+      1,
+      512,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3072
+     ],
+     [
+      1,
+      512,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3072
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      3072
+     ],
+     [
+      1,
+      1024,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3072
+     ],
+     [
+      1,
+      1024,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3072
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      1,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      1,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      3072
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3072
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3072
+     ],
+     [
+      1,
+      1,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3072
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      128,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      128,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      3584
+     ],
+     [
+      1,
+      128,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3584
+     ],
+     [
+      1,
+      128,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3584
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      256,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      256,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      3584
+     ],
+     [
+      1,
+      256,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3584
+     ],
+     [
+      1,
+      256,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3584
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      512,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      512,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      3584
+     ],
+     [
+      1,
+      512,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3584
+     ],
+     [
+      1,
+      512,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3584
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      3584
+     ],
+     [
+      1,
+      1024,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3584
+     ],
+     [
+      1,
+      1024,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3584
+    ]
+   },
+   {
+    "op": "aten.pow.Tensor_Scalar",
+    "in_shapes": [
+     [
+      1,
+      1,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mean.dim",
+    "in_shapes": [
+     [
+      1,
+      1,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     1
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      3584
+     ],
+     [
+      1,
+      1,
+      1
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3584
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      3584
+     ],
+     [
+      1,
+      1,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3584
+    ]
+   }
+  ],
+  "residual": [
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      4096
+     ],
+     [
+      1,
+      128,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     4096
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      4096
+     ],
+     [
+      1,
+      256,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     4096
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      4096
+     ],
+     [
+      1,
+      512,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     4096
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      4096
+     ],
+     [
+      1,
+      1024,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     4096
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      4096
+     ],
+     [
+      1,
+      1,
+      4096
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     4096
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      2048
+     ],
+     [
+      1,
+      128,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     2048
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      2048
+     ],
+     [
+      1,
+      256,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     2048
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      2048
+     ],
+     [
+      1,
+      512,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     2048
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      2048
+     ],
+     [
+      1,
+      1024,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     2048
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      2048
+     ],
+     [
+      1,
+      1,
+      2048
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     2048
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      3072
+     ],
+     [
+      1,
+      128,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3072
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      3072
+     ],
+     [
+      1,
+      256,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3072
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      3072
+     ],
+     [
+      1,
+      512,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3072
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      3072
+     ],
+     [
+      1,
+      1024,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3072
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      3072
+     ],
+     [
+      1,
+      1,
+      3072
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3072
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      3584
+     ],
+     [
+      1,
+      128,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     3584
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      3584
+     ],
+     [
+      1,
+      256,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     3584
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      3584
+     ],
+     [
+      1,
+      512,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     3584
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      3584
+     ],
+     [
+      1,
+      1024,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     3584
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      3584
+     ],
+     [
+      1,
+      1,
+      3584
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     3584
+    ]
+   }
+  ],
+  "rope": [
    {
     "op": "aten.bmm.default",
     "in_shapes": [
@@ -1850,21 +6766,238 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
+      1,
+      128,
+      64
+     ],
+     [
+      1,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       32,
       128,
       128
      ],
      [
+      1,
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      64
+     ],
+     [
+      1,
+      32,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      128
+     ],
+     [
+      1,
       32,
       128,
       128
      ]
     ],
     "out_shape": [
+     1,
      32,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      128
+     ],
+     [
+      1,
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      64
+     ],
+     [
+      1,
+      8,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      128
+     ],
+     [
+      1,
+      8,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
      128,
      128
     ]
@@ -1890,41 +7023,238 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
-      32,
+      1,
       256,
-      128
+      64
      ],
      [
-      32,
-      128,
-      256
+      1,
+      256,
+      64
      ]
     ],
     "out_shape": [
-     32,
+     1,
      256,
-     256
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cos.default",
     "in_shapes": [
      [
+      1,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       32,
       256,
-      256
+      128
      ],
      [
+      1,
+      1,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      64
+     ],
+     [
+      1,
+      32,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      128
+     ],
+     [
+      1,
       32,
       256,
       128
      ]
     ],
     "out_shape": [
+     1,
      32,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      128
+     ],
+     [
+      1,
+      1,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      64
+     ],
+     [
+      1,
+      8,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      128
+     ],
+     [
+      1,
+      8,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
      256,
      128
     ]
@@ -1950,41 +7280,238 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
-      32,
+      1,
       512,
-      128
+      64
      ],
      [
-      32,
-      128,
-      512
+      1,
+      512,
+      64
      ]
     ],
     "out_shape": [
-     32,
+     1,
      512,
-     512
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cos.default",
     "in_shapes": [
      [
+      1,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       32,
       512,
-      512
+      128
      ],
      [
+      1,
+      1,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      64
+     ],
+     [
+      1,
+      32,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      128
+     ],
+     [
+      1,
       32,
       512,
       128
      ]
     ],
     "out_shape": [
+     1,
      32,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      128
+     ],
+     [
+      1,
+      1,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      64
+     ],
+     [
+      1,
+      8,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      128
+     ],
+     [
+      1,
+      8,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
      512,
      128
     ]
@@ -2010,41 +7537,238 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
+      1,
+      1024,
+      64
+     ],
+     [
+      1,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       32,
       1024,
       128
      ],
      [
-      32,
-      128,
-      1024
+      1,
+      1,
+      1024,
+      128
      ]
     ],
     "out_shape": [
+     1,
      32,
      1024,
-     1024
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       32,
       1024,
-      1024
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      64
      ],
      [
+      1,
+      32,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      128
+     ],
+     [
+      1,
       32,
       1024,
       128
      ]
     ],
     "out_shape": [
+     1,
      32,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      128
+     ],
+     [
+      1,
+      1,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      64
+     ],
+     [
+      1,
+      8,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      128
+     ],
+     [
+      1,
+      8,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
      1024,
      128
     ]
@@ -2070,121 +7794,238 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
-      32,
       1,
-      128
+      1,
+      64
      ],
      [
-      32,
-      128,
-      129
+      1,
+      1,
+      64
      ]
     ],
     "out_shape": [
-     32,
      1,
-     129
+     1,
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cos.default",
     "in_shapes": [
      [
-      32,
       1,
-      129
-     ],
-     [
-      32,
-      129,
+      1,
       128
      ]
     ],
     "out_shape": [
+     1,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      128
+     ],
+     [
+      1,
+      1,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
      32,
      1,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       32,
       1,
-      128
-     ],
-     [
-      32,
-      128,
-      513
+      64
      ]
     ],
     "out_shape": [
+     1,
      32,
      1,
-     513
+     64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
+      1,
       32,
       1,
-      513
+      64
      ],
      [
+      1,
       32,
-      513,
-      128
+      1,
+      64
      ]
     ],
     "out_shape": [
+     1,
      32,
      1,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
+      1,
       32,
       1,
       128
      ],
      [
+      1,
       32,
-      128,
-      1025
+      1,
+      128
      ]
     ],
     "out_shape": [
+     1,
      32,
      1,
-     1025
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.mul.Tensor",
     "in_shapes": [
      [
-      32,
       1,
-      1025
+      8,
+      1,
+      128
      ],
      [
-      32,
-      1025,
+      1,
+      1,
+      1,
       128
      ]
     ],
     "out_shape": [
-     32,
+     1,
+     8,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      128
+     ],
+     [
+      1,
+      8,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
      1,
      128
     ]
@@ -2210,41 +8051,238 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
-      32,
+      1,
       128,
-      64
+      32
      ],
      [
-      32,
-      64,
-      128
+      1,
+      128,
+      32
      ]
     ],
     "out_shape": [
-     32,
+     1,
      128,
-     128
+     64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cos.default",
     "in_shapes": [
      [
+      1,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       32,
       128,
-      128
+      64
      ],
      [
+      1,
+      1,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     32
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      32
+     ],
+     [
+      1,
+      32,
+      128,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      128,
+      64
+     ],
+     [
+      1,
       32,
       128,
       64
      ]
     ],
     "out_shape": [
+     1,
      32,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      64
+     ],
+     [
+      1,
+      1,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     128,
+     32
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      32
+     ],
+     [
+      1,
+      8,
+      128,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      128,
+      64
+     ],
+     [
+      1,
+      8,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
      128,
      64
     ]
@@ -2270,41 +8308,238 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
-      32,
+      1,
       256,
-      64
+      32
      ],
      [
-      32,
-      64,
-      256
+      1,
+      256,
+      32
      ]
     ],
     "out_shape": [
-     32,
+     1,
      256,
-     256
+     64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cos.default",
     "in_shapes": [
      [
+      1,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       32,
       256,
-      256
+      64
      ],
      [
+      1,
+      1,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     32
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      32
+     ],
+     [
+      1,
+      32,
+      256,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      256,
+      64
+     ],
+     [
+      1,
       32,
       256,
       64
      ]
     ],
     "out_shape": [
+     1,
      32,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      64
+     ],
+     [
+      1,
+      1,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     256,
+     32
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      32
+     ],
+     [
+      1,
+      8,
+      256,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      256,
+      64
+     ],
+     [
+      1,
+      8,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
      256,
      64
     ]
@@ -2330,41 +8565,238 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
+      1,
+      512,
+      32
+     ],
+     [
+      1,
+      512,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       32,
       512,
       64
      ],
      [
-      32,
-      64,
-      512
+      1,
+      1,
+      512,
+      64
      ]
     ],
     "out_shape": [
+     1,
      32,
      512,
-     512
+     64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       32,
       512,
-      512
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     512,
+     32
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      32
      ],
      [
+      1,
+      32,
+      512,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      512,
+      64
+     ],
+     [
+      1,
       32,
       512,
       64
      ]
     ],
     "out_shape": [
+     1,
      32,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      64
+     ],
+     [
+      1,
+      1,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     512,
+     32
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      32
+     ],
+     [
+      1,
+      8,
+      512,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      512,
+      64
+     ],
+     [
+      1,
+      8,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
      512,
      64
     ]
@@ -2390,41 +8822,238 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
+      1,
+      1024,
+      32
+     ],
+     [
+      1,
+      1024,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.cos.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       32,
       1024,
       64
      ],
      [
-      32,
-      64,
-      1024
+      1,
+      1,
+      1024,
+      64
      ]
     ],
     "out_shape": [
+     1,
      32,
      1024,
-     1024
+     64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       32,
       1024,
-      1024
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1024,
+     32
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      32
      ],
      [
+      1,
+      32,
+      1024,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1024,
+      64
+     ],
+     [
+      1,
       32,
       1024,
       64
      ]
     ],
     "out_shape": [
+     1,
      32,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      64
+     ],
+     [
+      1,
+      1,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1024,
+     32
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      32
+     ],
+     [
+      1,
+      8,
+      1024,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1024,
+      64
+     ],
+     [
+      1,
+      8,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
      1024,
      64
     ]
@@ -2450,641 +9079,1528 @@
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
-      32,
       1,
-      64
+      1,
+      32
      ],
      [
-      32,
-      64,
-      129
+      1,
+      1,
+      32
      ]
     ],
     "out_shape": [
-     32,
      1,
-     129
+     1,
+     64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cos.default",
     "in_shapes": [
      [
-      32,
       1,
-      129
-     ],
-     [
-      32,
-      129,
+      1,
       64
      ]
     ],
     "out_shape": [
+     1,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.sin.default",
+    "in_shapes": [
+     [
+      1,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      32,
+      1,
+      64
+     ],
+     [
+      1,
+      1,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
      32,
      1,
      64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       32,
       1,
-      64
-     ],
-     [
-      32,
-      64,
-      513
+      32
      ]
     ],
     "out_shape": [
+     1,
      32,
      1,
-     513
+     32
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
+      1,
       32,
       1,
-      513
+      32
      ],
      [
+      1,
       32,
-      513,
-      64
+      1,
+      32
      ]
     ],
     "out_shape": [
-     32,
      1,
-     64
-    ]
-   },
-   {
-    "op": "aten.bmm.default",
-    "in_shapes": [
-     [
-      32,
-      1,
-      64
-     ],
-     [
-      32,
-      64,
-      1025
-     ]
-    ],
-    "out_shape": [
-     32,
-     1,
-     1025
-    ]
-   },
-   {
-    "op": "aten.bmm.default",
-    "in_shapes": [
-     [
-      32,
-      1,
-      1025
-     ],
-     [
-      32,
-      1025,
-      64
-     ]
-    ],
-    "out_shape": [
      32,
      1,
      64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
+      1,
+      32,
+      1,
+      64
+     ],
+     [
+      1,
+      32,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     32,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      64
+     ],
+     [
+      1,
+      1,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1,
+     32
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      32
+     ],
+     [
+      1,
+      8,
+      1,
+      32
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      8,
+      1,
+      64
+     ],
+     [
+      1,
+      8,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     8,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       24,
       128,
       128
      ],
      [
-      24,
+      1,
+      1,
       128,
       128
      ]
     ],
     "out_shape": [
+     1,
      24,
      128,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
+      24,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      24,
+      128,
+      64
+     ],
+     [
+      1,
+      24,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      24,
+      128,
+      128
+     ],
+     [
+      1,
+      24,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       24,
       256,
       128
      ],
      [
-      24,
-      128,
-      256
+      1,
+      1,
+      256,
+      128
      ]
     ],
     "out_shape": [
+     1,
      24,
      256,
-     256
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       24,
       256,
-      256
-     ],
-     [
-      24,
-      256,
-      128
+      64
      ]
     ],
     "out_shape": [
+     1,
+     24,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      24,
+      256,
+      64
+     ],
+     [
+      1,
+      24,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
      24,
      256,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
+      1,
+      24,
+      256,
+      128
+     ],
+     [
+      1,
+      24,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       24,
       512,
       128
      ],
      [
-      24,
-      128,
-      512
+      1,
+      1,
+      512,
+      128
      ]
     ],
     "out_shape": [
+     1,
      24,
      512,
-     512
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       24,
       512,
-      512
-     ],
-     [
-      24,
-      512,
-      128
+      64
      ]
     ],
     "out_shape": [
+     1,
+     24,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      24,
+      512,
+      64
+     ],
+     [
+      1,
+      24,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
      24,
      512,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
+      1,
+      24,
+      512,
+      128
+     ],
+     [
+      1,
+      24,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       24,
       1024,
       128
      ],
      [
-      24,
-      128,
-      1024
+      1,
+      1,
+      1024,
+      128
      ]
     ],
     "out_shape": [
+     1,
      24,
      1024,
-     1024
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       24,
       1024,
-      1024
-     ],
-     [
-      24,
-      1024,
-      128
+      64
      ]
     ],
     "out_shape": [
+     1,
+     24,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      24,
+      1024,
+      64
+     ],
+     [
+      1,
+      24,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
      24,
      1024,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
-      24,
       1,
+      24,
+      1024,
       128
      ],
      [
+      1,
       24,
-      128,
-      129
+      1024,
+      128
      ]
     ],
     "out_shape": [
-     24,
      1,
-     129
+     24,
+     1024,
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.mul.Tensor",
     "in_shapes": [
      [
+      1,
       24,
       1,
-      129
+      128
      ],
      [
-      24,
-      129,
+      1,
+      1,
+      1,
       128
      ]
     ],
     "out_shape": [
+     1,
      24,
      1,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       24,
       1,
-      128
-     ],
-     [
-      24,
-      128,
-      513
+      64
      ]
     ],
     "out_shape": [
+     1,
      24,
      1,
-     513
+     64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
+      1,
       24,
       1,
-      513
+      64
      ],
      [
+      1,
       24,
-      513,
-      128
+      1,
+      64
      ]
     ],
     "out_shape": [
-     24,
      1,
-     128
-    ]
-   },
-   {
-    "op": "aten.bmm.default",
-    "in_shapes": [
-     [
-      24,
-      1,
-      128
-     ],
-     [
-      24,
-      128,
-      1025
-     ]
-    ],
-    "out_shape": [
-     24,
-     1,
-     1025
-    ]
-   },
-   {
-    "op": "aten.bmm.default",
-    "in_shapes": [
-     [
-      24,
-      1,
-      1025
-     ],
-     [
-      24,
-      1025,
-      128
-     ]
-    ],
-    "out_shape": [
      24,
      1,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
+      1,
+      24,
+      1,
+      128
+     ],
+     [
+      1,
+      24,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     24,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       28,
       128,
       128
      ],
      [
-      28,
+      1,
+      1,
       128,
       128
      ]
     ],
     "out_shape": [
+     1,
      28,
      128,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
+      28,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      28,
+      128,
+      64
+     ],
+     [
+      1,
+      28,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      128,
+      128
+     ],
+     [
+      1,
+      28,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      4,
+      128,
+      128
+     ],
+     [
+      1,
+      1,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     128,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      128,
+      64
+     ],
+     [
+      1,
+      4,
+      128,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      4,
+      128,
+      128
+     ],
+     [
+      1,
+      4,
+      128,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     128,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       28,
       256,
       128
      ],
      [
-      28,
-      128,
-      256
+      1,
+      1,
+      256,
+      128
      ]
     ],
     "out_shape": [
+     1,
      28,
      256,
-     256
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       28,
       256,
-      256
-     ],
-     [
-      28,
-      256,
-      128
+      64
      ]
     ],
     "out_shape": [
+     1,
+     28,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      28,
+      256,
+      64
+     ],
+     [
+      1,
+      28,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
      28,
      256,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
+      1,
+      28,
+      256,
+      128
+     ],
+     [
+      1,
+      28,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      4,
+      256,
+      128
+     ],
+     [
+      1,
+      1,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     256,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      256,
+      64
+     ],
+     [
+      1,
+      4,
+      256,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      4,
+      256,
+      128
+     ],
+     [
+      1,
+      4,
+      256,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     256,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       28,
       512,
       128
      ],
      [
-      28,
-      128,
-      512
+      1,
+      1,
+      512,
+      128
      ]
     ],
     "out_shape": [
+     1,
      28,
      512,
-     512
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       28,
       512,
-      512
-     ],
-     [
-      28,
-      512,
-      128
+      64
      ]
     ],
     "out_shape": [
+     1,
+     28,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      28,
+      512,
+      64
+     ],
+     [
+      1,
+      28,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
      28,
      512,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
+      1,
+      28,
+      512,
+      128
+     ],
+     [
+      1,
+      28,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     28,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      4,
+      512,
+      128
+     ],
+     [
+      1,
+      1,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     512,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      512,
+      64
+     ],
+     [
+      1,
+      4,
+      512,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      4,
+      512,
+      128
+     ],
+     [
+      1,
+      4,
+      512,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     512,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
       28,
       1024,
       128
      ],
      [
-      28,
-      128,
-      1024
+      1,
+      1,
+      1024,
+      128
      ]
     ],
     "out_shape": [
+     1,
      28,
      1024,
-     1024
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       28,
       1024,
-      1024
-     ],
-     [
-      28,
-      1024,
-      128
+      64
      ]
     ],
     "out_shape": [
+     1,
+     28,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1024,
+      64
+     ],
+     [
+      1,
+      28,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
      28,
      1024,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
-      28,
       1,
+      28,
+      1024,
       128
      ],
      [
+      1,
       28,
-      128,
-      129
+      1024,
+      128
      ]
     ],
     "out_shape": [
-     28,
      1,
-     129
+     28,
+     1024,
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.mul.Tensor",
     "in_shapes": [
      [
-      28,
       1,
-      129
+      4,
+      1024,
+      128
      ],
      [
-      28,
-      129,
+      1,
+      1,
+      1024,
       128
      ]
     ],
     "out_shape": [
+     1,
+     4,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     1024,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1024,
+      64
+     ],
+     [
+      1,
+      4,
+      1024,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1024,
+      128
+     ],
+     [
+      1,
+      4,
+      1024,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     1024,
+     128
+    ]
+   },
+   {
+    "op": "aten.mul.Tensor",
+    "in_shapes": [
+     [
+      1,
+      28,
+      1,
+      128
+     ],
+     [
+      1,
+      1,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
      28,
      1,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.neg.default",
     "in_shapes": [
      [
+      1,
       28,
       1,
-      128
-     ],
-     [
-      28,
-      128,
-      513
+      64
      ]
     ],
     "out_shape": [
+     1,
      28,
      1,
-     513
+     64
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.cat.default",
     "in_shapes": [
      [
+      1,
       28,
       1,
-      513
+      64
      ],
      [
+      1,
       28,
-      513,
-      128
+      1,
+      64
      ]
     ],
     "out_shape": [
+     1,
      28,
      1,
      128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.add.Tensor",
     "in_shapes": [
      [
+      1,
       28,
       1,
       128
      ],
      [
+      1,
       28,
-      128,
-      1025
+      1,
+      128
      ]
     ],
     "out_shape": [
+     1,
      28,
      1,
-     1025
+     128
     ]
    },
    {
-    "op": "aten.bmm.default",
+    "op": "aten.mul.Tensor",
     "in_shapes": [
      [
-      28,
       1,
-      1025
+      4,
+      1,
+      128
      ],
      [
-      28,
-      1025,
+      1,
+      1,
+      1,
       128
      ]
     ],
     "out_shape": [
-     28,
+     1,
+     4,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.neg.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     1,
+     64
+    ]
+   },
+   {
+    "op": "aten.cat.default",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1,
+      64
+     ],
+     [
+      1,
+      4,
+      1,
+      64
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
+     1,
+     128
+    ]
+   },
+   {
+    "op": "aten.add.Tensor",
+    "in_shapes": [
+     [
+      1,
+      4,
+      1,
+      128
+     ],
+     [
+      1,
+      4,
+      1,
+      128
+     ]
+    ],
+    "out_shape": [
+     1,
+     4,
      1,
      128
     ]
@@ -3446,6954 +10962,6 @@
      28,
      1,
      1025
-    ]
-   }
-  ],
-  "norm": [
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      128,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      128,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     1
-    ]
-   },
-   {
-    "op": "aten.rsqrt.default",
-    "in_shapes": [
-     [
-      1,
-      128,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      256,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      256,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     1
-    ]
-   },
-   {
-    "op": "aten.rsqrt.default",
-    "in_shapes": [
-     [
-      1,
-      256,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      512,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      512,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     1
-    ]
-   },
-   {
-    "op": "aten.rsqrt.default",
-    "in_shapes": [
-     [
-      1,
-      512,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     1
-    ]
-   },
-   {
-    "op": "aten.rsqrt.default",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      1,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      1,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     1
-    ]
-   },
-   {
-    "op": "aten.rsqrt.default",
-    "in_shapes": [
-     [
-      1,
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      128,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      128,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      256,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      256,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      512,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      512,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      1,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      1,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      128,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      128,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      256,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      256,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      512,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      512,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      1,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      1,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      128,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      128,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      256,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      256,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      512,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      512,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     1
-    ]
-   },
-   {
-    "op": "aten.pow.Tensor_Scalar",
-    "in_shapes": [
-     [
-      1,
-      1,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mean.dim",
-    "in_shapes": [
-     [
-      1,
-      1,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     1
-    ]
-   }
-  ],
-  "rope": [
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     129
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     257
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     513
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     1025
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     129,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     513,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     1025,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      128,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     128,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      128,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     128,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      256,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     256,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      256,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     256,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      512,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     512,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      512,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     512,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1024,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1024,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1024,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.cos.default",
-    "in_shapes": [
-     [
-      1,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.sin.default",
-    "in_shapes": [
-     [
-      1,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     32,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1,
-      32
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1,
-     32
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     129,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     513,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     8,
-     1025,
-     64
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      24,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     24,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      24,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     24,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      24,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     24,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     24,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     24,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      28,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     28,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      4,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     4,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      28,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     28,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      4,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     4,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      28,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     28,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      4,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     4,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     28,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      4,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     4,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     28,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.neg.default",
-    "in_shapes": [
-     [
-      1,
-      4,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     4,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     4,
-     129,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     4,
-     513,
-     128
-    ]
-   },
-   {
-    "op": "aten.cat.default",
-    "in_shapes": [],
-    "out_shape": [
-     1,
-     4,
-     1025,
-     128
-    ]
-   }
-  ],
-  "elementwise": [
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      128
-     ]
-    ],
-    "out_shape": [
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     1
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      4096
-     ],
-     [
-      1,
-      128,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      4096
-     ],
-     [
-      1,
-      128,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      128,
-      128
-     ],
-     [
-      1,
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      128,
-      128
-     ],
-     [
-      1,
-      32,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      128,
-      128
-     ],
-     [
-      1,
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      128,
-      128
-     ],
-     [
-      1,
-      8,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      128,
-      128
-     ],
-     [
-      1,
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      4096
-     ],
-     [
-      1,
-      128,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     4096
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      128,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     14336
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      14336
-     ],
-     [
-      1,
-      128,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     14336
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      256
-     ]
-    ],
-    "out_shape": [
-     256
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     1
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      4096
-     ],
-     [
-      1,
-      256,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      4096
-     ],
-     [
-      1,
-      256,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      256,
-      128
-     ],
-     [
-      1,
-      1,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      256,
-      128
-     ],
-     [
-      1,
-      32,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      256,
-      128
-     ],
-     [
-      1,
-      1,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      256,
-      128
-     ],
-     [
-      1,
-      8,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      256,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     256,
-     256
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      256,
-      256
-     ],
-     [
-      1,
-      1,
-      256,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     256,
-     256
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      4096
-     ],
-     [
-      1,
-      256,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     4096
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      256,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     14336
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      14336
-     ],
-     [
-      1,
-      256,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     14336
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      512
-     ]
-    ],
-    "out_shape": [
-     512
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     1
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      4096
-     ],
-     [
-      1,
-      512,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      4096
-     ],
-     [
-      1,
-      512,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      512,
-      128
-     ],
-     [
-      1,
-      1,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      512,
-      128
-     ],
-     [
-      1,
-      32,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      512,
-      128
-     ],
-     [
-      1,
-      1,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      512,
-      128
-     ],
-     [
-      1,
-      8,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      512,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     512,
-     512
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      512,
-      512
-     ],
-     [
-      1,
-      1,
-      512,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     512,
-     512
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      4096
-     ],
-     [
-      1,
-      512,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     4096
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      512,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     14336
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      14336
-     ],
-     [
-      1,
-      512,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     14336
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1024
-     ]
-    ],
-    "out_shape": [
-     1024
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     1
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      4096
-     ],
-     [
-      1,
-      1024,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      4096
-     ],
-     [
-      1,
-      1024,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1024,
-      128
-     ],
-     [
-      1,
-      1,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1024,
-      128
-     ],
-     [
-      1,
-      32,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1024,
-      128
-     ],
-     [
-      1,
-      1,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1024,
-      128
-     ],
-     [
-      1,
-      8,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1024,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     1024
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1024,
-      1024
-     ],
-     [
-      1,
-      1,
-      1024,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     1024
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      4096
-     ],
-     [
-      1,
-      1024,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     4096
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     14336
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      14336
-     ],
-     [
-      1,
-      1024,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     14336
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1
-     ]
-    ],
-    "out_shape": [
-     1
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      129
-     ]
-    ],
-    "out_shape": [
-     129
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     1
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      4096
-     ],
-     [
-      1,
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      4096
-     ],
-     [
-      1,
-      1,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     4096
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      128
-     ],
-     [
-      1,
-      1,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      128
-     ],
-     [
-      1,
-      32,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1,
-      128
-     ],
-     [
-      1,
-      1,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1,
-      128
-     ],
-     [
-      1,
-      8,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      129
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     129
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      129
-     ],
-     [
-      1,
-      1,
-      1,
-      129
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     129
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      4096
-     ],
-     [
-      1,
-      1,
-      4096
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     4096
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      1,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     14336
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      14336
-     ],
-     [
-      1,
-      1,
-      14336
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     14336
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      513
-     ]
-    ],
-    "out_shape": [
-     513
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      513
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     513
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      513
-     ],
-     [
-      1,
-      1,
-      1,
-      513
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     513
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1025
-     ]
-    ],
-    "out_shape": [
-     1025
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      1025
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     1025
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      1025
-     ],
-     [
-      1,
-      1,
-      1,
-      1025
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     1025
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      2048
-     ],
-     [
-      1,
-      128,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      2048
-     ],
-     [
-      1,
-      128,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      128,
-      64
-     ],
-     [
-      1,
-      1,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      128,
-      64
-     ],
-     [
-      1,
-      32,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      128,
-      64
-     ],
-     [
-      1,
-      1,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      128,
-      64
-     ],
-     [
-      1,
-      8,
-      128,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     128,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      2048
-     ],
-     [
-      1,
-      128,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     2048
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      128,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      8192
-     ],
-     [
-      1,
-      128,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      2048
-     ],
-     [
-      1,
-      256,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      2048
-     ],
-     [
-      1,
-      256,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      256,
-      64
-     ],
-     [
-      1,
-      1,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      256,
-      64
-     ],
-     [
-      1,
-      32,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      256,
-      64
-     ],
-     [
-      1,
-      1,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      256,
-      64
-     ],
-     [
-      1,
-      8,
-      256,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     256,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      2048
-     ],
-     [
-      1,
-      256,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     2048
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      256,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      8192
-     ],
-     [
-      1,
-      256,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      2048
-     ],
-     [
-      1,
-      512,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      2048
-     ],
-     [
-      1,
-      512,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      512,
-      64
-     ],
-     [
-      1,
-      1,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      512,
-      64
-     ],
-     [
-      1,
-      32,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      512,
-      64
-     ],
-     [
-      1,
-      1,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      512,
-      64
-     ],
-     [
-      1,
-      8,
-      512,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     512,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      2048
-     ],
-     [
-      1,
-      512,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     2048
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      512,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      8192
-     ],
-     [
-      1,
-      512,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      2048
-     ],
-     [
-      1,
-      1024,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      2048
-     ],
-     [
-      1,
-      1024,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1024,
-      64
-     ],
-     [
-      1,
-      1,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1024,
-      64
-     ],
-     [
-      1,
-      32,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1024,
-      64
-     ],
-     [
-      1,
-      1,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1024,
-      64
-     ],
-     [
-      1,
-      8,
-      1024,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1024,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      2048
-     ],
-     [
-      1,
-      1024,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     2048
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      8192
-     ],
-     [
-      1,
-      1024,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      2048
-     ],
-     [
-      1,
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      2048
-     ],
-     [
-      1,
-      1,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     2048
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      64
-     ],
-     [
-      1,
-      1,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      32,
-      1,
-      64
-     ],
-     [
-      1,
-      32,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     32,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1,
-      64
-     ],
-     [
-      1,
-      1,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      8,
-      1,
-      64
-     ],
-     [
-      1,
-      8,
-      1,
-      64
-     ]
-    ],
-    "out_shape": [
-     1,
-     8,
-     1,
-     64
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      2048
-     ],
-     [
-      1,
-      1,
-      2048
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     2048
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      1,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      8192
-     ],
-     [
-      1,
-      1,
-      8192
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     8192
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      3072
-     ],
-     [
-      1,
-      128,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3072
-     ],
-     [
-      1,
-      128,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      128,
-      128
-     ],
-     [
-      1,
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      128,
-      128
-     ],
-     [
-      1,
-      24,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      128,
-      128
-     ],
-     [
-      1,
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      3072
-     ],
-     [
-      1,
-      128,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      3072
-     ],
-     [
-      1,
-      256,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3072
-     ],
-     [
-      1,
-      256,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      256,
-      128
-     ],
-     [
-      1,
-      1,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      256,
-      128
-     ],
-     [
-      1,
-      24,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      256,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     256,
-     256
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      256,
-      256
-     ],
-     [
-      1,
-      1,
-      256,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     256,
-     256
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      3072
-     ],
-     [
-      1,
-      256,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      3072
-     ],
-     [
-      1,
-      512,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3072
-     ],
-     [
-      1,
-      512,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      512,
-      128
-     ],
-     [
-      1,
-      1,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      512,
-      128
-     ],
-     [
-      1,
-      24,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      512,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     512,
-     512
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      512,
-      512
-     ],
-     [
-      1,
-      1,
-      512,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     512,
-     512
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      3072
-     ],
-     [
-      1,
-      512,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      3072
-     ],
-     [
-      1,
-      1024,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3072
-     ],
-     [
-      1,
-      1024,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1024,
-      128
-     ],
-     [
-      1,
-      1,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1024,
-      128
-     ],
-     [
-      1,
-      24,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1024,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1024,
-     1024
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1024,
-      1024
-     ],
-     [
-      1,
-      1,
-      1024,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1024,
-     1024
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      3072
-     ],
-     [
-      1,
-      1024,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      3072
-     ],
-     [
-      1,
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3072
-     ],
-     [
-      1,
-      1,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1,
-      128
-     ],
-     [
-      1,
-      1,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1,
-      128
-     ],
-     [
-      1,
-      24,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1,
-      129
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1,
-     129
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1,
-      129
-     ],
-     [
-      1,
-      1,
-      1,
-      129
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1,
-     129
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      3072
-     ],
-     [
-      1,
-      1,
-      3072
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3072
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1,
-      513
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1,
-     513
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1,
-      513
-     ],
-     [
-      1,
-      1,
-      1,
-      513
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1,
-     513
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1,
-      1025
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1,
-     1025
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      24,
-      1,
-      1025
-     ],
-     [
-      1,
-      1,
-      1,
-      1025
-     ]
-    ],
-    "out_shape": [
-     1,
-     24,
-     1,
-     1025
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      3584
-     ],
-     [
-      1,
-      128,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3584
-     ],
-     [
-      1,
-      128,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      128,
-      128
-     ],
-     [
-      1,
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      128,
-      128
-     ],
-     [
-      1,
-      28,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      128,
-      128
-     ],
-     [
-      1,
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      128,
-      128
-     ],
-     [
-      1,
-      4,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      128,
-      128
-     ],
-     [
-      1,
-      1,
-      128,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     128,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      3584
-     ],
-     [
-      1,
-      128,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3584
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      128,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      128,
-      18944
-     ],
-     [
-      1,
-      128,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      3584
-     ],
-     [
-      1,
-      256,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3584
-     ],
-     [
-      1,
-      256,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      256,
-      128
-     ],
-     [
-      1,
-      1,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      256,
-      128
-     ],
-     [
-      1,
-      28,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      256,
-      128
-     ],
-     [
-      1,
-      1,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      256,
-      128
-     ],
-     [
-      1,
-      4,
-      256,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     256,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      256,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     256,
-     256
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      256,
-      256
-     ],
-     [
-      1,
-      1,
-      256,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     256,
-     256
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      3584
-     ],
-     [
-      1,
-      256,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3584
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      256,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      256,
-      18944
-     ],
-     [
-      1,
-      256,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      3584
-     ],
-     [
-      1,
-      512,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3584
-     ],
-     [
-      1,
-      512,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      512,
-      128
-     ],
-     [
-      1,
-      1,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      512,
-      128
-     ],
-     [
-      1,
-      28,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      512,
-      128
-     ],
-     [
-      1,
-      1,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      512,
-      128
-     ],
-     [
-      1,
-      4,
-      512,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     512,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      512,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     512,
-     512
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      512,
-      512
-     ],
-     [
-      1,
-      1,
-      512,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     512,
-     512
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      3584
-     ],
-     [
-      1,
-      512,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3584
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      512,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      512,
-      18944
-     ],
-     [
-      1,
-      512,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      3584
-     ],
-     [
-      1,
-      1024,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3584
-     ],
-     [
-      1,
-      1024,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1024,
-      128
-     ],
-     [
-      1,
-      1,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1024,
-      128
-     ],
-     [
-      1,
-      28,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      1024,
-      128
-     ],
-     [
-      1,
-      1,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      1024,
-      128
-     ],
-     [
-      1,
-      4,
-      1024,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     1024,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1024,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1024,
-     1024
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1024,
-      1024
-     ],
-     [
-      1,
-      1,
-      1024,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1024,
-     1024
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      3584
-     ],
-     [
-      1,
-      1024,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3584
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1024,
-      18944
-     ],
-     [
-      1,
-      1024,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      3584
-     ],
-     [
-      1,
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      3584
-     ],
-     [
-      1,
-      1,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3584
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1,
-      128
-     ],
-     [
-      1,
-      1,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1,
-      128
-     ],
-     [
-      1,
-      28,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      1,
-      128
-     ],
-     [
-      1,
-      1,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      4,
-      1,
-      128
-     ],
-     [
-      1,
-      4,
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     4,
-     1,
-     128
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1,
-      129
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1,
-     129
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1,
-      129
-     ],
-     [
-      1,
-      1,
-      1,
-      129
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1,
-     129
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      3584
-     ],
-     [
-      1,
-      1,
-      3584
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3584
-    ]
-   },
-   {
-    "op": "aten.silu.default",
-    "in_shapes": [
-     [
-      1,
-      1,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      1,
-      18944
-     ],
-     [
-      1,
-      1,
-      18944
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     18944
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1,
-      513
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1,
-     513
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1,
-      513
-     ],
-     [
-      1,
-      1,
-      1,
-      513
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1,
-     513
-    ]
-   },
-   {
-    "op": "aten.mul.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1,
-      1025
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1,
-     1025
-    ]
-   },
-   {
-    "op": "aten.add.Tensor",
-    "in_shapes": [
-     [
-      1,
-      28,
-      1,
-      1025
-     ],
-     [
-      1,
-      1,
-      1,
-      1025
-     ]
-    ],
-    "out_shape": [
-     1,
-     28,
-     1,
-     1025
-    ]
-   }
-  ],
-  "embedding": [
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      4096
-     ],
-     [
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     4096
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      4096
-     ],
-     [
-      1,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     4096
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      4096
-     ],
-     [
-      1,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     4096
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      4096
-     ],
-     [
-      1,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     4096
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      4096
-     ],
-     [
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     4096
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      2048
-     ],
-     [
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     2048
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      2048
-     ],
-     [
-      1,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     2048
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      2048
-     ],
-     [
-      1,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     2048
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      2048
-     ],
-     [
-      1,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     2048
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      2048
-     ],
-     [
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     2048
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      3072
-     ],
-     [
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3072
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      3072
-     ],
-     [
-      1,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3072
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      3072
-     ],
-     [
-      1,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3072
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      3072
-     ],
-     [
-      1,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3072
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      128256,
-      3072
-     ],
-     [
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3072
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      152064,
-      3584
-     ],
-     [
-      1,
-      128
-     ]
-    ],
-    "out_shape": [
-     1,
-     128,
-     3584
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      152064,
-      3584
-     ],
-     [
-      1,
-      256
-     ]
-    ],
-    "out_shape": [
-     1,
-     256,
-     3584
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      152064,
-      3584
-     ],
-     [
-      1,
-      512
-     ]
-    ],
-    "out_shape": [
-     1,
-     512,
-     3584
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      152064,
-      3584
-     ],
-     [
-      1,
-      1024
-     ]
-    ],
-    "out_shape": [
-     1,
-     1024,
-     3584
-    ]
-   },
-   {
-    "op": "aten.embedding.default",
-    "in_shapes": [
-     [
-      152064,
-      3584
-     ],
-     [
-      1,
-      1
-     ]
-    ],
-    "out_shape": [
-     1,
-     1,
-     3584
     ]
    }
   ]

@@ -8,6 +8,7 @@ than fusing into a single SDPA op.
 Run: ./.venv/bin/python tools/trace_export/op_inventory.py
 """
 import json
+import sys
 from pathlib import Path
 
 import torch
@@ -32,6 +33,8 @@ def _shapes(xs):
     for a in xs:
         if isinstance(a, torch.Tensor):
             out.append(list(a.shape))
+        elif isinstance(a, (list, tuple)):  # e.g. torch.cat([a,b],dim) passes operands as a list
+            out += [list(t.shape) for t in a if isinstance(t, torch.Tensor)]
     return out
 
 
@@ -48,6 +51,25 @@ def _out_shape(rv):
     return None
 
 
+def _src():
+    """Semantic origin of this op = the innermost transformers frame, as
+    `ModuleClass.func` (e.g. LlamaRMSNorm.forward) or bare func for module-level
+    helpers (eager_attention_forward, apply_rotary_pos_emb, sdpa_mask). Used to
+    categorize overloaded aten ops (bmm/add/mul/cat) by origin, not op name (#5).
+    Cross-model: matches Qwen2RMSNorm/Qwen2MLP/… by class suffix."""
+    f = sys._getframe()
+    while f is not None:
+        fn = f.f_code.co_filename
+        if "transformers/models/" in fn or "masking_utils" in fn:
+            name = f.f_code.co_name
+            slf = f.f_locals.get("self")
+            if slf is not None:
+                name = f"{type(slf).__name__}.{name}"
+            return name
+        f = f.f_back
+    return None
+
+
 class Recorder(TorchDispatchMode):
     def __init__(self):
         self.records = []
@@ -60,6 +82,7 @@ class Recorder(TorchDispatchMode):
                 "op": str(func),
                 "in_shapes": _in_shapes(args, kwargs),
                 "out_shape": _out_shape(rv),
+                "src": _src(),
             }
         )
         return rv
@@ -124,7 +147,7 @@ def dedupe(samples):
         for length, recs in by_len.items():
             seen = {}
             for r in recs:
-                key = (r["op"], json.dumps(r["in_shapes"]), json.dumps(r["out_shape"]))
+                key = (r["op"], json.dumps(r["in_shapes"]), json.dumps(r["out_shape"]), r.get("src"))
                 if key not in seen:
                     seen[key] = {**r, "count": 0}
                 seen[key]["count"] += 1

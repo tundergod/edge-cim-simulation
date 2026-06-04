@@ -3,7 +3,7 @@
 Status: Accepted (2026-06-03)
 
 ## Context
-overall.md originally proposed `torch.onnx.export` for the op inventory, but HF→ONNX export of Llama/Qwen is fragile (risk #5: custom ops, fusion, dynamic shapes). A concern was raised that running an LLM is only possible on the Metis Card — but that conflates *measuring performance* (device-dependent, the L4 anchor) with *extracting the op graph* (a property of the model, device-independent).
+OVERALL.md originally proposed `torch.onnx.export` for the op inventory, but HF→ONNX export of Llama/Qwen is fragile (risk #5: custom ops, fusion, dynamic shapes). A concern was raised that running an LLM is only possible on the Metis Card — but that conflates *measuring performance* (device-dependent, the L4 anchor) with *extracting the op graph* (a property of the model, device-independent).
 
 ## Decision
 - **op inventory = PyTorch runtime tracer on the dev machine.** Run the HF model's forward in plain PyTorch (eager) with dispatch/FX hooks over **meta / FakeTensor** inputs — shapes propagate through every aten op **without real weights, real compute, a GPU, or the Metis Card**. So 1B–13B op inventory is seconds on the dev Mac. It uses PyTorch's dispatch/FX tracing over meta tensors — a more robust path than ONNX export for dynamic-shape decode, and (unlike ONNX export) not subject to its custom-op/fusion fragility.
