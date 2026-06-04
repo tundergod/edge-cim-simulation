@@ -33,11 +33,13 @@ they are the predicted side of the roofline.
 
 ## Headline findings
 
-**1. Weight-stationary matmul dominates compute in every workload.** matmul is ≥0.86 of
-prefill FLOPs and ≥0.575 of decode FLOPs across all 16 (model, task) cells; for the four
-short/medium tasks it is ≥0.99 of both. This is the structural reason a **CIM-centric**
-design — which excels precisely at weight-stationary GEMM/GEMV — is well-matched to LLM
-inference, with the non-matmul remainder offloaded.
+**1. Weight-stationary matmul dominates compute — except in long-context prefill.** For the
+three short/medium tasks (GSM8K, HumanEval, ShareGPT) matmul is **≥0.99 of both prefill and
+decode FLOPs**. Only long-context prefill (LongBench, P≈11.8k) gives attention's O(S²) FLOPs
+real weight: **matmul 0.61–0.74, attention 0.26–0.39** (decode 0.58–0.73 matmul) — consistent
+with the memory split. This is the structural reason a **CIM-centric** design — which excels at
+weight-stationary GEMM/GEMV — fits LLM inference, with the non-matmul remainder (and long-context
+attention) offloaded.
 
 **2. Decode is uniformly memory-bound; prefill is compute-bound and scales with length.**
 Decode matmul operational intensity is **2.0 FLOP/byte for every model and task** (M=1 GEMV:
@@ -66,7 +68,7 @@ measurement budget on the GEMV/GEMM grid (covered) plus a few attention-bmm kv a
 
 | task | dataset | P | D | regime | matmul FLOPs (pre/dec) | matmul intensity (pre/dec) |
 |---|---|---|---|---|---|---|
-| LongBench-TriviaQA | long-context | 11753 | 4 | prefill-heavy | 0.87 / 0.68 | 5554 / 2.0 |
+| LongBench-TriviaQA | long-context | 11753 | 4 | prefill-heavy | 0.71 / 0.68 | 5554 / 2.0 |
 | HumanEval | code | 132 | 54 | moderate | 1.00 / 0.99 | 255 / 2.0 |
 | GSM8K | QA/reason | 59 | 102 | balanced | 1.00 / 1.00 | 116 / 2.0 |
 | ShareGPT | chat | 175 | 344 | decode-heavy | 1.00 / 0.99 | 334 / 2.0 |

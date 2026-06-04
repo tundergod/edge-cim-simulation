@@ -22,45 +22,45 @@
  "totals": {
   "by_category": {
    "matmul": {
-    "count": 10643,
-    "flops": 467584155648,
-    "bytes": 174046763520,
+    "count": 10835,
+    "flops": 1195077795840,
+    "bytes": 176998685184,
     "rows": 10
    },
    "attention": {
-    "count": 6052,
-    "flops": 3189941568,
-    "bytes": 1555201656,
+    "count": 6160,
+    "flops": 8993388096,
+    "bytes": 1712844504,
     "rows": 220
    },
    "ffn": {
-    "count": 3026,
-    "flops": 26935296,
-    "bytes": 134676480,
+    "count": 3080,
+    "flops": 85327872,
+    "bytes": 426639360,
     "rows": 4
    },
    "norm": {
-    "count": 18474,
-    "flops": 29592990,
-    "bytes": 157011576,
+    "count": 18810,
+    "flops": 97739838,
+    "bytes": 475359480,
     "rows": 12
    },
    "softmax": {
-    "count": 1513,
-    "flops": 6206112,
-    "bytes": 24824448,
+    "count": 1540,
+    "flops": 17496864,
+    "bytes": 69987456,
     "rows": 55
    },
    "rope": {
-    "count": 15457,
-    "flops": 29887488,
-    "bytes": 134553850,
+    "count": 15730,
+    "flops": 96136704,
+    "bytes": 432464122,
     "rows": 26
    },
    "residual": {
-    "count": 3025,
-    "flops": 9695232,
-    "bytes": 58171392,
+    "count": 3080,
+    "flops": 31997952,
+    "bytes": 191987712,
     "rows": 2
    },
    "kv_cache": {
@@ -84,39 +84,39 @@
      "bytes": 1622016
     },
     "rope": {
-     "count": 13,
-     "flops": 1976832,
-     "bytes": 8997316
+     "count": 286,
+     "flops": 68226048,
+     "bytes": 306907588
     },
     "norm": {
-     "count": 6,
-     "flops": 1216908,
-     "bytes": 5684784
+     "count": 342,
+     "flops": 69363756,
+     "bytes": 324032688
     },
     "matmul": {
-     "count": 5,
-     "flops": 120626085888,
-     "bytes": 478577664
+     "count": 197,
+     "flops": 848119726080,
+     "bytes": 3430499328
     },
     "attention": {
-     "count": 4,
-     "flops": 214942464,
-     "bytes": 5838624
+     "count": 112,
+     "flops": 6018388992,
+     "bytes": 163481472
     },
     "softmax": {
-     "count": 1,
-     "flops": 418176,
-     "bytes": 1672704
+     "count": 28,
+     "flops": 11708928,
+     "bytes": 46835712
     },
     "residual": {
-     "count": 1,
-     "flops": 405504,
-     "bytes": 2433024
+     "count": 56,
+     "flops": 22708224,
+     "bytes": 136249344
     },
     "ffn": {
-     "count": 2,
-     "flops": 2162688,
-     "bytes": 10813440
+     "count": 56,
+     "flops": 60555264,
+     "bytes": 302776320
     }
    },
    "decode": {
@@ -167,8 +167,8 @@
     }
    }
   },
-  "total_flops": 471370318206,
-  "total_bytes": 178089103978,
+  "total_flops": 1204893787038,
+  "total_bytes": 182285868874,
   "total_rows": 385,
   "measured_rows": 28
  },
@@ -9991,6 +9991,81 @@
     ],
     [
      3072,
+     8192
+    ]
+   ],
+   "out_shape": [
+    132,
+    8192
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "matmul",
+   "phase": "prefill",
+   "count": 56,
+   "flops": 6643777536,
+   "bytes": 26652672,
+   "intensity": 249.27247579529737,
+   "measured": false
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     132,
+     8192
+    ],
+    [
+     8192,
+     3072
+    ]
+   ],
+   "out_shape": [
+    132,
+    3072
+   ],
+   "src": "LlamaMLP.forward",
+   "category": "matmul",
+   "phase": "prefill",
+   "count": 28,
+   "flops": 6643777536,
+   "bytes": 26652672,
+   "intensity": 249.27247579529737,
+   "measured": false
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     132,
+     3072
+    ],
+    [
+     3072,
+     3072
+    ]
+   ],
+   "out_shape": [
+    132,
+    3072
+   ],
+   "src": "LlamaAttention.forward",
+   "category": "matmul",
+   "phase": "prefill",
+   "count": 56,
+   "flops": 2491416576,
+   "bytes": 10248192,
+   "intensity": 243.10791366906474,
+   "measured": false
+  },
+  {
+   "op": "aten.mm.default",
+   "in_shapes": [
+    [
+     132,
+     3072
+    ],
+    [
+     3072,
      128256
     ]
    ],
@@ -10016,81 +10091,6 @@
     ],
     [
      3072,
-     8192
-    ]
-   ],
-   "out_shape": [
-    132,
-    8192
-   ],
-   "src": "LlamaMLP.forward",
-   "category": "matmul",
-   "phase": "prefill",
-   "count": 1,
-   "flops": 6643777536,
-   "bytes": 26652672,
-   "intensity": 249.27247579529737,
-   "measured": false
-  },
-  {
-   "op": "aten.mm.default",
-   "in_shapes": [
-    [
-     132,
-     8192
-    ],
-    [
-     8192,
-     3072
-    ]
-   ],
-   "out_shape": [
-    132,
-    3072
-   ],
-   "src": "LlamaMLP.forward",
-   "category": "matmul",
-   "phase": "prefill",
-   "count": 1,
-   "flops": 6643777536,
-   "bytes": 26652672,
-   "intensity": 249.27247579529737,
-   "measured": false
-  },
-  {
-   "op": "aten.mm.default",
-   "in_shapes": [
-    [
-     132,
-     3072
-    ],
-    [
-     3072,
-     3072
-    ]
-   ],
-   "out_shape": [
-    132,
-    3072
-   ],
-   "src": "LlamaAttention.forward",
-   "category": "matmul",
-   "phase": "prefill",
-   "count": 1,
-   "flops": 2491416576,
-   "bytes": 10248192,
-   "intensity": 243.10791366906474,
-   "measured": false
-  },
-  {
-   "op": "aten.mm.default",
-   "in_shapes": [
-    [
-     132,
-     3072
-    ],
-    [
-     3072,
      1024
     ]
    ],
@@ -10101,7 +10101,7 @@
    "src": "LlamaAttention.forward",
    "category": "matmul",
    "phase": "prefill",
-   "count": 1,
+   "count": 56,
    "flops": 830472192,
    "bytes": 3686400,
    "intensity": 225.28,
@@ -10129,7 +10129,7 @@
    "src": "eager_attention_forward",
    "category": "attention",
    "phase": "prefill",
-   "count": 1,
+   "count": 28,
    "flops": 107053056,
    "bytes": 1229184,
    "intensity": 87.09278350515464,
@@ -10157,7 +10157,7 @@
    "src": "eager_attention_forward",
    "category": "attention",
    "phase": "prefill",
-   "count": 1,
+   "count": 28,
    "flops": 107053056,
    "bytes": 1229184,
    "intensity": 87.09278350515464,
@@ -10180,7 +10180,7 @@
    "src": "LlamaMLP.forward",
    "category": "ffn",
    "phase": "prefill",
-   "count": 1,
+   "count": 28,
    "flops": 1081344,
    "bytes": 4325376,
    "intensity": 0.25,
@@ -10208,91 +10208,10 @@
    "src": "LlamaMLP.forward",
    "category": "ffn",
    "phase": "prefill",
-   "count": 1,
+   "count": 28,
    "flops": 1081344,
    "bytes": 6488064,
    "intensity": 0.16666666666666666,
-   "measured": false
-  },
-  {
-   "op": "aten.mul.Tensor",
-   "in_shapes": [
-    [
-     1,
-     24,
-     132,
-     132
-    ]
-   ],
-   "out_shape": [
-    1,
-    24,
-    132,
-    132
-   ],
-   "src": "eager_attention_forward",
-   "category": "attention",
-   "phase": "prefill",
-   "count": 1,
-   "flops": 418176,
-   "bytes": 1672704,
-   "intensity": 0.25,
-   "measured": false
-  },
-  {
-   "op": "aten.add.Tensor",
-   "in_shapes": [
-    [
-     1,
-     24,
-     132,
-     132
-    ],
-    [
-     1,
-     1,
-     132,
-     132
-    ]
-   ],
-   "out_shape": [
-    1,
-    24,
-    132,
-    132
-   ],
-   "src": "eager_attention_forward",
-   "category": "attention",
-   "phase": "prefill",
-   "count": 1,
-   "flops": 418176,
-   "bytes": 1707552,
-   "intensity": 0.24489795918367346,
-   "measured": false
-  },
-  {
-   "op": "aten._softmax.default",
-   "in_shapes": [
-    [
-     1,
-     24,
-     132,
-     132
-    ]
-   ],
-   "out_shape": [
-    1,
-    24,
-    132,
-    132
-   ],
-   "src": "eager_attention_forward",
-   "category": "softmax",
-   "phase": "prefill",
-   "count": 1,
-   "flops": 418176,
-   "bytes": 1672704,
-   "intensity": 0.25,
    "measured": false
   },
   {
@@ -10312,7 +10231,7 @@
    "src": "LlamaRMSNorm.forward",
    "category": "norm",
    "phase": "prefill",
-   "count": 1,
+   "count": 57,
    "flops": 405504,
    "bytes": 1622016,
    "intensity": 0.25,
@@ -10340,7 +10259,7 @@
    "src": "LlamaRMSNorm.forward",
    "category": "norm",
    "phase": "prefill",
-   "count": 1,
+   "count": 57,
    "flops": 405504,
    "bytes": 1622280,
    "intensity": 0.2499593165174939,
@@ -10366,7 +10285,7 @@
    "src": "LlamaRMSNorm.forward",
    "category": "norm",
    "phase": "prefill",
-   "count": 1,
+   "count": 57,
    "flops": 405504,
    "bytes": 1628160,
    "intensity": 0.2490566037735849,
@@ -10397,10 +10316,119 @@
    "src": "apply_rotary_pos_emb",
    "category": "rope",
    "phase": "prefill",
-   "count": 1,
+   "count": 56,
    "flops": 405504,
    "bytes": 1655808,
    "intensity": 0.24489795918367346,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     132,
+     3072
+    ],
+    [
+     1,
+     132,
+     3072
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    3072
+   ],
+   "src": "LlamaDecoderLayer.forward",
+   "category": "residual",
+   "phase": "prefill",
+   "count": 56,
+   "flops": 405504,
+   "bytes": 2433024,
+   "intensity": 0.16666666666666666,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     24,
+     132,
+     132
+    ]
+   ],
+   "out_shape": [
+    1,
+    24,
+    132,
+    132
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "prefill",
+   "count": 28,
+   "flops": 418176,
+   "bytes": 1672704,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.add.Tensor",
+   "in_shapes": [
+    [
+     1,
+     24,
+     132,
+     132
+    ],
+    [
+     1,
+     1,
+     132,
+     132
+    ]
+   ],
+   "out_shape": [
+    1,
+    24,
+    132,
+    132
+   ],
+   "src": "eager_attention_forward",
+   "category": "attention",
+   "phase": "prefill",
+   "count": 28,
+   "flops": 418176,
+   "bytes": 1707552,
+   "intensity": 0.24489795918367346,
+   "measured": false
+  },
+  {
+   "op": "aten._softmax.default",
+   "in_shapes": [
+    [
+     1,
+     24,
+     132,
+     132
+    ]
+   ],
+   "out_shape": [
+    1,
+    24,
+    132,
+    132
+   ],
+   "src": "eager_attention_forward",
+   "category": "softmax",
+   "phase": "prefill",
+   "count": 28,
+   "flops": 418176,
+   "bytes": 1672704,
+   "intensity": 0.25,
    "measured": false
   },
   {
@@ -10428,7 +10456,7 @@
    "src": "rotate_half",
    "category": "rope",
    "phase": "prefill",
-   "count": 1,
+   "count": 28,
    "flops": 405504,
    "bytes": 1622016,
    "intensity": 0.25,
@@ -10459,63 +10487,10 @@
    "src": "apply_rotary_pos_emb",
    "category": "rope",
    "phase": "prefill",
-   "count": 1,
+   "count": 28,
    "flops": 405504,
    "bytes": 2433024,
    "intensity": 0.16666666666666666,
-   "measured": false
-  },
-  {
-   "op": "aten.add.Tensor",
-   "in_shapes": [
-    [
-     1,
-     132,
-     3072
-    ],
-    [
-     1,
-     132,
-     3072
-    ]
-   ],
-   "out_shape": [
-    1,
-    132,
-    3072
-   ],
-   "src": "LlamaDecoderLayer.forward",
-   "category": "residual",
-   "phase": "prefill",
-   "count": 1,
-   "flops": 405504,
-   "bytes": 2433024,
-   "intensity": 0.16666666666666666,
-   "measured": false
-  },
-  {
-   "op": "aten.neg.default",
-   "in_shapes": [
-    [
-     1,
-     24,
-     132,
-     64
-    ]
-   ],
-   "out_shape": [
-    1,
-    24,
-    132,
-    64
-   ],
-   "src": "rotate_half",
-   "category": "rope",
-   "phase": "prefill",
-   "count": 1,
-   "flops": 202752,
-   "bytes": 811008,
-   "intensity": 0.25,
    "measured": false
   },
   {
@@ -10543,10 +10518,35 @@
    "src": "apply_rotary_pos_emb",
    "category": "rope",
    "phase": "prefill",
-   "count": 1,
+   "count": 56,
    "flops": 135168,
    "bytes": 574464,
    "intensity": 0.23529411764705882,
+   "measured": false
+  },
+  {
+   "op": "aten.neg.default",
+   "in_shapes": [
+    [
+     1,
+     24,
+     132,
+     64
+    ]
+   ],
+   "out_shape": [
+    1,
+    24,
+    132,
+    64
+   ],
+   "src": "rotate_half",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 28,
+   "flops": 202752,
+   "bytes": 811008,
+   "intensity": 0.25,
    "measured": false
   },
   {
@@ -10574,7 +10574,7 @@
    "src": "rotate_half",
    "category": "rope",
    "phase": "prefill",
-   "count": 1,
+   "count": 28,
    "flops": 135168,
    "bytes": 540672,
    "intensity": 0.25,
@@ -10605,7 +10605,7 @@
    "src": "apply_rotary_pos_emb",
    "category": "rope",
    "phase": "prefill",
-   "count": 1,
+   "count": 28,
    "flops": 135168,
    "bytes": 811008,
    "intensity": 0.16666666666666666,
@@ -10630,9 +10630,32 @@
    "src": "rotate_half",
    "category": "rope",
    "phase": "prefill",
-   "count": 1,
+   "count": 28,
    "flops": 67584,
    "bytes": 270336,
+   "intensity": 0.25,
+   "measured": false
+  },
+  {
+   "op": "aten.mul.Tensor",
+   "in_shapes": [
+    [
+     1,
+     132,
+     128
+    ]
+   ],
+   "out_shape": [
+    1,
+    132,
+    128
+   ],
+   "src": "LlamaRotaryEmbedding.forward",
+   "category": "rope",
+   "phase": "prefill",
+   "count": 2,
+   "flops": 16896,
+   "bytes": 67584,
    "intensity": 0.25,
    "measured": false
   },
@@ -10716,29 +10739,6 @@
    "measured": false
   },
   {
-   "op": "aten.mul.Tensor",
-   "in_shapes": [
-    [
-     1,
-     132,
-     128
-    ]
-   ],
-   "out_shape": [
-    1,
-    132,
-    128
-   ],
-   "src": "LlamaRotaryEmbedding.forward",
-   "category": "rope",
-   "phase": "prefill",
-   "count": 1,
-   "flops": 16896,
-   "bytes": 67584,
-   "intensity": 0.25,
-   "measured": false
-  },
-  {
    "op": "aten.sin.default",
    "in_shapes": [
     [
@@ -10778,7 +10778,7 @@
    "src": "LlamaRMSNorm.forward",
    "category": "norm",
    "phase": "prefill",
-   "count": 1,
+   "count": 57,
    "flops": 132,
    "bytes": 811272,
    "intensity": 0.00016270745200130165,
@@ -10801,7 +10801,7 @@
    "src": "LlamaRMSNorm.forward",
    "category": "norm",
    "phase": "prefill",
-   "count": 1,
+   "count": 57,
    "flops": 132,
    "bytes": 528,
    "intensity": 0.25,
@@ -10824,7 +10824,7 @@
    "src": "LlamaRMSNorm.forward",
    "category": "norm",
    "phase": "prefill",
-   "count": 1,
+   "count": 57,
    "flops": 132,
    "bytes": 528,
    "intensity": 0.25,
