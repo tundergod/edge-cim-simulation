@@ -112,7 +112,8 @@
     calibrated against two real Axelera Metis boards. Phase 0.1 extracts a device-independent
     <strong>op inventory</strong> (580 distinct op×shape signatures across 9 categories) from four
     HuggingFace models under four workloads. Phase 0.2 turns this into a per-(model×workload)
-    <strong>execution profile</strong>: weight-stationary matmul dominates compute everywhere, decode
+    <strong>execution profile</strong>: weight-stationary matmul dominates compute (≥0.99 of FLOPs in
+    short/medium workloads; long-context prefill the exception, attention rising to ~0.3), decode
     is uniformly memory-bound (operational intensity = 2.0 FLOP/byte), and only long-context prefill
     is attention-memory-bound. Phase 0.3 measures the real silicon: the Compute-in-Memory unit (Metis
     Alpha, via a weight-stationary 1×1-conv proxy) is fast on matmul but pays a <strong>~911 µs
@@ -201,7 +202,7 @@
   knee is Phase 0.3.</p>
 
   <div class="keys">
-    <div class="key"><div class="n">≥0.86</div><div class="l">matmul share of prefill FLOPs (every workload)</div></div>
+    <div class="key"><div class="n">≥0.99</div><div class="l">matmul share of prefill+decode FLOPs (short/medium tasks; LongBench 0.61–0.74)</div></div>
     <div class="key"><div class="n">2.0</div><div class="l">decode matmul operational intensity (FLOP/byte) — memory-bound everywhere</div></div>
     <div class="key v"><div class="n">65 %</div><div class="l">LongBench prefill <em>memory</em> that is attention (O(S²) score matrix), not weights</div></div>
   </div>
@@ -315,9 +316,10 @@
   <h2 class="sec"><span class="num">6</span>Synthesis — what the silicon says about the design</h2>
   <p>The measurements substantiate the CIM-centric position with real numbers, not assumptions:</p>
   <ul>
-    <li><strong>Put weight-stationary GEMM/GEMV on CIM.</strong> Matmul is ≥0.86 of prefill and
-    ≥0.575 of decode FLOPs everywhere; decode is uniformly memory-bound (intensity 2.0), exactly where
-    CIM weight-residency pays off — provided the per-call DMA floor is amortized (large ops, batched calls).</li>
+    <li><strong>Put weight-stationary GEMM/GEMV on CIM.</strong> Matmul is ≥0.99 of prefill and decode
+    FLOPs for short/medium workloads (long-context prefill the exception, attention 0.26–0.39); decode is
+    uniformly memory-bound (intensity 2.0), exactly where CIM weight-residency pays off — provided the
+    per-call DMA floor is amortized (large ops, batched calls).</li>
     <li><strong>Offload attention.</strong> CIM's ~29 ms/token attention penalty (62–351× GPU) is the
     quantified cost of dynamic activation×activation on a weight-stationary crossbar. The heterogeneous
     split is not a design choice but a measured necessity.</li>
