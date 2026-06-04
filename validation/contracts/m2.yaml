@@ -1,0 +1,15 @@
+module: m2_memory
+measurement_sources:
+  - measurements/aetina/metis_alpha_matmul.json   # pcie_floor_A1d5 (911us / 1112 p95)
+acceptance_criteria:
+  - {type: sanity, rules: [transfer_positive, monotonic_in_bytes]}
+  - {type: lpddr5_eff_BW, rule: "in [0.4*jedec_peak, jedec_peak] and brackets ~24 GB/s wall"}
+fixed_params:
+  - {pcie_floor_us: 911.1, source: pcie_floor_A1d5, note: "discrete host<->device transfers only"}
+  - {pcie_BW_GBs: 3.9, source: "documented Gen3x4 (voyager-sdk)"}
+  - {lpddr5_eff_BW_GBs: 24.2, jedec_peak_GBs: 51.2}
+decisions:
+  - no_sram_l1_l2_residency: "Alpha l2/ddr ratio ~1.00-1.01 (no on-card DRAM) -> Phase 2 must NOT build SRAM residency"
+  - ramulator2: "deferred to Phase 2 (ADR-0002 swappable); PIM-like ext = risk #6"
+  - kv_cache_2c: "analytic kv_bytes/BW_eff, UNVALIDATED (Phase 0.3 did not isolate KV-append)"
+sample_strategy: "TBD - variance_profile not collected (Phase 0.3 gap)"

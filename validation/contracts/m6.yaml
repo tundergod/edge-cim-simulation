@@ -1,0 +1,25 @@
+module: m6_scheduler
+phase1_scope: contract_only          # behavioral validation = Phase 2 (needs implementation)
+measurement_sources:
+  - simulator/models/m1_cim_tile.py
+  - simulator/models/m4_gpu.py
+  - measurements/op_inventory/        # op DAG (M5)
+acceptance_criteria:                  # ADR-0006 Phase-2 SYSTEM thresholds
+  - {type: e2e_latency_or_toks, threshold: 15%}
+  - {type: sota_reproduction, ref: ADR-0003}
+tunable_params:
+  - precision_boundary_conversion_op_cost   # HEADLINE GAP — see measurement_gap below
+  - op_to_unit_mapping_policy               # CIM / GPU / NPU / CPU assignment
+  - precision_boundary_placement            # which unit pays the conversion (ADR-0003/0004)
+  - memory_placement
+measurement_gap:
+  id: conversion_op_cost
+  adr: ADR-0004
+  issue: "ADR-0004 specifies the precision-boundary quant/dequant conversion-op cost is
+    calibrated in Phase 0.2 — but it was NEVER collected (grep quant measurements/ = 0;
+    conversion is not one of the 9 traced op categories; it is scheduler-inserted, not in
+    the HF eager trace). The headline mixed-precision contribution (CIM-INT8 x GPU-FP16)
+    therefore runs on an op with no cost basis. Phase 2 MUST measure dequant/requant
+    (cheap elementwise, measurable on CPU/NPU) before the mixed-precision claim is sound."
+note: "Phase 1 defines the contract + tunable params only. M6 is the contribution layer;
+  behavioral validation is Phase 2. The conversion-op cost is a tracked tunable + measurement gap."

@@ -1,0 +1,12 @@
+{
+ "_doc": "M2 2a PCIe/DMA. Fixed params (no per-shape PCIe sweep collected, Phase 0.3 gap). Floor applies to DISCRETE host<->device transfers only; decode weight-streaming uses BW term (no per-call floor) in recompose/production.",
+ "fixed_overhead_us_median": 911.1,
+ "fixed_overhead_us_p95": 1111.7,
+ "pcie_BW_GBs": 3.9,
+ "floor_applies_to": [
+  "kv_reload",
+  "activation_handoff",
+  "conversion_op_traffic"
+ ],
+ "no_slope_refit": "no per-shape (bytes,latency) PCIe table committed (Phase 0.3 gap)"
+}

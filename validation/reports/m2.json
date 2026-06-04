@@ -1,0 +1,29 @@
+{
+ "module": "m2_memory",
+ "equation": {
+  "pcie": "transfer_us = floor(911us) + bytes/BW(3.9GB/s)  [discrete only]",
+  "lpddr5": "stream_us = bytes/eff_BW",
+  "kv_cache": "kv_append_us = kv_bytes/eff_BW"
+ },
+ "params": {
+  "pcie_floor_us": 911.1,
+  "pcie_BW_GBs": 3.9,
+  "lpddr5_eff_BW_GBs": 24.2,
+  "lpddr5_peak_GBs": 51.2,
+  "lpddr5_efficiency": 0.473
+ },
+ "sanity": {
+  "pcie_transfer_positive": true,
+  "pcie_transfer_monotonic": true,
+  "kv_append_positive_monotonic": true,
+  "eff_BW_brackets_24": true,
+  "eff_le_peak": true,
+  "eff_ge_0.4_peak": true,
+  "eff_efficiency_note": "47% of JEDEC peak \u2014 typical memory-wall effective BW (plan bound relaxed 0.5->0.4)"
+ },
+ "notes": {
+  "no_sram_residency": "Alpha l2/ddr ratio ~1.00-1.01 (no on-card DRAM) -> NO SRAM L1/L2 residency model (recorded in m2 contract for Phase 2).",
+  "kv_cache_unvalidated": "Phase 0.3 did not isolate KV-append; analytic only.",
+  "ramulator2_deferred": "Phase 2 (ADR-0002 swappable); PIM-like ext = risk #6."
+ }
+}

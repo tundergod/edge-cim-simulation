@@ -1,0 +1,45 @@
+{
+ "method": "decode backbone = weight-streaming BW (fit 1B+3B -> predict 8B), weight_bytes from op_profile; non-streaming terms reported standalone.",
+ "per_token_weight_bytes": {
+  "llama-3.2-1b": 1.237,
+  "llama-3.2-3b": 3.214,
+  "llama-3.1-8b": 7.507
+ },
+ "measured_tok_s_1c": {
+  "llama-3.2-1b": 13.07,
+  "llama-3.2-3b": 6.38,
+  "llama-3.1-8b": 2.7
+ },
+ "fit_BW_GBs": 18.33,
+ "implied_BW_per_model_GBs": {
+  "llama-3.2-1b": 16.16,
+  "llama-3.2-3b": 20.51,
+  "llama-3.1-8b": 20.27
+ },
+ "pred_8b_tok_s": 2.44,
+ "measured_8b_tok_s": 2.7,
+ "rel_error_8b": 0.095,
+ "GATE_within_25pct": true,
+ "standalone_nonstreaming_8b_us": {
+  "decode_stream_backbone_us": 409470.5,
+  "cpu_support_us": 62023.4,
+  "gpu_offload_attention_us_lowerbound": 260185.0,
+  "kv_cache_append_us": 1386.5,
+  "_caveat": "already absorbed in BW_eff at the fit point; ADDING double-counts (Phase-2 fidelity, watch-item). GPU attn is heads*layers, lower-bound kernel."
+ },
+ "cim_attention_penalty_C4_ms": {
+  "range": [
+   31.3,
+   46.4
+  ],
+  "note": "why offload: CIM attention >> GPU-native; reported, NOT in t_step"
+ },
+ "prefill_ttft_besteffort_UNGATED": {
+  "M_prefill": 1024,
+  "vendor_ttft_s": 3.794,
+  "implied_prefill_throughput_TOPS": 4.05,
+  "est_using_decode_GEMV_throughput_s": 75.4,
+  "memory_bound_floor_s": 0.409,
+  "note": "UNGATED. Vendor TTFT implies ~4 TOPS effective prefill GEMM throughput, but decode-GEMV throughput (204 GFLOP/s=0.2 TOPS) gives an absurd 75s -> prefill GEMM runs ~20x faster than decode GEMV and is UNMEASURED (proj M>=512 device-fail; prefill attention S-scaling 1 pt; softmax S x S). Prefill path unvalidated; Phase-2 gap. prefill_ms_median degenerate, unused."
+ }
+}

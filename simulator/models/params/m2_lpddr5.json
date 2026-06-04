@@ -1,0 +1,9 @@
+{
+ "_doc": "M2 2b host LPDDR5 backend, ANALYTIC (Ramulator2 deferred to Phase 2, ADR-0002 swappable). PIM-like extension deferred (risk #6).",
+ "jedec_peak_GBs": 51.2,
+ "jedec_config": "LPDDR5-6400, 4x16-bit ch",
+ "effective_BW_GBs": 24.2,
+ "efficiency_vs_peak": 0.473,
+ "source": "measured decode wall ~24 GB/s (voyager-sdk.md / ADR-0006)",
+ "ramulator2": "deferred to Phase 2"
+}

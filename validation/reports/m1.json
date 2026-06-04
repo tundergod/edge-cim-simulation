@@ -1,0 +1,195 @@
+{
+ "module": "m1_cim_tile",
+ "equation": "dev_lat_us = (N<2048) 2*M*K*N/G_eff(N)  else  M*n_tiles*T_tile",
+ "params": {
+  "G_eff": "Hill Gmax=250.1,Nhalf=537.8",
+  "T_tile_us": 41.21,
+  "tile": 2048,
+  "G_eff_hill_median_relerr": 0.034,
+  "use_lookup_fallback": false
+ },
+ "compute_fit_gate_G_eff_staircase": {
+  "set": "8B channel-64 staircase G_eff(N), 8 pts (independent fit target)",
+  "median": 0.034,
+  "p95": 0.089,
+  "max": 0.092,
+  "pass_median_le_0.10": true,
+  "pass_p95_le_0.20": true
+ },
+ "tiling_reproduction_note": "multi-tile proj_decode measured dev_lat ARE canonical_tile*n_tiles extrapolations (by_group flag tiled_extrapolated); the model reproduces them by construction (errors ~0), so this is NOT an independent check. Independent M1 validation = G_eff staircase fit (above) + staircase held-out + native single-tile + narrow-N residual.",
+ "tiling_reproduction_8b_qwen_wellfilled": {
+  "n": 6,
+  "median": 0.0,
+  "p95": 0.0,
+  "max": 0.0,
+  "pass_median_le_0.10": true,
+  "pass_p95_le_0.20": true
+ },
+ "wellfilled_all_models": [
+  {
+   "model": "llama-3.2-1b",
+   "family": "q_o",
+   "K": 2048,
+   "N": 2048,
+   "meas_us": 41.21,
+   "pred_us": 41.21,
+   "rel_err": 0.0
+  },
+  {
+   "model": "llama-3.2-1b",
+   "family": "gate_up",
+   "K": 2048,
+   "N": 8192,
+   "meas_us": 164.8,
+   "pred_us": 164.84,
+   "rel_err": 0.0
+  },
+  {
+   "model": "llama-3.2-1b",
+   "family": "down",
+   "K": 8192,
+   "N": 2048,
+   "meas_us": 164.8,
+   "pred_us": 164.84,
+   "rel_err": 0.0
+  },
+  {
+   "model": "llama-3.2-3b",
+   "family": "q_o",
+   "K": 3072,
+   "N": 3072,
+   "meas_us": 164.8,
+   "pred_us": 164.84,
+   "rel_err": 0.0
+  },
+  {
+   "model": "llama-3.2-3b",
+   "family": "gate_up",
+   "K": 3072,
+   "N": 8192,
+   "meas_us": 329.6,
+   "pred_us": 329.68,
+   "rel_err": 0.0
+  },
+  {
+   "model": "llama-3.2-3b",
+   "family": "down",
+   "K": 8192,
+   "N": 3072,
+   "meas_us": 329.6,
+   "pred_us": 329.68,
+   "rel_err": 0.0
+  },
+  {
+   "model": "llama-3.1-8b",
+   "family": "q_o",
+   "K": 4096,
+   "N": 4096,
+   "meas_us": 164.8,
+   "pred_us": 164.84,
+   "rel_err": 0.0
+  },
+  {
+   "model": "llama-3.1-8b",
+   "family": "gate_up",
+   "K": 4096,
+   "N": 14336,
+   "meas_us": 576.81,
+   "pred_us": 576.94,
+   "rel_err": 0.0
+  },
+  {
+   "model": "llama-3.1-8b",
+   "family": "down",
+   "K": 14336,
+   "N": 4096,
+   "meas_us": 576.81,
+   "pred_us": 576.94,
+   "rel_err": 0.0
+  },
+  {
+   "model": "qwen2.5-7b",
+   "family": "q_o",
+   "K": 3584,
+   "N": 3584,
+   "meas_us": 164.8,
+   "pred_us": 164.84,
+   "rel_err": 0.0
+  },
+  {
+   "model": "qwen2.5-7b",
+   "family": "gate_up",
+   "K": 3584,
+   "N": 18944,
+   "meas_us": 824.01,
+   "pred_us": 824.2,
+   "rel_err": 0.0
+  },
+  {
+   "model": "qwen2.5-7b",
+   "family": "down",
+   "K": 18944,
+   "N": 3584,
+   "meas_us": 824.01,
+   "pred_us": 824.2,
+   "rel_err": 0.0
+  }
+ ],
+ "narrow_kv_residual_verify_e": {
+  "note": "wide-K narrow-N underfill; G_eff(N) over-predicts throughput->latency; single 8B point, unfittable -> reported, NOT in gate.",
+  "rows": [
+   {
+    "model": "llama-3.2-1b",
+    "family": "kv",
+    "K": 2048,
+    "N": 512,
+    "meas_us": 18.63,
+    "pred_us": 17.19,
+    "rel_err": 0.077
+   },
+   {
+    "model": "llama-3.2-3b",
+    "family": "kv",
+    "K": 3072,
+    "N": 1024,
+    "meas_us": 34.52,
+    "pred_us": 38.37,
+    "rel_err": 0.112
+   },
+   {
+    "model": "llama-3.1-8b",
+    "family": "kv",
+    "K": 4096,
+    "N": 1024,
+    "meas_us": 36.92,
+    "pred_us": 51.16,
+    "rel_err": 0.386
+   },
+   {
+    "model": "qwen2.5-7b",
+    "family": "kv",
+    "K": 3584,
+    "N": 512,
+    "meas_us": 24.9,
+    "pred_us": 30.09,
+    "rel_err": 0.208
+   }
+  ]
+ },
+ "staircase_heldout_N2048": {
+  "N": 2048,
+  "G_pred": 196.5,
+  "G_meas": 203.6,
+  "rel_err": 0.035
+ },
+ "sanity": {
+  "monotonic_dev_lat_in_N": true,
+  "risers_all_64_multiple": true,
+  "aspect_equal_mac_spread": 0.108
+ },
+ "nonequation_regions": {
+  "lm_head_N_128k_152k": "analytic n_tiles*T_tile, no measurement (canonical N=4096 tile)",
+  "prefill_M_ge_512": "device-alloc fail, analytic, unvalidated",
+  "qwen_non2048": "predicted on padded tiles (no restore); ~1.24x is a GFLOP/s reporting bias only"
+ }
+}

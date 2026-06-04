@@ -1,0 +1,7 @@
+{
+ "_doc": "M4 Mali-G610. attn_bmm_us(kv)=a+b*kv single-head f16 (offload ref). GEMM absolute = LOWER BOUND (unoptimised kernel).",
+ "attn_bmm_a_us": 27.742,
+ "attn_bmm_b_us_per_kv": 0.44208,
+ "gemm_gflops_saturated_lowerbound": 20.12,
+ "ksweep_saturation_M": 128
+}

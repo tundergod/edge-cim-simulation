@@ -1,0 +1,19 @@
+{
+ "_doc": "M1 CIM tile timing (Phase 1). G_eff(N) saturating throughput from 8B channel-64 staircase; T_tile = full 2048x2048 tile dev latency. Decode-calibrated; prefill unvalidated.",
+ "G_eff_Gmax_gflops": 250.1,
+ "G_eff_Nhalf": 537.8,
+ "G_eff_lookup": {
+  "64": 26.63,
+  "128": 48.57,
+  "256": 78.0,
+  "512": 112.68,
+  "1024": 169.75,
+  "1536": 204.03,
+  "2048": 203.58
+ },
+ "use_lookup": false,
+ "G_eff_hill_median_relerr": 0.034,
+ "crossbar_tile": 2048,
+ "canonical_tile_us": 41.21,
+ "device_envelope_params": 6000000
+}

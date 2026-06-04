@@ -1,0 +1,15 @@
+module: m3_event_engine
+phase1_scope: contract_only          # behavioral validation = Phase 2 (needs implementation)
+measurement_sources:
+  - simulator/models/m1_cim_tile.py  # per-op latencies feed the engine
+  - simulator/models/m2_memory.py    # shared-bandwidth contention
+acceptance_criteria:                 # ADR-0006 Phase-2 SYSTEM thresholds (not per-op)
+  - {type: e2e_latency_or_toks, threshold: 15%}
+  - {type: contention_knee, threshold: 15%}    # the load-bearing memory-wall check
+tunable_params:
+  - bandwidth_contention_knee        # ADR-0001 obligation: reproduce the ~60 GB/s saturation knee
+  - interconnect_efficiency          # shared-BW arbitration (ADR-0002)
+  - concurrency_overlap_factor       # CIM || GPU || NPU overlap
+note: "Phase 1 defines the contract + tunable params only. M3 is a lightweight discrete-event
+  engine (ADR-0001); behavioral validation (toy op-stream timing, the ~60 GB/s contention knee)
+  is performed in Phase 2 once implemented. Not gated in Phase 1."

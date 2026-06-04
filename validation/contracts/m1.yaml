@@ -1,0 +1,15 @@
+module: m1_cim_tile
+measurement_sources:
+  - measurements/aetina/metis_alpha_matmul.json   # by_group: staircase64, proj_decode, aspect, lmhead_tile
+acceptance_criteria:                               # ADR-0006 Phase-1
+  - {type: median_op_error, threshold: 10%, scope: G_eff staircase (independent fit)}
+  - {type: p95_op_error, threshold: 20%, scope: G_eff staircase}
+  - {type: roofline_knee_drift, threshold: 15%, scope: staircase held-out N}
+  - {type: sanity, rules: [no_nan_or_inf, dev_lat_positive, monotonic_in_N_fixed_K]}
+reported_separately:
+  - narrow_kv_proj_residual            # wide-K narrow-N underfill (8B kv +39%), plan verify e, NOT gated
+nonequation_regions:
+  - lm_head_N_128k_152k                # analytic n_tiles*T_tile, no measurement
+  - prefill_M_ge_512                   # device-alloc fail, analytic, unvalidated
+  - qwen_non2048                        # predicted on padded tiles; 1.24x is a GFLOP/s reporting bias only
+sample_strategy: "TBD - variance_profile not collected (Phase 0.3 gap)"

@@ -1,0 +1,10 @@
+module: m5_trace
+phase1_scope: validate_on_known_inputs   # deterministic; no fitted params
+measurement_sources:
+  - measurements/op_inventory/{model}.json       # Phase 0.1 oracle (expected_ops_check)
+  - measurements/op_profile/{model}_{task}.json
+acceptance_criteria:
+  - {type: oracle_semantic_covered, rule: "expected_ops_check.all_semantic_covered == true (4 models)"}
+  - {type: zero_orphans, rule: "every op_profile op is in the model's traced distinct_ops (0 mismatch)"}
+method: "reuse Phase 0.1 inventory oracle; counts from inventory, no hand x layers"
+sample_strategy: n/a
