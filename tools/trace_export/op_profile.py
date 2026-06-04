@@ -187,9 +187,9 @@ class Model:
     def profile(self, P, D):
         """Return list of profile rows for workload (prefill=P, decode=D tokens)."""
         rows = {}
-        # prefill: one forward at seq=P
+        # prefill: one forward at seq=P (each op fires t["count"] times, not once — issue #9)
         for t in self.pre:
-            self._add(rows, _instantiate(t, P), "prefill", 1)
+            self._add(rows, _instantiate(t, P), "prefill", t["count"])
         # decode: length-indep ops x D ; length-dep ops per kv position (past=P..P+D-1)
         for t in self.dec:
             if t["len_dep"]:
@@ -284,9 +284,16 @@ def main():
         cats = {}
         for r in rows:
             cats[r["category"]] = cats.get(r["category"], 0) + 1
-        print(f"{m}: templates pre={len(M.pre)} dec={len(M.dec)}  "
-              f"held-out validation PASS  | profile(128,4) rows={len(rows)} cats={cats}")
-    print("\nALL MODELS: held-out (prefill 128/512, decode 128) reproduced exactly.")
+        # issue #9 regression: profile() prefill (one forward at seq=P) must equal grid_profile()
+        # at a grid point — guards against the prefill count multiplicity being dropped.
+        gp = M.grid_profile()["prefill"]
+        for P in (256, 1024):
+            prof_pre = {_key(r): r["count"] for r in M.profile(P, 4) if r["phase"] == "prefill"}
+            grid_pre = {_key(r): r["count"] for r in gp[P]}
+            assert prof_pre == grid_pre, f"{m}: profile() prefill != grid_profile at P={P} (issue #9)"
+        print(f"{m}: templates pre={len(M.pre)} dec={len(M.dec)}  held-out + profile/grid PASS"
+              f"  | profile(128,4) rows={len(rows)} cats={cats}")
+    print("\nALL MODELS: held-out (prefill 128/512, decode 128) + profile()/grid prefill consistency OK.")
 
 
 if __name__ == "__main__":
