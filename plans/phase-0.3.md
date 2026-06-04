@@ -1,5 +1,16 @@
 # Plan: Phase 0.3 — 真實板特性量測（不含溫度）
 
+> **狀態（2026-06-04）：A1/A1d(CIM)、A5(Mali)、A6(CPU)、B(vendor LLM)、C4、C5 ✅ 已完成並 commit（PR #8）。⏳ A4(RKNPU2) 未完成 —— 卡在 aetina 離線。**
+>
+> **A4 已備妥（不需 aetina）：** metiscard `~/rknnconv`（uv py3.10）裝好 rknn-toolkit2（依賴 pin：`setuptools<81` 為 pkg_resources、`onnx==1.14.1` 為 onnx.mapping、`numpy<2`）；`characterization/metis_card/convert_rknn.py` 已轉出 **23/23 `.rknn`** 於 `metiscard:~/rknn_out/`（16 投影 + 7 attention bmm，含 2-input 原生 activation×activation）；`characterization/aetina/run_rknpu2.py`（aetina rknnlite runner）就緒。
+>
+> **A4 待辦（需 aetina 回到網路後）：**
+> 1. ☐ **救回 aetina**：重開後仍完全離線（連 ping 都沒）→ 需實體確認開機完成 + 網路起來；先用 `ping 140.112.28.105` 確認上線，再 `ssh aetina`。
+> 2. ☐ `rsync metiscard:~/rknn_out/ → aetina:~/rknn_out/`（metiscard 無 GitHub 認證，經 Mac 中轉：先拉回 Mac 再推 aetina）。
+> 3. ☐ aetina：`~/edge-cim-simulation/.rknnvenv/bin/python run_rknpu2.py ~/rknn_out` → 產 `measurements/aetina/rknpu2_matmul.json`（rknnlite 上板 latency + GFLOP/s；FP16）。
+> 4. ☐ 把 **NPU 原生 attention** 線加進報告 Fig 4（對照 CIM composed 29 ms / Mali 80–500 µs），並把 `docs/phase0.3-findings.md` 的「RKNPU2 not collected」gap 換成數據 + 「NPU 大投影不需 tiling」對照；更新 `docs/report/`、PR #8。
+> 5. ☐（選用）HeteroInfer NPU Fig 3（stage 階梯）/ Fig 4（order/shape）連續掃描。
+
 輸入：`measurements/op_inventory/sweep_matrix.json`（580 sigs，9 類：matmul/attention/rope/norm/ffn/residual/softmax/embedding/kv_cache）+ `measurements/op_profile/*`（Phase 0.2：逐-sig 執行次數，定本階段量測優先序）。
 驅動（machines.md）：Mac = git 中機；腳本在 `characterization/{aetina,metis_card}/` → `rsync` 到板 → `ssh` 執行 → `rsync` 結果回 `measurements/{aetina,metis_card}/` → Mac commit。板上不留獨有程式碼。
 散熱受控（溫度量測 = Phase 0.4）。**每個 session 前先 `axdevice` 確認卡在線**（兩卡都曾掉線；救援見 voyager-sdk.md §11）。

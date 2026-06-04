@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CIM-Centric LLM Inference Simulator — Phase 0 Characterization Report</title>
+<style>
+  :root{
+    --ink:#1a1714; --paper:#fbfaf7; --muted:#6b645c; --rule:#d9d2c7;
+    --blue:#0072B2; --verm:#D55E00; --green:#107a5b; --faint:#efece5;
+    --serif:'Charter','Iowan Old Style','Palatino Linotype',Palatino,'Book Antiqua',Georgia,serif;
+    --sans:'Avenir Next','Optima','Gill Sans',ui-sans-serif,sans-serif;
+    --mono:'SF Mono','Menlo','Roboto Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html{font-size:15px;}
+  body{font-family:var(--serif); color:var(--ink); background:var(--paper);
+       line-height:1.5; margin:0; -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;}
+  .page{max-width:46rem; margin:0 auto; padding:3.2rem 2.6rem 4rem;}
+
+  /* ---- title block ---- */
+  .eyebrow{font-family:var(--sans); font-size:.66rem; letter-spacing:.22em; text-transform:uppercase;
+           color:var(--verm); font-weight:600; margin:0 0 1.1rem;}
+  h1.title{font-size:2.35rem; line-height:1.12; font-weight:700; margin:.2rem 0 .5rem; letter-spacing:-.012em;}
+  .subtitle{font-size:1.08rem; color:var(--muted); font-style:italic; margin:0 0 1.4rem;}
+  .accent-rule{height:3px; width:3.6rem; background:var(--blue); border:0; margin:0 0 1.5rem;}
+  .byline{font-family:var(--sans); font-size:.78rem; color:var(--muted); display:flex; flex-wrap:wrap;
+          gap:.4rem 1.4rem; border-top:1px solid var(--rule); border-bottom:1px solid var(--rule);
+          padding:.7rem 0; margin-bottom:2rem;}
+  .byline b{color:var(--ink); font-weight:600;}
+
+  /* ---- abstract ---- */
+  .abstract{background:var(--faint); border-left:3px solid var(--blue); padding:1.1rem 1.3rem;
+            margin:0 0 2.4rem; font-size:.96rem;}
+  .abstract h2{font-family:var(--sans); font-size:.7rem; letter-spacing:.18em; text-transform:uppercase;
+               margin:0 0 .5rem; color:var(--muted); font-weight:600;}
+  .abstract p{margin:.4rem 0;}
+
+  /* ---- headings ---- */
+  h2.sec{font-size:1.5rem; font-weight:700; margin:2.6rem 0 .2rem; letter-spacing:-.01em;
+         padding-top:.6rem; border-top:1px solid var(--rule);}
+  h2.sec .num{color:var(--blue); font-feature-settings:"tnum"; margin-right:.5rem;}
+  h3.sub{font-family:var(--sans); font-size:.98rem; font-weight:600; margin:1.5rem 0 .3rem; letter-spacing:-.005em;}
+  p{margin:.65rem 0;}
+  a{color:var(--blue); text-decoration:none;}
+  strong{font-weight:700;}
+  em{font-style:italic;}
+  code,.mono{font-family:var(--mono); font-size:.82em; background:var(--faint); padding:.06em .32em;
+             border-radius:3px; color:#3a342d;}
+
+  /* ---- key-result callouts ---- */
+  .keys{display:grid; grid-template-columns:1fr 1fr 1fr; gap:.8rem; margin:1.4rem 0 .6rem;}
+  .key{border:1px solid var(--rule); border-top:3px solid var(--blue); padding:.8rem .85rem; background:#fff;}
+  .key .n{font-size:1.5rem; font-weight:700; line-height:1; color:var(--blue); font-family:var(--sans);}
+  .key.v .n{color:var(--verm);} .key.v{border-top-color:var(--verm);}
+  .key.g .n{color:var(--green);} .key.g{border-top-color:var(--green);}
+  .key .l{font-family:var(--sans); font-size:.7rem; color:var(--muted); margin-top:.35rem; line-height:1.3;}
+
+  /* ---- tables (booktabs) ---- */
+  table{width:100%; border-collapse:collapse; margin:1.1rem 0; font-size:.82rem; font-family:var(--sans);}
+  caption{caption-side:top; text-align:left; font-family:var(--sans); font-size:.74rem; color:var(--muted);
+          margin-bottom:.45rem; font-style:normal;}
+  caption b{color:var(--ink);}
+  thead th{border-top:1.6px solid var(--ink); border-bottom:1px solid var(--ink); text-align:right;
+           padding:.4rem .55rem; font-weight:600;}
+  thead th:first-child{text-align:left;}
+  tbody td{border-bottom:1px solid var(--rule); padding:.34rem .55rem; text-align:right; font-feature-settings:"tnum";}
+  tbody td:first-child{text-align:left; font-family:var(--serif);}
+  tbody tr:last-child td{border-bottom:1.6px solid var(--ink);}
+  .num-mono{font-feature-settings:"tnum";}
+
+  /* ---- figures ---- */
+  figure{margin:1.6rem 0; page-break-inside:avoid; text-align:center;}
+  figure img{max-width:100%; border:1px solid var(--rule); background:#fff;}
+  figure.wide img{max-width:100%;}
+  figcaption{font-family:var(--sans); font-size:.76rem; color:var(--muted); text-align:left;
+             margin-top:.5rem; line-height:1.4;}
+  figcaption b{color:var(--ink);}
+
+  .note{font-size:.84rem; color:var(--muted); border-left:2px solid var(--rule); padding-left:.8rem; margin:1rem 0;}
+  ul{margin:.5rem 0; padding-left:1.2rem;} li{margin:.3rem 0;}
+
+  /* ---- print ---- */
+  @page{ size:A4; margin:18mm 16mm; }
+  @media print{
+    body{background:#fff;}
+    .page{max-width:none; margin:0; padding:0;}
+    h2.sec{page-break-after:avoid;} h3.sub{page-break-after:avoid;}
+    figure,table,.keys,.abstract{page-break-inside:avoid;}
+    .page-break{page-break-before:always;}
+  }
+  .footer{margin-top:3rem; padding-top:1rem; border-top:1px solid var(--rule);
+          font-family:var(--sans); font-size:.72rem; color:var(--muted);}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <p class="eyebrow">Real-silicon-calibrated simulator · Phase 0 characterization</p>
+  <h1 class="title">CIM as a Peer Compute Unit for LLM Inference on a Heterogeneous Mobile SoC</h1>
+  <p class="subtitle">From op inventory to silicon: workload statistics and board characterization across Phases 0.1–0.3</p>
+  <hr class="accent-rule">
+  <div class="byline">
+    <span><b>Scope</b> dense Llama-3 / Qwen-2.5, 1B–8B, INT8, batch = 1, prefill + decode</span>
+    <span><b>Silicon</b> Axelera Metis Alpha (CIM) + production Metis Card</span>
+    <span><b>Models</b> Llama-3.2-1B/3B · Llama-3.1-8B · Qwen2.5-7B</span>
+    <span><b>Date</b> 2026-06</span>
+  </div>
+
+  <div class="abstract">
+    <h2>Abstract</h2>
+    <p>We characterize LLM inference for a <em>simulated</em> CIM-enabled heterogeneous mobile SoC,
+    calibrated against two real Axelera Metis boards. Phase 0.1 extracts a device-independent
+    <strong>op inventory</strong> (580 distinct op×shape signatures across 9 categories) from four
+    HuggingFace models under four workloads. Phase 0.2 turns this into a per-(model×workload)
+    <strong>execution profile</strong>: weight-stationary matmul dominates compute (≥0.99 of FLOPs in
+    short/medium workloads; long-context prefill the exception, attention rising to ~0.3), decode
+    is uniformly memory-bound (operational intensity = 2.0 FLOP/byte), and only long-context prefill
+    is attention-memory-bound. Phase 0.3 measures the real silicon: the Compute-in-Memory unit (Metis
+    Alpha, via a weight-stationary 1×1-conv proxy) is fast on matmul but pays a <strong>~911 µs
+    per-call DMA floor</strong> and, for dynamic attention it cannot keep stationary, a
+    <strong>~31–46 ms/token reload penalty — 97–376× slower than GPU-native</strong> — the empirical basis
+    for a CIM-centric design that offloads attention. A micro→end-to-end bridge fit on 1B/3B predicts
+    the held-out 8B decode throughput to <strong>10 %</strong>, with an effective bandwidth (16–21 GB/s)
+    that tracks the production card's documented ~24 GB/s decode wall.</p>
+  </div>
+
+  <!-- ===================== 1. MOTIVATION ===================== -->
+  <h2 class="sec"><span class="num">1</span>Motivation &amp; position</h2>
+  <p>Commercial discrete CIM accelerators (Axelera Metis, Hailo, Mythic, Untether) ship as PCIe/M.2
+  cards; mobile SoCs integrate NPU + GPU + CPU over shared LPDDR. Their combination — <strong>CIM as a
+  unified-memory-attached peer compute unit on a heterogeneous mobile SoC</strong> — is where the
+  industry is heading, yet is almost absent from the 2024–2026 literature for LLM workloads. Such a
+  chip does not exist, and real Metis cards cannot be the research object directly (the Alpha cannot
+  run LLM compute; the production card runs LLMs only through a closed, precompiled toolchain). We
+  therefore study a <em>simulated</em> CIM-mobile SoC and use the real Metis silicon as calibration
+  ground truth.</p>
+  <p><strong>CIM-centric design discipline.</strong> The system is designed <em>around CIM's limits
+  first</em> — it excels at weight-stationary GEMV, is poor at dynamic attention, needs channel-aligned
+  tiles, and pays a host–device round trip. GPU/NPU/CPU are the support layer for what CIM cannot or
+  should not do. Crucially, the op→unit assignment is <strong>decided by measurement, not assumed</strong>.
+  This report is that measurement.</p>
+
+  <!-- ===================== 2. METHOD ===================== -->
+  <h2 class="sec"><span class="num">2</span>Method &amp; setup</h2>
+  <p>Three machines, one private repository as the single source of truth. All measurements store raw
+  per-iteration data; every figure in this report is a build artifact regenerable from committed JSON.</p>
+
+  <table>
+    <caption><b>Table 1.</b> The three-machine measurement topology.</caption>
+    <thead><tr><th>Machine</th><th>Role</th><th>Key silicon</th><th>SDK</th></tr></thead>
+    <tbody>
+      <tr><td>Mac (M3 Pro)</td><td>control / dev / git hub</td><td>—</td><td>—</td></tr>
+      <tr><td>aetina (RK3588)</td><td>CIM + GPU + NPU + CPU micro-bench</td><td>Metis Alpha 1 GiB · Mali-G610 · A76</td><td>v1.3.1</td></tr>
+      <tr><td>metiscard (i9-12900K)</td><td>end-to-end LLM (L4 anchor)</td><td>Metis Card 16 GiB · RTX 3090</td><td>v1.6</td></tr>
+    </tbody>
+  </table>
+
+  <table>
+    <caption><b>Table 2.</b> Model configurations (GQA in all four; kv-width = kv_heads × head_dim).</caption>
+    <thead><tr><th>Model</th><th>layers</th><th>hidden</th><th>heads / kv</th><th>head_dim</th><th>ffn</th><th>vocab</th><th>tied</th></tr></thead>
+    <tbody>
+      <tr><td>Llama-3.2-1B</td><td>16</td><td>2048</td><td>32 / 8</td><td>64</td><td>8192</td><td>128256</td><td>yes</td></tr>
+      <tr><td>Llama-3.2-3B</td><td>28</td><td>3072</td><td>24 / 8</td><td>128</td><td>8192</td><td>128256</td><td>yes</td></tr>
+      <tr><td>Llama-3.1-8B</td><td>32</td><td>4096</td><td>32 / 8</td><td>128</td><td>14336</td><td>128256</td><td>no</td></tr>
+      <tr><td>Qwen2.5-7B</td><td>28</td><td>3584</td><td>28 / 4</td><td>128</td><td>18944</td><td>152064</td><td>no</td></tr>
+    </tbody>
+  </table>
+
+  <table>
+    <caption><b>Table 3.</b> Workloads (Layer-A), spanning the prefill-heavy ↔ decode-heavy spectrum.
+    Mean prefill/decode token counts from Phase 0.1 tokenization (Llama family; Qwen ≈ same).</caption>
+    <thead><tr><th>Task</th><th>Dataset</th><th>prefill</th><th>decode</th><th>regime</th></tr></thead>
+    <tbody>
+      <tr><td>Long-context</td><td>LongBench-TriviaQA</td><td>11753</td><td>4</td><td>prefill-heavy</td></tr>
+      <tr><td>Code</td><td>HumanEval</td><td>132</td><td>54</td><td>moderate</td></tr>
+      <tr><td>QA / reasoning</td><td>GSM8K</td><td>59</td><td>102</td><td>balanced</td></tr>
+      <tr><td>Chat</td><td>ShareGPT</td><td>175</td><td>344</td><td>decode-heavy</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Validation layers cross-checked: L1 CIM per-op, L2 DRAM/PCIe, L3 NPU/GPU per-op,
+  L4 end-to-end LLM (production card), L5 sensitivity, L6 end-to-end CNN (reused). This report covers
+  L1–L4; the op→unit mapping is characterization-driven.</p>
+
+  <!-- ===================== 3. PHASE 0.1 ===================== -->
+  <h2 class="sec"><span class="num">3</span>Phase 0.1 — op inventory</h2>
+  <p>Using a PyTorch meta/FakeTensor + dispatch tracer with forced eager attention, we extract the
+  exact op×shape stream each model executes — device-independent, no GPU, no board. All four models
+  decompose into the same ~38 ATen primitives; the only op-set difference is Qwen's biased QKV
+  (<code>addmm</code> vs Llama's <code>mm</code>). A completeness cross-check and a real-weights 1B run
+  both pass. The deduplicated <strong>sweep matrix</strong> is 580 distinct
+  <code>(op, in_shapes, out_shape)</code> signatures, categorized by semantic origin into 9 classes:
+  matmul 105, attention 95, rope 190, norm 90, softmax 21, ffn 30, residual 20, embedding 20,
+  kv_cache 9. This is the op set Phases 0.2–0.3 weight and measure.</p>
+
+  <!-- ===================== 4. PHASE 0.2 ===================== -->
+  <h2 class="sec"><span class="num">4</span>Phase 0.2 — workload-op statistics</h2>
+  <p>Phase 0.2 attaches <em>weights</em> to the sweep matrix: for every signature, how many times it
+  executes in each (model × workload), plus FLOPs / bytes / operational intensity from shape. Counts
+  come from the Phase-0.1 inventory (the counting oracle — never hand-rolled); off-grid workload-length
+  shapes are generated by a data-driven length-template validated to reproduce held-out inventory
+  points exactly for all four models. Intensity is the predicted side of the roofline; the measured
+  knee is Phase 0.3.</p>
+
+  <div class="keys">
+    <div class="key"><div class="n">≥0.99</div><div class="l">matmul share of prefill+decode FLOPs (short/medium tasks; LongBench 0.61–0.74)</div></div>
+    <div class="key"><div class="n">2.0</div><div class="l">decode matmul operational intensity (FLOP/byte) — memory-bound everywhere</div></div>
+    <div class="key v"><div class="n">65 %</div><div class="l">LongBench prefill <em>memory</em> that is attention (O(S²) score matrix), not weights</div></div>
+  </div>
+
+  <figure class="wide">
+    <img src="../figures/phase0.2/fig1_op_breakdown_llama-3.1-8b.png" alt="op-category breakdown">
+    <figcaption><b>Figure 1.</b> Op-category composition for Llama-3.1-8B across the four workloads,
+    by FLOPs (top) and memory bytes (bottom), prefill vs decode. Weight-stationary <span style="color:var(--blue)"><b>matmul</b></span>
+    dominates compute and (in decode) memory everywhere; the exception is long-context prefill
+    (LongBench), where the O(S²) <span style="color:var(--verm)"><b>attention</b></span> score matrix
+    and softmax dominate <em>memory</em>. This is the structural fit for a CIM-centric design, and the
+    one regime where a weights-only memory model is wrong.</figcaption>
+  </figure>
+
+  <figure class="wide">
+    <img src="../figures/phase0.2/fig2_roofline_llama-3.1-8b.png" alt="operational intensity">
+    <figcaption><b>Figure 2.</b> Predicted-side operational intensity (FLOP/byte) vs FLOPs contributed,
+    prefill (filled) vs decode (open). Decode collapses to the memory-bound region (intensity ≈ 2,
+    M = 1 GEMV) — the regime where CIM weight-residency helps most — while prefill matmul/attention is
+    compute-bound and scales with context length (matmul intensity 115 → 5554 from GSM8K to LongBench).</figcaption>
+  </figure>
+
+  <!-- ===================== 5. PHASE 0.3 ===================== -->
+  <h2 class="sec page-break"><span class="num">5</span>Phase 0.3 — real-board characterization</h2>
+  <p>We now measure the silicon. CIM is the Metis Alpha via a 1×1-conv proxy — faithful for
+  weight-stationary matmul/GEMV (the conv filter is a compile-time-constant weight), a compute lower
+  bound for attention (both operands are activations). A hard device-memory envelope
+  (<code>K·N ≤ ~6M</code> params allocatable) means large projections run as 2048×2048 crossbar tiles;
+  we measure one canonical tile and extrapolate <code>n_tiles × tile_latency</code> — itself the real
+  CIM tiling cost.</p>
+
+  <div class="keys">
+    <div class="key"><div class="n">911 µs</div><div class="l">per-call host↔device DMA floor — dominates small decode GEMVs (A1d.5)</div></div>
+    <div class="key v"><div class="n">97–376×</div><div class="l">CIM composed attention slower than GPU-native → offload (C4)</div></div>
+    <div class="key g"><div class="n">10 %</div><div class="l">8B decode tok/s hold-out error from a 1B/3B fit (C5)</div></div>
+  </div>
+
+  <h3 class="sub">5.1 CIM is fast on matmul but gated by the round trip</h3>
+  <p>Decode-GEMV <em>device</em> throughput is 110–230 GFLOP/s, but the per-call DMA floor makes the
+  <em>end-to-end</em> latency of a tiny decode GEMV ~0.9 ms regardless of its compute (Figure 3). This
+  on-PCIe floor is the structural CIM cost: CIM wins on compute, loses on the round trip — and tiling a
+  large op multiplies the floor by <code>n_tiles</code>.</p>
+
+  <table>
+    <caption><b>Table 4.</b> CIM micro-characterization (Metis Alpha, 1×1-conv proxy, INT8, decode M = 1).</caption>
+    <thead><tr><th>Axis</th><th>Result</th></tr></thead>
+    <tbody>
+      <tr><td>Device envelope</td><td>K·N ≤ ~6M params allocatable (6.3M ok, 8.4M+ fail); larger ops tiled 2048×2048</td></tr>
+      <tr><td>A1d.2 channel staircase</td><td>dev latency 9.8 → 24.7 → 41.2 → 82.4 µs for N = 64, 1024, 2048, 3072</td></tr>
+      <tr><td>A1d.3 (M,K,N) aspect</td><td>equal-MAC wide / tall 227, square 204 GFLOP/s (~10% aspect penalty)</td></tr>
+      <tr><td>A1d.4 l2 vs ddr</td><td>1.00–1.01× — <em>null axis</em> (Alpha has no on-card DRAM; not extrapolable)</td></tr>
+      <tr><td>A1d.6 GQA-narrow waste</td><td>kv-proj (N = 512) 112 vs wide gate/up 204 GFLOP/s — ~55% utilization (1B)</td></tr>
+    </tbody>
+  </table>
+
+  <figure>
+    <img src="../figures/phase0.3/fig3_pcie_floor.png" alt="pcie floor" style="max-width:62%">
+    <figcaption><b>Figure 3.</b> CIM end-to-end system latency vs device compute latency across shapes.
+    The ~911 µs per-call DMA floor (orange) sits far above the no-overhead diagonal — small decode
+    GEMVs are floor-bound, not compute-bound. This is the host–device cost the simulator's memory layer
+    (M2) must model.</figcaption>
+  </figure>
+
+  <h3 class="sub">5.2 CIM cannot keep attention stationary — the offload argument</h3>
+  <p>The conv-proxy attention compute floor is tiny (~20 µs single-head), but it ignores the
+  per-decode-step reload of the growing KV-cache into the crossbar. Composing the measured reload
+  (<code>T = floor + layers · DMA_floor</code>) gives ~31–46 ms/token, <strong>99 % of it the per-layer
+  reload</strong> — an Alpha-topology <em>upper bound</em>, but the order of magnitude is the point:
+  CIM is 97–376× slower than GPU-native attention (Figure 4). Dynamic activation×activation attention
+  violates CIM's weight-stationary premise; it must be offloaded. This is the empirical heart of the
+  CIM-centric thesis.</p>
+
+  <figure>
+    <img src="../figures/phase0.3/fig7_cim_vs_gpu_attn.png" alt="cim vs gpu attention" style="max-width:62%">
+    <figcaption><b>Figure 4.</b> Single-head attention latency vs kv length: CIM conv-proxy
+    <span style="color:var(--blue)"><b>floor</b></span> (compute only, misleadingly fast),
+    CIM <span style="color:var(--verm)"><b>composed</b></span> (+KV reload, the real ~31–46 ms penalty),
+    and <span style="color:var(--green)"><b>GPU-native FP16</b></span> (Mali, 80–500 µs). The two-order-of-magnitude
+    gap motivates assigning attention to GPU/NPU.</figcaption>
+  </figure>
+
+  <h3 class="sub">5.3 Micro → end-to-end: predicting the production card</h3>
+  <p>The production Metis Card runs the vendor INT8 LLMs end-to-end (the L4 anchor). Decode is a
+  near-pure weight-streaming memory wall, so we fit an effective decode bandwidth on 1B + 3B and
+  predict the <em>held-out</em> 8B throughput (an ADR-0006 size-invariance test). The prediction lands
+  at 2.44 vs measured 2.70 tok/s — 10 % error — and the implied bandwidth (16.2 / 20.5 / 20.3 GB/s)
+  shows a genuine size trend bracketing the ~24 GB/s wall (Figure 5). Op-level structure plus Phase-0.2
+  counts compose into the real LLM's throughput: the L1→L4 link holds.</p>
+
+  <figure>
+    <img src="../figures/phase0.3/fig6_twopillar.png" alt="two-pillar prediction" style="max-width:58%">
+    <figcaption><b>Figure 5.</b> Two-pillar hold-out. Effective decode bandwidth fit on
+    <span style="color:var(--blue)"><b>1B and 3B</b></span> predicts the held-out
+    <span style="color:var(--green)"><b>8B</b></span> decode tok/s within 10 % of the
+    <span style="color:var(--verm)"><b>measurement</b></span>. The residual is real size-dependence
+    (smaller models stream weights less efficiently), not a fit artifact.</figcaption>
+  </figure>
+
+  <table>
+    <caption><b>Table 5.</b> Production Metis Card — vendor INT8 decode (axllm, ctx 1024, median of 3 prompts).
+    The 4c/1c speedup shrinks with model size (size-invariance drift), which is why C5 is a hold-out.</caption>
+    <thead><tr><th>Model</th><th>1-core tok/s</th><th>4-core tok/s</th><th>4c/1c</th><th>TTFT (1c)</th><th>weight (GB)</th></tr></thead>
+    <tbody>
+      <tr><td>Llama-3.2-1B</td><td>13.07</td><td>14.77</td><td>1.13×</td><td>0.55 s</td><td>1.24</td></tr>
+      <tr><td>Llama-3.2-3B</td><td>6.38</td><td>6.99</td><td>1.10×</td><td>1.13 s</td><td>3.21</td></tr>
+      <tr><td>Llama-3.1-8B</td><td>2.70</td><td>2.92</td><td>1.08×</td><td>3.79 s</td><td>8.03</td></tr>
+    </tbody>
+  </table>
+
+  <!-- ===================== 6. SYNTHESIS ===================== -->
+  <h2 class="sec"><span class="num">6</span>Synthesis — what the silicon says about the design</h2>
+  <p>The measurements substantiate the CIM-centric position with real numbers, not assumptions:</p>
+  <ul>
+    <li><strong>Put weight-stationary GEMM/GEMV on CIM.</strong> Matmul is ≥0.99 of prefill and decode
+    FLOPs for short/medium workloads (long-context prefill the exception, attention 0.26–0.39); decode is
+    uniformly memory-bound (intensity 2.0), exactly where CIM weight-residency pays off — provided the
+    per-call DMA floor is amortized (large ops, batched calls).</li>
+    <li><strong>Offload attention.</strong> CIM's ~31–46 ms/token attention penalty (97–376× GPU) is the
+    quantified cost of dynamic activation×activation on a weight-stationary crossbar. The heterogeneous
+    split is not a design choice but a measured necessity.</li>
+    <li><strong>Mind the tile and the round trip.</strong> Channel-64 alignment, GQA-narrow underfill
+    (55 % utilization), and the 911 µs floor are the CIM-specific knobs the simulator's M1/M2 must model.</li>
+    <li><strong>The bridge is real.</strong> A bytes-driven, op-count-weighted model fit on small models
+    predicts the large model's measured throughput to 10 % — evidence the per-op calibration composes
+    into faithful end-to-end behavior.</li>
+  </ul>
+
+  <!-- ===================== 7. GAPS ===================== -->
+  <h2 class="sec"><span class="num">7</span>Gaps &amp; next steps</h2>
+  <ul>
+    <li><strong>RKNPU2 (NPU) not collected</strong> this pass; the attention-offload argument rests on
+    the GPU comparison alone. The C4 composed attention is an Alpha-topology upper-bound estimate; the
+    Mali GEMM kernel is unoptimized (a throughput lower bound).</li>
+    <li><strong>l2/ddr is a null axis on Alpha</strong> (no on-card DRAM) — residency sensitivity must
+    come from the production card, not extrapolated from the Alpha gap.</li>
+    <li><strong>Large-M prefill</strong> (≥2048) exceeds the device allocation envelope; LongBench
+    M ≈ 11.8k stays analytic for Phase 1.</li>
+    <li><strong>Thermal (Phase 0.4):</strong> <code>core_temp</code> is unsupported on the production
+    PCIe-Rev1 card; thermal characterization will use the Alpha RK3588 thermal zones.</li>
+    <li><strong>Next:</strong> Phase 1 fits closed-form latency equations per micro-benchmark (replacing
+    lookup tables) and validates each simulator component; Phase 2 integrates them into the end-to-end
+    event-driven simulator.</li>
+  </ul>
+
+  <div class="footer">
+    CIM-Centric LLM Inference Simulator · Phase 0 characterization report · all figures and tables
+    regenerable from committed data (<span class="mono">tools/trace_export</span>,
+    <span class="mono">tools/analysis</span>, <span class="mono">tools/plotting</span>). Generated with Claude Code.
+  </div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+ "note": "Alpha-topology penalty estimate (NOT production absolute). kv_bytes=2*kv*kvh*hd INT8 (one layer); reload = L*(kv_bytes/BW + fixed_overhead): each of L layers reloads its own KV per decode step (both bandwidth and fixed terms x L).",
+ "BW_pcie_GBs": 3.9,
+ "fixed_overhead_us": 911.1,
+ "rows": [
+  {
+   "kv": 129,
+   "floor_us": 18.14,
+   "kv_bytes": 264192,
+   "reload_us": 31322.9,
+   "composed_us": 31341.1,
+   "reload_share": 0.999
+  },
+  {
+   "kv": 513,
+   "floor_us": 19.49,
+   "kv_bytes": 1050624,
+   "reload_us": 37775.7,
+   "composed_us": 37795.2,
+   "reload_share": 0.999
+  },
+  {
+   "kv": 1025,
+   "floor_us": 20.42,
+   "kv_bytes": 2099200,
+   "reload_us": 46379.4,
+   "composed_us": 46399.8,
+   "reload_share": 1.0
+  }
+ ]
+}
