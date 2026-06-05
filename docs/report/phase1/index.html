@@ -393,7 +393,14 @@ Phase 2    模擬器整合                  （把校好的公式組成完整模
 </tbody>
 </table>
 <p>→ <strong>同一個 N、K 越寬、吞吐越高</strong>（這就是後面要 fit 的「K 效應」）。</p>
-<p><strong>device envelope（能配置多大）</strong>：實測探出 <code>K·N ≲ 6M</code> 參數可配置（6.3M OK、8.4M 失敗 <code>zeMemAllocDevice</code>）。注意這 <strong>6M（≈6MB）遠小於晶片的 52 MiB 片上 SRAM</strong>（每核 4 MiB L1 + 32 MiB 共享 L2 + 每核 1 MiB D-IMC）——代表 conv-proxy 的權重只被配置到一塊<strong>受限的區域</strong>（約per-core L1/IMC 等級），不是整顆晶片的 SRAM。<strong>這是 SDK/編譯的配置上限，不是晶片容量。</strong></p>
+<p><strong>device envelope（能配置多大）— 為什麼是 6M，不是 32 MB L2？</strong>
+實測探出 <code>K·N ≲ 6M</code> 參數可配置（6.3M OK、8.4M 失敗 <code>zeMemAllocDevice</code>）。這個 6M <strong>既不是 32 MB L2、也不是 52 MiB 片上 SRAM</strong>——關鍵在於 <strong>Alpha 板沒有真正的 on-card DRAM</strong>：</p>
+<ul>
+<li><code>zeMemAllocDevice</code> 配置的「device 記憶體」，在 Alpha 上其實是一塊<strong>把 host LPDDR 映射進裝置位址空間的 PCIe-IOMMU window</strong>（不是真 DRAM；voyager-sdk.md <code>[MEASURED]</code>）。</li>
+<li>而這個 window <strong>預設只有 ~14 MB</strong>（Axelera 論壇 SMMU-v3 thread #1330，可經 device-tree 擴到 128 MB／1 GB；voyager-sdk.md:248）。</li>
+<li>6.3M 參數（≈6 MB 權重）＋ 活化／workspace 剛好逼近這 ~14 MB → 8.4M 就配不下。</li>
+</ul>
+<p>所以 <strong>6M ≈「預設 IOMMU window 的權重份額」</strong>，跟 L2（32 MB，weights home 預設、&gt;32 MB 才 spill）或晶片 SRAM 容量無關。（嚴格確認那次 run 的 window 大小，要看板上的 <code>compile_config.json</code>／device-tree——板子目前離線，這條列為<strong>證據鏈到此、待上板補確認</strong>。）</p>
 <hr />
 <h2>A1.3 參數設計：公式與 2D 擬合</h2>
 <p>延遲公式（<code>simulator/models/m1_cim_tile.py</code>）：</p>
@@ -534,8 +541,8 @@ G_eff(N,K) = Gmax · N/(N+Na) · K/(K+Kb)   # 2D 有效吞吐（GOP/s）
 </tr>
 <tr>
 <td>device envelope</td>
-<td>✅ 已釐清</td>
-<td>6M 參數是 SDK 配置上限，遠小於 52 MiB 片上 SRAM；非晶片容量</td>
+<td>⚠️ 證據到 IOMMU window</td>
+<td>6M ≈ 預設 PCIe-IOMMU window（~14MB，forum #1330）的權重份額（Alpha 無真 on-card DRAM）；<strong>非</strong> L2(32MB)/SRAM；確切 window 大小待上板看 <code>compile_config.json</code></td>
 </tr>
 <tr>
 <td>板子離線</td>

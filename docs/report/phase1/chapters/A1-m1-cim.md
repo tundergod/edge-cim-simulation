@@ -38,7 +38,14 @@ decode 時 M=1（GEMV）。一次矩陣乘法 `[1,K]×[K,N]` 有兩個維度：
 
 → **同一個 N、K 越寬、吞吐越高**（這就是後面要 fit 的「K 效應」）。
 
-**device envelope（能配置多大）**：實測探出 `K·N ≲ 6M` 參數可配置（6.3M OK、8.4M 失敗 `zeMemAllocDevice`）。注意這 **6M（≈6MB）遠小於晶片的 52 MiB 片上 SRAM**（每核 4 MiB L1 + 32 MiB 共享 L2 + 每核 1 MiB D-IMC）——代表 conv-proxy 的權重只被配置到一塊**受限的區域**（約per-core L1/IMC 等級），不是整顆晶片的 SRAM。**這是 SDK/編譯的配置上限，不是晶片容量。**
+**device envelope（能配置多大）— 為什麼是 6M，不是 32 MB L2？**
+實測探出 `K·N ≲ 6M` 參數可配置（6.3M OK、8.4M 失敗 `zeMemAllocDevice`）。這個 6M **既不是 32 MB L2、也不是 52 MiB 片上 SRAM**——關鍵在於 **Alpha 板沒有真正的 on-card DRAM**：
+
+- `zeMemAllocDevice` 配置的「device 記憶體」，在 Alpha 上其實是一塊**把 host LPDDR 映射進裝置位址空間的 PCIe-IOMMU window**（不是真 DRAM；voyager-sdk.md `[MEASURED]`）。
+- 而這個 window **預設只有 ~14 MB**（Axelera 論壇 SMMU-v3 thread #1330，可經 device-tree 擴到 128 MB／1 GB；voyager-sdk.md:248）。
+- 6.3M 參數（≈6 MB 權重）＋ 活化／workspace 剛好逼近這 ~14 MB → 8.4M 就配不下。
+
+所以 **6M ≈「預設 IOMMU window 的權重份額」**，跟 L2（32 MB，weights home 預設、>32 MB 才 spill）或晶片 SRAM 容量無關。（嚴格確認那次 run 的 window 大小，要看板上的 `compile_config.json`／device-tree——板子目前離線，這條列為**證據鏈到此、待上板補確認**。）
 
 ---
 
@@ -121,7 +128,7 @@ G_eff(N,K) = Gmax · N/(N+Na) · K/(K+Kb)   # 2D 有效吞吐（GOP/s）
 | 單位 | ✅ 已更正 | GOP/s（INT8），非 GFLOP/s |
 | compute ceiling | 📌 未建模 | 量到的 ~227 GOP/s 只有峰值 209,600 GOP/s 的 0.1%；decode 不碰天花板（issue #16） |
 | 64 對齊 | ✅ 已解釋 | 64 outputs/cycle、8×64 輸出組織；非-64 點無明顯罰則 |
-| device envelope | ✅ 已釐清 | 6M 參數是 SDK 配置上限，遠小於 52 MiB 片上 SRAM；非晶片容量 |
+| device envelope | ⚠️ 證據到 IOMMU window | 6M ≈ 預設 PCIe-IOMMU window（~14MB，forum #1330）的權重份額（Alpha 無真 on-card DRAM）；**非** L2(32MB)/SRAM；確切 window 大小待上板看 `compile_config.json` |
 | 板子離線 | ⛔ 無法補量 | 多-tile / >2048 / 大形狀都無法再量；只能外推並標未驗證 |
 
 **一句話總結 A1**：Metis CIM 是**四核、每核 512×512** 的 INT8 D-IMC；我們以「n 核」為最小單位（n=4）建模，有效吞吐 `G_eff(N,K)` 隨 N 與 K 上升、在 13 個原生點上擬合到中位 2.7%；**但只有單-tile（≤一塊）有量測**，更大的形狀全是外推、誠實標未驗證（連續上升，不再平移，也不再把外推點當量測）。下一章 A2 處理「搬資料」那一半。
