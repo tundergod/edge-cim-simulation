@@ -10,4 +10,10 @@ tunable_params:
   - npu_gemm_gflops          # FLOPs / effective throughput (per shape)
   - npu_attn_bmm_us_per_kv   # native activation x activation attention (offload candidate)
 dependency: "Fit like m4_gpu (FLOPs/G_eff + native attn bmm) from rknpu2_matmul.json when #13 resolves."
+phase2_plan: "Simulate the NPU with ONNXim (a systolic-NPU simulator; ADR-0007 / OVERALL.md M4 note),
+  then CROSS-CHECK against HeteroInfer (SOSP'25, papers/methodology-and-simulators/) NPU
+  characteristics: Fig 3 stage performance (32x32 systolic staircase), Fig 4 order/shape
+  sensitivity, Fig 8 graph-gen time. If ONNXim (generic systolic) mispredicts RKNPU2's
+  Rockchip-specific behaviour, fall back to a measured lookup-table override (already in the M4
+  design). HeteroInfer's NPU>>GPU-for-matmul + NPU-1 stage-performance findings are the validation targets."
 phase1_note: "Placeholder. NPU is a documented dependency, not a modeled unit. Attention-offload thesis stands on the Mali GPU comparison alone."

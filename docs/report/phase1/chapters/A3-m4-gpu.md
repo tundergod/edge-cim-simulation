@@ -27,6 +27,13 @@
 
 **這就是「attention 要 offload」的硬道理**：不是偏好，是 CIM 的物理限制。
 
+> **澄清（你問的 Q6）：attention 也包含矩陣乘法，那「GEMV 適合 CIM、attention 適合 GPU」到底在分什麼？**
+> 分的**不是**「有沒有矩陣乘法」——投影（Q/K/V/O、FFN）和 attention（QK^T、S·V）**全都是矩陣乘法**（decode 時都是 GEMV/bmm）。真正的分界是 **「其中一個運算元是不是固定的權重」**：
+> - **投影 / FFN**：activation × **固定模型權重**（W_q、W_gate… 是訓練好的常數）→ 權重可以**釘在 crossbar 上不動**（weight-stationary）→ **CIM 的主場**。
+> - **attention**：activation × **activation**（Q、K、V 全是 runtime 資料，K/V 還隨上下文長大）→ **沒有固定權重可釘**，每個 decode step 都要把長大的 K/V 重載進陣列 → 違反 CIM 省電前提 → **丟給 GPU/NPU**（它們做通用 activation×activation 是日常）。
+>
+> 所以精確的講法是：**weight-stationary 的 matmul → CIM；activation×activation 的 matmul → GPU/NPU**。我先前「GEMV 適合 CIM、attention 適合 GPU」是簡化說法，這裡是精確版。
+
 ---
 
 ## A3.3 參數設計：attention 成本公式
@@ -42,6 +49,10 @@ attn_bmm_us(kv) = a + b · kv
 - **b = 0.442 µs/kv**：斜率，每多一個 KV token 多花 0.442 µs。
 
 > **單一 head 的注意事項**：這個公式是**一個 head** 的成本。真正一個 token 的 decode attention 要乘上「head 數 × layer 數」。**這個 `× heads × layers` 的聚合方式，我們留到 Phase 2 才展開**（這是一個已記錄的 watch-item；因為在短文本下 attention 遠小於權重串流，不影響 decode 的主要 gate）。
+
+> **⚠️ 但 kv 只量到 1024，我們的 workload 最長到 ~12k（你問的 Q5）。** LongBench 的 prefill ≈ 11.8k token（Qwen 12.2k）→ decode 時 kv 會長到 ~12k，是量測上限 1024 的 **約 12 倍**。
+> - **線性形式本身是對的**：decode 的 QK^T（`[1,hd]×[hd,kv]`）和 S·V（`[1,kv]×[kv,hd]`）都是對 **kv 個元素**各做一次（O(kv)），softmax 也是 → per-step 成本**結構上就線性於 kv**。所以 `a + b·kv` 的**形狀**是正確的、不是硬湊。
+> - **但把它外推 12× 是未驗證的**：斜率/截距是在 kv≤1024 擬的，到 12k 可能因 cache 行為、GPU 占用率而偏移。連 HeteroInfer 的特性化也大多在 seq ≤1024（其 Fig 8 最長序列就是 1024）。所以 **kv ≫ 1024 標為「未驗證外推」**，救板後應在 kv∈{2k,4k,8k} 補點確認線性是否延續。這也是 §A1/Part B 那條「prefill 路徑未驗證」之外、decode 端的一個明確 gap。
 
 ---
 
@@ -85,6 +96,10 @@ attn_bmm_us(kv) = a + b · kv
 ![P4](../../../figures/phase1/P4_mali_ksweep.png)
 - **X 軸**：方陣維度 M（對數）。**Y 軸**：吞吐（GFLOP/s）。**藍=FP16、灰=FP32**。
 - **怎麼看**：吞吐在 M=128 就大致持平在 ~20 GFLOP/s（之後僅在 20 附近微幅起伏，不再明顯上升；標題寫「LOWER BOUND」提醒這是未優化 kernel）。FP16 全程 ≥ FP32（半精度較快）。
+
+> **對照 HeteroInfer（你問的 Q5：GPU 差距 + Fig 1 特性）。**
+> - **差距 ~50×**：HeteroInfer（SOSP'25，本 repo）在旗艦 **Snapdragon 8 Gen 3 的 Adreno 750**（優化 OpenCL kernel）量到 GPU matmul 約 **1 TFLOPS**（理論峰值 2.8 TFLOPS）；我們的 **Mali-G610**（RK3588，中階）+ **未優化** kernel 飽和在 **~20 GFLOP/s** → **約 50× 低**。這個差距完全合理：旗艦 vs 中階 GPU、優化 vs 未優化 kernel——**正好印證我們把 GPU 絕對 matmul 吞吐當「下界」是對的**。
+> - **Fig 1 特性我們也有**：HeteroInfer Fig 1 的 GPU 特性是「tensor 小時 memory-bound、變大後 FLOPS 線性上升、再大則 compute-bound 飽和」。**我們的 P4（ksweep 到 M=128 飽和）就是同一條轉折**——特性對得上，只是絕對值因 GPU 等級 + kernel 低約 50×。所以 attention 對照（CIM 31–46ms vs GPU 幾十–幾百µs，2 個數量級）即使把我們的 GPU 往上修 50× 仍然成立（Part B 的 offload 結論穩固）。
 
 ---
 

@@ -1,9 +1,13 @@
 {
- "_doc": "M2 2b host LPDDR5 backend, ANALYTIC (Ramulator2 deferred to Phase 2, ADR-0002 swappable). PIM-like extension deferred (risk #6).",
- "jedec_peak_GBs": 51.2,
- "jedec_config": "LPDDR5-6400, 4x16-bit ch",
+ "_doc": "M2 host DRAM backend, ANALYTIC (Ramulator2 deferred to Phase 2, ADR-0002). The MEASURED anchor is the production Metis Card's on-card LPDDR4x; the simulated forward-looking SoC uses LPDDR5 (a DIFFERENT memory). Do NOT report 24.2 as '% of LPDDR5'.",
+ "memory_type_measured": "LPDDR4x (production Metis Card, on-card; exact config [GAP])",
  "effective_BW_GBs": 24.2,
- "efficiency_vs_peak": 0.473,
- "source": "measured decode wall ~24 GB/s (voyager-sdk.md / ADR-0006)",
+ "jedec_peak_GBs": 34.1,
+ "efficiency_vs_measured_peak": 0.71,
+ "efficiency_evidence": "HeteroInfer SOSP'25 Fig5: single-proc decode 40-45/68=59-66% of peak; web survey 60-80% (21% unoptimised, 85% best-case) for memory-bound LLM decode.",
+ "sim_lpddr5_peak_GBs": 51.2,
+ "sim_lpddr5_eff_BW_GBs": 33.3,
+ "sim_efficiency": 0.65,
+ "source_measured": "voyager-sdk.md:278 (decode time prop weight bytes, r2=0.997)",
  "ramulator2": "deferred to Phase 2"
 }

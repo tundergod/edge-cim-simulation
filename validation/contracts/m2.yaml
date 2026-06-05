@@ -1,15 +1,23 @@
 module: m2_memory
 measurement_sources:
   - measurements/aetina/metis_alpha_matmul.json   # pcie_floor_A1d5 (911us / 1112 p95)
+  - "voyager-sdk.md:278"                           # measured production-card LPDDR4x decode wall 24.2 GB/s
 acceptance_criteria:
   - {type: sanity, rules: [transfer_positive, monotonic_in_bytes]}
-  - {type: lpddr5_eff_BW, rule: "in [0.4*jedec_peak, jedec_peak] and brackets ~24 GB/s wall"}
+  - {type: dram_eff_BW, rule: "measured 24.2 GB/s = 55-85% of the MEASURED memory's (LPDDR4x ~34 GB/s) peak"}
 fixed_params:
   - {pcie_floor_us: 911.1, source: pcie_floor_A1d5, note: "discrete host<->device transfers only"}
   - {pcie_BW_GBs: 3.9, source: "documented Gen3x4 (voyager-sdk)"}
-  - {lpddr5_eff_BW_GBs: 24.2, jedec_peak_GBs: 51.2}
+  - {measured_eff_BW_GBs: 24.2, memory: "LPDDR4x (production card)", lpddr4x_peak_GBs: 34.1, eff_pct: 0.71}
+  - {sim_lpddr5_peak_GBs: 51.2, sim_lpddr5_eff_GBs: 33.3, note: "forward-looking SoC, different memory"}
+efficiency_evidence: "HeteroInfer SOSP'25 Fig5 single-proc decode 40-45/68=59-66%; web 60-80% memory-bound"
 decisions:
-  - no_sram_l1_l2_residency: "Alpha l2/ddr ratio ~1.00-1.01 (no on-card DRAM) -> Phase 2 must NOT build SRAM residency"
+  - build_l1_l2_residency: "Phase 2 MUST build L1 (4 MiB/core) + L2 (32 MiB shared) residency
+      (REVERSED the earlier no-build decision) — needed for architecture research once the
+      memory-wall bottleneck is addressed. The Alpha l2/ddr ~1.00-1.01 'no effect' was only a
+      topology artifact (Alpha has no on-card DRAM); the simulated SoC does, so the SRAM
+      hierarchy is a load-bearing variable and must be modeled to real sizes."
   - ramulator2: "deferred to Phase 2 (ADR-0002 swappable); PIM-like ext = risk #6"
-  - kv_cache_2c: "analytic kv_bytes/BW_eff, UNVALIDATED (Phase 0.3 did not isolate KV-append)"
+  - kv_cache_2c: "analytic kv_bytes/BW_eff as a TEMPORARY stand-in (board offline), UNVALIDATED;
+      re-calibrate the coefficient when the board is recovered (the form is correct, pure-BW op)"
 sample_strategy: "TBD - variance_profile not collected (Phase 0.3 gap)"

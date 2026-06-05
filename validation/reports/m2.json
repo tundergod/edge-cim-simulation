@@ -2,28 +2,29 @@
  "module": "m2_memory",
  "equation": {
   "pcie": "transfer_us = floor(911us) + bytes/BW(3.9GB/s)  [discrete only]",
-  "lpddr5": "stream_us = bytes/eff_BW",
+  "dram": "stream_us = bytes/eff_BW",
   "kv_cache": "kv_append_us = kv_bytes/eff_BW"
  },
  "params": {
   "pcie_floor_us": 911.1,
   "pcie_BW_GBs": 3.9,
-  "lpddr5_eff_BW_GBs": 24.2,
-  "lpddr5_peak_GBs": 51.2,
-  "lpddr5_efficiency": 0.473
+  "measured_eff_BW_GBs": 24.2,
+  "measured_memory": "LPDDR4x (production card)",
+  "measured_peak_GBs": 34.1,
+  "efficiency_vs_measured_peak": 0.71,
+  "sim_lpddr5_peak_GBs": 51.2,
+  "sim_lpddr5_eff_GBs": 33.3
  },
  "sanity": {
   "pcie_transfer_positive": true,
   "pcie_transfer_monotonic": true,
   "kv_append_positive_monotonic": true,
-  "eff_BW_brackets_24": true,
-  "eff_le_peak": true,
-  "eff_ge_0.4_peak": true,
-  "eff_efficiency_note": "47% of JEDEC peak \u2014 typical memory-wall effective BW (plan bound relaxed 0.5->0.4)"
+  "eff_in_60_80pct_of_measured_peak": true,
+  "efficiency_note": "71% of LPDDR4x peak \u2014 matches HeteroInfer (59-66%) + web (60-80%) for memory-bound decode. (Prior '47% of LPDDR5' was a wrong-memory comparison.)"
  },
  "notes": {
-  "no_sram_residency": "Alpha l2/ddr ratio ~1.00-1.01 (no on-card DRAM) -> NO SRAM L1/L2 residency model (recorded in m2 contract for Phase 2).",
-  "kv_cache_unvalidated": "Phase 0.3 did not isolate KV-append; analytic only.",
+  "build_sram_hierarchy": "Phase 2 WILL build L1 (4 MiB/core) + L2 (32 MiB shared) residency (reversed the earlier no-build decision) \u2014 needed for architecture research once the memory-wall bottleneck is addressed. Alpha l2/ddr showed no effect only because Alpha has no on-card DRAM; the simulated SoC does.",
+  "kv_cache_unvalidated": "Phase 0.3 did not isolate KV-append; analytic kv_bytes/BW, used as a temporary stand-in (board offline) \u2014 flagged unvalidated.",
   "ramulator2_deferred": "Phase 2 (ADR-0002 swappable); PIM-like ext = risk #6."
  }
 }
