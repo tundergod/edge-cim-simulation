@@ -1,0 +1,30 @@
+{
+ "module": "m7_energy",
+ "model": "spec-based (ADR-0005): CIM 15 TOPS/W, DRAM/PCIe pJ/bit, CPU A76 W*cores*t",
+ "params": {
+  "cim_tops_w": 15.0,
+  "lpddr5_pj_per_bit": 4.0,
+  "pcie_pj_per_bit": 5.0,
+  "a76_core_w": 0.75,
+  "cpu_cores": 4
+ },
+ "per_token_8b_decode_mJ": {
+  "cim_proj_mJ": 1.001,
+  "dram_stream_mJ": 240.149,
+  "cpu_support_mJ": 15.0
+ },
+ "per_token_total_mJ": 256.15,
+ "dominant_term": "dram_stream_mJ",
+ "sanity": {
+  "all_positive": true,
+  "monotonic_with_activity": true,
+  "implied_avg_power_W_plausible": true,
+  "implied_avg_power_W": 0.692,
+  "memory_dominates_robust_to_pm20pct": true
+ },
+ "sensitivity_pm20pct": {
+  "corners_tested": 16,
+  "conclusion_flips": 0
+ },
+ "limitation": "energy ESTIMATED not measured (no telemetry, ADR-0005); conclusions robust to +/-20%. CPU support time is a coarse per-token estimate."
+}

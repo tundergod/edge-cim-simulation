@@ -9,6 +9,37 @@ Reverse-chronological (newest first).
 
 ---
 
+## 2026-06-05 — Establish Phase 1.x structure: rename `phase1` → `phase1.1`
+
+Phase 1 (component modeling & validation) is split into two sub-phases by **data source**
+(mirrors the existing Phase 0.1–0.4 convention):
+
+- **Phase 1.1** (done) — components calibrated against our own Metis silicon measurements
+  (CIM, GPU, CPU-softmax, DRAM-LPDDR4x, M5-trace, M7-energy) + the e2e recompose hold-out.
+- **Phase 1.2** (next) — components lacking our own silicon measurement, modeled via
+  simulator/datasheet/literature: **NPU** (ONNXim + HeteroInfer, #13), **DRAM SoC hierarchy**
+  (LPDDR5 + L1/L2 residency), **full CPU compute model**. Labeled `simulated, not
+  silicon-validated` (weaker gate). See OVERALL.md § 階段總覽.
+
+The already-merged Phase 1 work IS Phase 1.1, so its artifacts were renamed (git mv, history
+preserved):
+
+- `docs/report/phase1/`        → `docs/report/phase1.1/` (incl. `phase1-report.pdf` → `phase1.1-report.pdf`)
+- `docs/figures/phase1/`       → `docs/figures/phase1.1/`
+- `validation/reports/phase1/` → `validation/reports/phase1.1/`
+- `docs/phase1-findings.md`    → `docs/phase1.1-findings.md`
+- `plans/phase-1.md`           → `plans/phase-1.1.md`
+
+Updated all in-file path references (8 fit/validate scripts, the report builder + its
+embed regex, chapter figure links, the plan) and relabeled report prose `Phase 1 → Phase 1.1`.
+Reclassified three deferrals from `Phase 2 → Phase 1.2` in the report (NPU build, L1/L2 SRAM
+residency, full CPU model) — these are now 1.2, not integration. HTML + PDF regenerated.
+
+**Not renamed (intentional):** the merged git branch `phase-1` (history); tool *filenames*
+`phase1_figs.py` / `build_phase1_report.py` (kept to avoid churn — they build the Phase-1
+umbrella reports; only their internal paths changed). Older LOG entries below still name
+pre-rename paths (accurate at the time).
+
 ## 2026-06-05 — Split `docs/report/` by phase
 
 `docs/report/` mixed a flat Phase-0 report (`report.html`/`report.pdf`) with the already-

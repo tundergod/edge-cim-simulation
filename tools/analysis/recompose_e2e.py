@@ -14,7 +14,7 @@ unmeasured at M>=512; prefill_ms_median is degenerate and unused).
 
 Reads  measurements/op_profile/*.json, metis_card/vendor_llm_int8.json,
        aetina/cim_attention_composed.json
-Writes measurements/metis_card/twopillar_prediction_fitted.json, validation/reports/phase1/recompose.json
+Writes measurements/metis_card/twopillar_prediction_fitted.json, validation/reports/phase1.1/recompose.json
 
 Run: ./.venv/bin/python tools/analysis/recompose_e2e.py
 """
@@ -128,7 +128,7 @@ def main():
                     % (implied_prefill_tops, pf_compute_decodeGEMV_s)},
     }
     (MC / "twopillar_prediction_fitted.json").write_text(json.dumps(out, indent=1))
-    (ROOT / "validation/reports/phase1/recompose.json").write_text(json.dumps(out, indent=1))
+    (ROOT / "validation/reports/phase1.1/recompose.json").write_text(json.dumps(out, indent=1))
 
     print(f"recompose: fit BW={out['fit_BW_GBs']} GB/s (1b+3b) -> pred 8b={out['pred_8b_tok_s']} "
           f"vs meas={out['measured_8b_tok_s']} tok/s ({err_8b*100:.1f}% err, "
