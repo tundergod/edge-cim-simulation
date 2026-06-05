@@ -5,18 +5,42 @@ Guidance for any agent working in this repo. Read this first, then [OVERALL.md](
 ## Orientation
 
 - **What this is:** a real-silicon-calibrated simulator of LLM inference on a CIM-enabled heterogeneous mobile SoC, calibrated against two Axelera Metis boards. Goal, phases, modules (M1–M8), validation layers (L1–L6): [OVERALL.md](OVERALL.md).
-- **Authoritative docs (don't re-derive):** [OVERALL.md](OVERALL.md) = plan & phases (preliminary — revise freely). [docs/voyager-sdk.md](docs/voyager-sdk.md) = how to measure Metis (tagged `[DOC]`/`[FORUM]`/`[MEASURED]`/`[GAP]`). [papers/](papers/) = literature + real-silicon notes (16 curated). [CONTEXT.md](CONTEXT.md) = domain glossary.
+- **Authoritative docs (don't re-derive):** [OVERALL.md](OVERALL.md) = plan & phases (preliminary — revise freely). [docs/voyager-sdk.md](docs/voyager-sdk.md) = how to measure Metis (tagged `[DOC]`/`[FORUM]`/`[MEASURED]`/`[GAP]`). [papers/](papers/) = literature + real-silicon notes (16 curated). [CONTEXT.md](CONTEXT.md) = domain glossary **+ repo index** (`## Repo index` — a directory-level map of where everything lives; consult it to locate code/docs/data fast, before grepping blindly).
 - **Hard scope:** dense Llama-3 / Qwen-2.5, 1B–8B, INT8, batch=1, prefill+decode. See `OVERALL.md` § 範圍外 for what's excluded.
 - **Secrets:** never commit tokens/keys. The HF token lives in the user's environment (`HF_TOKEN`), not in the repo.
 
 ## How to work (Karpathy guidelines)
 
-Full text: `/karpathy-guidelines`. The four rules, applied here:
+Behavioral guidelines to reduce common LLM coding mistakes (from [Karpathy's observations](https://x.com/karpathy/status/2015883857489522876)). They bias toward caution over speed; for trivial tasks, use judgment. The four rules in full, each with how it applies here:
 
-1. **Think before coding.** State assumptions explicitly; if multiple interpretations exist, surface them — don't pick silently. If a simpler approach exists, say so.
-2. **Simplicity first.** Minimum code that solves the task. No speculative features, abstractions, config, or error handling for impossible cases.
-3. **Surgical changes.** Touch only what the task requires. Match existing style. Don't refactor or "improve" adjacent code; mention unrelated dead code, don't delete it.
-4. **Goal-driven execution.** Turn each task into a verifiable check and loop until it passes. For module work, that means: validate against `validation/contracts/*` and the `measurements/` ground truth.
+**1. Think before coding — don't assume, don't hide confusion, surface tradeoffs.**
+Before implementing:
+- State your assumptions explicitly. If uncertain, ask.
+- If multiple interpretations exist, present them — don't pick silently.
+- If a simpler approach exists, say so. Push back when warranted.
+- If something is unclear, stop. Name what's confusing. Ask.
+
+**2. Simplicity first — minimum code that solves the problem, nothing speculative.**
+- No features beyond what was asked.
+- No abstractions for single-use code.
+- No "flexibility"/configurability that wasn't requested.
+- No error handling for impossible scenarios.
+- If you write 200 lines and it could be 50, rewrite it.
+- Ask: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+**3. Surgical changes — touch only what you must, clean up only your own mess.**
+- Don't "improve" adjacent code, comments, or formatting.
+- Don't refactor things that aren't broken.
+- Match existing style, even if you'd do it differently.
+- If you notice unrelated dead code, mention it — don't delete it.
+- Remove only the imports/variables/functions that YOUR changes made unused; don't remove pre-existing dead code unless asked.
+- The test: every changed line should trace directly to the user's request.
+
+**4. Goal-driven execution — define success criteria, loop until verified.**
+- Transform tasks into verifiable goals: "Add validation" → "write tests for invalid inputs, then make them pass"; "Fix the bug" → "write a test that reproduces it, then make it pass".
+- For multi-step tasks, state a brief plan (`1. step → verify: check`).
+- Strong success criteria let you loop independently; weak criteria ("make it work") require constant clarification.
+- **Here:** turn module work into a verifiable check and loop until it passes — validate against `validation/contracts/*` and the `measurements/` ground truth.
 
 ### Process precedence (multiple skill packs are installed)
 
