@@ -1,6 +1,42 @@
 # CONTEXT
 
-Domain glossary for this repo. When naming a concept in an issue, plan, test, or proposal, use the term as defined here. Authoritative detail lives in [OVERALL.md](OVERALL.md) and [docs/voyager-sdk.md](docs/voyager-sdk.md).
+Domain **glossary** + **repo index** for this repo. When naming a concept, use the term as defined in the glossary. To find where something lives, use the repo index (below) before grepping blindly. Authoritative detail: [OVERALL.md](OVERALL.md) (plan/phases/modules) and [docs/voyager-sdk.md](docs/voyager-sdk.md) (Metis/SDK measurement), plus each file's own header.
+
+## Repo index
+
+Directory-level map so you can locate things fast. Within a listed dir, the per-file header is the authority.
+
+| Path | What's there |
+|---|---|
+| `OVERALL.md` | **Project brief**: phases (0.1→2), modules M1–M8, validation layers L1–L6, workloads, open risks. The plan. |
+| `CLAUDE.md` | Agent guidance + the **per-phase workflow** (read first). |
+| `CONTEXT.md` | This file — glossary + repo index. |
+| `LOG.md` | Cross-phase change log (renames, repo-wide corrections). |
+| `README.md` | Repo intro. |
+| `plans/phase-*.md` | **Per-phase action-only plans** (0.1, 0.2, 0.3, 1.1, 1.2, 1.3). |
+| `simulator/models/*.py` | The M-module timing/energy models: `m1_cim_tile`, `m2_memory`, `m4_cpu`/`m4_gpu`/`m4_npu`, `m7_energy`. |
+| `simulator/models/params/*.json` | Fitted parameters per model (`m1_cim`, `m2_pcie`, `m2_lpddr5`, `m4_*`, `m7_energy`). |
+| `tools/analysis/*.py` | **Fit scripts** (`fit_m1_cim`, `fit_m2`, `fit_m4_cpu/gpu`, `recompose_e2e`) → produce params + validation reports. |
+| `tools/plotting/*.py` | One script per figure (regenerate from committed data; never hand-drawn). `_style.py` = shared style. |
+| `tools/report/*.py` | Stitch report chapters → HTML. |
+| `tools/trace_export/*.py` | Phase 0.1/0.2: op inventory, op profile, trace generation, sweep matrix. |
+| `validation/contracts/m*.yaml` | **Per-module validation contracts** (acceptance criteria, tunable params, gaps). |
+| `validation/reports/phase*/m*.json` | Validation results (fit errors, gate pass/fail). |
+| `validation/validate_*.py` | Per-module validators (m5 trace, m7 energy). |
+| `characterization/aetina/*` | **On-board micro-benchmark scripts** for the Aetina/Alpha board (`run_metis_cim`, `run_cpu_ops`, `run_mali_matmul`, `run_rknpu2`). |
+| `characterization/metis_card/*` | Metis Card scripts (`run_vendor_llm` = L4 tok/s anchor, `convert_rknn`). |
+| `measurements/aetina/*.json` | **Alpha silicon measurements** (CIM matmul, cpu_ops, mali_matmul, cim_attention). |
+| `measurements/metis_card/*.json` | Metis Card e2e LLM measurements (the **L4 anchor**). |
+| `measurements/op_inventory/`, `op_profile/` | Phase 0.1/0.2 op×shape inventory + per-(model,workload) counts/FLOPs/bytes. |
+| `traces/*.json.gz` | Per-token op×shape streams per (model, workload). |
+| `docs/voyager-sdk.md` | **How to measure Metis** (Voyager SDK; tagged `[DOC]`/`[FORUM]`/`[MEASURED]`/`[GAP]`). |
+| `docs/agents/machines.md` | The boards/hosts: Alpha, Metis Card, SSH, clocks, hard-coded constants. |
+| `docs/agents/{issue-tracker,triage-labels,domain}.md` | Agent process docs. |
+| `docs/adr/000N-*.md` | **Architecture Decision Records** (0001 engine-fidelity, 0002 memory, 0003 scheduler, 0004 mixed-precision, 0005 energy, 0006 validation/gates, 0007 op-inventory). |
+| `docs/phase*-findings.md` | Per-phase durable findings/conclusions (0.2, 0.3, 1.1). |
+| `docs/report/phase{0,1.1,1.2}/` | Built long-form reports (`index.html` + `*.pdf` + `chapters/`). |
+| `docs/figures/phase*/` | Build-artifact figures (regenerated from committed data). |
+| `papers/{metis-silicon,methodology-and-simulators,pim-llm-accelerators,platforms,ideas}/` | Curated literature + real-silicon notes (see `papers/README.md`). |
 
 ## Glossary
 
