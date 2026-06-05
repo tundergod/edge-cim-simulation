@@ -9,6 +9,19 @@ Reverse-chronological (newest first).
 
 ---
 
+## 2026-06-05 — Split `docs/report/` by phase
+
+`docs/report/` mixed a flat Phase-0 report (`report.html`/`report.pdf`) with the already-
+nested `phase1/`. Split by phase to mirror `validation/reports/phase1/` and the `phase1/`
+report layout:
+
+- `docs/report/report.html`  → `docs/report/phase0/index.html`
+- `docs/report/report.pdf`   → `docs/report/phase0/phase0-report.pdf`
+
+Now symmetric: `docs/report/phase0/index.html` + `docs/report/phase1/index.html`. The
+Phase-0 report is hand-written (no generator); the older LOG entry below still names its
+pre-move path `docs/report/report.html` (accurate at the time).
+
 ## 2026-06-05 — Post-Phase-1 consistency audit: repo-wide unit + architecture sync
 
 After merging Phase 1 (PR #15), a consistency audit found that the Phase-1 corrections
