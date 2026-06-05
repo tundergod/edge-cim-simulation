@@ -23,7 +23,21 @@ Heavy backend (Ramulator2, `engine='ramulator2'`) = Phase 1.3, same constructor 
 kv-append stays UNVALIDATED (Phase 0.3 did not isolate it; pure-BW form is correct, board
 offline -> re-calibrate the coefficient when recovered).
 """
+import json
+from pathlib import Path
+
 from simulator.models.engine import UnitEngine, Workload, check_return
+
+_RAM2 = Path(__file__).resolve().parents[2] / "simulated/ramulator2/lpddr5_eff.json"
+
+
+def _ramulator2_eff_bw(spec):
+    """Phase 1.3 heavy engine: effective BW (GB/s) from a cached Ramulator2 LPDDR5 sweep
+    (produced by tools/ramulator2/build.sh + tools/analysis/mem_ramulator2.py). Returns None
+    when the cache is absent (the C++ build is deferred) -> documented analytic fallback."""
+    if (spec.get("memory_type") or spec.get("dram_type")) != "LPDDR5" or not _RAM2.exists():
+        return None
+    return float(json.loads(_RAM2.read_text())["eff_BW_GBs"])
 
 
 class MemoryModel(UnitEngine):
@@ -37,6 +51,15 @@ class MemoryModel(UnitEngine):
             self.eff_BW_GBs = spec.get("dram_eff_BW_GBs")
         else:
             self.eff_BW_GBs = spec["eff_BW_GBs"]   # mem_lpddr4/4x/5 effective bandwidth
+        # Phase 1.3 heavy backend: engine='ramulator2' swaps in the LPDDR5 sim's effective BW
+        # (same constructor + frozen contract; ADR-0002). Cache absent -> analytic fallback.
+        self.heavy_source = None
+        if engine == "ramulator2":
+            bw = _ramulator2_eff_bw(spec)
+            if bw:
+                self.eff_BW_GBs, self.heavy_source = bw, "ramulator2"
+            else:
+                self.heavy_source = "ramulator2-deferred"   # C++ build not available -> analytic fallback
 
     # ---- engine contract -------------------------------------------------
     def predict(self, wl: Workload) -> dict:
@@ -62,6 +85,11 @@ class MemoryModel(UnitEngine):
 
     def _bw_tag(self):
         """Honesty tag for the bound memory's effective BW."""
+        if self.heavy_source == "ramulator2":
+            return "simulated (Ramulator2 LPDDR5 heavy sim, NOT silicon; Phase 1.3)"
+        if self.heavy_source == "ramulator2-deferred":
+            return ("simulated (eff 0.65); engine='ramulator2' requested but the Ramulator2 C++ "
+                    "build is deferred -> ANALYTIC fallback (risk-#6 documented, report user)")
         mt = self.spec.get("memory_type") or self.spec.get("dram_type")
         if mt == "LPDDR4x":
             return "calibrated (production-card LPDDR4x decode anchor 24.2 GB/s)"

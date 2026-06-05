@@ -5,7 +5,8 @@ Writes simulator/models/params/{m2_pcie,m2_lpddr5}.json
        validation/reports/phase1.1/m2.json
 
 PCIe floor + BW are fixed params (no per-shape sweep collected). LPDDR5 effective BW
-is analytic (JEDEC peak + measured decode wall); Ramulator2 deferred to Phase 2.
+is analytic (JEDEC peak + measured decode wall); Ramulator2 LPDDR5 single-stream cross-check =
+Phase 1.3 (engine='ramulator2' drop-in), multi-unit contention = Phase 2.
 
 Run: ./.venv/bin/python tools/analysis/fit_m2.py
 """
@@ -52,7 +53,8 @@ def main():
 
     eff_vs_lpddr4x = round(MEASURED_LPDDR4X_EFF_GBs / LPDDR4X_PEAK_GBs, 3)   # 0.71
     dram = {
-        "_doc": "M2 host DRAM backend, ANALYTIC (Ramulator2 deferred to Phase 2, ADR-0002). "
+        "_doc": "M2 host DRAM backend, ANALYTIC (Ramulator2 LPDDR5 single-stream cross-check = "
+                "Phase 1.3, multi-unit contention = Phase 2, ADR-0002). "
                 "The MEASURED anchor is the production Metis Card's on-card LPDDR4x; the simulated "
                 "forward-looking SoC uses LPDDR5 (a DIFFERENT memory). Do NOT report 24.2 as '% of LPDDR5'.",
         "memory_type_measured": "LPDDR4x (production Metis Card, on-card; exact config [GAP])",
@@ -65,7 +67,7 @@ def main():
         "sim_lpddr5_eff_BW_GBs": SIM_LPDDR5_EFF_GBs,            # ~33.3 (51.2 x 0.65)
         "sim_efficiency": SIM_EFFICIENCY,
         "source_measured": "voyager-sdk.md:278 (decode time prop weight bytes, r2=0.997)",
-        "ramulator2": "deferred to Phase 2",
+        "ramulator2": "single-stream LPDDR5 cross-check = Phase 1.3 (engine='ramulator2'); multi-unit = Phase 2",
     }
     (ROOT / "simulator/models/params/m2_lpddr5.json").write_text(json.dumps(dram, indent=1))
 

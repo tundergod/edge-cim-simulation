@@ -27,3 +27,5 @@ build/
 # Plots / reports (regenerate from data)
 tools/plotting/_out/
 docs/_build/
+tools/ramulator2/upstream/
+tools/onnxim/upstream/

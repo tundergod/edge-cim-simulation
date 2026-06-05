@@ -16,7 +16,7 @@ committed JSON via `tools/analysis/fit_*.py`, `tools/analysis/recompose_e2e.py`,
 |---|---|---|---|---|
 | M1 CIM tile | `dev_lat = Σ N-tiles 2·M·K·n/G_eff(n,K)` (quad-core 512×512, **GOP/s**) | 2D G_eff(N,K) native fit median≤10%, p95≤20% | median **2.7%**, p95 **14.9%** | ✅ |
 | M2 PCIe/DMA | `floor + bytes/BW` (911µs, 3.9 GB/s fixed) | sanity + boundary recorded | positive, monotonic | ✅ |
-| M2 DRAM | analytic eff-BW (Ramulator2 → Phase 2) | measured ∈ 55–85% of measured-mem peak | **LPDDR4x 24.2/34 GB/s (71%)**; sim LPDDR5 33/51 | ✅ |
+| M2 DRAM | analytic eff-BW (Ramulator2 → 1.3 single-stream / 2 contention) | measured ∈ 55–85% of measured-mem peak | **LPDDR4x 24.2/34 GB/s (71%)**; sim LPDDR5 33/51 | ✅ |
 | M4 GPU (Mali) | `attn_bmm = 27.74 + 0.442·kv` µs (offload) | median≤10%, p95≤20% | median **0.6%**, p95 **1.1%** | ✅ |
 | M4 CPU (A76) | softmax `a + b·kv`; others constants | median≤10%, p95≤20% | median **0.3%**, p95 **1.8%** | ✅ |
 | M4 NPU | — | blocked on #13 | placeholder | ⏸ |
@@ -71,7 +71,8 @@ prediction. On the Alpha board itself every decode-GEMV paid the floor (topology
 extrapolated). The measured decode wall **24.2 GB/s is the production card's LPDDR4x** (≈71% of
 a ~34 GB/s LPDDR4x-4266 ×64 peak — consistent with HeteroInfer's 40–45/68=59–66% and the web's
 60–80% for memory-bound decode; the prior "47% of LPDDR5-51.2" was a wrong-memory comparison).
-The simulated forward-looking SoC uses LPDDR5 (peak 51.2, eff ~33 at 65%). Ramulator2 deferred to
+The simulated forward-looking SoC uses LPDDR5 (peak 51.2, eff ~33 at 65%). Ramulator2 LPDDR5
+single-stream cross-check = Phase 1.3 (`engine='ramulator2'` drop-in); multi-unit contention =
 Phase 2. kv_cache append = analytic `kv_bytes/BW_eff`, **unvalidated** (temporary stand-in, board
 offline). **Phase 1.2 WILL build L1 (4 MiB/core) + L2 (32 MiB shared) residency** (reversed the
 earlier no-build decision — the Alpha l2/ddr ≈1.00–1.01 "no effect" was only a topology artifact;
@@ -127,5 +128,5 @@ degenerate vendor field ~0.007 s across all sizes — unused.)
 - **conversion-op cost (M6):** ADR-0004 Phase-0.2 calibration never done — headline mixed-precision gap.
 - **prefill path:** decode-calibrated only; whole prefill path analytic/unvalidated.
 - **kv_cache / embedding:** analytic, unvalidated (Phase 0.3 didn't isolate / micro-bench them).
-- **Ramulator2:** deferred to Phase 2 (analytic LPDDR5 ships in Phase 1.1).
+- **Ramulator2:** single-stream LPDDR5 cross-check in **Phase 1.3** (`engine='ramulator2'` drop-in behind the 1.2 interface); multi-unit contention in **Phase 2** (analytic LPDDR5 ships in Phase 1.1).
 - **Phase-2 watch-items:** kv_append vs BW double-count; attention heads×layers rollup.

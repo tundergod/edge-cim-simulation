@@ -10,5 +10,13 @@ Memory access is the crux (decode memory wall). The subfield standard backend is
 
 Representative-iteration preserves full memory fidelity (every simulated token is full cacheline-level); a literal full-run would force coarser (tile) granularity and *lower* fidelity.
 
+### Revision (2026-06-06, Phase 1.3) — staging of the Ramulator2 backend
+The Ramulator2 backend is staged across phases (it was loosely "Phase 2" in earlier wording):
+- **Phase 1.2** ships the **analytic** LPDDR4/4x/5 effective-BW model as the primary `MemoryModel` (the "(i)" fast-DSE option), calibrated to the LPDDR4x 24.2 GB/s decode anchor.
+- **Phase 1.3** drops the **Ramulator2 LPDDR5** backend in behind the SAME swappable interface as `MemoryModel(spec, engine='ramulator2')` — a drop-in for `engine='analytic'` — to **cross-check the single-stream** per-token BW/latency at representative KV lengths (128/512/1024). *(This session: the Ramulator2 C++ build was not authorized; the `engine='ramulator2'` branch is wired and falls back to analytic with a documented note until the build lands — see `docs/phase1.3-findings.md`.)*
+- **Phase 2** uses Ramulator2 for its **signature value: multi-unit contention** (CIM+NPU+GPU+CPU sharing LPDDR) and the token-by-token whole-machine run.
+
+LPDDR4/4x have **no first-class Ramulator2 preset** (Ramulator2 ships LPDDR5; confirm against `src/dram/impl/` when building) — a 1.3/2 config item, `assumption` until checked.
+
 ## Consequences
 M2 budgets Ramulator2 LPDDR5/PIM config + Python co-sim (OVERALL.md risk #6). The per-token-smoothness assumption is validated once against silicon. The swappable interface is also what enables the L4 validate-then-swap bridging (ADR-0006).
