@@ -230,7 +230,7 @@
   <p>We now measure the silicon. CIM is the Metis Alpha via a 1×1-conv proxy — faithful for
   weight-stationary matmul/GEMV (the conv filter is a compile-time-constant weight), a compute lower
   bound for attention (both operands are activations). A hard device-memory envelope
-  (<code>K·N ≤ ~6M</code> params allocatable) means large projections run as 2048×2048 crossbar tiles;
+  (<code>K·N ≤ ~6M</code> params allocatable) means large projections run as 2048-wide composite tiles (4 cores × 512×512, effective 2048 output width — not a single 2048×2048 array);
   we measure one canonical tile and extrapolate <code>n_tiles × tile_latency</code> — itself the real
   CIM tiling cost.</p>
 
@@ -241,7 +241,7 @@
   </div>
 
   <h3 class="sub">5.1 CIM is fast on matmul but gated by the round trip</h3>
-  <p>Decode-GEMV <em>device</em> throughput is 110–230 GFLOP/s, but the per-call DMA floor makes the
+  <p>Decode-GEMV <em>device</em> throughput is 110–230 GOP/s (INT8), but the per-call DMA floor makes the
   <em>end-to-end</em> latency of a tiny decode GEMV ~0.9 ms regardless of its compute (Figure 3). This
   on-PCIe floor is the structural CIM cost: CIM wins on compute, loses on the round trip — and tiling a
   large op multiplies the floor by <code>n_tiles</code>.</p>
@@ -250,11 +250,11 @@
     <caption><b>Table 4.</b> CIM micro-characterization (Metis Alpha, 1×1-conv proxy, INT8, decode M = 1).</caption>
     <thead><tr><th>Axis</th><th>Result</th></tr></thead>
     <tbody>
-      <tr><td>Device envelope</td><td>K·N ≤ ~6M params allocatable (6.3M ok, 8.4M+ fail); larger ops tiled 2048×2048</td></tr>
+      <tr><td>Device envelope</td><td>K·N ≤ ~6M params allocatable (6.3M ok, 8.4M+ fail); larger ops tiled 2048-wide (4 cores × 512×512)</td></tr>
       <tr><td>A1d.2 channel staircase</td><td>dev latency 9.8 → 24.7 → 41.2 → 82.4 µs for N = 64, 1024, 2048, 3072</td></tr>
-      <tr><td>A1d.3 (M,K,N) aspect</td><td>equal-MAC wide / tall 227, square 204 GFLOP/s (~10% aspect penalty)</td></tr>
+      <tr><td>A1d.3 (M,K,N) aspect</td><td>equal-MAC wide / tall 227, square 204 GOP/s (~10% aspect penalty)</td></tr>
       <tr><td>A1d.4 l2 vs ddr</td><td>1.00–1.01× — <em>null axis</em> (Alpha has no on-card DRAM; not extrapolable)</td></tr>
-      <tr><td>A1d.6 GQA-narrow waste</td><td>kv-proj (N = 512) 112 vs wide gate/up 204 GFLOP/s — ~55% utilization (1B)</td></tr>
+      <tr><td>A1d.6 GQA-narrow waste</td><td>kv-proj (N = 512) 112 vs wide gate/up 204 GOP/s — ~55% utilization (1B)</td></tr>
     </tbody>
   </table>
 

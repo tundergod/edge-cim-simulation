@@ -33,7 +33,7 @@ A1. CIM 矩陣（matmul + attention）→ 寫 `characterization/aetina/run_metis
   → verify：每 matmul 形狀 + 每 attention 單-head 形狀都有 dev latency；l2/ddr 兩組齊；抽一筆 dev FPS>0。
 
 A1d. **CIM 深度特性（A 主軸；conv-proxy 忠實域；焦點 = Phase 0.2 主導 op）** → 擴充 `run_metis_cim.py`，焦點 = lm_head / gate-up / down GEMV（×4 模型，dims H∈{2048,3072,3584,4096}、F∈{8192,8192,14336,18944}、V∈{128256,152064}）+ kv_proj 窄-N（kv_w∈{512,1024}）：
-  - **A1d.1 roofline-knee**：FFN/lm_head/q-o 三族在 decode(M=1) + grid prefill M 掃，記 dev FPS→有效 GB/s 與 GFLOP/s。→ verify：有效吞吐 vs (K·N bytes) 曲線顯 memory→compute knee；M=1 點落 memory-bound(intensity≈2) 端。
+  - **A1d.1 roofline-knee**：FFN/lm_head/q-o 三族在 decode(M=1) + grid prefill M 掃，記 dev FPS→有效 GB/s 與 GOP/s（INT8）。→ verify：有效吞吐 vs (K·N bytes) 曲線顯 memory→compute knee；M=1 點落 memory-bound(intensity≈2) 端。
   - **A1d.2 channel-64 階梯**：M=1、K=H、N 由 64 到 F 每 64 一步（+ 幾個 off-64 如 512±32）**probe 推測的 64-channel granularity 是否 gate conv out-channels**（voyager-sdk §1/§2 為 `[DOC] inferred`、僅證 Pad/Slice，未證 conv 輸出 → 此步即是實證）。→ verify：latency-vs-N 階梯、risers 在 64 倍數；N=512(kv_w) 低利用 vs N=14336。
   - **A1d.3 (M,K,N) aspect 敏感度**：等 MAC 不同長寬（down [F→H] vs gate/up [H→F] vs q/o [H→H]；decode M=1 vs prefill M∈{128,1024}）。→ verify：等 MAC latency 不同 → 量化 aspect 敏感（CIM 版 Fig 4）。
   - **A1d.4 l2 vs ddr 殘留**（每 A1d.1 shape 兩編）：標 L2-spill 門檻（gate/up [4096×14336]≈59 MB > 32 MB L2 → 強制 DDR；1B kv/q 合身）。**Alpha 無 on-card DRAM，"ddr"=host LPDDR over PCIe，l2/ddr gap 高估 production card（其真 on-card LPDDR ~24 GB/s）→ 只取殘留「敏感形狀」，絕對值不外推到 production**。→ verify：每 shape l2/ddr dev-latency 齊；l2 失效 byte 門檻 ≈32 MB L2。

@@ -8,7 +8,7 @@ All figures regenerable from committed JSON (`tools/plotting/phase03_figs.py`,
 ## Headline results
 
 1. **CIM excels at weight-stationary matmul but is gated by a per-call DMA floor.** On the
-   1×1-conv proxy, decode GEMV **device** throughput is 110–230 GFLOP/s, but the **per-call
+   1×1-conv proxy, decode GEMV **device** throughput is 110–230 GOP/s (INT8), but the **per-call
    host↔device DMA floor is ~911 µs (p95 1112 µs)** — so end-to-end *system* latency of a small
    decode GEMV is ~0.9 ms regardless of its tiny compute (dev 18–165 µs). This on-PCIe floor (A1d.5,
    Fig 3) is the structural CIM cost the simulator must model: CIM wins on compute, loses on the
@@ -36,11 +36,11 @@ All figures regenerable from committed JSON (`tools/plotting/phase03_figs.py`,
 
 | axis | result |
 |---|---|
-| **device envelope** | conv weight **K·N ≤ ~6 M params** allocatable (probed: 6.3 M OK, 8.4 M+ fail `zeMemAllocDevice`). Larger ops run as 2048×2048 crossbar tiles; latency = n_tiles × tile, and the 911 µs floor × n_tiles compounds (the real CIM tiling cost). |
+| **device envelope** | conv weight **K·N ≤ ~6 M params** allocatable (probed: 6.3 M OK, 8.4 M+ fail `zeMemAllocDevice`). Larger ops run as 2048-wide composite tiles (4 cores × 512×512, effective 2048 output width — *not* a single 2048×2048 array; see Phase 1 / AIPU ISSCC 2024); latency = n_tiles × tile, and the 911 µs floor × n_tiles compounds (the real CIM tiling cost). |
 | **A1d.2 channel staircase** | decode dev latency rises with output channels N: 9.8 µs @64 → 24.7 @1024 → 41.2 @2048 → 82.4 @3072 (Fig 4). Roughly linear in N within a tile. |
-| **A1d.3 (M,K,N) aspect** | at equal MAC (4.19 M): wide [1024→4096] 227, tall [4096→1024] 227, **square [2048→2048] 204 GFLOP/s** — mild (~10 %) penalty for square vs extreme aspect. |
+| **A1d.3 (M,K,N) aspect** | at equal MAC (4.19 M): wide [1024→4096] 227, tall [4096→1024] 227, **square [2048→2048] 204 GOP/s** — mild (~10 %) penalty for square vs extreme aspect. |
 | **A1d.4 l2 vs ddr** | **ratio 1.00–1.01× (no effect)** — Alpha has *no on-card DRAM* (`ddr` = host LPDDR over PCIe), so `dpu_constants_home` is not a meaningful residency axis here. Confirms the plan caveat: do **not** extrapolate an l2/ddr gap to the production card. |
-| **A1d.6 GQA-narrow waste** | the narrow kv-projection (N=512) reaches only **112 GFLOP/s vs 204 for the wide gate/up (1B)** — ~55 % utilization; GQA's narrow output dimension underfills the crossbar. |
+| **A1d.6 GQA-narrow waste** | the narrow kv-projection (N=512) reaches only **112 GOP/s vs 204 for the wide gate/up (1B)** — ~55 % utilization; GQA's narrow output dimension underfills the crossbar. |
 
 ## Support + offload units
 
@@ -75,6 +75,6 @@ thermal readout is a confirmed **Phase 0.4 gap** (Alpha RK3588 thermal zones rem
   per-call floor (dev-vs-system) rather than a separate concurrency sweep; large-M (≥2048) prefill
   conv-proxy tiles fail device allocation (LongBench M≈11.8k stays analytic, Phase 1); l2/ddr is a
   null axis on Alpha (above). The C4 composed attention is an Alpha-topology upper-bound estimate.
-  Tiled-op GFLOP/s for non-2048-aligned dims (Qwen H=3584, F=18944) is biased **low** — true FLOPs
+  Tiled-op GOP/s for non-2048-aligned dims (Qwen H=3584, F=18944) is biased **low** — true OPs
   over padded-tile latency (the 2048-grid over-covers K·N by ~1.24×); the 1B/3B/8B dims are
   2048-multiples and unaffected, so no headline rests on the Qwen throughput figure.

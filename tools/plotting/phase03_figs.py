@@ -110,7 +110,7 @@ def fig_cim_vs_gpu_attn(c4, mali):
 
 
 def fig_cim_roofline(cim):
-    """CIM effective throughput (GFLOP/s) across projection families (decode M=1)."""
+    """CIM effective throughput (GOP/s; INT8) across projection families (decode M=1)."""
     rows = [r for r in cim["by_group"].get("proj_decode", []) if "dev_gflops" in r]
     if not rows:
         return
@@ -122,7 +122,7 @@ def fig_cim_roofline(cim):
     for fam, col in fam_color.items():
         ax.scatter([], [], color=col, label=fam)
     ax.set_xscale("log"); ax.set_xlabel("weight size K·N (M params)")
-    ax.set_ylabel("CIM device throughput (GFLOP/s)")
+    ax.set_ylabel("CIM device throughput (GOP/s)")
     ax.set_title("CIM matmul throughput vs op (decode M=1)\ntiled ops amortise differently", fontsize=8)
     ax.legend(fontsize=6.5, title="projection"); ax.tick_params(length=2)
     fig.tight_layout(); save(fig, str(FIG / "fig5_cim_throughput"))
