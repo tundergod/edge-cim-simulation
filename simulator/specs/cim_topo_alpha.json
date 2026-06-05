@@ -1,0 +1,27 @@
+{
+  "_doc": "CIM topology A = Metis Alpha (Aetina, pre-production M.2). NO on-card DRAM; LLM-INCAPABLE (closed-firmware -1301 wall). Carries the TRANSPORT/ENVELOPE differences only; the CIM COMPUTE engine (M1, simulator/models/params/m1_cim.json) is topology-agnostic and SHARED with topology B. PCIe Gen3x4 3.9 GB/s + 911 us per-call DMA floor are MEASURED. alloc envelope ~14 MB is an ASSUMPTION (vs 1 GiB BAR). alloc_envelope_param_count (6M, SDK weight-alloc limit) != native_max_kn (4.19M K*N area, m1_cim.json).",
+  "topology": "alpha",
+  "on_card_dram": false,
+  "llm_capable": false,
+  "transport": "pcie_gen3x4",
+  "pcie_BW_GBs": 3.9,
+  "per_call_floor_us": 911,
+  "alloc_envelope_MB": 14,
+  "alloc_envelope_param_count": 6000000,
+  "clock_mhz": 800,
+  "cim_compute_params": "simulator/models/params/m1_cim.json",
+  "honesty": "calibrated compute (Alpha 13 pts) + measured transport; envelope=assumption",
+  "notes": {
+    "param_vs_kn": "alloc_envelope_param_count (6M params, SDK alloc limit) is NOT native_max_kn (4.19M = 2048x2048 K*N tile area). Different quantities.",
+    "envelope": "~14 MB is an assumption (vs the 1 GiB IOMMU BAR), not a measurement.",
+    "llm": "closed firmware -1301 + no on-card DRAM -> cannot compute LLM; used for CIM/PCIe/NPU/GPU/CPU micro-benchmarks.",
+    "clock": "800 MHz (machines.md); same as Card -> direct dev_lat/dev_gflops comparison, no rescale."
+  },
+  "provenance": {
+    "pcie_BW_GBs": "Phase 0.3 PCIe Gen3x4 measurement 3.9 GB/s [measured]",
+    "per_call_floor_us": "Phase 0.3 pcie_floor_A1d5 911 us per-call DMA floor [measured]",
+    "alloc_envelope_MB": "~14 MB vs 1 GiB BAR [assumption]",
+    "alloc_envelope_param_count": "SDK weight-alloc limit 6M [measured-spec]",
+    "clock_mhz": "machines.md Alpha clock=800MHz [measured]"
+  }
+}

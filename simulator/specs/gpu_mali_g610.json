@@ -1,0 +1,27 @@
+{
+  "_doc": "Mali-G610 GPU spec (Phase 1.2). Micro-benchmark (mali_matmul.json) is the primary source; analytic roofline is a SWAPPABLE slot for model-swap, giving shape-trend + a lower bound only (NOT transferable calibration; 5 points insufficient). HONESTY: the Phase 1.1 20.12 GFLOP/s point is FP16, NOT INT8; INT8 GPU GEMM has ZERO data (kernel is FP32/FP16 only). FP32 peak 512 GFLOP/s is an assumption that may UNDERESTIMATE by 2-4x.",
+  "unit": "gpu",
+  "cores": 4,
+  "freq_ghz": 1.0,
+  "arch": "Valhall (4th gen)",
+  "fp32_peak_gflops": 512,
+  "fp16_peak_gflops": 1024,
+  "int8_peak_gflops": null,
+  "measured_fp16_gflops": 20.12,
+  "ksweep_saturation_M": null,
+  "honesty": "simulated (roofline slot); micro-benchmark primary",
+  "notes": {
+    "int8": "ZERO INT8 GPU GEMM data; Mali matmul kernel is FP32/FP16 only.",
+    "measured_point": "Phase 1.1 20.12 GFLOP/s = FP16, NOT INT8.",
+    "peak": "FP32 512 GFLOP/s = assumption; may underestimate 2-4x; needs verification.",
+    "roofline": "shape-trend + absolute lower bound only; not transferable calibration.",
+    "ksweep_saturation_M": "DEAD param (kept, not deleted; annotated per audit)."
+  },
+  "provenance": {
+    "cores": "Mali-G610 MC4 (4 cores) [measured-spec]",
+    "fp32_peak_gflops": "vendor/derived 512 [assumption; may underestimate 2-4x]",
+    "fp16_peak_gflops": "~1 TFLOP/s [assumption]",
+    "int8_peak_gflops": "no data [gap]",
+    "measured_fp16_gflops": "Phase 1.1 mali_matmul.json, FP16 [measured]"
+  }
+}

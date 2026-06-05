@@ -1,0 +1,24 @@
+{
+  "_doc": "LPDDR4x spec (Phase 1.2 analytic). This is the production Metis Card's on-card memory and the MEASURED anchor: eff_BW 24.2 GB/s (voyager-sdk.md:278, decode time prop weight bytes, r2=0.997). 64-bit bus, JEDEC 4266 MT/s -> 34.1 peak; board 4224 -> 33.8. Peaks tagged ASSUMPTION; eff 0.71 = 24.2/34.1 MEASURED. NOTE: this on-card LPDDR4x (24.2) is a DIFFERENT memory from the RK3588 host LPDDR4 in cpu_rk3588 -- do not mix.",
+  "unit": "memory",
+  "memory_type": "LPDDR4x",
+  "bus_bits": 64,
+  "mt_s_jedec": 4266,
+  "peak_GBs": 34.1,
+  "mt_s_board": 4224,
+  "board_peak_GBs": 33.8,
+  "efficiency": 0.71,
+  "eff_BW_GBs": 24.2,
+  "honesty": "calibrated (eff_BW = measured production-card anchor)",
+  "notes": {
+    "math": "4266x8=34.1, 4224x8=33.8.",
+    "anchor": "eff_BW 24.2 = production Metis Card on-card LPDDR4x decode measurement (the L4 BW anchor).",
+    "distinct": "on-card LPDDR4x (24.2) != RK3588 host LPDDR4 (cpu_rk3588) != Metis SRAM tier."
+  },
+  "provenance": {
+    "peak_GBs": "4266 MT/s x 64-bit (in-repo no data-rate source) [assumption]",
+    "board_peak_GBs": "4224 MT/s x 64-bit [assumption]",
+    "eff_BW_GBs": "production Metis Card on-card decode 24.2 GB/s (voyager-sdk.md:278, r2=0.997) [measured]",
+    "efficiency": "24.2/34.1 = 0.71 [measured]"
+  }
+}
