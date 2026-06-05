@@ -1,0 +1,95 @@
+{
+ "module": "m4_cpu",
+ "honesty": "CALIBRATED to fp32 cpu_ops.json (single A76 core, single-thread). fp16 = numpy UPPER BOUND (emulated); swiglu fp16 = mixed precision; A55 / multicore = simulated (IPC=1 little, single-core measured -> extrapolated). eta_bw = ASSUMPTION.",
+ "equation": "latency_us = max(compute_us, memory_us) + overhead_op; compute_us = n_elem*ops_per_elem/(W*IPC*freq)/eta_c; memory_us = working_set_bytes/(BW_tier*eta_bw)",
+ "calibrated": {
+  "eta_c": 0.1521,
+  "basis": "single A76 core, single-thread, numpy fp32 (measurements/aetina/cpu_ops.json)"
+ },
+ "assumption": {
+  "eta_bw": 0.6,
+  "why": "no bandwidth-resolved op in fp32 decode data; no CPU mem-BW micro-benchmark (audit gap). Corroborated (not contradicted) by the qwen vocab op (594 KiB -> L3, the one decode op on the cache/memory branch)."
+ },
+ "structural_assumption": {
+  "ops_per_elem": {
+   "residual": 1,
+   "rmsnorm": 5,
+   "rope_apply": 6,
+   "swiglu": 34,
+   "softmax": 33,
+   "sampling_argmax": 1
+  },
+  "byte_passes": {
+   "residual": 2,
+   "rmsnorm": 4,
+   "rope_apply": 5,
+   "swiglu": 3,
+   "softmax": 3,
+   "sampling_argmax": 1
+  },
+  "note": "exp() (softmax/swiglu) = cost driver (large transcendental instruction-weight), NOT a reduction/elementwise split."
+ },
+ "overhead_op_us": {
+  "residual": 0.789,
+  "rmsnorm": 16.815,
+  "rope_apply": 22.525,
+  "sampling_argmax": 7.321,
+  "softmax": 15.498,
+  "swiglu": 0.0
+ },
+ "residuals_pct": {
+  "residual": {
+   "median": 5.84,
+   "max": 13.12,
+   "bound": [
+    "compute"
+   ]
+  },
+  "rmsnorm": {
+   "median": 1.45,
+   "max": 2.51,
+   "bound": [
+    "compute"
+   ]
+  },
+  "rope_apply": {
+   "median": 1.86,
+   "max": 4.87,
+   "bound": [
+    "compute"
+   ]
+  },
+  "sampling_argmax": {
+   "median": 1.1,
+   "max": 1.42,
+   "bound": [
+    "compute",
+    "memory"
+   ]
+  },
+  "softmax": {
+   "median": 0.81,
+   "max": 2.37,
+   "bound": [
+    "compute"
+   ]
+  },
+  "swiglu": {
+   "median": 1.87,
+   "max": 4.3,
+   "bound": [
+    "compute"
+   ]
+  }
+ },
+ "overall_residual_pct": {
+  "median": 1.15,
+  "p95": 7.31,
+  "max": 13.12
+ },
+ "notes": {
+  "residual_noise": "residual is the noisiest op (cov up to 0.25 in cpu_ops.json) and overhead-dominated at decode N; its model error is within its own measurement noise.",
+  "cache_branch": "decode support-op working sets reside in L1/L2/L3, NEVER LPDDR; the qwen vocab op (594 KiB) spills to L3 and takes the memory/cache branch.",
+  "prefill": "decode (1-token) costs; prefill = x S tokens (analytic, unvalidated). 'swap LPDDR4->5 recompute' applies to PREFILL only."
+ }
+}

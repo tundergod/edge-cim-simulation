@@ -1,6 +1,8 @@
 module: m4_gpu
+phase: 1.2                    # 1.1 micro-benchmark model (MaliGpuModel) PRIMARY; 1.2 (D4) adds a swappable analytic roofline slot
 measurement_sources:
-  - measurements/aetina/mali_matmul.json          # groups: attn, ksweep, proj_decode
+  - measurements/aetina/mali_matmul.json          # groups: attn, ksweep, proj_decode (FP16)
+# --- Phase 1.1: micro-benchmark model (UNCHANGED, primary, attention-offload validated) ---
 acceptance_criteria:
   - {type: median_op_error, threshold: 10%, scope: attn_bmm offload (decode single-head)}
   - {type: p95_op_error, threshold: 20%, scope: attn_bmm offload}
@@ -9,3 +11,14 @@ notes:
   - gemm_absolute_is_lower_bound       # unoptimised OpenCL kernel; only shape-trend fit, ksweep saturates M>=128
   - role: "GPU = attention offload (validated); CIM does the projections"
 sample_strategy: "TBD - variance_profile not collected (Phase 0.3 gap)"
+# --- Phase 1.2: analytic roofline SLOT (GpuRooflineModel, m4_gpu_roofline.py) ---
+roofline_slot:
+  engine: "GpuRooflineModel(spec, engine='analytic') — a model-SWAP slot, coexists with MaliGpuModel"
+  spec: simulator/specs/gpu_mali_g610.json
+  honesty: simulated           # roofline = shape-trend + LOWER BOUND, NOT transferable calibration
+  calibration: "eff calibrated to mali_matmul.json FP16 ONLY; error vs 1.1 pts median 3.1% (lower-bound tail to 66%)"
+  no_numeric_gate: "INT8 GPU GEMM = ZERO data (kernel is FP32/FP16). NO INT8 acceptance gate. Phase 1.1 20.12 GFLOP/s = FP16, not INT8."
+  gaps:
+    - fp32_peak_512_assumption     # may underestimate 2-4x; model does NOT depend on it (calibrates vs FP16)
+    - ksweep_saturation_M_dead     # dead param, kept (not deleted), annotated per audit
+  report: validation/reports/phase1.2/m4_gpu_roofline.json

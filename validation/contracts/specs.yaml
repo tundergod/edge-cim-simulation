@@ -1,0 +1,27 @@
+module: specs                 # Phase 1.2: swappable component specs + the shared UnitEngine interface
+engine_interface:
+  contract: "Engine(spec, engine='analytic').predict(Workload) -> {latency_us, bound, provenance}"
+  frozen_return_keys: [latency_us, bound, provenance]   # bound in {compute, memory, floor}
+  binding: "spec bound at construction; predict() eats only a Workload"
+  loader: simulator/specs/loader.py        # load_spec(name) + provenance(spec, field)
+  base: simulator/models/engine.py         # UnitEngine ABC + Workload dataclass + check_return
+  conformance_test: tests/test_engine_iface.py
+  heavy_engines: "Phase 1.3 drops engine='ramulator2'|'onnxim' in behind the SAME constructor + return contract"
+acceptance_criteria:
+  - {type: sanity, rules: [every_spec_has_provenance, peak_BW_math_consistent, engines_conform_to_frozen_keys]}
+  - {type: cross_check, script: tools/analysis/check_phase1_2.py}      # must exit 0
+specs:                        # spec -> engine + honesty
+  cpu_rk3588:      {engine: m4_cpu.CpuModel,          honesty: "calibrated (cpu_ops.json) + assumption (cache BW) + simulated (A55/multicore)"}
+  npu_rknpu2:      {engine: m4_npu.NpuModel,          honesty: "simulated/borrowed (NO silicon, issue #13)"}
+  gpu_mali_g610:   {engine: m4_gpu_roofline.GpuRooflineModel, honesty: "simulated (roofline lower bound, FP16-calibrated; INT8 zero data)"}
+  mem_lpddr4:      {engine: m2_memory.MemoryModel,    honesty: "assumption (peak) + derived eff_BW"}
+  mem_lpddr4x:     {engine: m2_memory.MemoryModel,    honesty: "calibrated (24.2 production-card decode anchor)"}
+  mem_lpddr5:      {engine: m2_memory.MemoryModel,    honesty: "simulated (eff 0.65 < measured 0.71); assumption (peak)"}
+  sram_metis_aipu: {engine: m1_cim_spm.SramTier,      honesty: "assumption (CACTI BW/latency); architecture-only residency"}
+  cim_topo_alpha:  {engine: m2_memory.MemoryModel,    honesty: "measured (911us floor, 3.9 PCIe); assumption (~14MB envelope)"}
+  cim_topo_card:   {engine: m2_memory.MemoryModel,    honesty: "measured (24.2 on-card BW); CIM compute = Alpha 13pts calibrated"}
+notes:
+  - "Swapping a model = swapping a spec file; engine code unchanged."
+  - "alloc_envelope_param_count (6M, cim_topo_alpha) != native_max_kn (4.19M, m1_cim.json) — different quantities."
+  - "cpu_rk3588 cache BW is self-contained (WP-CPU depends ONLY on this spec, not the memory spec); != Metis AIPU SRAM tier."
+  - "both boards 800MHz (machines.md) -> Alpha/Card dev_lat directly comparable, no rescale."

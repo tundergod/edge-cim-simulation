@@ -16,6 +16,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from simulator.models.m2_memory import MemoryModel  # noqa: E402
+from simulator.specs.loader import load_spec  # noqa: E402
 
 AET = ROOT / "measurements/aetina"
 
@@ -68,17 +69,22 @@ def main():
     }
     (ROOT / "simulator/models/params/m2_lpddr5.json").write_text(json.dumps(dram, indent=1))
 
-    m = MemoryModel(pcie, dram)
+    # decision-A migration: the Phase 1.2 spec-based engine for the monotonicity sanity (PCIe floor
+    # from the Alpha topology spec; stream/kv from the LPDDR4x anchor spec). The report's numeric
+    # params come from the MEASURED constants below (keeps the frozen 1.1 m2.json exact: floor 911.1).
+    pci = MemoryModel(load_spec("cim_topo_alpha"))
+    mem = MemoryModel(load_spec("mem_lpddr4x"))
     sizes = [1e3, 1e5, 1e6, 1e7, 1e8]
-    tr = [m.pcie_transfer_us(b) for b in sizes]
-    kv = [m.kv_append_us(b) for b in sizes]
-    eff, peak = m.lpddr5_eff_BW_GBs, m.lpddr5_peak_GBs   # eff=24.2 (LPDDR4x), peak=34.1 (LPDDR4x)
+    tr = [pci.pcie_transfer_us(b) for b in sizes]
+    kv = [mem.kv_append_us(b) for b in sizes]
+    floor_us, pcie_BW = floor["fixed_overhead_us_median"], 3.9   # measured (m2_pcie.json)
+    eff, peak = MEASURED_LPDDR4X_EFF_GBs, LPDDR4X_PEAK_GBs       # 24.2, 34.1 (LPDDR4x)
 
     report = {
         "module": "m2_memory",
         "equation": {"pcie": "transfer_us = floor(911us) + bytes/BW(3.9GB/s)  [discrete only]",
                      "dram": "stream_us = bytes/eff_BW", "kv_cache": "kv_append_us = kv_bytes/eff_BW"},
-        "params": {"pcie_floor_us": m.floor_us, "pcie_BW_GBs": m.pcie_BW_GBs,
+        "params": {"pcie_floor_us": floor_us, "pcie_BW_GBs": pcie_BW,
                    "measured_eff_BW_GBs": eff, "measured_memory": "LPDDR4x (production card)",
                    "measured_peak_GBs": peak, "efficiency_vs_measured_peak": eff_vs_lpddr4x,
                    "sim_lpddr5_peak_GBs": SIM_LPDDR5_PEAK_GBs, "sim_lpddr5_eff_GBs": SIM_LPDDR5_EFF_GBs},
@@ -101,7 +107,7 @@ def main():
     }
     (ROOT / "validation/reports/phase1.1/m2.json").write_text(json.dumps(report, indent=1))
     s = report["sanity"]
-    print(f"M2: pcie floor={m.floor_us}us BW={m.pcie_BW_GBs}GB/s | measured LPDDR4x eff={eff} "
+    print(f"M2: pcie floor={floor_us}us BW={pcie_BW}GB/s | measured LPDDR4x eff={eff} "
           f"peak={peak} ({eff_vs_lpddr4x:.0%}) | sim LPDDR5 eff={SIM_LPDDR5_EFF_GBs}/{SIM_LPDDR5_PEAK_GBs} "
           f"| sanity={all(v for v in s.values() if isinstance(v, bool))}")
 

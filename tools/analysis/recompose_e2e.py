@@ -28,6 +28,7 @@ sys.path.insert(0, str(ROOT))
 from simulator.models.m2_memory import MemoryModel       # noqa: E402
 from simulator.models.m4_gpu import MaliGpuModel          # noqa: E402
 from simulator.models.m4_cpu import CpuModel              # noqa: E402
+from simulator.specs.loader import load_spec              # noqa: E402
 
 OP = ROOT / "measurements/op_profile"
 MC = ROOT / "measurements/metis_card"
@@ -67,9 +68,14 @@ def main():
     err_8b = abs(pred_8b - meas["llama-3.1-8b"]) / meas["llama-3.1-8b"]
 
     # --- standalone non-streaming terms for 8B (transparency; NOT added -> double-count) ---
-    mem = MemoryModel()
+    # Phase 1.2 spec-based engines (decision A migration). The production card decodes from
+    # on-card LPDDR4x -> bind mem_lpddr4x (eff_BW 24.2, identical to the Phase-1.1 anchor, so the
+    # kv-append term is unchanged). GPU stays the Phase-1.1 micro-benchmark model (MaliGpuModel,
+    # untouched). The CPU support term now reflects the calibrated instruction-count roofline; it is
+    # a STANDALONE transparency value (absorbed into BW, NOT added) so it does not move the gate.
+    mem = MemoryModel(load_spec("mem_lpddr4x"))
     gpu = MaliGpuModel()
-    cpu = CpuModel()
+    cpu = CpuModel(load_spec("cpu_rk3588"))
     c = CFG["llama-3.1-8b"]
     kvbar = 512                                  # avg decode kv at ctx1024 (P + D/2)
     counts = decode_counts_per_token("llama-3.1-8b")

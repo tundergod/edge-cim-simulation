@@ -22,7 +22,7 @@
  "GATE_within_25pct": true,
  "standalone_nonstreaming_8b_us": {
   "decode_stream_backbone_us": 409470.5,
-  "cpu_support_us": 62023.4,
+  "cpu_support_us": 15007.0,
   "gpu_offload_attention_us_lowerbound": 260185.0,
   "kv_cache_append_us": 1386.5,
   "_caveat": "already absorbed in BW_eff at the fit point; ADDING double-counts (Phase-2 fidelity, watch-item). GPU attn is heads*layers, lower-bound kernel."

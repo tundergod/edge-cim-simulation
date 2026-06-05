@@ -1,0 +1,24 @@
+{
+ "module": "cim_card_revalidate",
+ "status": "DEFERRED_FALLBACK",
+ "honesty": "CIM = Alpha 13pts CALIBRATED (non-frozen, pending board); Card revalidation DEFERRED.",
+ "reason": "SSH to metiscard was not authorized this session (harness denied remote-shell to the shared board; user asleep). No Card raw measurements available.",
+ "fallback_per_plan": "plans/phase-1.2.md step 18 note + handoff \u00a75: low-level compile absent / MatMul unsupported / board unreachable -> 'Alpha 13pts calibrated (pending board) + Card e2e validates memory-wall', report user.",
+ "alpha_13_points_NK_gops": {
+  "N64K2048": 26.6,
+  "N128K2048": 48.6,
+  "N256K2048": 78.0,
+  "N480K2048": 105.5,
+  "N512K2048": 112.7,
+  "N512K3584": 147.4,
+  "N544K2048": 111.8,
+  "N1000K2048": 165.6,
+  "N1024K2048": 169.8,
+  "N1024K3072": 182.3,
+  "N1024K4096": 227.2,
+  "N1536K2048": 204.0,
+  "N2048K2048": 203.7
+ },
+ "to_unblock": "grant SSH (add Bash rule for `ssh metiscard`), then: rsync the port to the Card, run `python run_metis_cim_v16.py --spike` (feasibility), then full, rsync results back, re-run this validator.",
+ "both_boards_800MHz": "machines.md: Alpha + Card both clock=800MHz -> dev_gflops directly comparable, no rescale (applies once Card data exists)."
+}

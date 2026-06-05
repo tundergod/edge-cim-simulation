@@ -1,0 +1,191 @@
+"""Phase 1.2 — CIM re-validation on the production Metis Card (same 800MHz quad-core AIPU).
+
+Port of characterization/aetina/run_metis_cim.py (Alpha) to the Card (Voyager v1.6). The CIM
+COMPUTE kernel is NOT frozen: the same AIPU is alive on the Card, so we re-measure the 1x1-conv
+matmul proxy with axrunmodel (dev FPS = isolated compute) and cross-check vs the Alpha 13 points
+(both boards 800MHz -> directly comparable, NO clock rescale). We also add the prefill /
+compute-bound shapes Alpha could not reach.
+
+STATUS: UNVERIFIED ON CARD — written from the Alpha script; not yet run (SSH to metiscard was not
+authorized in this session). When SSH is granted:
+    rsync -a characterization/metis_card/ metiscard:~/edge-cim-simulation/characterization/
+    ssh metiscard 'cd ~/edge-cim-simulation/characterization && \
+        source ~/tundergod/voyager-sdk/axelera-env/bin/activate && \
+        python run_metis_cim_v16.py --spike'        # ~30 min feasibility probe first
+    # then full:  python run_metis_cim_v16.py
+    rsync -a metiscard:~/edge-cim-simulation/measurements/metis_card/ measurements/metis_card/
+
+COMPILE PATH (the SPIKE question): prefer the LOW-LEVEL `compile` (Alpha used it at
+run_metis_cim.py:65 — NOT deploy.py). voyager-sdk.md:339 records that general MatMul is not a
+deploy.py-supported op (YOLO11 whitelist), so deploy.py is only a best-effort fallback. If
+low-level `compile` is gone in v1.6 AND deploy.py cannot compile a MatMul/conv proxy, the task
+takes the documented fallback (Alpha 13pts calibrated, pending board) and REPORTS the user — it
+does NOT silently switch paths.
+
+Run: python run_metis_cim_v16.py [--spike] [--seconds 5] [--dataset-len 20] [--only GROUP]
+"""
+import argparse, json, re, shutil, subprocess, time
+from pathlib import Path
+import numpy as np
+import onnx
+from onnx import helper, TensorProto, numpy_helper
+
+WORK = Path("/tmp/cim_card_work"); WORK.mkdir(parents=True, exist_ok=True)
+SDK = str(Path.home() / "tundergod" / "voyager-sdk")          # Card SDK (Alpha was /home/ubuntu/voyager-sdk)
+RESULTS = WORK / "results.json"
+LOG = WORK / "progress.log"
+FPS_RE = re.compile(r"dev:([\d.]+)\s+host:([\d.]+)\s+system:([\d.]+)fps")
+
+# The 13 Alpha native single-tile throughput points (M=1) — the cross-validation ground truth
+# (mirrors simulator/models/params/m1_cim.json native_throughput_points). dev_gflops here must
+# match these (same AIPU, same 800MHz) to confirm the kernel re-validates.
+ALPHA_13 = [(64,2048),(128,2048),(256,2048),(480,2048),(512,2048),(512,3584),(544,2048),
+            (1000,2048),(1024,2048),(1024,3072),(1024,4096),(1536,2048),(2048,2048)]  # (N,K)
+
+
+def log(msg):
+    line = f"[{time.strftime('%H:%M:%S')}] {msg}"
+    print(line, flush=True)
+    with open(LOG, "a") as f:
+        f.write(line + "\n")
+
+
+def build_conv_onnx(M, K, N, bias, path):
+    """1x1 conv == [M,K]x[K,N] matmul (weight-stationary). Identical to the Alpha proxy."""
+    X = helper.make_tensor_value_info("input", TensorProto.FLOAT, [1, K, 1, M])
+    Y = helper.make_tensor_value_info("output", TensorProto.FLOAT, [1, N, 1, M])
+    inits = [numpy_helper.from_array(np.random.randn(N, K, 1, 1).astype(np.float32), "W")]
+    conv_in = ["input", "W"]
+    if bias:
+        inits.append(numpy_helper.from_array(np.random.randn(N).astype(np.float32), "B"))
+        conv_in.append("B")
+    node = helper.make_node("Conv", conv_in, ["output"], kernel_shape=[1, 1], strides=[1, 1], pads=[0, 0, 0, 0])
+    g = helper.make_graph([node], "m", [X], [Y], inits)
+    onnx.save(helper.make_model(g, opset_imports=[helper.make_opsetid("", 13)]), str(path))
+
+
+def _try_low_level_compile(d, M, K, residency, dataset_len, timeout):
+    """Alpha's low-level `compile` (1:1). Returns (model_json|None, info). FileNotFoundError on the
+    `compile` binary => v1.6 dropped it (the SPIKE answer)."""
+    cmd = ["compile", "--input", str(d / "m.onnx"), "--input-shape", f"1,{K},1,{M}",
+           "--output", str(d / "out"), "--overwrite", "--log-level", "WARNING",
+           "--dataset-len", str(dataset_len)]
+    if residency:
+        (d / "cfg.json").write_text(json.dumps({"dpu_constants_home": f"global.{residency}"}))
+        cmd += ["--config", str(d / "cfg.json")]
+    try:
+        rc = subprocess.run(cmd, cwd=SDK, capture_output=True, text=True, timeout=timeout)
+    except FileNotFoundError:
+        return None, {"compile_path": "LOW_LEVEL_COMPILE_ABSENT"}   # SPIKE: `compile` gone in v1.6
+    if rc.returncode != 0:
+        return None, {"compile_path": "low_level_compile", "error": "compile", "rc": rc.returncode,
+                      "stderr": rc.stderr[-300:]}
+    mj = list((d / "out").rglob("model.json"))
+    return (mj[0] if mj else None), {"compile_path": "low_level_compile"}
+
+
+def measure(M, K, N, bias=False, residency=None, seconds=5, dataset_len=20, timeout=900):
+    """Compile (low-level `compile`, falling back to a documented STOP) + axrunmodel one shape."""
+    d = WORK / "cur"
+    if d.exists():
+        shutil.rmtree(d)
+    d.mkdir(parents=True)
+    try:
+        build_conv_onnx(M, K, N, bias, d / "m.onnx")
+        t0 = time.time()
+        mj, info = _try_low_level_compile(d, M, K, residency, dataset_len, timeout)
+        ct = time.time() - t0
+        if info.get("compile_path") == "LOW_LEVEL_COMPILE_ABSENT":
+            # The SPIKE verdict. deploy.py fallback needs MatMul support (voyager-sdk.md:339 says
+            # not whitelisted) + INT8 calibration data -> operator decision, not a silent switch.
+            return {"error": "low_level_compile_absent",
+                    "spike": "v1.6 has no low-level `compile`; deploy.py MatMul support unverified "
+                             "(voyager-sdk.md:339). DOCUMENTED FALLBACK: Alpha 13pts calibrated + "
+                             "report user.", "compile_s": round(ct, 1)}
+        if mj is None:
+            return {**info, "error": info.get("error", "no_model_json"), "compile_s": round(ct, 1)}
+        ax = subprocess.run(["axrunmodel", str(mj), "--seconds", str(seconds)],
+                            cwd=SDK, capture_output=True, text=True, timeout=180)
+        m = FPS_RE.search(ax.stdout)
+        if not m:
+            return {**info, "error": "no_fps", "stdout": ax.stdout[-200:], "compile_s": round(ct, 1)}
+        dev, host, sys_ = float(m.group(1)), float(m.group(2)), float(m.group(3))
+        flops = 2 * M * K * N
+        return {**info, "dev_fps": dev, "host_fps": host, "system_fps": sys_,
+                "dev_lat_us": 1e6 / dev, "system_lat_us": 1e6 / sys_,
+                "dev_gflops": flops * dev / 1e9, "compile_s": round(ct, 1)}
+    except subprocess.TimeoutExpired:
+        return {"error": "timeout"}
+    except Exception as e:
+        return {"error": f"{type(e).__name__}: {e}"}
+    finally:
+        if d.exists():
+            shutil.rmtree(d, ignore_errors=True)
+
+
+def manifest(spike):
+    """Card tasks: the 13 Alpha cross-validation shapes + prefill/compute-bound (the Alpha gap).
+    --spike trims to a fast feasibility set (square + 2 staircase + 1 prefill)."""
+    tasks = []
+
+    def add(group, family, M, K, N):
+        tid = f"{group}|{family}|M{M}|K{K}|N{N}"
+        tasks.append((tid, group, dict(family=family, M=M, K=K, N=N)))
+
+    if spike:
+        add("aspect", "square", 1, 2048, 2048)        # the canonical native tile
+        add("staircase64", "stair", 1, 2048, 512)
+        add("staircase64", "stair", 1, 2048, 2048)
+        add("prefill", "gate_up", 256, 4096, 14336)   # compute-bound probe (the Alpha gap)
+        return tasks
+
+    # cross-validation: re-measure the 13 Alpha native single-tile points (M=1)
+    for (N, K) in ALPHA_13:
+        add("alpha13", "native", 1, K, N)
+    # channel-64 staircase (M=1, K=2048)
+    for N in [64, 128, 256, 512, 1024, 1536, 2048, 3072]:
+        add("staircase64", "stair", 1, 2048, N)
+    # aspect (equal MAC)
+    add("aspect", "wide", 1, 1024, 4096); add("aspect", "tall", 1, 4096, 1024); add("aspect", "square", 1, 2048, 2048)
+    # PREFILL / compute-bound (the regime Alpha's 1GB-window board could not reach; on-card DRAM helps)
+    c8 = dict(H=4096, F=14336)
+    for M in [128, 256, 512, 1024, 2048]:
+        add("prefill", "gate_up", M, c8["H"], c8["F"])
+        add("prefill", "q_o", M, c8["H"], c8["H"])
+    return tasks
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--spike", action="store_true", help="fast feasibility probe (~4 shapes)")
+    ap.add_argument("--seconds", type=int, default=5)
+    ap.add_argument("--dataset-len", type=int, default=20)
+    ap.add_argument("--only", default=None)
+    args = ap.parse_args()
+
+    results = json.loads(RESULTS.read_text()) if RESULTS.exists() else {}
+    tasks = manifest(args.spike)
+    if args.only:
+        tasks = [t for t in tasks if t[1] == args.only]
+    todo = [t for t in tasks if t[0] not in results]
+    log(f"=== run_metis_cim_v16 ({'SPIKE' if args.spike else 'FULL'}): {len(tasks)} tasks, "
+        f"{len(todo)} to do; SDK={SDK} ===")
+    spike_absent = False
+    for i, (tid, group, p) in enumerate(todo):
+        r = measure(p["M"], p["K"], p["N"], seconds=args.seconds, dataset_len=args.dataset_len)
+        results[tid] = {**p, "group": group, **r}
+        RESULTS.write_text(json.dumps(results, indent=1))
+        if r.get("error") == "low_level_compile_absent" and not spike_absent:
+            spike_absent = True
+            log("!!! SPIKE VERDICT: low-level `compile` ABSENT in v1.6. " + r["spike"])
+        tag = r.get("error", f"dev={r.get('dev_fps',0):.0f}fps {r.get('dev_gflops',0):.1f}GOP/s "
+                             f"[{r.get('compile_path','?')}]")
+        log(f"[{i+1}/{len(todo)}] {group}/{p['family']} M{p['M']}K{p['K']}N{p['N']} -> {tag}")
+    out = Path.home() / "edge-cim-simulation" / "measurements" / "metis_card"
+    out.mkdir(parents=True, exist_ok=True)
+    (out / "cim_card_revalidate_raw.json").write_text(json.dumps(results, indent=1))
+    log(f"=== DONE: {len(results)} results -> {out/'cim_card_revalidate_raw.json'} ===")
+
+
+if __name__ == "__main__":
+    main()

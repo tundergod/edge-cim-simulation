@@ -1,18 +1,106 @@
-"""M4 — RKNPU2 (RK3588 NPU) timing model — PLACEHOLDER.
+"""M4 — RKNPU2 (RK3588 NPU) timing model — ANALYTIC systolic-roofline (Phase 1.2, D2).
 
-BLOCKED ON GitHub issue #13: the RKNPU2 matmul/attention micro-benchmark
-(measurements/aetina/rknpu2_matmul.json) was not collected (aetina offline during
-Phase 0.3). The .rknn artifacts are staged and the runner is ready; once #13 resolves,
-fit this the same way as m4_gpu (FLOPs/G_eff + native attention bmm) from
-rknpu2_matmul.json.
+NO RKNPU2 silicon (board offline, issue #13) -> EVERY number here is `simulated`/`borrowed`,
+NOT calibrated. This is an analytic systolic-array roofline whose *shape* is borrowed from the
+HeteroInfer characterization (SOSP'25, papers/methodology-and-simulators/) and whose ceilings come
+from the RKNPU2 datasheet (6 TOPS INT8). It exists so the heterogeneous simulator has a swappable
+NPU slot; it is replaced, not validated, by silicon (#13) or ONNXim (Phase 1.3).
 
-Until then NPU is a documented dependency, not a modeled unit. The attention-offload
-argument stands on the GPU (Mali) comparison alone (see m4_gpu).
+Model (GEMM M x K x N, INT8):
+  - alignment padding: each dim is padded UP to the systolic dimension (borrowed Hexagon 32x32,
+    HeteroInfer §3.2 Fig3) -> padded MACs = ceil(M/sd)*sd * ceil(K/sd)*sd * ceil(N/sd)*sd. This
+    is the Fig3 STAIRCASE: latency steps every time a dim crosses a multiple of 32 (small/odd
+    shapes waste a whole pad row/col). The knee sits at the 32x32 boundary.
+  - compute ceiling: 6 TOPS INT8 datasheet peak -> compute_us = 2*padded_MACs/(tops*1e12)*1e6,
+    scaled by an order/shape FACTOR (HeteroInfer §3.2 Fig4): reversing the Matmul dim order, or a
+    wide-activation/narrow-weight shape, breaks the weight-stall paradigm and costs up to 6x. We
+    model that as a multiplier in [1, 6] driven by the N:K aspect (capped at the borrowed 6x).
+  - memory ceiling: bytes / eff_BW, with eff_BW from the spec's HeteroInfer Fig5 band (40-45 of a
+    68 GB/s peak = 59-66%); the active weights/activations must stream in.
+  - dispatch floor: a small fixed per-op cost so tiny ops are not free.
+  bound = argmax(compute, memory, floor).
+
+Native attention (op='attn_bmm'): activation x activation, no static weight to stall on -> pure
+compute-bound at the padded TOPS ceiling (no order/shape penalty, no weight stream). Per (kv,heads,
+layers): QK^T (M=heads*1, K=hd, N=kv) + S.V (M=heads*1, K=kv, N=hd), padded to 32.
+
+dtypes: INT4/8/16 + FP16 only (datasheet). No RKNPU2 power telemetry -> energy NOT determinable.
 """
+import math
+
+from simulator.models.engine import UnitEngine, Workload
+
+# borrowed HeteroInfer constants (SOSP'25 §3.2/§3.3) — all `borrowed`, none measured here.
+_ORDER_SHAPE_MAX = 6.0      # Fig4: up to 6x order/shape penalty
+_DISPATCH_FLOOR_US = 2.0    # simulated fixed per-op dispatch (no silicon -> nominal, assumption)
+_DTYPE_BYTES = {"int4": 0.5, "int8": 1.0, "int16": 2.0, "fp16": 2.0}
 
 
-class NpuModel:
-    def __init__(self, params=None):
-        raise NotImplementedError(
-            "M4 NPU not modeled: blocked on issue #13 (rknpu2_matmul.json not collected). "
-            "Fit from rknpu2_matmul.json when #13 resolves.")
+class NpuModel(UnitEngine):
+    """Analytic RKNPU2 systolic-roofline. All outputs `simulated`/`borrowed` (no silicon, #13)."""
+
+    def __init__(self, spec, engine="analytic"):
+        super().__init__(spec, engine)
+        sd = spec["systolic_dim"]
+        self.sd = int(sd[0])                       # borrowed 32x32 -> single alignment quantum
+        self.tops = float(spec["tops_int8"])       # 6 TOPS INT8 datasheet ceiling
+        bw = spec["bw_GBs"]
+        # eff BW band (Fig5 59-66% of 68 peak); use the low end as the roofline ceiling (pessimistic).
+        self.bw_eff_low = float(bw["eff_low"])     # ~20.1 GB/s
+        self.bw_eff_high = float(bw["eff_high"])   # ~22.4 GB/s
+        self.dtypes = set(spec["dtypes"])          # restricted to INT4/8/16/FP16 (datasheet)
+
+    def _pad(self, x):
+        """Pad a dim UP to the borrowed systolic quantum (Fig3 staircase source)."""
+        return self.sd * max(1, math.ceil(x / self.sd))
+
+    def _order_shape_factor(self, K, N):
+        """Fig4 order/shape penalty in [1, 6]: a wide activation relative to the weight (large N:K)
+        breaks the weight-stall paradigm. Linear in log2(N/K), saturated at the borrowed 6x."""
+        if K <= 0 or N <= 0:
+            return 1.0
+        ratio = N / K
+        if ratio <= 1.0:
+            return 1.0
+        f = 1.0 + (_ORDER_SHAPE_MAX - 1.0) * min(1.0, math.log2(ratio) / math.log2(8.0))
+        return min(_ORDER_SHAPE_MAX, f)
+
+    def _gemm_us(self, M, K, N, dtype):
+        """Padded-MAC systolic roofline for one GEMM. Returns (latency_us, bound)."""
+        Mp, Kp, Np = self._pad(M), self._pad(K), self._pad(N)
+        padded_macs = Mp * Kp * Np
+        osf = self._order_shape_factor(K, N)
+        compute_us = 2.0 * padded_macs / (self.tops * 1e12) * 1e6 * osf
+        # weights stream in at the eff-BW ceiling (low end of the Fig5 band = pessimistic roofline).
+        wbytes = K * N * _DTYPE_BYTES.get(dtype, 1.0)
+        memory_us = wbytes / (self.bw_eff_low * 1e9) * 1e6
+        return self._argmax_bound(compute_us, memory_us)
+
+    def _attn_us(self, kv, heads, layers, hd, dtype):
+        """Native attention QK^T + S.V, padded, compute-bound (act x act, no weight stall)."""
+        # QK^T: (heads, hd) x (hd, kv); S.V: (heads, kv) x (kv, hd). padded to sd.
+        qkt = self._pad(heads) * self._pad(hd) * self._pad(kv)
+        sv = self._pad(heads) * self._pad(kv) * self._pad(hd)
+        compute_us = 2.0 * (qkt + sv) / (self.tops * 1e12) * 1e6 * layers
+        return self._argmax_bound(compute_us, 0.0)
+
+    def _argmax_bound(self, compute_us, memory_us):
+        floor = _DISPATCH_FLOOR_US
+        lat = max(compute_us, memory_us, floor)
+        bound = "compute" if lat == compute_us else ("memory" if lat == memory_us else "floor")
+        return lat, bound
+
+    def predict(self, wl: Workload) -> dict:
+        """Frozen dict {latency_us, bound, provenance}. ALL outputs simulated/borrowed (no silicon)."""
+        if wl.op in ("attn_bmm", "attention"):
+            hd = wl.extra.get("hd", wl.K or 128)
+            lat, bound = self._attn_us(wl.kv, wl.heads, wl.layers, hd, wl.dtype)
+            prov = ("simulated: analytic systolic attn (act x act, padded to borrowed %dx%d, "
+                    "compute-bound; HeteroInfer Fig3); NO silicon (#13)" % (self.sd, self.sd))
+        else:
+            lat, bound = self._gemm_us(wl.M, wl.K, wl.N, wl.dtype)
+            prov = ("simulated: analytic systolic roofline %d TOPS INT8 ceiling + borrowed %dx%d "
+                    "padding (Fig3 staircase) + order/shape factor <=%gx (Fig4); BW band Fig5 "
+                    "59-66%%/68; borrowed, NO silicon (#13)"
+                    % (int(self.tops), self.sd, self.sd, _ORDER_SHAPE_MAX))
+        return {"latency_us": float(lat), "bound": bound, "provenance": prov}

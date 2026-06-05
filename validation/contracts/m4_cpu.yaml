@@ -1,13 +1,24 @@
 module: m4_cpu
+phase: 1.2                    # Phase 1.2 (D1): CALIBRATED instruction-count ROOFLINE (replaces the 1.1 measured-constant lookup)
+engine: "CpuModel(spec, engine='analytic') — latency_us = max(compute_us, memory_us) + overhead_op"
+spec: simulator/specs/cpu_rk3588.json
+honesty: calibrated           # eta_c + overhead_op calibrated to fp32 cpu_ops.json (single A76 core); fp16/A55/multicore = simulated
 measurement_sources:
-  - measurements/aetina/cpu_ops.json
+  - measurements/aetina/cpu_ops.json          # fp32, single A76 core, single-thread (calibration basis)
 acceptance_criteria:
-  - {type: median_op_error, threshold: 10%, scope: softmax linear-in-kv fit}
-  - {type: p95_op_error, threshold: 20%, scope: softmax}
-  - {type: sanity, rules: [latency_positive, softmax_monotonic_in_kv]}
-notes:
-  - fp16_is_upper_bound                # numpy-emulated on A76 (provenance: phase0.3-findings)
-  - measured_latencies_not_flops       # issue #10
-  - const_ops: [rmsnorm, rope_apply, residual, swiglu, sampling_argmax]   # per-(model,dtype) constants
-  - prefill_xS_unvalidated             # decode (1-token) costs; prefill x S analytic, unvalidated
-sample_strategy: "cov per op from cpu_ops.json (e.g. softmax 0.001-0.005, rmsnorm 0.006-0.012)"
+  # CALIBRATED per-op residual vs fp32 cpu_ops.json (instruction-count roofline). Guidance, not a hard promise.
+  - {type: median_op_error, threshold: 10%, scope: all-ops, observed: 1.15%}
+  - {type: p95_op_error,    threshold: 15%, scope: all-ops, observed: 7.31%}
+  - {type: sanity, rules: [latency_positive, monotonic_in_op_size, multicore_lowers_compute]}
+tunable_params:
+  - eta_c                     # CALIBRATED numpy fraction of peak NEON fp32 throughput (= 0.1521)
+  - overhead_op_us            # CALIBRATED per-op fixed cost (rmsnorm/rope/residual/sampling/softmax)
+  - eta_bw                    # ASSUMPTION 0.6 — see gap below
+  - ops_per_elem / byte_passes  # STRUCTURAL assumption (instruction-count physics; exp()=cost driver)
+gaps:
+  - eta_bw_assumption: "no bandwidth-resolved op in the fp32 decode data + no CPU mem-BW micro-benchmark (audit gap). The memory term binds only for the largest working set (qwen vocab -> L3); elsewhere compute/overhead dominate."
+  - fp16_upper_bound: "fp16 = numpy-EMULATED on A76 -> reuses the fp32-calibrated roofline as an UPPER BOUND; swiglu fp16 = mixed precision."
+  - a55_multicore_simulated: "single A76 core single-thread = measured basis; A55 (IPC=1) + multicore = EXTRAPOLATED (simulated)."
+superseded:
+  phase_1_1: "validation/reports/phase1.1/m4_cpu.json = the 1.1 measured-constant lookup (softmax linear-in-kv + per-op constants); kept as the 1.1 record, superseded by this instruction-count engine."
+report: validation/reports/phase1.2/m4_cpu.json

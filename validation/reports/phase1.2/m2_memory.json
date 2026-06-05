@@ -1,0 +1,103 @@
+{
+ "module": "m2_memory",
+ "phase": "1.2",
+ "anchor": {
+  "eff_BW_GBs": 24.2,
+  "memory": "LPDDR4x (production Metis Card)",
+  "source": "voyager-sdk.md:278 (decode time prop weight bytes, r2=0.997)",
+  "tag": "measured (calibrated anchor)"
+ },
+ "memory_specs": {
+  "mem_lpddr4": {
+   "memory_type": "LPDDR4",
+   "peak_GBs": 25.6,
+   "eff_BW_GBs": 18.2,
+   "eff_BW_tag": "assumption (eff derived from measured-4x 0.71 efficiency)",
+   "peak_tag": "assumption (in-repo no data-rate source)",
+   "vs_anchor_ratio": 0.752,
+   "stream_us": {
+    "1e+03B": 0.055,
+    "1e+05B": 5.495,
+    "1e+07B": 549.451,
+    "1e+09B": 54945.055
+   },
+   "positive": true,
+   "monotonic_in_bytes": true
+  },
+  "mem_lpddr4x": {
+   "memory_type": "LPDDR4x",
+   "peak_GBs": 34.1,
+   "eff_BW_GBs": 24.2,
+   "eff_BW_tag": "calibrated (measured production-card decode anchor 24.2 GB/s)",
+   "peak_tag": "assumption (in-repo no data-rate source)",
+   "vs_anchor_ratio": 1.0,
+   "stream_us": {
+    "1e+03B": 0.041,
+    "1e+05B": 4.132,
+    "1e+07B": 413.223,
+    "1e+09B": 41322.314
+   },
+   "positive": true,
+   "monotonic_in_bytes": true
+  },
+  "mem_lpddr5": {
+   "memory_type": "LPDDR5",
+   "peak_GBs": 51.2,
+   "eff_BW_GBs": 33.3,
+   "eff_BW_tag": "simulated (sim eff 0.65 < measured 0.71; different memory, discounted)",
+   "peak_tag": "assumption (in-repo no data-rate source)",
+   "vs_anchor_ratio": 1.376,
+   "stream_us": {
+    "1e+03B": 0.03,
+    "1e+05B": 3.003,
+    "1e+07B": 300.3,
+    "1e+09B": 30030.03
+   },
+   "positive": true,
+   "monotonic_in_bytes": true
+  }
+ },
+ "topology": {
+  "alpha": {
+   "per_call_floor_us": 911,
+   "pcie_BW_GBs": 3.9,
+   "pcie_transfer_us(0B)": 911.0,
+   "tag": "floor measured (911 us per-call DMA, Alpha topology artifact)"
+  },
+  "card": {
+   "per_call_floor_us": 0,
+   "on_card_eff_BW_GBs": 24.2,
+   "tag": "no per-call floor (on-card streaming); BW = measured 24.2 anchor"
+  }
+ },
+ "sram_what_if": {
+  "l2_MiB_shared": 32,
+  "bw_GBs": 256.0,
+  "latency_ns": 5.0,
+  "bw_latency_tag": "CACTI assumption (no published Metis SRAM BW/latency)",
+  "residency": "architecture-only",
+  "weights_8B_resident": false,
+  "weights_8B_resolves_to": "DRAM",
+  "weights_8B_us": 330578.5,
+  "act_4MiB_resident": true,
+  "act_4MiB_us": 16.389,
+  "what_if": "if the 8B weight set FIT L2 (it cannot, 8 GB >> 32 MiB) the decode wall would move from host LPDDR to SRAM BW \u2014 residency is the load-bearing architecture variable (architecture-only, weights never resident)."
+ },
+ "sim_eff_explanation": "LPDDR5 sim eff 0.65 vs measured 0.71 (LPDDR4x): LPDDR5 efficiency was NOT measured on our silicon (a different memory), so we discount below the measured 4x value rather than assume parity.",
+ "honesty": {
+  "peaks": "assumption (MT/s x 64-bit; in-repo no data-rate source)",
+  "lpddr4x_24.2": "measured anchor -> calibrated",
+  "lpddr5_33.3": "simulated (0.65 discount)",
+  "sram_bw_latency": "CACTI assumption",
+  "residency": "architecture-only (8B weights never resident)"
+ },
+ "ramulator2": "deferred to Phase 1.3 (ADR-0002 swappable; same constructor + contract). NOTE LPDDR4(x) is not a first-class Ramulator2 DRAM preset \u2014 Phase 1.3 must supply/adapt the timing config; LPDDR5 has a preset.",
+ "sanity": {
+  "three_specs_positive_monotonic": true,
+  "lpddr4x_eff_BW_is_anchor": true,
+  "lpddr5_eff_BW_33.3": true,
+  "alpha_pays_floor": true,
+  "card_pays_no_floor": true,
+  "weights_8B_never_resident": true
+ }
+}

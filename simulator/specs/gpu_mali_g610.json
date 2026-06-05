@@ -23,5 +23,13 @@
     "fp16_peak_gflops": "~1 TFLOP/s [assumption]",
     "int8_peak_gflops": "no data [gap]",
     "measured_fp16_gflops": "Phase 1.1 mali_matmul.json, FP16 [measured]"
+  },
+  "roofline_fit": {
+    "_doc": "CALIBRATED roofline slot (FP16, LOWER BOUND, not transferable). eff_compute_fp16 = saturated f16 GFLOP/s / fp16 peak; mem_eff_BW_GBs = lstsq fit to FP16 decode-GEMV. INT8 = zero data.",
+    "eff_compute_fp16": 0.01981,
+    "saturated_f16_gflops": 20.29,
+    "mem_eff_BW_GBs": 1.256,
+    "calibration": "mali_matmul.json FP16 (ksweep 5 pts + 16 decode-GEMV pts)",
+    "honesty": "shape-trend + lower bound; predicted < measured expected; FP16 only"
   }
 }

@@ -17,6 +17,16 @@ decisions:
       memory-wall bottleneck is addressed. The Alpha l2/ddr ~1.00-1.01 'no effect' was only a
       topology artifact (Alpha has no on-card DRAM); the simulated SoC does, so the SRAM
       hierarchy is a load-bearing variable and must be modeled to real sizes."
+  - sram_belongs_to_m1_spm: "Phase 1.2 — the L1/L2/D-IMC SRAM tier lives in M1-SPM
+      (simulator/models/m1_cim_spm.py, SramTier reading sram_metis_aipu), NOT M2. M2 covers
+      host DRAM (mem_lpddr4/4x/5) + the CIM-topology PCIe floor (cim_topo_alpha/card). The
+      SRAM tier is CACTI/assumption (no published Metis SRAM BW/latency) with
+      residency=architecture-only: 8B INT8 weights (~8 GB) >> 32 MiB L2 -> never resident,
+      so predict() resolves them to the DRAM tier (the decode wall is host LPDDR, not SRAM)."
+  - adr0002_deviation: "ADR-0002 scheduled the Ramulator2 DRAM backend for 'Phase 2'. Phase 1.2
+      keeps M2 analytic (MemoryModel(spec, engine='analytic'), swappable per ADR-0002) and moves
+      the heavy Ramulator2 backend to PHASE 1.3 (engine='ramulator2', same constructor + frozen
+      contract). DEVIATION from ADR-0002's 'Phase 2' wording: heavy DRAM sim now lands in 1.3."
   - ramulator2: "deferred to Phase 2 (ADR-0002 swappable); PIM-like ext = risk #6"
   - kv_cache_2c: "analytic kv_bytes/BW_eff as a TEMPORARY stand-in (board offline), UNVALIDATED;
       re-calibrate the coefficient when the board is recovered (the form is correct, pure-BW op)"
