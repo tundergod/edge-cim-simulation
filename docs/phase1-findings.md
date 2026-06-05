@@ -14,7 +14,7 @@ committed JSON via `tools/analysis/fit_*.py`, `tools/analysis/recompose_e2e.py`,
 
 | Component | Equation | Gate | Result | Pass |
 |---|---|---|---|---|
-| M1 CIM tile | `N<2048: 2MKN/G_eff(N)` else `M·n_tiles·T_tile` | G_eff staircase median≤10%, p95≤20% | median **3.4%**, p95 **8.9%** | ✅ |
+| M1 CIM tile | `dev_lat = Σ N-tiles 2·M·K·n/G_eff(n,K)` (quad-core 512×512, **GOP/s**) | 2D G_eff(N,K) native fit median≤10%, p95≤20% | median **2.7%**, p95 **14.9%** | ✅ |
 | M2 PCIe/DMA | `floor + bytes/BW` (911µs, 3.9 GB/s fixed) | sanity + boundary recorded | positive, monotonic | ✅ |
 | M2 LPDDR5 | analytic eff-BW (Ramulator2 → Phase 2) | eff ∈[0.4·peak,peak], brackets 24 | 24.2 / 51.2 GB/s (47%) | ✅ |
 | M4 GPU (Mali) | `attn_bmm = 27.74 + 0.442·kv` µs (offload) | median≤10%, p95≤20% | median **0.6%**, p95 **1.1%** | ✅ |
@@ -40,19 +40,27 @@ committed JSON via `tools/analysis/fit_*.py`, `tools/analysis/recompose_e2e.py`,
 ## Per-component detail
 
 ### M1 — CIM tile
-Two regimes: narrow output (N<2048) follows the underfill curve `2MKN/G_eff(N)`; full/multi-tile
-(N≥2048) is `M·n_tiles·T_tile` (T_tile = **41.21 µs**, n_tiles = ⌈K/2048⌉·⌈N/2048⌉). `G_eff(N)`
-is a saturating Hill fit on the 8B channel-64 staircase (**median 3.4%, p95 8.9%, max 9.2%**);
-staircase held-out N=2048 = 3.5%. Multi-tile `proj_decode` values are themselves
-`canonical_tile×n_tiles` extrapolations, so reproducing them (~0%) is **not** independent —
-the independent fit is the staircase + the narrow residual.
-- **GQA-narrow residual (reported separately, plan verify e):** wide-K narrow-N kv-proj is
-  over-predicted by `G_eff(N)` — 1B N=512 +8%, 3B +11%, **8B N=1024 +39%**, Qwen N=512 +21%.
-  N≥1024 is well-filled (8B kv-proj K4096×N1024 = 227 GFLOP/s ≥ wide), so the 8B is the
-  wide-K narrow-N corner (single point, unfittable). A CIM-centric finding, not buried in the average.
-- **Non-equation regions:** lm_head N≈128k/152k (analytic n_tiles·T_tile, no measurement);
-  prefill M≥512 (device-alloc fail, analytic, unvalidated); Qwen non-2048 (predicted on padded
-  tiles, no restore — the ~1.24× is a GFLOP/s reporting bias only).
+**Architecture (ISSCC 2024, papers/metis-silicon/metis-aipu-isscc2024.md):** Metis is **quad-core**,
+each core a **512×512** INT8 D-IMC crossbar. The simulator's minimum unit is one core (512 wide)
+and **`n_cores` is a free parameter** (=4 for Metis → effective output width 2048). Throughput is
+INT8 **GOP/s**, not FLOP/s. Latency tiles the output N into passes of width ≤ n_cores·512 and **sums
+per tile (rising** — a partial last tile adds its own size, not a full tile). The 2D throughput
+`G_eff(N,K) = Gmax·N/(N+Na)·K/(K+Kb)` (Gmax=333.7, Na=577, Kb=574 GOP/s) is fit on **13 native
+single-tile points** (K·N ≤ 4.19M, the largest natively measurable) → **median 2.7%, p95 14.9%,
+max 17.6%**.
+- **Honest native vs generated:** only **5 of 16** proj_decode shapes are native measurements
+  (1B q_o; 1B/3B/8B/Qwen kv, all N≤2048); the other **11 are model tile-sum output** (K·N > the
+  ~6 M-param envelope, no measurement) — **NOT** presented as 0%-error.
+- **K-effect is FITTED** (retracts the prior "unfittable, single point" claim): wider K raises
+  throughput (N=512: K2048→112.6 vs K3584→147.4; N=1024: K2048→170 vs K4096→227); the 2D fit
+  captures it, and the high-K corner (8B kv K4096×N1024) is over-predicted **+21.5%**, shown not hidden.
+- **Multi-tile = UNVALIDATED:** the one native multi-tile point (N=4096,K=1024 = 37.1µs) is
+  over-predicted **+36%** (continued-rise tiling is pessimistic); everything K·N > 4.19M is
+  extrapolation (board offline → cannot re-measure; issues #2/#11/#17). lm_head N≈128k/152k and
+  prefill M≥512 stay analytic, no measurement.
+- **Device envelope** = the PCIe-IOMMU window (default ~14 MB, forum #1330; Alpha has no real
+  on-card DRAM), **NOT** the 32 MB L2 / 52 MiB on-chip SRAM. Compute ceiling (~52 TOPS/core) not
+  modeled — decode never approaches it (issue #16).
 
 ### M2 — memory / PCIe
 PCIe `transfer_us = 911µs + bytes/3.9GB/s` (fixed params; no per-shape sweep collected). **Floor
@@ -104,7 +112,7 @@ reported separately as the offload justification (≈2 orders slower than GPU-na
 
 ### Prefill (ungated, unvalidated)
 Vendor `ttft_s_median` (8B = 3.79 s) implies **~4.1 TOPS** effective prefill GEMM throughput, but
-the decode-GEMV throughput (204 GFLOP/s = 0.2 TOPS) would give an absurd 75 s — i.e. prefill GEMM
+the decode-GEMV throughput (204 GOP/s = 0.2 TOPS) would give an absurd 75 s — i.e. prefill GEMM
 runs ~20× faster than decode GEMV and is **unmeasured** (proj M≥512 device-fail; prefill attention
 S-scaling 1 pt; softmax S×S). Prefill path unvalidated → Phase-2 gap. (`prefill_ms_median` is a
 degenerate vendor field ~0.007 s across all sizes — unused.)
