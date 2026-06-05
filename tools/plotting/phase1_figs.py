@@ -169,16 +169,25 @@ def m5_coverage():
                 present.add(row["category"])
         for jc, c in enumerate(cats):
             grid[i, jc] = 1 if c in present else 0
-    fig, ax = plt.subplots(figsize=(5.0, 1.9))
-    ax.imshow(grid, cmap="Greens", vmin=0, vmax=1.5, aspect="auto")
-    ax.set_xticks(range(len(cats))); ax.set_xticklabels(cats, rotation=45, ha="right", fontsize=6)
-    ax.set_yticks(range(len(models))); ax.set_yticklabels([m.split("-")[-1] for m in models], fontsize=6)
+    ylabels = {"llama-3.2-1b": "1B", "llama-3.2-3b": "3B", "llama-3.1-8b": "8B", "qwen2.5-7b": "Qwen"}
+    fig, ax = plt.subplots(figsize=(5.4, 2.0))
+    ax.imshow(grid, cmap="Greens", vmin=0, vmax=1.8, aspect="auto")
+    ax.set_xticks(range(len(cats))); ax.set_xticklabels(cats, rotation=40, ha="right", fontsize=6.5)
+    ax.set_yticks(range(len(models))); ax.set_yticklabels([ylabels[m] for m in models], fontsize=7)
+    # filled marker for covered (avoid the missing-glyph checkmark tofu); per-model summary on the right
     for i in range(len(models)):
         for j in range(len(cats)):
-            ax.text(j, i, "✓" if grid[i, j] else "✗", ha="center", va="center",
-                    color="#1b7f5a" if grid[i, j] else "#C45A12", fontsize=7)
+            if grid[i, j]:
+                ax.plot(j, i, marker="o", ms=3.5, color="#1b7f5a")
+            else:
+                ax.text(j, i, "x", ha="center", va="center", color="#C45A12", fontsize=8)
+    for i, m in enumerate(models):
+        r = m5["per_model"][m]
+        ax.text(len(cats) - 0.35, i, f"{r['n_distinct_ops']} ops · {len(r['orphan_ops'])} orphan",
+                va="center", fontsize=5.5, color="#555")
+    ax.set_xlim(-0.5, len(cats) + 1.8)
     orphans = sum(len(r["orphan_ops"]) for r in m5["per_model"].values())
-    ax.set_title(f"M5  op-category coverage (4 models x 9 cats) — {orphans} orphans", fontsize=8)
+    ax.set_title(f"M5  op-category coverage — all 9 traced, {orphans} orphans", fontsize=8)
     S.save(fig, FIG / "M5_coverage")
 
 

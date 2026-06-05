@@ -46,8 +46,9 @@ transfer_us  = 911 µs          + bytes ÷ 3.9 GB/s
 > **參數怎麼來的？** 我們**沒有**做「不同資料量 × 傳輸時間」的完整掃描（那是 Phase 0.3 的一個 collect-what-you-can 缺口），所以 **911µs 和 3.9 GB/s 都當固定參數**，不重新擬合斜率。這點在報告裡誠實標註。
 
 > **補充：什麼是 double buffering（雙緩衝）？** 一次推論其實有三步：**搬輸入進去 → 裝置計算 → 搬輸出回來**。
+>
 > - **關閉（單緩衝）**：三步**串列**——搬完才算、算完才搬回，DMA 和計算互相等待，總時間 ≈ 搬入 + 計算 + 搬回。
-> - **開啟（雙緩衝）**：用兩塊 buffer **輪流**，讓「這一筆在算」的同時「下一筆已經在搬」——DMA 和計算**重疊（pipeline）**，總時間 ≈ max(搬, 算)，把搬移的時間藏進計算裡。
+> - **開啟（雙緩衝）**：用兩塊 buffer **輪流**，讓「這一筆在算」的同時「下一筆已經在搬」——DMA 和計算**重疊（pipeline）**，總時間 ≈ max(搬，算），把搬移的時間藏進計算裡。
 >
 > 對 CIM 的意義：decode 的計算很小（A1 那 9–165µs），所以開雙緩衝能藏掉的有限，**911µs 的 per-call floor 仍主導**。Phase 0.3 量 PCIe 時就是用 `--double-buffer / --no-double-buffer` 兩組對比去**隔離出傳輸成本**（voyager-sdk §A2）。這也呼應 A1.5 那條 N>2048 外推：大運算時雙緩衝能藏更多搬移，是「真實硬體比我悲觀的連續分塊更好」的原因之一。
 
@@ -56,6 +57,7 @@ transfer_us  = 911 µs          + bytes ÷ 3.9 GB/s
 ## A2.3 Measurement vs Prediction（2a：那筆 floor 真的是固定的嗎？）
 
 我們怎麼量到 911µs 的？很巧妙：**同一個運算量兩個值**——
+
 - **device latency**：只算「在裝置上計算」的時間（M1 那個）。
 - **system latency**：從 host 角度看的「整趟來回」時間。
 
@@ -63,13 +65,14 @@ transfer_us  = 911 µs          + bytes ÷ 3.9 GB/s
 
 **圖 A2-1（M2 PCIe floor）— 量測的 floor vs 固定 911µs 預測**
 ![M2_floor](../../../figures/phase1/M2_pcie_floor.png)
+
 - **X 軸**：device 計算延遲（µs）——代表「這個運算多大」（這張圖只取單-tile 形狀，範圍約 9µs 到 41µs）。
 - **Y 軸**：實測的每次呼叫 floor（= system − device，µs）。
 - **藍點**：30 個形狀各自量到的 floor。**橘線**：我們的預測（911µs 中位數）。**灰虛線**：p95（1112µs）。
 - **怎麼看（關鍵）**：藍點全都落在一條 **805–1120µs 的帶**裡——和它對比的「資料量項 `bytes/BW`」對這些小 decode GEMV 幾乎是 0（搬幾 KB÷3.9GB/s ≈ 零點幾 µs）。所以**這趟來回的成本幾乎全部來自那筆固定開銷**，是不折不扣的主導項。
-- **但要誠實看圖**：藍點**不是完全水平**——你會看到它隨運算變大**微微往下滑**（小運算約 1100µs → 大運算約 810µs，統計上負相關 r≈−0.86，約 −7µs/µs）。這可能是大運算時 DMA 和計算有部分重疊（double-buffering）所致。重點是:**這個漂移幅度(~300µs)遠小於 floor 本身(~900µs)**,所以我們用**一個固定常數 911µs 當一階近似**,並把這個與大小相關的漂移**誠實地併入殘差帶**(中位 911、p95 1112)。
+- **但要誠實看圖**：藍點**不是完全水平**——你會看到它隨運算變大**微微往下滑**（小運算約 1100µs → 大運算約 810µs，統計上負相關 r≈−0.86，約 −7µs/µs）。這可能是大運算時 DMA 和計算有部分重疊（double-buffering）所致。重點是：**這個漂移幅度（~300µs）遠小於 floor 本身（~900µs)**，所以我們用**一個固定常數 911µs 當一階近似**，並把這個與大小相關的漂移**誠實地併入殘差帶**(中位 911、p95 1112）。
 
-> 換句話說:**measurement = 沿著一條微降趨勢散在 805–1120 的藍點;prediction = 一條 911µs 的水平線**。模型抓對了「來回成本主導、約 900µs」這個本質,但**沒有**宣稱它跟運算大小完全無關——那個微降趨勢是已標註的殘差。
+> 換句話說：**measurement = 沿著一條微降趨勢散在 805–1120 的藍點；prediction = 一條 911µs 的水平線**。模型抓對了「來回成本主導、約 900µs」這個本質，但**沒有**宣稱它跟運算大小完全無關——那個微降趨勢是已標註的殘差。
 
 ---
 
@@ -90,37 +93,37 @@ transfer_us  = 911 µs          + bytes ÷ 3.9 GB/s
 
 ## A2.5 KV-cache（2c：長文本下的隱形成本）
 
-**KV-cache 是什麼？** decode 時，模型要「回看」前面所有 token 的 Key/Value。為了不每次重算,把每個 token 的 K、V **存起來（cache）**,下個 token 直接讀。每生一個新 token,就要把它的 K/V **append（附加）** 進 cache——這是一個**純記憶體頻寬**的動作（搬 bytes,不做計算）。
+**KV-cache 是什麼？** decode 時，模型要「回看」前面所有 token 的 Key/Value。為了不每次重算，把每個 token 的 K、V **存起來（cache）**，下個 token 直接讀。每生一個新 token,就要把它的 K/V **append（附加）** 進 cache——這是一個**純記憶體頻寬**的動作（搬 bytes,不做計算）。
 
-我們的模型很簡單:`kv_append_us = kv_bytes ÷ 有效頻寬`。
+我們的模型很簡單：`kv_append_us = kv_bytes ÷ 有效頻寬`。
 
-**為什麼要特別講它?** 因為在**長文本**下它一點都不小:Phase 0.2 的統計顯示,在 LongBench(prompt 約 11800 個 token)的 decode 階段,**kv_cache 佔了 12.6–33.5% 的 bytes**(8B 模型 22.2%、3B 最高 33.5%)——在多數模型是僅次於 matmul、attention 的**第三大頻寬消耗**(而 **3B 模型甚至超過 attention、躍居第二**)。短文本可忽略,長文本不行;Phase 2 要跑 LongBench,漏了它會系統性低估。
+**為什麼要特別講它?** 因為在**長文本**下它一點都不小：Phase 0.2 的統計顯示，在 LongBench(prompt 約 11800 個 token）的 decode 階段，**kv_cache 佔了 12.6–33.5% 的 bytes**（8B 模型 22.2%、3B 最高 33.5%）——在多數模型是僅次於 matmul、attention 的**第三大頻寬消耗**(而 **3B 模型甚至超過 attention、躍居第二**）。短文本可忽略，長文本不行；Phase 2 要跑 LongBench,漏了它會系統性低估。
 
-**⚠️ 誠實標註 + 暫時做法**:Phase 0.3 **沒有單獨量測** KV-append(collect-what-you-can 缺口),**而且板子現在離線、補不了量**。所以現階段就**用這個解析式 `kv_bytes/有效頻寬` 當暫時替身**(用已有的頻寬數字)、明標 **unvalidated**——這完全夠 Phase 2 先把模擬器跑起來;等板子救回再用真值校準(它是純頻寬 op,解析式的形式是對的,只差一個係數確認)。比照 A1 對「lm_head / prefill」的誠實處理。
+**⚠️ 誠實標註 + 暫時做法**：Phase 0.3 **沒有單獨量測** KV-append（collect-what-you-can 缺口）,**而且板子現在離線、補不了量**。所以現階段就**用這個解析式 `kv_bytes/有效頻寬` 當暫時替身**(用已有的頻寬數字）、明標 **unvalidated**——這完全夠 Phase 2 先把模擬器跑起來；等板子救回再用真值校準（它是純頻寬 op,解析式的形式是對的，只差一個係數確認）。比照 A1 對「lm_head / prefill」的誠實處理。
 
 ---
 
-## A2.6 一個更新的設計決定:Phase 2 要建 L1/L2 residency
+## A2.6 一個更新的設計決定：Phase 2 要建 L1/L2 residency
 
-> **這條決定改了。** 前一版這裡寫「不要建 SRAM residency」,理由是 Phase 0.3 量到 Alpha 的 l2-vs-ddr 延遲比 **1.00–1.01×(幾乎沒差)**。但這個結論**只在 Alpha 上、而且只因為 Alpha 根本沒有 on-card DRAM**(所謂「ddr」是 host LPDDR over PCIe),所以「放 L2 還是放 DRAM」在那塊板上不是有意義的軸——它是**拓樸特例,不能外推成「不必建」**。
+> **這條決定改了。** 前一版這裡寫「不要建 SRAM residency」，理由是 Phase 0.3 量到 Alpha 的 l2-vs-ddr 延遲比 **1.00–1.01×（幾乎沒差）**。但這個結論**只在 Alpha 上、而且只因為 Alpha 根本沒有 on-card DRAM**（所謂「ddr」是 host LPDDR over PCIe）,所以「放 L2 還是放 DRAM」在那塊板上不是有意義的軸——它是**拓樸特例，不能外推成「不必建」**。
 
-**更新(依架構研究需求):Phase 2 要建 L1/L2 residency 模型。** 因為這個模擬器之後要做**架構研究**:一旦我們把當前的「記憶體牆」瓶頸解掉(換更快的記憶體、加大 SRAM、改拓樸…),**L1(每核 4 MiB)/L2(32 MiB 共享)能不能放下權重/KV,就會變成決定性的變數**。要回答「如果權重能整個放進 L2,decode 會快多少」這類問題,就**必須把真實的 SRAM 階層還原進模擬器**。所以:
+**更新（依架構研究需求):Phase 2 要建 L1/L2 residency 模型。** 因為這個模擬器之後要做**架構研究**：一旦我們把當前的「記憶體牆」瓶頸解掉（換更快的記憶體、加大 SRAM、改拓樸…),**L1（每核 4 MiB）/L2(32 MiB 共享）能不能放下權重/KV,就會變成決定性的變數**。要回答「如果權重能整個放進 L2,decode 會快多少」這類問題，就**必須把真實的 SRAM 階層還原進模擬器**。所以：
 
-- **建** L1(4 MiB/核)+ L2(32 MiB 共享)的 residency 模型(尺寸見 A1.2 的 device-envelope 段與 [AIPU 論文筆記](../../../../papers/metis-silicon/metis-aipu-isscc2024.md));資料放 L1/L2/DRAM 哪一層、各層頻寬與容量,都要顯式建模。
-- Alpha 的「l2/ddr 無差異」量測**只描述 Alpha 這塊板**,不能當「不必建」的依據。
+- **建** L1（4 MiB/核）+ L2(32 MiB 共享）的 residency 模型（尺寸見 A1.2 的 device-envelope 段與 [AIPU 論文筆記](../../../../papers/metis-silicon/metis-aipu-isscc2024.md));資料放 L1/L2/DRAM 哪一層、各層頻寬與容量，都要顯式建模。
+- Alpha 的「l2/ddr 無差異」量測**只描述 Alpha 這塊板**，不能當「不必建」的依據。
 - M2 合約已從「不建」改成「**Phase 2 建 L1/L2**」。
 - 一切硬體都**還原最真實的情況**——這是讓模擬器能拿來做架構探索的前提。
 
 ---
 
-## A2.7 限制與 gap(誠實清單)
+## A2.7 限制與 gap（誠實清單）
 
 | 項目 | 狀態 | 說明 |
 |---|---|---|
-| PCIe floor / BW | ✅ 固定參數 | 911µs + 3.9 GB/s;**無逐點 PCIe 掃描**(Phase 0.3 缺口)→ 不重擬斜率 |
-| DRAM 頻寬 | ⚠️ 解析 | **量測 = LPDDR4x 24.2 GB/s = 71% of ~34 peak**(HeteroInfer 59–66% + web 60–80% 佐證);模擬 SoC 的 LPDDR5 另計(33/51.2);Ramulator2 延 Phase 2 |
-| kv_cache append | ❌ 未驗證(暫用) | 解析 `kv_bytes/BW` 當暫時替身(板離線);長文本佔 12.6–33.5% 不可省;待救板補真值 |
-| L1/L2 residency | 🔧 改為要建 | **Phase 2 建** L1(4MiB/核)+L2(32MiB 共享);Alpha 「l2/ddr≈1.0」只是無 on-card DRAM 的拓樸特例,不能外推 |
-| floor 適用邊界 | ✅ 已界定 | 只對離散 host↔device 搬移收費;decode 串流不逐次付(見 A2.2) |
+| PCIe floor / BW | ✅ 固定參數 | 911µs + 3.9 GB/s;**無逐點 PCIe 掃描**（Phase 0.3 缺口）→ 不重擬斜率 |
+| DRAM 頻寬 | ⚠️ 解析 | **量測 = LPDDR4x 24.2 GB/s = 71% of ~34 peak**（HeteroInfer 59–66% + web 60–80% 佐證）;模擬 SoC 的 LPDDR5 另計（33/51.2);Ramulator2 延 Phase 2 |
+| kv_cache append | ❌ 未驗證（暫用) | 解析 `kv_bytes/BW` 當暫時替身（板離線);長文本佔 12.6–33.5% 不可省；待救板補真值 |
+| L1/L2 residency | 🔧 改為要建 | **Phase 2 建** L1（4MiB/核）+L2（32MiB 共享）;Alpha 「l2/ddr≈1.0」只是無 on-card DRAM 的拓樸特例，不能外推 |
+| floor 適用邊界 | ✅ 已界定 | 只對離散 host↔device 搬移收費；decode 串流不逐次付（見 A2.2) |
 
-**一句話總結 A2**:「搬資料」的成本由「一次約 911µs 的固定來回 + 頻寬」描述,這筆來回成本主導(對小 GEMV 而言 `bytes/BW` 幾乎是 0);記憶體頻寬方面,**量測到的 24.2 GB/s 是量產卡 LPDDR4x 的有效值(= ~71% 理論峰值,HeteroInfer 與網路文獻都佐證這是正常)**,模擬 SoC 的 LPDDR5 另算;KV-cache 用解析式當暫時替身(板離線、未驗證);**L1/L2 residency 改為 Phase 2 要建**(架構研究需要還原真實 SRAM 階層)。**M1(算)+ M2(搬)合起來,就是 CIM 路徑的完整成本**——接下來 A3/A4 看 CIM 不擅長的事丟給誰做。
+**一句話總結 A2**：「搬資料」的成本由「一次約 911µs 的固定來回 + 頻寬」描述，這筆來回成本主導（對小 GEMV 而言 `bytes/BW` 幾乎是 0);記憶體頻寬方面，**量測到的 24.2 GB/s 是量產卡 LPDDR4x 的有效值（= ~71% 理論峰值，HeteroInfer 與網路文獻都佐證這是正常)**，模擬 SoC 的 LPDDR5 另算；KV-cache 用解析式當暫時替身（板離線、未驗證);**L1/L2 residency 改為 Phase 2 要建**(架構研究需要還原真實 SRAM 階層）。**M1（算）+ M2(搬）合起來，就是 CIM 路徑的完整成本**——接下來 A3/A4 看 CIM 不擅長的事丟給誰做。

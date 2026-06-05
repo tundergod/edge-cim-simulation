@@ -42,6 +42,7 @@ Phase 0.3 量測期間，**aetina 板（跑 RKNPU2 的那塊）離線了**——
 2. 「**attention 該 offload**」這個結論，目前**站在 GPU 的數據上就足夠**（A3 的 CIM 31–46ms vs GPU 幾十–幾百µs，差 2 個數量級，對 kernel 品質不敏感）。NPU 只是**第二個佐證**，不是必要條件。
 
 NPU 補上之後會多兩樣東西：
+
 - **第二個 offload 對照點**（NPU 原生 attention vs GPU vs CIM penalty）。
 - **「NPU 大投影不需 tiling」的對照**（NPU 不像 CIM 有「輸出超過 4核×512=2048 就要分塊」的限制）。
 
@@ -60,4 +61,4 @@ NPU 補上之後會多兩樣東西：
 
 ---
 
-**一句話總結 A5**：NPU 是 attention 的第二個 offload 候選，本期因 aetina 離線（issue #13）未量測；前置（23 個 `.rknn` + runner）都備妥，等板子回線即可補；缺它不動搖 Phase 1 的 decode 校準與「attention 該 offload」結論，只少了第二個佐證。它以「報錯 stub + BLOCKED 合約」誠實佔位。
+**一句話總結 A5**：NPU 是 attention 的第二個 offload 候選，本期因 aetina 離線（issue #13）未量測；前置（23 個 `.rknn` + runner）都備妥，等板子回線即可補；缺它不動搖 Phase 1 的 decode 校準與「attention 該 offload」結論，只少了第二個佐證。它以「報錯 stub + BLOCKED 合約」誠實佔位。下一章 A6 回到「源頭」——看是誰決定每個 token 到底要跑哪些 op。

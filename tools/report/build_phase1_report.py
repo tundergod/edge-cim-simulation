@@ -51,8 +51,15 @@ def main():
             toc.append('<li class="toc-h">Part A — 每個元件</li>')
         if part == "B":
             toc.append('<li class="toc-h">Part B — 組合成 LLM</li>')
-        short = title.split("—")[0].strip() if "—" in title else title
-        toc.append(f'<li><a href="#{anchor}">{short}</a></li>')
+        # TOC label: "<code> · <name>" with the (parenthetical) dropped, e.g. "A1 · M1：CIM tile"
+        mt = re.match(r"(.+?)\s*[—–]\s*(.+)", title)
+        if mt:
+            code = mt.group(1).strip()
+            rest = re.sub(r"（[^）]*）", "", mt.group(2)).strip()
+            label = f"{code} · {rest}"[:22]
+        else:
+            label = title[:22]
+        toc.append(f'<li><a href="#{anchor}">{label}</a></li>')
         body.append(f'<section class="chapter" id="{anchor}">{html}</section>')
 
     toc_html = "\n".join(toc)
@@ -115,7 +122,7 @@ hr{{border:none;border-top:1px solid var(--line);margin:26px 0}}
   .main{{margin-left:0;max-width:100%;padding:0}}
   .chapter{{break-before:page}}
   .cover{{break-after:page}}
-  h2,h3{{break-after:avoid}} img,table,pre,blockquote{{break-inside:avoid}}
+  h2,h3{{break-after:avoid}} img{{break-before:avoid;break-inside:avoid}} table,pre,blockquote{{break-inside:avoid}}
 }}
 </style></head><body>
 
