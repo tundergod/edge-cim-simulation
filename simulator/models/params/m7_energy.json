@@ -1,0 +1,8 @@
+{
+ "_doc": "M7 spec-based energy (ADR-0005). Estimated, not measured. +/-20% sensitivity.",
+ "cim_tops_w": 15.0,
+ "lpddr5_pj_per_bit": 4.0,
+ "pcie_pj_per_bit": 5.0,
+ "a76_core_w": 0.75,
+ "cpu_cores": 4
+}

@@ -1,0 +1,77 @@
+{
+ "_doc": "M1 CIM tile (Phase 1). Quad-core, 512x512/core (ISSCC 2024). G_eff(N,K) 2D throughput (GOP/s, INT8) fit on native single-tile pts (K*N<=4.19M). n_cores free.",
+ "n_cores": 4,
+ "core_width": 512,
+ "G_eff_Gmax_gops": 333.67,
+ "G_eff_Na": 577.2,
+ "G_eff_Kb": 574.1,
+ "native_max_kn": 4194304,
+ "alloc_envelope_params": 6000000,
+ "native_throughput_points": [
+  {
+   "N": 64,
+   "K": 2048,
+   "gops": 26.6
+  },
+  {
+   "N": 128,
+   "K": 2048,
+   "gops": 48.6
+  },
+  {
+   "N": 256,
+   "K": 2048,
+   "gops": 78.0
+  },
+  {
+   "N": 480,
+   "K": 2048,
+   "gops": 105.5
+  },
+  {
+   "N": 512,
+   "K": 2048,
+   "gops": 112.7
+  },
+  {
+   "N": 512,
+   "K": 3584,
+   "gops": 147.4
+  },
+  {
+   "N": 544,
+   "K": 2048,
+   "gops": 111.8
+  },
+  {
+   "N": 1000,
+   "K": 2048,
+   "gops": 165.6
+  },
+  {
+   "N": 1024,
+   "K": 2048,
+   "gops": 169.8
+  },
+  {
+   "N": 1024,
+   "K": 3072,
+   "gops": 182.3
+  },
+  {
+   "N": 1024,
+   "K": 4096,
+   "gops": 227.2
+  },
+  {
+   "N": 1536,
+   "K": 2048,
+   "gops": 204.0
+  },
+  {
+   "N": 2048,
+   "K": 2048,
+   "gops": 203.7
+  }
+ ]
+}

@@ -1,0 +1,275 @@
+{
+ "module": "m1_cim_tile",
+ "architecture": "quad-core, 512x512 INT8 D-IMC per core; n_cores free (=4 Metis); GOP/s not FLOP/s",
+ "equation": "dev_lat = sum over N-tiles(width<=n_cores*512) of 2*M*K*n/G_eff(n,K); G_eff(N,K)=Gmax*N/(N+Na)*K/(K+Kb)",
+ "params": {
+  "Gmax_gops": 333.67,
+  "Na": 577.2,
+  "Kb": 574.1,
+  "n_cores": 4,
+  "core_width": 512,
+  "native_max_kn_M": 4.19
+ },
+ "throughput_fit_gate_native": {
+  "set": "native single-tile throughput G_eff(N,K), 13 pts (all natively measured)",
+  "median": 0.027,
+  "p95": 0.149,
+  "max": 0.176,
+  "pass_median_le_0.10": true,
+  "pass_p95_le_0.20": true
+ },
+ "native_latency_meas_vs_pred": [
+  {
+   "N": 64,
+   "K": 2048,
+   "meas_us": 9.8,
+   "pred_us": 10.1,
+   "rel_err": 0.024,
+   "group": "staircase64"
+  },
+  {
+   "N": 128,
+   "K": 2048,
+   "meas_us": 10.8,
+   "pred_us": 11.1,
+   "rel_err": 0.027,
+   "group": "staircase64"
+  },
+  {
+   "N": 256,
+   "K": 2048,
+   "meas_us": 13.4,
+   "pred_us": 13.1,
+   "rel_err": 0.026,
+   "group": "staircase64"
+  },
+  {
+   "N": 480,
+   "K": 2048,
+   "meas_us": 18.6,
+   "pred_us": 16.6,
+   "rel_err": 0.108,
+   "group": "staircase_off64"
+  },
+  {
+   "N": 512,
+   "K": 2048,
+   "meas_us": 18.6,
+   "pred_us": 17.1,
+   "rel_err": 0.08,
+   "group": "staircase64"
+  },
+  {
+   "N": 512,
+   "K": 3584,
+   "meas_us": 24.9,
+   "pred_us": 27.1,
+   "rel_err": 0.09,
+   "group": "proj_decode"
+  },
+  {
+   "N": 544,
+   "K": 2048,
+   "meas_us": 19.9,
+   "pred_us": 17.6,
+   "rel_err": 0.116,
+   "group": "staircase_off64"
+  },
+  {
+   "N": 1000,
+   "K": 2048,
+   "meas_us": 24.7,
+   "pred_us": 24.8,
+   "rel_err": 0.002,
+   "group": "staircase_off64"
+  },
+  {
+   "N": 1024,
+   "K": 2048,
+   "meas_us": 24.7,
+   "pred_us": 25.2,
+   "rel_err": 0.019,
+   "group": "staircase64"
+  },
+  {
+   "N": 1024,
+   "K": 3072,
+   "meas_us": 34.5,
+   "pred_us": 35.0,
+   "rel_err": 0.014,
+   "group": "proj_decode"
+  },
+  {
+   "N": 1024,
+   "K": 4096,
+   "meas_us": 36.9,
+   "pred_us": 44.8,
+   "rel_err": 0.214,
+   "group": "aspect"
+  },
+  {
+   "N": 1536,
+   "K": 2048,
+   "meas_us": 30.8,
+   "pred_us": 33.2,
+   "rel_err": 0.077,
+   "group": "staircase64"
+  },
+  {
+   "N": 2048,
+   "K": 2048,
+   "meas_us": 41.2,
+   "pred_us": 41.3,
+   "rel_err": 0.002,
+   "group": "aspect"
+  }
+ ],
+ "tiling_validation_native_multitile": [
+  {
+   "N": 4096,
+   "K": 1024,
+   "meas_us": 37.1,
+   "pred_us": 50.3,
+   "rel_err": 0.356,
+   "note": "the only native multi-tile point; tests continued-rise tiling"
+  }
+ ],
+ "proj_decode_native_vs_generated": {
+  "n_native": 5,
+  "n_generated": 11,
+  "note": "only the native rows are measurements; generated rows are this model's tile-sum output (no native measurement exists, K*N > 4.19M envelope).",
+  "rows": [
+   {
+    "model": "llama-3.2-1b",
+    "family": "q_o",
+    "K": 2048,
+    "N": 2048,
+    "meas_us": 41.2,
+    "native": true
+   },
+   {
+    "model": "llama-3.2-1b",
+    "family": "kv",
+    "K": 2048,
+    "N": 512,
+    "meas_us": 18.6,
+    "native": true
+   },
+   {
+    "model": "llama-3.2-3b",
+    "family": "kv",
+    "K": 3072,
+    "N": 1024,
+    "meas_us": 34.5,
+    "native": true
+   },
+   {
+    "model": "llama-3.2-1b",
+    "family": "gate_up",
+    "K": 2048,
+    "N": 8192,
+    "meas_us": 164.8,
+    "native": false
+   },
+   {
+    "model": "llama-3.2-1b",
+    "family": "down",
+    "K": 8192,
+    "N": 2048,
+    "meas_us": 164.8,
+    "native": false
+   },
+   {
+    "model": "llama-3.2-3b",
+    "family": "q_o",
+    "K": 3072,
+    "N": 3072,
+    "meas_us": 164.8,
+    "native": false
+   },
+   {
+    "model": "llama-3.2-3b",
+    "family": "gate_up",
+    "K": 3072,
+    "N": 8192,
+    "meas_us": 329.6,
+    "native": false
+   },
+   {
+    "model": "llama-3.2-3b",
+    "family": "down",
+    "K": 8192,
+    "N": 3072,
+    "meas_us": 329.6,
+    "native": false
+   },
+   {
+    "model": "llama-3.1-8b",
+    "family": "q_o",
+    "K": 4096,
+    "N": 4096,
+    "meas_us": 164.8,
+    "native": false
+   },
+   {
+    "model": "llama-3.1-8b",
+    "family": "kv",
+    "K": 4096,
+    "N": 1024,
+    "meas_us": 36.9,
+    "native": true
+   },
+   {
+    "model": "llama-3.1-8b",
+    "family": "gate_up",
+    "K": 4096,
+    "N": 14336,
+    "meas_us": 576.8,
+    "native": false
+   },
+   {
+    "model": "llama-3.1-8b",
+    "family": "down",
+    "K": 14336,
+    "N": 4096,
+    "meas_us": 576.8,
+    "native": false
+   },
+   {
+    "model": "qwen2.5-7b",
+    "family": "q_o",
+    "K": 3584,
+    "N": 3584,
+    "meas_us": 164.8,
+    "native": false
+   },
+   {
+    "model": "qwen2.5-7b",
+    "family": "kv",
+    "K": 3584,
+    "N": 512,
+    "meas_us": 24.9,
+    "native": true
+   },
+   {
+    "model": "qwen2.5-7b",
+    "family": "gate_up",
+    "K": 3584,
+    "N": 18944,
+    "meas_us": 824.0,
+    "native": false
+   },
+   {
+    "model": "qwen2.5-7b",
+    "family": "down",
+    "K": 18944,
+    "N": 3584,
+    "meas_us": 824.0,
+    "native": false
+   }
+  ]
+ },
+ "extrapolation_note": "K*N > 4.19M (multi-tile) is UNVALIDATED: no native data above one tile; latency uses a continued-rising tile-sum (partial last tile adds its own size, not a full tile). Board offline -> cannot measure (issues #2/#11/#17).",
+ "regime_note": "decode/memory-bound only (~227 GOP/s eff, ~0.1% of the 209600 GOP/s compute peak); compute-ceiling not modeled (issue #16).",
+ "unit_note": "throughput is INT8 GOP/s (issue #18); the raw JSON field name 'dev_gflops' is legacy."
+}

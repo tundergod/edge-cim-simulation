@@ -1,0 +1,18 @@
+module: m1_cim_tile
+architecture: "quad-core, 512x512 INT8 D-IMC per core; n_cores free (=4 Metis); throughput = GOP/s"
+measurement_sources:
+  - measurements/aetina/metis_alpha_matmul.json   # by_group: staircase64, proj_decode, aspect, ...
+acceptance_criteria:                               # ADR-0006 Phase-1
+  - {type: median_op_error, threshold: 10%, scope: 2D G_eff(N,K) native single-tile fit (13 pts)}
+  - {type: p95_op_error, threshold: 20%, scope: 2D G_eff(N,K) native single-tile fit}
+  - {type: sanity, rules: [no_nan_or_inf, dev_lat_positive, monotonic_rising_in_N]}
+reported_not_gated:
+  - high_K_corner_residual             # 8B kv K4096xN1024: latency over-pred +21.5% (= throughput under-pred 17.6%); native fit pt, GOP/s
+  - multitile_tiling_residual          # the 1 native multi-tile pt (N4096,K1024) over-predicted +36%, UNVALIDATED
+nonequation_regions:
+  - lm_head_N_128k_152k                # analytic tile-sum, no measurement
+  - prefill_M_ge_512                   # device-alloc fail, analytic, unvalidated
+  - "K*N > 4.19M (multi-tile)"         # only 1 native multi-tile pt; rest extrapolation (board offline)
+  - qwen_non2048                        # predicted on padded tiles; ~1.24x is a GOP/s reporting bias only
+device_envelope: "~6M params = PCIe-IOMMU window (default ~14MB, Alpha no on-card DRAM), NOT 32MB L2/SRAM"
+sample_strategy: "TBD - variance_profile not collected (Phase 0.3 gap)"
