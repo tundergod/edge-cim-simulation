@@ -1,67 +1,69 @@
 """M1 — CIM tile timing model (Phase 1 fit). Loads params from params/m1_cim.json.
 
-Dev (compute) latency of a weight-stationary GEMV/GEMM on the Metis Alpha CIM
-(1x1-conv proxy), fit from measurements/aetina/metis_alpha_matmul.json.
+ARCHITECTURE (ISSCC 2024, papers/metis-silicon/metis-aipu-isscc2024.md):
+Metis is QUAD-CORE; each AI-Core has a 512x512 INT8 D-IMC crossbar (16 banks of
+512-in x 32-out x 4 weight-sets). The simulator's minimum unit is ONE CORE (512 wide);
+`n_cores` is a free parameter (= 4 for Metis). The effective output width of the
+combined engine = n_cores * 512 (= 2048 at n=4). Throughput is INT8 OP/s (GOP/s), NOT
+FLOP/s. Our Phase-0.3 measurements used the default compile (presumed all 4 cores; the
+2048 = 4x512 boundary is the evidence) -> the fit is calibrated at n_cores=4.
 
-Decode (M=1) is the calibrated path. The effective throughput G_eff(N) (GFLOP/s)
-rises with output-channel fill N and saturates — fit on the channel-64 staircase
-(group `staircase64`). Latency = FLOPs / G_eff(N); FLOPs = 2*M*K*N. The 2048x2048
-crossbar-tile count governs the device envelope (K*N > ~6M -> tiled) and feeds the
-per-call DMA-floor compounding handled in M2. Prefill (M>1) uses the same form scaled
-by M but is UNVALIDATED (no board data at M>=512; see plan §背景).
+Device latency (decode/memory-bound regime; M=1 is the calibrated path):
+  dev_lat = sum over output-tiles (each <= n_cores*512 wide) of FLOPs_tile / G_eff(n,K)
+where G_eff(N,K) (GOP/s) is the effective throughput, rising with BOTH the output width
+N and input depth K (2D fill), fit on native single-tile points (K*N <= 4.19M). Tiling
+along N keeps the latency RISING (a partial last tile adds its own smaller latency, not a
+full tile). Everything above one native tile (K*N > 4.19M) is UNVALIDATED extrapolation.
 
-The per-call host<->device DMA floor (911 us) is M2's, not M1's: this model returns
-device compute latency only.
+The 911 us per-call host<->device DMA floor is M2's, not M1's. The compute ceiling
+(~52 TOPS/core) is NOT modeled: decode never approaches it (issue #16).
 """
 import json
 import math
 from pathlib import Path
 
 _PARAMS = Path(__file__).parent / "params" / "m1_cim.json"
+CORE_WIDTH = 512  # per-core D-IMC crossbar output width (ISSCC 2024)
 
 
 class CimTileModel:
-    def __init__(self, params=None):
+    def __init__(self, params=None, n_cores=None):
         p = params if params is not None else json.loads(_PARAMS.read_text())
-        self.Gmax = p["G_eff_Gmax_gflops"]      # saturated effective throughput
-        self.Nhalf = p["G_eff_Nhalf"]           # half-saturation output channels
-        self.tile = p["crossbar_tile"]          # 2048 x 2048 physical tile
-        self.T_tile_us = p["canonical_tile_us"] # full 2048x2048 tile dev latency
-        self.envelope = p["device_envelope_params"]  # ~6e6 allocatable K*N
-        self.lookup = {int(k): v for k, v in p.get("G_eff_lookup", {}).items()}
-        self.use_lookup = p.get("use_lookup", False)
+        self.n_cores = n_cores if n_cores is not None else p.get("n_cores", 4)
+        self.core_width = p.get("core_width", CORE_WIDTH)
+        # 2D effective-throughput closed form: G = Gmax * N/(N+Na) * K/(K+Kb)  (GOP/s)
+        self.Gmax = p["G_eff_Gmax_gops"]
+        self.Na = p["G_eff_Na"]
+        self.Kb = p["G_eff_Kb"]
+        self.native_max_kn = p.get("native_max_kn", 4_194_304)  # 2048*2048; above = extrapolated
+        self.alloc_envelope = p.get("alloc_envelope_params", 6_000_000)  # SDK weight-alloc limit
 
-    def g_eff(self, N):
-        """Effective throughput (GFLOP/s) vs output-channel fill N (saturating)."""
-        if self.use_lookup and self.lookup:
-            return self._interp(N)
-        return self.Gmax * N / (N + self.Nhalf)
+    @property
+    def width(self):
+        return self.n_cores * self.core_width   # effective combined output width (2048 at n=4)
 
-    def _interp(self, N):
-        xs = sorted(self.lookup)
-        if N <= xs[0]:
-            return self.lookup[xs[0]]
-        if N >= xs[-1]:
-            return self.lookup[xs[-1]]          # saturate above the swept range
-        for a, b in zip(xs, xs[1:]):
-            if a <= N <= b:
-                return self.lookup[a] + (self.lookup[b] - self.lookup[a]) * (N - a) / (b - a)
+    def g_eff(self, N, K):
+        """Effective INT8 throughput (GOP/s) vs output width N and input depth K (2D fill)."""
+        return self.Gmax * (N / (N + self.Na)) * (K / (K + self.Kb))
 
     def dev_lat_us(self, M, K, N):
         """Device compute latency (us) of (M,K)x(K,N). M=1 = decode (calibrated path).
 
-        Two regimes: narrow output (N < one tile) follows the underfill curve
-        FLOPs/G_eff(N); a full/multi-tile output (N >= tile) is n_tiles*T_tile, which
-        matches the padded-tile measured latency (incl. Qwen non-2048 dims, no restore).
-        The wide-K + narrow-N case (e.g. 8B kv-proj K=4096,N=1024) is a known residual
-        the underfill curve over-predicts (reported separately, plan verify e).
+        Tiles the output N into passes of width <= n_cores*512; each pass costs by its OWN
+        size via the 2D throughput, so latency keeps rising across tiles (a partial last
+        tile adds less, not a full tile). K*N > native_max_kn is UNVALIDATED extrapolation.
         """
-        if N < self.tile:                        # narrow output -> underfill curve
-            return 2.0 * M * K * N / (self.g_eff(N) * 1e9) * 1e6
-        return M * self.n_tiles(K, N) * self.T_tile_us
+        W = self.width
+        lat, rem = 0.0, N
+        while rem > 0:
+            n = min(W, rem)
+            lat += 2.0 * M * K * n / (self.g_eff(n, K) * 1e9) * 1e6
+            rem -= n
+        return lat
 
-    def n_tiles(self, K, N):
-        return math.ceil(K / self.tile) * math.ceil(N / self.tile)
+    def is_extrapolated(self, K, N):
+        """True if (K,N) is beyond the largest natively measured single tile."""
+        return K * N > self.native_max_kn
 
-    def is_tiled(self, K, N):
-        return K * N > self.envelope
+    def n_tiles(self, N):
+        return math.ceil(N / self.width)

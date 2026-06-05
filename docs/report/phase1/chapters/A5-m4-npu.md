@@ -43,7 +43,7 @@ Phase 0.3 量測期間，**aetina 板（跑 RKNPU2 的那塊）離線了**——
 
 NPU 補上之後會多兩樣東西：
 - **第二個 offload 對照點**（NPU 原生 attention vs GPU vs CIM penalty）。
-- **「NPU 大投影不需 tiling」的對照**（NPU 不像 CIM 有 2048 crossbar 的切塊限制）。
+- **「NPU 大投影不需 tiling」的對照**（NPU 不像 CIM 有「輸出超過 4核×512=2048 就要分塊」的限制）。
 
 這些會讓 M6 排程器（A8）在「attention 丟 GPU 還是 NPU」上有更完整的依據，但**不影響 Phase 1 已驗證的部分**。
 

@@ -6,7 +6,7 @@
 
 ## B.1 為什麼需要這一步？（零件對不代表整機對）
 
-Part A 證明了每個零件準（M1 的 CIM 3.4%、M4-GPU 的 attention 0.6%…）。但**零件準 ≠ 組起來準**——組合時可能漏項、可能重複計算、可能拓樸假設錯。所以我們要做一個**端到端的重新合成（recompose）**：用校好的公式 + Phase 0.2 的 op 次數，去預測一個真實 LLM 的 **decode 速度（tok/s）**，再跟真晶片比。
+Part A 證明了每個零件準（M1 的 CIM 吞吐 2.7%、M4-GPU 的 attention 0.6%…）。但**零件準 ≠ 組起來準**——組合時可能漏項、可能重複計算、可能拓樸假設錯。所以我們要做一個**端到端的重新合成（recompose）**：用校好的公式 + Phase 0.2 的 op 次數，去預測一個真實 LLM 的 **decode 速度（tok/s）**，再跟真晶片比。
 
 這也呼應 §0.8 的兩種門檻：這裡用的是**較寬鬆的端到端門檻 ≤ 25%**（因為疊了很多元件 + 拓樸假設）。
 
@@ -101,7 +101,7 @@ B.3 的 decode 預測**只用了 weight-streaming 主幹**(`BW_eff/weight_bytes`
 - CIM 的 prefill 投影(M≥512)在裝置上**配置失敗,沒量到**。
 - prefill 的 attention、softmax 是 S×S 形狀,本期沒涵蓋。
 
-我們有量產卡的 prefill 時間錨點(`ttft_s_median`,8B = 3.79 s)。用它反推,**prefill 的 GEMM 吞吐約 4.1 TOPS**——但如果錯用 decode 的吞吐(204 GFLOP/s)去估,會得到荒謬的 75 秒。這個 20 倍的差距正好證明:**prefill 的吞吐和 decode 完全不同,而我們沒量到它**。所以 prefill 預測是 **best-effort、不評分、列為 Phase 2 必補**。
+我們有量產卡的 prefill 時間錨點(`ttft_s_median`,8B = 3.79 s)。用它反推,**prefill 的 GEMM 吞吐約 4.1 TOPS**——但如果錯用 decode 的吞吐(204 GOP/s)去估,會得到荒謬的 75 秒。這個 20 倍的差距正好證明:**prefill 的吞吐和 decode 完全不同,而我們沒量到它**。所以 prefill 預測是 **best-effort、不評分、列為 Phase 2 必補**。
 
 (順帶:vendor 還有一個 `prefill_ms_median` 欄位,但它跨模型都是 ~0.007 s 不變,是個壞掉的 degenerate 欄位,我們棄用、改用會隨模型變的 `ttft_s_median`。)
 

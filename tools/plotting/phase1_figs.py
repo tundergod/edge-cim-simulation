@@ -34,59 +34,67 @@ def load(p):
 
 
 def p1_staircase(mm):
+    """P1: latency vs N at K=2048. Native points only; >2048 = rising UNVALIDATED extrapolation."""
     m = CimTileModel()
-    pts = sorted((r["N"], r["dev_lat_us"]) for r in mm["by_group"]["staircase64"])
-    Ns = [n for n, _ in pts]
-    fig, ax = plt.subplots(figsize=(3.3, 2.4))
-    ax.plot(Ns, [l for _, l in pts], "o", color=S.PALETTE["matmul"], ms=4, label="measured (8B)")
-    xs = np.arange(64, 3137, 32)
-    ax.plot(xs, [m.dev_lat_us(1, 2048, int(x)) for x in xs], "-", color="#333", lw=1, label="fitted")
-    for r in mm["by_group"]["staircase_off64"]:
-        ax.plot(r["N"], r["dev_lat_us"], "x", color=S.PALETTE["residual"], ms=5)
+    nat = sorted((r["N"], r["dev_lat_us"]) for r in mm["by_group"]["staircase64"]
+                 if not r.get("tiled_extrapolated"))          # exclude generated N=3072
+    off = [(r["N"], r["dev_lat_us"]) for r in mm["by_group"]["staircase_off64"]]
+    fig, ax = plt.subplots(figsize=(3.5, 2.5))
+    ax.plot([n for n, _ in nat], [l for _, l in nat], "o", color=S.PALETTE["matmul"], ms=4,
+            label="measured (native)")
+    ax.plot([n for n, _ in off], [l for _, l in off], "x", color=S.PALETTE["residual"], ms=5,
+            label="off-64 probe (native)")
+    x1 = np.arange(64, 2049, 16)
+    ax.plot(x1, [m.dev_lat_us(1, 2048, int(x)) for x in x1], "-", color="#333", lw=1.1,
+            label="model (calibrated)")
+    x2 = np.arange(2048, 4097, 16)
+    ax.plot(x2, [m.dev_lat_us(1, 2048, int(x)) for x in x2], "--", color=S.PALETTE["attention"],
+            lw=1.2, label="model (extrapolation, UNVALIDATED)")
+    ax.axvline(2048, ls=":", color="#aaa", lw=0.8)
+    ax.text(2120, 13, "4 cores x 512 = 2048\nno native data above", fontsize=5, color="#888")
     ax.set_xlabel("output channels N (K=2048, M=1)")
     ax.set_ylabel("dev latency (us)")
-    ax.set_title("P1  CIM channel-64 staircase")
-    ax.legend(loc="upper left")
+    ax.set_title("P1  CIM latency vs N — >2048 rises (not flat), unvalidated")
+    ax.legend(loc="upper left", fontsize=5)
     S.save(fig, FIG / "P1_cim_staircase")
 
 
-def p2_proj_fit(mm):
-    m = CimTileModel()
-    fig, ax = plt.subplots(figsize=(3.3, 2.4))
-    for r in mm["by_group"]["proj_decode"]:
-        if r.get("dev_lat_us") is None:
-            continue
-        kn = r["K"] * r["N"]
-        held = r["model"] in ("llama-3.1-8b", "qwen2.5-7b")
-        ax.scatter(kn, r["dev_lat_us"], s=26, color=MCOL[r["model"]],
-                   marker="D" if held else "o", edgecolor="k" if held else "none", lw=0.5)
-    xs = np.logspace(6, 8.2, 60)
-    ax.plot(xs, [m.dev_lat_us(1, 2048, int(x / 2048)) for x in xs], "-", color="#999", lw=0.8,
-            label="fitted (K=2048 slice)")
-    ax.set_xscale("log"); ax.set_yscale("log")
-    ax.set_xlabel("weight size K*N (params)")
-    ax.set_ylabel("dev latency (us)")
-    ax.set_title("P2  CIM decode GEMV fit (diamond=held-out 8B/Qwen)")
-    handles = [plt.Line2D([], [], marker="o", ls="", color=MCOL[m_], label=m_.split("-")[-1])
-               for m_ in MCOL]
-    ax.legend(handles=handles, fontsize=5, loc="upper left")
-    S.save(fig, FIG / "P2_cim_proj_fit")
+KCOL = {1024: "#56B4E9", 2048: "#0072B2", 3072: "#009E73", 3584: "#CC79A7", 4096: "#D55E00"}
 
 
-def p3_fiterr_cdf(m1):
-    g = m1["compute_fit_gate_G_eff_staircase"]
-    # reconstruct per-point errs not stored; show the gate stats as a step CDF proxy
-    errs = np.array([0.0, g["median"], g["p95"], g["max"]])
-    errs = np.sort(errs)
-    fig, ax = plt.subplots(figsize=(3.3, 2.4))
-    ys = np.linspace(0, 1, len(errs))
-    ax.step(errs * 100, ys, where="post", color=S.PALETTE["matmul"], lw=1.4)
+def p2_geff(m1params):
+    """P2: 2D effective throughput G_eff(N,K) — measured (dots) vs 2D fit (lines), per K."""
+    m = CimTileModel(m1params)
+    pts = m1params["native_throughput_points"]
+    fig, ax = plt.subplots(figsize=(3.5, 2.5))
+    for K in sorted({p["K"] for p in pts}):
+        kp = sorted([p for p in pts if p["K"] == K], key=lambda x: x["N"])
+        c = KCOL.get(K, "#999")
+        ax.scatter([p["N"] for p in kp], [p["gops"] for p in kp], s=24, color=c, zorder=3,
+                   label=f"K={K}")
+        Nf = np.linspace(64, 2048, 40)
+        ax.plot(Nf, [m.g_eff(n, K) for n in Nf], "-", color=c, lw=0.9, alpha=0.8)
+    ax.set_xlabel("output channels N")
+    ax.set_ylabel("effective throughput (GOP/s, INT8)")
+    ax.set_title("P2  CIM G_eff(N,K): meas (dots) vs 2D fit (lines)")
+    ax.legend(fontsize=5, title="wider K -> higher", title_fontsize=5)
+    S.save(fig, FIG / "P2_cim_geff")
+
+
+def p3_fiterr_cdf(m1params):
+    """P3: CDF of the native throughput-fit relative error vs the 10%/20% targets."""
+    m = CimTileModel(m1params)
+    errs = np.sort([abs(m.g_eff(p["N"], p["K"]) - p["gops"]) / p["gops"]
+                    for p in m1params["native_throughput_points"]])
+    fig, ax = plt.subplots(figsize=(3.5, 2.5))
+    ys = np.arange(1, len(errs) + 1) / len(errs)
+    ax.step(errs * 100, ys, where="post", color=S.PALETTE["matmul"], lw=1.5)
     ax.axvline(10, ls="--", color=S.PALETTE["attention"], lw=0.9, label="median target 10%")
     ax.axvline(20, ls=":", color=S.PALETTE["residual"], lw=0.9, label="p95 target 20%")
-    ax.set_xlabel("G_eff relative error (%)")
+    ax.set_xlabel("G_eff(N,K) relative error (%)")
     ax.set_ylabel("cumulative fraction")
-    ax.set_title("P3  M1 G_eff fit error (median %.0f%%, p95 %.0f%%)"
-                 % (g["median"] * 100, g["p95"] * 100))
+    ax.set_title("P3  M1 throughput fit error (median %.0f%%, n=%d)"
+                 % (np.median(errs) * 100, len(errs)))
     ax.legend(fontsize=5)
     S.save(fig, FIG / "P3_m1_fiterr_cdf")
 
@@ -254,9 +262,10 @@ def p7_attn(c4, gpu_params):
 
 def main():
     mm = load(AET / "metis_alpha_matmul.json")
+    m1params = load(ROOT / "simulator/models/params/m1_cim.json")
     p1_staircase(mm)
-    p2_proj_fit(mm)
-    p3_fiterr_cdf(load(REP / "m1.json"))
+    p2_geff(m1params)
+    p3_fiterr_cdf(m1params)
     p4_mali_ksweep(load(AET / "mali_matmul.json"))
     p5_cpu(load(REP / "m4_cpu.json"))
     m2_pcie_floor()
