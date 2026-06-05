@@ -2,7 +2,7 @@
 
 Reads  measurements/aetina/metis_alpha_matmul.json + _raw.json (native flags)
 Writes simulator/models/params/m1_cim.json   (2D G_eff params, n_cores=4)
-       validation/reports/phase1/m1.json             (native fit errors + native/generated split)
+       validation/reports/phase1.1/m1.json             (native fit errors + native/generated split)
 
 Architecture (papers/metis-silicon/metis-aipu-isscc2024.md): quad-core, 512x512 per core.
 G_eff(N,K) (GOP/s, INT8) rises with output width N AND input depth K -> fit a 2D closed form
@@ -23,7 +23,7 @@ from simulator.models.m1_cim_tile import CimTileModel  # noqa: E402
 
 AET = ROOT / "measurements/aetina"
 PARAMS = ROOT / "simulator/models/params/m1_cim.json"
-REPORT = ROOT / "validation/reports/phase1/m1.json"
+REPORT = ROOT / "validation/reports/phase1.1/m1.json"
 NATIVE_MAX_KN = 2048 * 2048   # 4.19M params = largest natively measured single tile
 
 

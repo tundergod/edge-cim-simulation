@@ -2,7 +2,7 @@
 
 Reads  measurements/aetina/mali_matmul.json (groups: attn, ksweep, proj_decode)
 Writes simulator/models/params/m4_gpu.json
-       validation/reports/phase1/m4_gpu.json
+       validation/reports/phase1.1/m4_gpu.json
 
 attn_bmm_us(kv) (single-head QK^T+S.V, f16) is fit linear in kv -> the offload reference.
 GEMM absolute throughput is a LOWER BOUND (unoptimised kernel); we record the ksweep
@@ -85,7 +85,7 @@ def main():
         "notes": {"role": "GPU = attention offload; CIM does the projections. attn latency is "
                           "the validated GPU deliverable; GEMM absolute is a lower bound."},
     }
-    (ROOT / "validation/reports/phase1/m4_gpu.json").write_text(json.dumps(report, indent=1))
+    (ROOT / "validation/reports/phase1.1/m4_gpu.json").write_text(json.dumps(report, indent=1))
     g = report["attn_offload_gate"]
     print(f"M4-GPU: attn_bmm_us = {params['attn_bmm_a_us']} + {params['attn_bmm_b_us_per_kv']}*kv")
     print(f"  attn offload fit: median={g['median_relerr']} p95={g['p95_relerr']} "

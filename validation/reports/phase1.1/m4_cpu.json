@@ -1,0 +1,164 @@
+{
+ "module": "m4_cpu",
+ "equation": {
+  "softmax": "us = a + b*kv per (model,dtype)",
+  "other": "per-(model,dtype) constant (no within-op sweep)"
+ },
+ "softmax_fit_gate": {
+  "n": 24,
+  "median": 0.003,
+  "p95": 0.018,
+  "max": 0.034,
+  "pass_median_le_0.10": true,
+  "pass_p95_le_0.20": true
+ },
+ "const_ops": [
+  "rmsnorm",
+  "rope_apply",
+  "residual",
+  "swiglu",
+  "sampling_argmax"
+ ],
+ "const_us": {
+  "rmsnorm": {
+   "llama-3.2-1b": {
+    "fp16": 88.96,
+    "fp32": 21.0
+   },
+   "llama-3.2-3b": {
+    "fp16": 123.08,
+    "fp32": 22.46
+   },
+   "llama-3.1-8b": {
+    "fp16": 157.21,
+    "fp32": 23.62
+   },
+   "qwen2.5-7b": {
+    "fp16": 139.71,
+    "fp32": 23.04
+   }
+  },
+  "rope_apply": {
+   "llama-3.2-1b": {
+    "fp16": 81.96,
+    "fp32": 25.67
+   },
+   "llama-3.2-3b": {
+    "fp16": 112.87,
+    "fp32": 29.17
+   },
+   "llama-3.1-8b": {
+    "fp16": 144.37,
+    "fp32": 32.37
+   },
+   "qwen2.5-7b": {
+    "fp16": 128.62,
+    "fp32": 30.33
+   }
+  },
+  "residual": {
+   "llama-3.2-1b": {
+    "fp16": 21.58,
+    "fp32": 1.75
+   },
+   "llama-3.2-3b": {
+    "fp16": 31.79,
+    "fp32": 1.9
+   },
+   "llama-3.1-8b": {
+    "fp16": 41.71,
+    "fp32": 2.04
+   },
+   "qwen2.5-7b": {
+    "fp16": 36.75,
+    "fp32": 2.04
+   }
+  },
+  "swiglu": {
+   "llama-3.2-1b": {
+    "fp16": 321.7,
+    "fp32": 103.98
+   },
+   "llama-3.2-3b": {
+    "fp16": 321.12,
+    "fp32": 101.21
+   },
+   "llama-3.1-8b": {
+    "fp16": 557.8,
+    "fp32": 170.62
+   },
+   "qwen2.5-7b": {
+    "fp16": 733.52,
+    "fp32": 227.2
+   }
+  },
+  "sampling_argmax": {
+   "llama-3.2-1b": {
+    "fp16": 986.98,
+    "fp32": 53.66
+   },
+   "llama-3.2-3b": {
+    "fp16": 987.56,
+    "fp32": 53.37
+   },
+   "llama-3.1-8b": {
+    "fp16": 985.52,
+    "fp32": 52.5
+   },
+   "qwen2.5-7b": {
+    "fp16": 1171.02,
+    "fp32": 61.54
+   }
+  }
+ },
+ "softmax_linear": {
+  "llama-3.2-1b": {
+   "fp16": {
+    "a": 12.44,
+    "b": 1.5535
+   },
+   "fp32": {
+    "a": 15.72,
+    "b": 0.3779
+   }
+  },
+  "llama-3.2-3b": {
+   "fp16": {
+    "a": 12.14,
+    "b": 1.1655
+   },
+   "fp32": {
+    "a": 12.46,
+    "b": 0.2922
+   }
+  },
+  "llama-3.1-8b": {
+   "fp16": {
+    "a": 12.34,
+    "b": 1.5529
+   },
+   "fp32": {
+    "a": 16.55,
+    "b": 0.375
+   }
+  },
+  "qwen2.5-7b": {
+   "fp16": {
+    "a": 12.41,
+    "b": 1.3593
+   },
+   "fp32": {
+    "a": 14.45,
+    "b": 0.3301
+   }
+  }
+ },
+ "sanity": {
+  "softmax_monotonic_in_kv": true,
+  "fp16_is_upper_bound": "numpy-emulated on A76 (provenance: phase0.3-findings, not a cpu_ops.json field)"
+ },
+ "notes": {
+  "prefill": "decode (1-token) costs; prefill = x S tokens analytic, UNVALIDATED",
+  "issue_10": "measured latencies used, NOT analytic 1-flop/elem FLOPs"
+ }
+}

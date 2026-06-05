@@ -1,0 +1,170 @@
+{
+ "module": "m4_gpu",
+ "equation": {
+  "attn": "attn_bmm_us = a + b*kv (single-head qkT+sv, f16)",
+  "gemm": "gemm_lat_us = FLOPs/g_sat (LOWER BOUND)"
+ },
+ "params": {
+  "_doc": "M4 Mali-G610. attn_bmm_us(kv)=a+b*kv single-head f16 (offload ref). GEMM absolute = LOWER BOUND (unoptimised kernel).",
+  "attn_bmm_a_us": 27.742,
+  "attn_bmm_b_us_per_kv": 0.44208,
+  "gemm_gflops_saturated_lowerbound": 20.12,
+  "ksweep_saturation_M": 128
+ },
+ "attn_offload_gate": {
+  "set": "decode single-head attn, kv=[128, 512, 1024]",
+  "fit_us": {
+   "128": 84.3,
+   "512": 254.1,
+   "1024": 480.4
+  },
+  "meas_us": {
+   "128": 83.4,
+   "512": 255.7,
+   "1024": 479.7
+  },
+  "median_relerr": 0.006,
+  "p95_relerr": 0.011,
+  "max_relerr": 0.011,
+  "pass_median_le_0.10": true,
+  "pass_p95_le_0.20": true
+ },
+ "ksweep_saturation": {
+  "g_sat_gflops_f16": 20.12,
+  "saturates_at_M": 128,
+  "note": "absolute throughput = LOWER BOUND (unoptimised kernel)"
+ },
+ "gemm_proj_decode_trend_lowerbound": [
+  {
+   "tag": "1b",
+   "K": 2048,
+   "N": 2048,
+   "meas_us": 19552.0,
+   "lb_pred_us": 416.9,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "1b",
+   "K": 2048,
+   "N": 512,
+   "meas_us": 1596.2,
+   "lb_pred_us": 104.2,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "1b",
+   "K": 2048,
+   "N": 8192,
+   "meas_us": 27029.9,
+   "lb_pred_us": 1667.7,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "1b",
+   "K": 8192,
+   "N": 2048,
+   "meas_us": 26529.9,
+   "lb_pred_us": 1667.7,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "3b",
+   "K": 3072,
+   "N": 3072,
+   "meas_us": 14742.6,
+   "lb_pred_us": 938.1,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "3b",
+   "K": 3072,
+   "N": 1024,
+   "meas_us": 4857.2,
+   "lb_pred_us": 312.7,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "3b",
+   "K": 3072,
+   "N": 8192,
+   "meas_us": 40101.2,
+   "lb_pred_us": 2501.6,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "3b",
+   "K": 8192,
+   "N": 3072,
+   "meas_us": 39148.4,
+   "lb_pred_us": 2501.6,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "8b",
+   "K": 4096,
+   "N": 4096,
+   "meas_us": 26113.9,
+   "lb_pred_us": 1667.7,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "8b",
+   "K": 4096,
+   "N": 1024,
+   "meas_us": 6438.0,
+   "lb_pred_us": 416.9,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "8b",
+   "K": 4096,
+   "N": 14336,
+   "meas_us": 95088.0,
+   "lb_pred_us": 5837.0,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "8b",
+   "K": 14336,
+   "N": 4096,
+   "meas_us": 92182.3,
+   "lb_pred_us": 5837.0,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "qwen",
+   "K": 3584,
+   "N": 3584,
+   "meas_us": 19886.6,
+   "lb_pred_us": 1276.8,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "qwen",
+   "K": 3584,
+   "N": 512,
+   "meas_us": 2807.3,
+   "lb_pred_us": 182.4,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "qwen",
+   "K": 3584,
+   "N": 18944,
+   "meas_us": 109779.8,
+   "lb_pred_us": 6749.0,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  },
+  {
+   "tag": "qwen",
+   "K": 18944,
+   "N": 3584,
+   "meas_us": 106325.5,
+   "lb_pred_us": 6749.0,
+   "note": "GEMV latency-bound; pred is a compute lower bound"
+  }
+ ],
+ "notes": {
+  "role": "GPU = attention offload; CIM does the projections. attn latency is the validated GPU deliverable; GEMM absolute is a lower bound."
+ }
+}

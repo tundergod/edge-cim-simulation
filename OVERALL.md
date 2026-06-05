@@ -96,8 +96,10 @@
 | **Phase 0.2** | **op 統計 / workload-op profile**（純軟體：由 0.1 的 trace，算每個 (model × workload) **逐-sig** 執行次數 + FLOPs / bytes / operational intensity + prefill/decode 拆分）。產出 `measurements/op_profile/`。 | 加權 + 排序 0.3 板上量測；供端到端成本合成與 roofline |
 | **Phase 0.3** | **真實板量測（除溫度外全部）**：各單元 micro-benchmark + 端到端 LLM + variance（量測優先序由 0.2 profile 決定）。產出 `measurements/aetina,metis_card/`。 | 即可開始 Phase 1 / Phase 2 |
 | **Phase 0.4** | **溫度／熱特性量測**（兩平台；耗時較久）。可與 Phase 1/2 並行。 | 熱模組（M8，選用）才加入 |
-| **Phase 1** | 每個 component 的建模與驗證：對每組 micro-benchmark 擬合**方程式**（取代龐大 lookup table）；逐一驗證各 component（含非 micro-benchmark 的 M3/M5/M6/M7）準確度與需調參數。 | 得到校好的 component 模型 |
-| **Phase 2** | 模擬器實作（整合）：把校好的 component 整合成端到端 event-driven 模擬器，跑完整 prefill+decode，做 L4/L6 端到端驗證、L5 敏感度、混合精度。 | 完整模擬器 |
+| **Phase 1**（傘狀：component 建模與驗證） | 每個 component 的建模與驗證：對每組量測擬合**方程式**（取代龐大 lookup table）；逐一驗證各 component 準確度與需調參數。分兩個子階段（依**資料來源**切，不依模組）：見下兩列。 | 得到校好、誠實標註的 component 模型，交給 Phase 2 |
+| &nbsp;&nbsp;**Phase 1.1**（已完成 ✅） | **以自家 Metis silicon 量測校準並通過 ADR-0006 gate 的 component**：M1-CIM（2D G_eff，2.7%）、M4-GPU（Mali）、M4-CPU（softmax/elementwise 已量測部分）、M2-DRAM（量產卡 LPDDR4x）、M5-trace、M7-energy，外加端到端 recompose hold-out（8B 9.5%）。報告 `docs/report/phase1.1/`。 | 量測級可信的核心 decode 路徑（CIM 算 + 記憶體搬） |
+| &nbsp;&nbsp;**Phase 1.2**（進行中） | **缺自家 silicon 量測、需以模擬器／datasheet／文獻補的 component**：**NPU**（aetina 離線 #13 → ONNXim 模擬 + HeteroInfer 交叉驗證）、**DRAM SoC 階層**（LPDDR5 + L1/L2 SRAM residency，量產卡是 LPDDR4x、Alpha 無 on-card DRAM）、**CPU 完整計算模型**（承接 1.1 的 softmax 量測，補任意 support op）。這些 model 明確標 **simulated, not silicon-validated**（gate 較弱，對外部參照而非自家量測）；板子回線可再補量測升級。 | 補齊 offload 第二候選（NPU）與記憶體階層，所有 component 齊備 |
+| **Phase 2** | 模擬器實作（整合）：**等 Phase 1.1 + 1.2 所有 component 都建好、測過**，把校好的 component 整合成端到端 event-driven 模擬器（M3 事件引擎 + M6 排程器），跑完整 prefill+decode，做 L4/L6 端到端驗證、L5 敏感度、混合精度。 | 完整模擬器 |
 | **（深入討論）** | 完成上述後，針對 Phase 0/1 做更深入的架構與實作確認（見文末檢查點）。 | 確認方向正確再大量實作 |
 
 > **資料與圖的可重現原則（所有量測 phase 一律遵守）**：每次量測一律存**原始數據**——所有 timed iteration 的原值 + 每個 sweep 點的兩軸值 + config + 單位，**不只存 median/p95 摘要**；板上 raw log 原檔（`axllm --show-stats`、rknn profile、`axrunmodel` bench）一併納版控。所有圖都是 **build artifact**：`tools/plotting/` 每張圖一支 script，只吃 committed 數據重產（roofline、op-breakdown、Fig 1/3/4/5 對應圖），**絕不手繪**；任何人可從 repo 一鍵重畫每張圖。

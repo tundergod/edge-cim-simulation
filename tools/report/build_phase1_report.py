@@ -1,6 +1,6 @@
-"""Build the Phase 1 long-form HTML report (build artifact) from the chapter markdown.
+"""Build the Phase 1.1 long-form HTML report (build artifact) from the chapter markdown.
 
-Stitches docs/report/phase1/chapters/*.md into one polished, beginner-friendly HTML
+Stitches docs/report/phase1.1/chapters/*.md into one polished, beginner-friendly HTML
 (editorial technical-methods aesthetic, sticky sidebar TOC, figures base64-embedded so
 HTML + PDF are self-contained). Then print to PDF with headless Chromium.
 
@@ -13,16 +13,16 @@ from pathlib import Path
 import markdown as md
 
 ROOT = Path(__file__).resolve().parents[2]
-CH = ROOT / "docs/report/phase1/chapters"
-FIG = ROOT / "docs/figures/phase1"
-OUT = ROOT / "docs/report/phase1/index.html"
+CH = ROOT / "docs/report/phase1.1/chapters"
+FIG = ROOT / "docs/figures/phase1.1"
+OUT = ROOT / "docs/report/phase1.1/index.html"
 
 ORDER = ["00-intro", "A1-m1-cim", "A2-m2-memory", "A3-m4-gpu", "A4-m4-cpu",
          "A5-m4-npu", "A6-m5-trace", "A7-m7-energy", "A8-m3-m6", "B-llm-combined"]
 
 
 def embed_figs(html):
-    """Replace ../../../figures/phase1/NAME.png src with base64 data URIs."""
+    """Replace ../../../figures/phase1.1/NAME.png src with base64 data URIs."""
     def repl(m):
         name = m.group(1)
         p = FIG / f"{name}.png"
@@ -30,7 +30,7 @@ def embed_figs(html):
             return m.group(0)
         b = base64.b64encode(p.read_bytes()).decode()
         return f'src="data:image/png;base64,{b}"'
-    return re.sub(r'src="(?:\.\./)+figures/phase1/([^"]+)\.png"', repl, html)
+    return re.sub(r'src="(?:\.\./)+figures/phase1\.1/([^"]+)\.png"', repl, html)
 
 
 def main():
@@ -67,7 +67,7 @@ def main():
 
     HTML = f"""<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Phase 1 — 元件建模與驗證（完整解說報告）</title>
+<title>Phase 1.1 — 元件建模與驗證（完整解說報告）</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
@@ -127,13 +127,13 @@ hr{{border:none;border-top:1px solid var(--line);margin:26px 0}}
 </style></head><body>
 
 <nav class="sidebar">
-  <div class="brand">Edge-CIM · Phase 1</div>
+  <div class="brand">Edge-CIM · Phase 1.1</div>
   <ul>{toc_html}</ul>
 </nav>
 
 <div class="main">
   <header class="cover">
-    <div class="eyebrow">Edge-CIM Simulation · Phase 1 · 完整解說報告</div>
+    <div class="eyebrow">Edge-CIM Simulation · Phase 1.1 · 完整解說報告</div>
     <h1>元件建模與驗證</h1>
     <p class="lede">把真實 Metis 晶片的量測，變成可解釋、可外推、誠實標註的延遲方程式——寫給每一個想看懂的人（CS 大學部背景即可）。</p>
     <div class="meta"><span>2026-06-05</span><span>decode-calibrated</span><span>由淺入深 · 不漏細節</span><span>所有數字皆可從 committed JSON 重產</span></div>

@@ -1,7 +1,7 @@
 """Phase 1 figures (build artifacts, nature-figure style). 7 figures P1-P7.
 
-Each figure is regenerable from committed JSON (measurements/ + validation/reports/phase1/ +
-simulator/models/params/). Writes PNG (for the HTML report) + PDF + SVG to docs/figures/phase1/.
+Each figure is regenerable from committed JSON (measurements/ + validation/reports/phase1.1/ +
+simulator/models/params/). Writes PNG (for the HTML report) + PDF + SVG to docs/figures/phase1.1/.
 
 Run: ./.venv/bin/python tools/plotting/phase1_figs.py
 """
@@ -23,8 +23,8 @@ from simulator.models.m1_cim_tile import CimTileModel  # noqa: E402
 AET = ROOT / "measurements/aetina"
 MC = ROOT / "measurements/metis_card"
 OP = ROOT / "measurements/op_profile"
-REP = ROOT / "validation/reports/phase1"
-FIG = ROOT / "docs/figures/phase1"
+REP = ROOT / "validation/reports/phase1.1"
+FIG = ROOT / "docs/figures/phase1.1"
 MCOL = {"llama-3.2-1b": S.PALETTE["matmul"], "llama-3.2-3b": S.PALETTE["ffn"],
         "llama-3.1-8b": S.PALETTE["attention"], "qwen2.5-7b": S.PALETTE["rope"]}
 
