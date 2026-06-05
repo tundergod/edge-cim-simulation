@@ -121,7 +121,7 @@ def main():
             "est_using_decode_GEMV_throughput_s": round(pf_compute_decodeGEMV_s, 1),
             "memory_bound_floor_s": round(pf_memory_s, 3),
             "note": "UNGATED. Vendor TTFT implies ~%.0f TOPS effective prefill GEMM throughput, "
-                    "but decode-GEMV throughput (204 GFLOP/s=0.2 TOPS) gives an absurd %.0fs -> "
+                    "but decode-GEMV throughput (204 GOP/s=0.2 TOPS) gives an absurd %.0fs -> "
                     "prefill GEMM runs ~20x faster than decode GEMV and is UNMEASURED (proj M>=512 "
                     "device-fail; prefill attention S-scaling 1 pt; softmax S x S). Prefill path "
                     "unvalidated; Phase-2 gap. prefill_ms_median degenerate, unused."

@@ -40,6 +40,6 @@
   "implied_prefill_throughput_TOPS": 4.05,
   "est_using_decode_GEMV_throughput_s": 75.4,
   "memory_bound_floor_s": 0.409,
-  "note": "UNGATED. Vendor TTFT implies ~4 TOPS effective prefill GEMM throughput, but decode-GEMV throughput (204 GFLOP/s=0.2 TOPS) gives an absurd 75s -> prefill GEMM runs ~20x faster than decode GEMV and is UNMEASURED (proj M>=512 device-fail; prefill attention S-scaling 1 pt; softmax S x S). Prefill path unvalidated; Phase-2 gap. prefill_ms_median degenerate, unused."
+  "note": "UNGATED. Vendor TTFT implies ~4 TOPS effective prefill GEMM throughput, but decode-GEMV throughput (204 GOP/s=0.2 TOPS) gives an absurd 75s -> prefill GEMM runs ~20x faster than decode GEMV and is UNMEASURED (proj M>=512 device-fail; prefill attention S-scaling 1 pt; softmax S x S). Prefill path unvalidated; Phase-2 gap. prefill_ms_median degenerate, unused."
  }
 }
