@@ -10,7 +10,9 @@
 
 ---
 
-## 保留清單（16 篇）
+## 保留清單（17 篇）
+
+> 2026-06-05 新增 [configuration-wall-asplos2026](methodology-and-simulators/configuration-wall-asplos2026.md)（DMA-bottleneck triage，見文末）。
 
 圖例：📄 = 已附原始 PDF／HTML；🔗 = 原始檔僅有網址（未附本地檔）。每篇標注**對實作的用途**。
 
@@ -30,6 +32,7 @@
 | [neurosim-validation-frontiers2021](methodology-and-simulators/neurosim-validation-frontiers2021.md) | 🔗 [URL](https://pmc.ncbi.nlm.nih.gov/articles/PMC8219932/) | D4 驗證範式（對真實晶片校準、<1% 誤差）→ **L1** 交叉驗證與 **M1** 可信度所複製的樣板 |
 | [dnn-neurosim-v1-iedm2019](methodology-and-simulators/dnn-neurosim-v1-iedm2019.md) | 📄 pdf | CIM tile 的 timing/energy 模型 → **M1** 的選用性物理交叉檢查（NeuroSim cross-check） |
 | [gem5-salam-merge-2025](methodology-and-simulators/gem5-salam-merge-2025.md) | 🔗 [URL](https://www.gem5.org/2025/07/30/gem5AccHetSimBlog.html) | 評估後未採用的建構路徑 → 影響 **M3** event-engine 架構決策（含 risk #1 的退路選項） |
+| [configuration-wall-asplos2026](methodology-and-simulators/configuration-wall-asplos2026.md) | 📄 pdf | **per-call overhead 的形式化。** Configuration roofline（`I_OC`、`BW_Config`）+ dedup/overlap 編譯優化 → 我方 round-trip-tax thesis 的學理一般化；驅動 **M2/M3**（per-call overhead 時序形式）、**M6**（dedup/overlap 槓桿）、roofline 驗證的第三軸。⚠ 明確不含 DMA 資料搬移（只建模 setup/config 半邊；substrate 為 tightly-coupled，非 PCIe）|
 
 ### metis-silicon/ — 我方真實晶片調查（校準 ground truth）
 | 筆記 | 原始檔 | 對實作的用途 |
@@ -70,3 +73,18 @@
 > - `dnn-neurosim-v1`（保留）：若最終走純 trace-driven lookup（risk #1 退路），其角色從必需降為選用，但仍建議保留。
 > - `gem5-salam`（保留）：屬「評估後未採用」的路徑；若視為純 related-work 可移除。
 > - `lp-spec`（保留）：mobile 平台最接近競品，但其具體技術（LPDDR-PIM 上的 speculative decode）超出我們範圍；保留主要取其 mobile NPU+PIM 分派建模。
+
+---
+
+## DMA-bottleneck triage（2026-06-05）
+
+針對 Phase 0.3 觀察到的 per-call DMA round-trip bottleneck，評估 4 篇候選論文是否「直接相關」。**保留 1、排除 3**（同 cent/cxl-pnm 的 substrate-mismatch 標準）：
+
+| 論文 | 判定 | 理由 |
+|---|---|---|
+| **The Configuration Wall**（ASPLOS'26）| ✅ **ingest** | per-call overhead 的 configuration roofline 一般化我方 round-trip-tax；驅動 M2/M3/M6 + roofline 第三軸。⚠ 明確不含 DMA 資料搬移（只建模 setup/config 半邊；tightly-coupled 非 PCIe）|
+| **QuCo**（HPCA'26，Murcia+W&M+NVIDIA）| ❌ excluded | GPU **TMA** tile-transfer 自動配置 HW unit；NVIDIA-GPU substrate 屬 future work（Mali 才是我方 SoC GPU；NVIDIA = 延後的 Accel-Sim plug-in），v1 無模組可驅動。Configuration Wall 的 GPU-DMA 姊妹作 |
+| **COMET**（HPCA'26，NUDT+PKU）| ❌ excluded | multi-chiplet-module（MCM）on-package 互連 + 記憶體 co-design；我方拓樸是 host-SoC + 單一 CIM-on-PCIe，非多 chiplet 加速器，comms 模型不對應 |
+| **Fastmove**（FAST'23，USTC+SmartX）| ❌ excluded | on-chip DMA（Intel I/OAT 類）做 DRAM↔NVM 儲存搬移 + CPU/DMA load-splitting；主題相鄰但 DMA 領域不同（儲存非加速器 offload），無可轉用之 PCIe round-trip 模型 |
+
+> 若不同意排除判斷（特別是 QuCo——它是「DMA tile-transfer 配置開銷」最貼題的一篇，只差在 GPU substrate），告知即可補 ingest 為 related-work 定位。
