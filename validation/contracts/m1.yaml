@@ -7,7 +7,7 @@ acceptance_criteria:                               # ADR-0006 Phase-1
   - {type: p95_op_error, threshold: 20%, scope: 2D G_eff(N,K) native single-tile fit}
   - {type: sanity, rules: [no_nan_or_inf, dev_lat_positive, monotonic_rising_in_N]}
 reported_not_gated:
-  - high_K_corner_residual             # 8B kv K4096xN1024 over-predicted +21.5% (now a native fit pt, GOP/s)
+  - high_K_corner_residual             # 8B kv K4096xN1024: latency over-pred +21.5% (= throughput under-pred 17.6%); native fit pt, GOP/s
   - multitile_tiling_residual          # the 1 native multi-tile pt (N4096,K1024) over-predicted +36%, UNVALIDATED
 nonequation_regions:
   - lm_head_N_128k_152k                # analytic tile-sum, no measurement

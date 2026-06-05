@@ -576,9 +576,9 @@ G_eff(N,K) = Gmax · N/(N+Na) · K/(K+Kb)   # 2D 有效吞吐（GOP/s）
 <td>那筆 911µs 固定成本 + 頻寬</td>
 </tr>
 <tr>
-<td><strong>2b host LPDDR5</strong></td>
-<td>模擬 SoC 的主記憶體頻寬</td>
-<td>24 GB/s 的記憶體牆</td>
+<td><strong>2b host DRAM</strong></td>
+<td>host 主記憶體頻寬（量測=量產卡 <strong>LPDDR4x</strong>；模擬 SoC=<strong>LPDDR5</strong>）</td>
+<td>量測 ~24 GB/s 的記憶體牆</td>
 </tr>
 <tr>
 <td><strong>2c kv_cache</strong></td>
@@ -653,7 +653,7 @@ transfer_us  = 911 µs          + bytes ÷ 3.9 GB/s
 </blockquote>
 <p><strong>更新(依架構研究需求):Phase 2 要建 L1/L2 residency 模型。</strong> 因為這個模擬器之後要做<strong>架構研究</strong>:一旦我們把當前的「記憶體牆」瓶頸解掉(換更快的記憶體、加大 SRAM、改拓樸…),<strong>L1(每核 4 MiB)/L2(32 MiB 共享)能不能放下權重/KV,就會變成決定性的變數</strong>。要回答「如果權重能整個放進 L2,decode 會快多少」這類問題,就<strong>必須把真實的 SRAM 階層還原進模擬器</strong>。所以:</p>
 <ul>
-<li><strong>建</strong> L1(4 MiB/核)+ L2(32 MiB 共享)的 residency 模型(尺寸見 A1.2 與論文 Table C);資料放 L1/L2/DRAM 哪一層、各層頻寬與容量,都要顯式建模。</li>
+<li><strong>建</strong> L1(4 MiB/核)+ L2(32 MiB 共享)的 residency 模型(尺寸見 A1.2 的 device-envelope 段與 <a href="../../../../papers/metis-silicon/metis-aipu-isscc2024.md">AIPU 論文筆記</a>);資料放 L1/L2/DRAM 哪一層、各層頻寬與容量,都要顯式建模。</li>
 <li>Alpha 的「l2/ddr 無差異」量測<strong>只描述 Alpha 這塊板</strong>,不能當「不必建」的依據。</li>
 <li>M2 合約已從「不建」改成「<strong>Phase 2 建 L1/L2</strong>」。</li>
 <li>一切硬體都<strong>還原最真實的情況</strong>——這是讓模擬器能拿來做架構探索的前提。</li>

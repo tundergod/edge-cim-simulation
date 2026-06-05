@@ -53,7 +53,8 @@ max 17.6%**.
   ~6 M-param envelope, no measurement) — **NOT** presented as 0%-error.
 - **K-effect is FITTED** (retracts the prior "unfittable, single point" claim): wider K raises
   throughput (N=512: K2048→112.6 vs K3584→147.4; N=1024: K2048→170 vs K4096→227); the 2D fit
-  captures it, and the high-K corner (8B kv K4096×N1024) is over-predicted **+21.5%**, shown not hidden.
+  captures it, and the high-K corner (8B kv K4096×N1024) has **latency over-predicted +21.5%
+  (= throughput under-predicted 17.6%)**, shown not hidden.
 - **Multi-tile = UNVALIDATED:** the one native multi-tile point (N=4096,K=1024 = 37.1µs) is
   over-predicted **+36%** (continued-rise tiling is pessimistic); everything K·N > 4.19M is
   extrapolation (board offline → cannot re-measure; issues #2/#11/#17). lm_head N≈128k/152k and
