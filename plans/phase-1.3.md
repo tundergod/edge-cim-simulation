@@ -1,6 +1,6 @@
 # Plan: Phase 1.3 — Wave 2：重型保真模擬引擎（ONNXim / Ramulator2）
 
-範圍：把兩個 **C++ 重型 sim** 插進 Phase 1.2 已就緒的**共用引擎介面**（`UnitEngine.predict(workload,spec)`），當**更高保真的可換引擎**：**ONNXim**（NPU）、**Ramulator2**（記憶體 DRAM）。皆標 `simulated, not silicon-validated`。**前提**：Phase 1.2 已 merge（spec 層 + 共用介面 + analytic 引擎齊備）。分支 `phase-1.3`。可平行（ONNXim ∥ Ramulator2）。
+範圍：把兩個 **C++ 重型 sim** 插進 Phase 1.2 已就緒的**共用引擎介面**（`Engine(spec, engine=).predict(workload)`），當**更高保真的可換引擎**：**ONNXim**（NPU）、**Ramulator2**（記憶體 DRAM）。皆標 `simulated, not silicon-validated`。**前提**：Phase 1.2 已 merge（spec 層 + 共用介面 + analytic 引擎齊備）。分支 `phase-1.3`。可平行（ONNXim ∥ Ramulator2）。
 
 > **定位（grill 收斂）**：重型 sim 的招牌價值（Ramulator2 的多單元競爭；逐 token 整機）要 **Phase 2** 才被用到；本期角色 = (i) **交叉比對 Phase 1.2 的 analytic 單串流趨勢**、(ii) **介面就緒，Phase 2 一接就能用、silicon 一回來就能驗**。即時報酬偏低、真正報酬在 Phase 2——「先建好就緒」的取捨。**單點失敗（C++ build 爆）退 documented fallback、不影響已 merge 的 1.2。**
 
@@ -31,6 +31,6 @@
 ## C. 合併
 11. 交叉驗證：`engine='analytic'|'onnxim'|'ramulator2'` 三者 drop-in 互換、結果形狀一致、honesty 標一致。 → verify：`check_phase1_3.py` 跑通。
 12. 報告 `build_phase1_3_report.py`（章節：ONNXim、Ramulator2、與 1.2 analytic 對照）→ HTML→PDF。`docs/phase1.3-findings.md`。 → verify：HTML/PDF、每章 sim-vs-analytic。
-13. OVERALL.md（Phase 1.3 完成）、LOG.md。**reconcile「Ramulator2 階段」**：ADR-0002 加一行修訂（單串流 LPDDR5 cross-check 落 1.3、多單元競爭用 Phase 2）+ 修 OVERALL risk #6 措辭 + 標 `m2_memory.py` docstring 與 `docs/phase1.1-findings.md:19`、`A2-m2-memory.md` 的「Ramulator2→Phase 2」為待更新（follow-up）。secret-scan + commit（不動 papers/）+ `gh pr create` phase-1.3→main + 通知 user。 → verify：grep 無命中、PR 開出、ADR-0002/OVERALL/findings 不再與「Ramulator2 在 1.3」矛盾。
+13. OVERALL.md（Phase 1.3 完成）、LOG.md。**reconcile「Ramulator2 階段」**：ADR-0002 加一行修訂（單串流 LPDDR5 cross-check 落 1.3、多單元競爭用 Phase 2）+ 修 OVERALL risk #6 措辭 + 標 `m2_memory.py` docstring 與 `docs/phase1.1-findings.md`（:19/:74/:130）、`docs/report/phase1.1/chapters/A2-m2-memory.md`（:90/:124）的「Ramulator2→Phase 2」為待更新（follow-up，grep 全掃）。secret-scan + commit（不動 papers/）+ `gh pr create` phase-1.3→main + 通知 user。 → verify：grep 無命中、PR 開出、ADR-0002/OVERALL/findings 不再與「Ramulator2 在 1.3」矛盾。
 
-Outputs：`tools/onnxim/`+`tools/ramulator2/`（vendored）；`measurements/onnxim/rknpu2_sim_matmul.json`；heavy 引擎接 `m4_npu.py`/`m2_memory.py`（`engine='onnxim'|'ramulator2'`）；scripts（npu_onnxim_trace/mem_ramulator2/build_*/check_phase1_3）；validation/reports/phase1.3/*.json；圖 N3/M2；報告 index.html+pdf+findings；OVERALL/LOG；PR。
+Outputs：`tools/onnxim/`+`tools/ramulator2/`（vendored）；`simulated/onnxim/rknpu2_sim_matmul.json`；heavy 引擎接 `m4_npu.py`/`m2_memory.py`（加 `engine='onnxim'|'ramulator2'` 分支）；scripts（npu_onnxim_trace/mem_ramulator2/build_*/check_phase1_3）；validation/reports/phase1.3/*.json；圖 N3/M2-ramulator2；報告 index.html+pdf+findings；OVERALL/LOG（含 ADR-0002 reconcile）；PR。
