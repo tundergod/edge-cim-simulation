@@ -1,6 +1,6 @@
 """Phase 1 — build M7 energy params (spec, ADR-0005) + validate (no silicon ground truth).
 
-Writes simulator/models/params/m7_energy.json, validation/reports/m7.json
+Writes simulator/models/params/m7_energy.json, validation/reports/phase1/m7.json
 
 No power telemetry -> validate by sanity + +/-20% coefficient sensitivity:
   (1) energy positive; (2) monotonic with activity; (3) order-of-magnitude vs a spec-derived
@@ -87,7 +87,7 @@ def main():
         "limitation": "energy ESTIMATED not measured (no telemetry, ADR-0005); conclusions "
                       "robust to +/-20%. CPU support time is a coarse per-token estimate.",
     }
-    (ROOT / "validation/reports/m7.json").write_text(json.dumps(report, indent=1))
+    (ROOT / "validation/reports/phase1/m7.json").write_text(json.dumps(report, indent=1))
     s = report["sanity"]
     bool_checks = ["all_positive", "monotonic_with_activity", "implied_avg_power_W_plausible",
                    "memory_dominates_robust_to_pm20pct"]

@@ -7,7 +7,7 @@ profile introduces NO op that wasn't traced from HF (0 orphans). Counts come fro
 inventory, never hand-rolled x layers (issue from phase0.2 findings).
 
 Reads  measurements/op_inventory/{model}.json, measurements/op_profile/{model}_{task}.json
-Writes validation/reports/m5.json
+Writes validation/reports/phase1/m5.json
 
 Run: ./.venv/bin/python validation/validate_m5_trace.py
 """
@@ -51,7 +51,7 @@ def main():
         "per_model": per_model,
         "pass_all": all_ok,
     }
-    (ROOT / "validation/reports/m5.json").write_text(json.dumps(report, indent=1))
+    (ROOT / "validation/reports/phase1/m5.json").write_text(json.dumps(report, indent=1))
     for m, r in per_model.items():
         print(f"M5 {m:14s}: covered={r['semantic_covered']} distinct={r['n_distinct_ops']} "
               f"rows={r['n_profile_rows']} orphans={len(r['orphan_ops'])} PASS={r['pass']}")

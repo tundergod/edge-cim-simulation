@@ -2,7 +2,7 @@
 
 Reads  measurements/aetina/cpu_ops.json
 Writes simulator/models/params/m4_cpu.json
-       validation/reports/m4_cpu.json
+       validation/reports/phase1/m4_cpu.json
 
 softmax = linear-in-kv fit per (model,dtype) (3 pts kv in {128,512,1024}); other ops =
 per-(model,dtype) constants (no within-op sweep). fp16 = emulated upper bound.
@@ -76,7 +76,7 @@ def main():
         "notes": {"prefill": "decode (1-token) costs; prefill = x S tokens analytic, UNVALIDATED",
                   "issue_10": "measured latencies used, NOT analytic 1-flop/elem FLOPs"},
     }
-    (ROOT / "validation/reports/m4_cpu.json").write_text(json.dumps(report, indent=1))
+    (ROOT / "validation/reports/phase1/m4_cpu.json").write_text(json.dumps(report, indent=1))
     g = report["softmax_fit_gate"]
     print(f"M4-CPU: softmax linear fit n={g['n']} median={g['median']} p95={g['p95']} "
           f"max={g['max']} PASS={g['pass_median_le_0.10'] and g['pass_p95_le_0.20']}")

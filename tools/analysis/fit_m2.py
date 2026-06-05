@@ -2,7 +2,7 @@
 
 Reads  measurements/aetina/metis_alpha_matmul.json (pcie_floor_A1d5)
 Writes simulator/models/params/{m2_pcie,m2_lpddr5}.json
-       validation/reports/m2.json
+       validation/reports/phase1/m2.json
 
 PCIe floor + BW are fixed params (no per-shape sweep collected). LPDDR5 effective BW
 is analytic (JEDEC peak + measured decode wall); Ramulator2 deferred to Phase 2.
@@ -99,7 +99,7 @@ def main():
                 "used as a temporary stand-in (board offline) — flagged unvalidated.",
             "ramulator2_deferred": "Phase 2 (ADR-0002 swappable); PIM-like ext = risk #6."},
     }
-    (ROOT / "validation/reports/m2.json").write_text(json.dumps(report, indent=1))
+    (ROOT / "validation/reports/phase1/m2.json").write_text(json.dumps(report, indent=1))
     s = report["sanity"]
     print(f"M2: pcie floor={m.floor_us}us BW={m.pcie_BW_GBs}GB/s | measured LPDDR4x eff={eff} "
           f"peak={peak} ({eff_vs_lpddr4x:.0%}) | sim LPDDR5 eff={SIM_LPDDR5_EFF_GBs}/{SIM_LPDDR5_PEAK_GBs} "
