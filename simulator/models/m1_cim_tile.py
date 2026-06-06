@@ -37,6 +37,12 @@ class CimTileModel:
         self.Kb = p["G_eff_Kb"]
         self.native_max_kn = p.get("native_max_kn", 4_194_304)  # 2048*2048; above = extrapolated
         self.alloc_envelope = p.get("alloc_envelope_params", 6_000_000)  # SDK weight-alloc limit
+        # prefill (M>1): canonical-tile latency is AFFINE in M, tile_lat=a+b*M (Card-measured by
+        # fit_cim_prefill.py at M<={1,64,128,256}; M>prefill_M_max extrapolated). None until fit.
+        self.prefill_a_us = p.get("prefill_tile_a_us")
+        self.prefill_b_us = p.get("prefill_tile_b_us")
+        self.prefill_M_max = p.get("prefill_M_max")
+        self.prefill_M_min = min(p["prefill_M_fit"]) if p.get("prefill_M_fit") else None  # fit basis lower bound
 
     @property
     def width(self):
@@ -47,23 +53,61 @@ class CimTileModel:
         return self.Gmax * (N / (N + self.Na)) * (K / (K + self.Kb))
 
     def dev_lat_us(self, M, K, N):
-        """Device compute latency (us) of (M,K)x(K,N). M=1 = decode (calibrated path).
+        """Device compute latency (us) of (M,K)x(K,N). Two regimes:
 
-        Tiles the output N into passes of width <= n_cores*512; each pass costs by its OWN
-        size via the 2D throughput, so latency keeps rising across tiles (a partial last
-        tile adds less, not a full tile). K*N > native_max_kn is UNVALIDATED extrapolation.
+        M<=1 (DECODE, calibrated): tile the output N into passes of width <= n_cores*512; each
+        pass costs by its OWN size via the 2D throughput, so latency keeps rising across tiles
+        (a partial last tile adds less, not a full tile). K*N > native_max_kn is extrapolation.
+
+        M>1 (PREFILL, Card-measured): the 2048x2048 weight tile's load is amortized over M
+        activation columns -> tile latency is AFFINE in M (a + b*M, fit on the FULL-tile prefill
+        points M in {64,128,256}; the M=1 decode point is NOT in this fit). A GEMM costs
+        (K*N / W^2) * (a + b*M): FRACTIONAL tile area (NOT ceil), so compute and weight-load scale
+        with the actual K*N -- a partial-width GEMM is not over-charged a full tile, and the value
+        equals the integer tile count for W-multiple shapes. Linear-in-M extrapolation of the DECODE
+        law would over-predict ~80x. UNVALIDATED where prefill_extrapolated() is True: M>prefill_M_max
+        (256), M<prefill_M_min (the 1<M<64 below-fit band), or partial-width tiles (K or N not a
+        multiple of W) -- the fit used only full tiles at M in {64,128,256}.
+
+        NO monotonicity clamp across the decode<->prefill boundary (issues #35/#39): decode (M=1) and
+        prefill (M>=64) are two separately-calibrated models with NO data between, disagreeing up to
+        ~2.5x at the narrow-K corner. Any clamp either over-charges partial-width (#39) or mixes cost
+        bases (#35). So the un-bridged region -- where the prefill value can dip BELOW the M=1 decode
+        value -- is surfaced HONESTLY by prefill_extrapolated()==True rather than fake-monotonized. In
+        the CALIBRATED region (M>=64, full-width) prefill is monotone in M and sits above the M=1 decode.
         """
+        if M <= 1:
+            return self._decode_lat_us(K, N) * M   # M=1 = the calibrated decode floor (linear in M)
+        if self.prefill_a_us is None:
+            raise ValueError("prefill (M>1) latency needs the M-amortization fit; "
+                             "run tools/analysis/fit_cim_prefill.py")
+        W = self.width   # canonical tile edge (= n_cores*512 = 2048); native_max_kn = W*W
+        area = (K * N) / (W * W)   # fractional tile area (not ceil): no padded-tile over-charge
+        return area * (self.prefill_a_us + self.prefill_b_us * M)
+
+    def _decode_lat_us(self, K, N):
+        """M=1 decode latency (us): output N tiled into passes of width <= W, each costed by its own
+        size via the 2D throughput (partial-fill-aware). The calibrated path."""
         W = self.width
         lat, rem = 0.0, N
         while rem > 0:
             n = min(W, rem)
-            lat += 2.0 * M * K * n / (self.g_eff(n, K) * 1e9) * 1e6
+            lat += 2.0 * K * n / (self.g_eff(n, K) * 1e9) * 1e6
             rem -= n
         return lat
 
     def is_extrapolated(self, K, N):
-        """True if (K,N) is beyond the largest natively measured single tile."""
+        """True if (K,N) is beyond the largest natively measured single tile (decode regime)."""
         return K * N > self.native_max_kn
+
+    def prefill_extrapolated(self, M, K, N):
+        """True if an M>1 prefill prediction is outside the calibrated range: M>prefill_M_max (only
+        M<=256 compiles/was measured), M<prefill_M_min (below the M>=64 fit basis -- 1<M<64 is
+        extrapolation, NOT calibrated), or a partial-width tile (K or N not a multiple of W -- the
+        affine fit used only full 2048x2048 tiles, so sub-tile-width prefill is uncalibrated)."""
+        W = self.width
+        return (M > (self.prefill_M_max or M) or M < (self.prefill_M_min or 0)
+                or (K % W != 0) or (N % W != 0))
 
     def n_tiles(self, N):
         return math.ceil(N / self.width)

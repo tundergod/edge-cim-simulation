@@ -179,7 +179,7 @@ Mirrors Python: `axr_create_context`, `axr_load_model`, `axr_device_connect`, `a
 
 ## 6. Compiler config — the sweep surface
 
-Two paths: high-level `deploy.py` (YAML in → deployed model + pipeline) and low-level `compile`/`axcompile` (ONNX in → artifact). Most characterization uses `deploy.py`. The knob bible is `docs/reference/compiler_configs_full.md` (~100 fields); short curated version `compiler_configs.md`.
+Two paths: high-level `deploy.py` (YAML in → deployed model + pipeline) and low-level `compile`/`axcompile` (ONNX in → artifact). Most characterization uses `deploy.py`. **v1.6 renamed the low-level CLI `compile`→`axcompile`** (NOT removed — corrects an earlier guess), shipped in the `axelera-devkit[all]` wheel from Axelera Artifactory, officially **Beta** `[MEASURED 2026-06-06]`. The knob bible is `docs/reference/compiler_configs_full.md` (~100 fields); short curated version `compiler_configs.md`.
 
 **All compile-time overrides go inside `extra_kwargs.compilation_config:` in the model YAML** (placing them directly under `models.<name>` is rejected) `[MEASURED]`.
 
@@ -308,6 +308,12 @@ Known per-unit pathologies to expect `[MEASURED]` (from Step-1, see [papers/meti
 - **End-to-end LLM (metiscard):** `axllm <model> --prompt "…" --show-stats` verified — emits Tokenization / Prefill / TTFT / Gen tok/s (llama-3.2-1b ≈ 11 tok/s on the 16 GB card, fw v1.6.0).
 - **RKNPU2:** `rknn-toolkit-lite2` (on-board inference runtime) installs on aarch64 ✓; **`rknn-toolkit2` (ONNX→`.rknn` converter) fails to build on aarch64** (`onnxoptimizer` wheel) → convert on an x86 host (metiscard) then run on-board via rknnlite, or install the C/C++ build deps and retry.
 - `compile --log-level` requires UPPERCASE (`WARNING`, not `warning`).
+
+**CIM-Card revalidation (production card, v1.6)** `[MEASURED 2026-06-06]` (`characterization/metis_card/run_metis_cim_v16.py` → `validation/reports/phase1.2/cim_card_revalidate.json`, chapter `docs/report/phase1.2/chapters/CIM-card.md`):
+- **Compiler is `axcompile`** (v1.6 rename of `compile`, `axelera-devkit[all]` Beta wheel from Artifactory): `axcompile --input m.onnx --input-shape 1,K,1,M --output DIR --overwrite --dataset-len N` (auto INT8 calibration, no imageset) → `DIR/compiled_model/model.json`; run via `axrunmodel` in the `axelera-env` SDK env, which prints `dev:.. host:.. system:.. latency:..ms` (**no literal `fps` token** — the FPS parser must not require it). Raw `MatMul`/`Gemm` still fails (`ONNXGraphCleanerError`) → the 1×1-conv proxy is required (corroborates §10's 2026-06-04 finding on the card).
+- **Decode kernel reproduces:** the 13 Alpha native tiles re-measured on the Card (same 800 MHz AIPU, NO clock rescale) → median `|rel_diff|` **4.8%**, p95 9.6% (Card systematically ~2–10% below Alpha across SDK v1.3.1→v1.6). The Alpha `G_eff(N,K)` fit is Card-confirmed (un-frozen).
+- **Prefill GEMMs hit a compiler SRAM-tiling wall, NOT a DRAM-envelope wall:** a single ~2048×2048 tile compiles only at **M≤256**; M=512 / large-N FFN fail with `Could not find a tiling factor that fits the memory constraints` (L1≈4 MB). The Card's 16 GiB does **not** lift this (it is L1/L2, not BAR/device-DRAM). Fit the affine `tile_lat(M)=a+b·M` on the genuine prefill points M∈{64,128,256} (full 2048×2048 tiles; the M=1 decode point is a separate regime, reported separately, NOT in the fit); a GEMM = `(K·N/W²) × tile_lat(M)` (fractional tile area, not ceil → no over-charge for partial-width shapes). M>256 or partial-width tiles are extrapolated.
+- **Board recovery:** a PCIe AER uncorrectable fault (kernel auto-recovery failed) was cleared by `axdevice --refresh` (pcie-rescan + reload-firmware) — distinct from §11's Alpha lspci-vanish recovery.
 
 ---
 

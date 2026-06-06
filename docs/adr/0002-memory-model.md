@@ -10,5 +10,13 @@ Memory access is the crux (decode memory wall). The subfield standard backend is
 
 Representative-iteration preserves full memory fidelity (every simulated token is full cacheline-level); a literal full-run would force coarser (tile) granularity and *lower* fidelity.
 
+### Revision (2026-06-06, Phase 1.3) — staging of the Ramulator2 backend
+The Ramulator2 backend is staged across phases (it was loosely "Phase 2" in earlier wording):
+- **Phase 1.2** ships the **analytic** LPDDR4/4x/5 effective-BW model as the primary `MemoryModel` (the "(i)" fast-DSE option), calibrated to the LPDDR4x 24.2 GB/s decode anchor.
+- **Phase 1.3** drops the **Ramulator2 LPDDR5** backend in behind the SAME swappable interface as `MemoryModel(spec, engine='ramulator2')` — a drop-in for `engine='analytic'` — to **cross-check the single-stream** BW. **DONE (Ramulator 2.1, commit `278f1ef`):** saturated LPDDR5_6400 streaming reaches 98.6% of peak; Ramulator2's DRAM-**device** single-stream efficiency is **0.92** (47.1 GB/s) vs the analytic **system-level 0.65** (33.3 GB/s). The 0.92-vs-0.65 gap is exactly the system overhead this ADR says is *calibrated from silicon, not imported from Ramulator* — so the cross-check **validates** that decision: the DRAM device is not the single-stream bottleneck, and the silicon-calibrated 0.65 stays primary. See `validation/reports/phase1.3/m2_ramulator2.json`, `docs/phase1.3-findings.md`.
+- **Phase 2** uses Ramulator2 for its **signature value: multi-unit contention** (CIM+NPU+GPU+CPU sharing LPDDR) and the token-by-token whole-machine run.
+
+LPDDR4/4x have **no first-class Ramulator2 preset** — **CONFIRMED 2026-06-06** by building Ramulator2: `src/dram/impl/` ships DDR3/4/5, GDDR6, HBM/2/3, and **LPDDR5 only** (no LPDDR4/4x). So the analytic LPDDR4/4x specs cannot be cross-checked by a stock Ramulator2 preset — a 1.3/2 config item (port an LPDDR4 timing set, or restrict the Ramulator2 cross-check to LPDDR5).
+
 ## Consequences
 M2 budgets Ramulator2 LPDDR5/PIM config + Python co-sim (OVERALL.md risk #6). The per-token-smoothness assumption is validated once against silicon. The swappable interface is also what enables the L4 validate-then-swap bridging (ADR-0006).

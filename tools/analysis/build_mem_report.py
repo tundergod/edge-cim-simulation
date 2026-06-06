@@ -107,7 +107,7 @@ def main():
                 r["positive"] and r["monotonic_in_bytes"] for r in mem_rows.values()),
             "lpddr4x_eff_BW_is_anchor": mem_rows["mem_lpddr4x"]["eff_BW_GBs"] == ANCHOR_EFF_BW,
             "lpddr5_eff_BW_33.3": mem_rows["mem_lpddr5"]["eff_BW_GBs"] == 33.3,
-            "alpha_pays_floor": topo["alpha"]["per_call_floor_us"] == 911,
+            "alpha_pays_floor": topo["alpha"]["per_call_floor_us"] == 911.1,  # measured pcie_floor_A1d5 (m2_pcie.json)
             "card_pays_no_floor": topo["card"]["per_call_floor_us"] == 0,
             "weights_8B_never_resident": not sram_whatif["weights_8B_resident"],
         },

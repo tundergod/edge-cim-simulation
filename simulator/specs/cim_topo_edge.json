@@ -1,0 +1,26 @@
+{
+  "_doc": "CIM topology C = forward-looking EDGE CIM integrated in a mobile SoC. NO dedicated on-card DRAM: it streams weights from the SoC's SHARED LPDDR5 over the on-chip NoC. The CIM COMPUTE engine (M1, simulator/models/params/m1_cim.json) is topology-agnostic and SHARED with topologies A (Alpha) and B (Card) -- same 800 MHz quad-core AIPU, Card-revalidated. The memory wall is the TARGET LPDDR5 effective BW x a NoC efficiency. It is explicitly NOT the Card's 24.2 GB/s (that is the Card's dedicated on-card LPDDR4x, an older memory + a different topology). UNVALIDATED: no edge silicon exists; noc_efficiency is an ASSUMPTION to calibrate when it does.",
+  "topology": "edge",
+  "on_card_dram": false,
+  "llm_capable": true,
+  "mem_spec_ref": "mem_lpddr5",
+  "noc_efficiency": 0.9,
+  "transport": "noc",
+  "per_call_floor_us": 0,
+  "clock_mhz": 800,
+  "cim_compute_params": "simulator/models/params/m1_cim.json",
+  "honesty": "calibrated compute (Alpha 13 pts, Card-revalidated) + ASSUMED edge memory wall (target LPDDR5 sim eff x noc_efficiency; no edge silicon)",
+  "notes": {
+    "memory_wall": "eff_BW = mem_lpddr5.eff_BW_GBs (33.3) x noc_efficiency (0.9) = 30.0 GB/s. The 33.3 already includes the LPDDR5 DRAM-controller/system efficiency (0.65 of 51.2 peak); noc_efficiency is the ADDITIONAL on-chip-fabric factor for an integrated CIM sharing LPDDR5. Starts from the memory spec's eff_BW (NOT peak x noc, which would discard it).",
+    "not_card_24.2": "the Card's 24.2 GB/s is its dedicated on-card LPDDR4x decode wall (topology-specific, older memory); edge uses the SoC's LPDDR5 -> higher BW. Do NOT port 24.2 to edge.",
+    "bracket": "noc_efficiency in [0.7, 1.0] is a plausible assumption range -> eff_BW in [23.3, 33.3] GB/s; 0.9 (30.0 GB/s) is a mild-NoC-overhead choice.",
+    "floor": "integrated on-chip NoC -> no per-call PCIe floor (contrast Alpha's measured 911 us)."
+  },
+  "provenance": {
+    "mem_spec_ref": "target SoC memory = mem_lpddr5 [assumption, forward-looking]",
+    "noc_efficiency": "0.9 NoC/arbitration overhead for an integrated CIM sharing LPDDR5 [assumption, no edge silicon to calibrate]",
+    "transport": "on-chip NoC [assumption]",
+    "per_call_floor_us": "integrated, no per-call DMA floor [architecture]",
+    "clock_mhz": "same 800 MHz AIPU as Alpha/Card [measured, shared compute engine]"
+  }
+}

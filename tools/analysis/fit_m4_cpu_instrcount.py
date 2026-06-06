@@ -21,7 +21,9 @@ micro-benchmark (audit gap). eta_bw=0.6 is a literature-typical cache-efficiency
 memory term only binds for the largest working set (qwen vocab -> L3) where it is corroborated (not
 contradicted) by the data. It is present for prefill / architecture-study working sets.
 
-fp16 cpu_ops.json rows are numpy-EMULATED on the A76 -> UPPER BOUND, NOT calibrated here (fp32 only).
+This fit is fp32-ONLY (fp16 cpu_ops.json rows are numpy-EMULATED, unrepresentative of native fp16, so
+NOT fit here). The engine's dtype='fp16' path is an ANALYTIC native-fp16 estimate (fp16_lanes=8 = 2x
+fp32 SIMD; eta_c borrowed from fp32), NOT calibrated -- see m4_cpu.py.
 
 Reads  measurements/aetina/cpu_ops.json
 Writes simulator/models/params/m4_cpu_instrcount.json   (calibrated factors the engine consumes)
@@ -74,12 +76,22 @@ def main():
     spec = json.loads((ROOT / "simulator/specs/cpu_rk3588.json").read_text())
     rows = _rows(ops, spec)
 
-    # Calibrate ONE eta_c + per-op overhead on the compute-bound ops: med = (1/eta_c)*compute_raw + ovh[op].
+    # Calibrate ONE eta_c + per-op overhead: med = (1/eta_c)*compute_raw + ovh[op]. predict() returns
+    # max(compute, memory), so eta_c must be fit ONLY on rows where the COMPUTE term binds -- a row the
+    # memory term dominates (e.g. qwen sampling_argmax, V=152064 -> L3) was fit on a term predict() does
+    # not return for it. 2-pass: solve on all compute-ops, then drop the memory-bound rows and re-solve.
     cops = sorted(set(COMPUTE_OPS))
-    A = [[cr] + [1.0 if base == o else 0.0 for o in cops]
-         for base, _, _, cr, _ in rows if base in COMPUTE_OPS]
-    y = [med for base, _, med, _, _ in rows if base in COMPUTE_OPS]
-    sol, *_ = np.linalg.lstsq(np.array(A), np.array(y), rcond=None)
+    comp_rows = [(base, med, cr, mem) for base, _, med, cr, mem in rows if base in COMPUTE_OPS]
+
+    def _solve(inv_prev):
+        sel = [(b, med, cr) for (b, med, cr, mem) in comp_rows if inv_prev is None or cr * inv_prev >= mem]
+        A = [[cr] + [1.0 if b == o else 0.0 for o in cops] for (b, med, cr) in sel]
+        y = [med for (b, med, cr) in sel]
+        sol, *_ = np.linalg.lstsq(np.array(A), np.array(y), rcond=None)
+        return sol
+
+    sol = _solve(None)                  # pass 1: all compute-ops
+    sol = _solve(float(sol[0]))         # pass 2: only rows where compute binds at the pass-1 eta_c
     inv_eta_c = float(sol[0])
     eta_c = 1.0 / inv_eta_c
     overhead = {o: max(0.0, float(v)) for o, v in zip(cops, sol[1:])}
@@ -101,7 +113,8 @@ def main():
     params = {
         "_doc": "CALIBRATED factors for the CPU instruction-count roofline (m4_cpu.py), fit to fp32 "
                 "cpu_ops.json on a single A76 core. eta_c calibrated; eta_bw=ASSUMPTION (no BW-resolved "
-                "op in fp32 decode data); overhead_op per op. fp16 = emulated upper bound (not fit).",
+                "op in fp32 decode data); overhead_op per op. fp32-only fit; the model's fp16 path is "
+                "analytic native-fp16 (2x SIMD), NOT fit here.",
         "eta_c": round(eta_c, 4),
         "eta_bw": ETA_BW,
         "eta_bw_tag": "assumption (no CPU mem-BW micro-benchmark; literature-typical cache efficiency)",
@@ -114,9 +127,10 @@ def main():
 
     report = {
         "module": "m4_cpu",
-        "honesty": "CALIBRATED to fp32 cpu_ops.json (single A76 core, single-thread). fp16 = numpy "
-                   "UPPER BOUND (emulated); swiglu fp16 = mixed precision; A55 / multicore = simulated "
-                   "(IPC=1 little, single-core measured -> extrapolated). eta_bw = ASSUMPTION.",
+        "honesty": "CALIBRATED to fp32 cpu_ops.json (single A76 core, single-thread). dtype='fp16' = "
+                   "ANALYTIC native-fp16 (fp16_lanes=8 = 2x fp32 SIMD), NOT calibrated (emulated fp16 "
+                   "unrepresentative); A55 / multicore = simulated (IPC=1 little, single-core measured "
+                   "-> extrapolated). eta_bw = ASSUMPTION.",
         "equation": "latency_us = max(compute_us, memory_us) + overhead_op; "
                     "compute_us = n_elem*ops_per_elem/(W*IPC*freq)/eta_c; "
                     "memory_us = working_set_bytes/(BW_tier*eta_bw)",

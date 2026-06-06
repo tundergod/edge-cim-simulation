@@ -59,9 +59,9 @@
  },
  "topology": {
   "alpha": {
-   "per_call_floor_us": 911,
+   "per_call_floor_us": 911.1,
    "pcie_BW_GBs": 3.9,
-   "pcie_transfer_us(0B)": 911.0,
+   "pcie_transfer_us(0B)": 911.1,
    "tag": "floor measured (911 us per-call DMA, Alpha topology artifact)"
   },
   "card": {

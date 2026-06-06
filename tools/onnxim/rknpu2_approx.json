@@ -1,0 +1,48 @@
+{
+  "_doc": "ONNXim RKNPU2-approx config (Phase 1.3, engine='onnxim'). Generic systolic_ws NPU configured to approximate RKNPU2: 3 cores x 32x32 (borrowed Hexagon 32x32, the analytic NpuModel's dim), INT8 (precision=1 byte), core_freq 1000MHz -> 6144 GFLOPS = 6.14 TOPS ~= datasheet 6 TOPS; DRAM 25 GB/s (ramulator2 DDR4). icnt=simple (procedural). simulated, NOT silicon; ONNXim != issue #13. Copied from systolic_ws_8x8_c4, edited num_cores 4->3, core 8->32, precision 2->1, dropped icnt_config_path. SPAD scaled for 32x32 (spad 2048/accum 512/vector 8192 — the 8x8 default spad=64 is too small for a 32x32 array and causes a div-by-zero in Mapping.cc tiling). KNOWN ONNXim LIMIT: GEMMs with N<=64 still SIGFPE-crash (degenerate tiling) -> the cross-check uses N>=128.",
+  "num_cores": 3,
+  "core_freq": 1000,
+  "core_print_interval": 10000,
+  "core_config": {
+    "core_0": {
+      "core_type": "systolic_ws", "core_width": 32, "core_height": 32,
+      "spad_size": 2048, "accum_spad_size": 512, "sram_width": 32,
+      "vector_process_bit": 8192,
+      "add_latency": 1, "mul_latency": 1, "mac_latency": 1, "exp_latency": 1,
+      "gelu_latency": 1, "div_latency": 1, "add_tree_latency": 1,
+      "scalar_sqrt_latency": 1, "scalar_add_latency": 1, "scalar_mul_latency": 1
+    },
+    "core_1": {
+      "core_type": "systolic_ws", "core_width": 32, "core_height": 32,
+      "spad_size": 2048, "accum_spad_size": 512, "sram_width": 32,
+      "vector_process_bit": 8192,
+      "add_latency": 1, "mul_latency": 1, "mac_latency": 1, "exp_latency": 1,
+      "gelu_latency": 1, "div_latency": 1, "add_tree_latency": 1,
+      "scalar_sqrt_latency": 1, "scalar_add_latency": 1, "scalar_mul_latency": 1
+    },
+    "core_2": {
+      "core_type": "systolic_ws", "core_width": 32, "core_height": 32,
+      "spad_size": 2048, "accum_spad_size": 512, "sram_width": 32,
+      "vector_process_bit": 8192,
+      "add_latency": 1, "mul_latency": 1, "mac_latency": 1, "exp_latency": 1,
+      "gelu_latency": 1, "div_latency": 1, "add_tree_latency": 1,
+      "scalar_sqrt_latency": 1, "scalar_add_latency": 1, "scalar_mul_latency": 1
+    }
+  },
+
+  "dram_type": "ramulator2",
+  "dram_freq": 400,
+  "dram_channels": 2,
+  "dram_req_size": 32,
+  "dram_latency": 10,
+  "dram_print_interval": 10000,
+  "dram_config_path": "../configs/ramulator2_configs/DDR4.yaml",
+
+  "icnt_type": "simple",
+  "icnt_latency": 1,
+  "icnt_freq": 2000,
+
+  "precision": 1,
+  "layout": "NHWC",
+  "scheduler": "simple"
+}

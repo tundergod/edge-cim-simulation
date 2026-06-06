@@ -16,9 +16,10 @@ HONESTY (D4, non-negotiable):
     points. This is FP16 only.
   - INT8 GPU GEMM has ZERO data (the Mali matmul kernel is FP32/FP16). predict() on an
     int8 workload still uses the FP16-calibrated ceilings -> flagged in provenance.
-  - The whole model is a SHAPE-TREND + LOWER BOUND: an unoptimised OpenCL kernel and only
-    5 saturation points -> NOT a transferable calibration. predicted < measured is the
-    expected (honest) direction; provenance says 'simulated (roofline lower bound)'.
+  - The whole model is a SHAPE-TREND fit, NOT a strict lower bound: an unoptimised OpenCL
+    kernel and only 5 saturation points -> NOT a transferable calibration. predicted is mostly
+    <= measured (~2/3; frac_pred_le_measured~0.53) but ~1/3 over-predict by up to +5%;
+    provenance says 'simulated (roofline shape-trend)'.
   - FP32 peak 512 GFLOP/s in the spec is an assumption (may underestimate 2-4x); this
     model calibrates against FP16, so it does not rely on that assumption.
   - ksweep_saturation_M is a DEAD param in the spec (kept, not deleted, per audit);
@@ -30,7 +31,7 @@ _BYTES_PER_ELEM = {"fp32": 4, "fp16": 2, "int8": 1}
 
 
 class GpuRooflineModel(UnitEngine):
-    """Mali-G610 analytic roofline (FP16-calibrated, lower bound). Spec = gpu_mali_g610."""
+    """Mali-G610 analytic roofline (FP16-calibrated, shape-trend; NOT a strict lower bound). Spec = gpu_mali_g610."""
 
     def __init__(self, spec, engine="analytic"):
         super().__init__(spec, engine)
@@ -50,7 +51,7 @@ class GpuRooflineModel(UnitEngine):
         else:
             latency_us, bound = memory_us, "memory"
         int8_flag = " (dtype=int8 has ZERO GPU data; FP16 ceilings used)" if wl.dtype == "int8" else ""
-        prov = (f"simulated (roofline lower bound, FP16-calibrated to mali_matmul.json; "
+        prov = (f"simulated (roofline shape-trend, FP16-calibrated to mali_matmul.json; "
                 f"ceil={self.ceil_gflops:.2f} GFLOP/s, BW={self.mem_eff_BW_GBs:.2f} GB/s; "
-                f"shape-trend + lower bound, NOT transferable){int8_flag}")
+                f"shape-trend fit, NOT a strict lower bound, NOT transferable){int8_flag}")
         return {"latency_us": latency_us, "bound": bound, "provenance": prov}

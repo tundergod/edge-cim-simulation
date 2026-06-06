@@ -13,9 +13,9 @@ makes the SRAM residency a load-bearing what-if variable (per the reversed M2 de
 WITHOUT claiming weights ever fit.
 """
 from simulator.models.engine import UnitEngine, Workload, check_return
+from simulator.specs.loader import load_spec
 
 _MiB = 1024 * 1024
-DRAM_EFF_BW_GBs = 24.2   # production-card LPDDR4x decode anchor (mem_lpddr4x), the spill target
 
 
 class SramTier(UnitEngine):
@@ -25,7 +25,9 @@ class SramTier(UnitEngine):
         self.bw_GBs = spec["bw_GBs"]                   # CACTI assumption
         self.latency_ns = spec["latency_ns"]           # CACTI assumption
         self.residency = spec["residency"]             # 'architecture-only'
-        self.dram_eff_BW_GBs = DRAM_EFF_BW_GBs
+        # DRAM-spill BW = the LPDDR4x anchor, READ from its spec (not a hardcoded 24.2) so a
+        # re-calibration of mem_lpddr4x propagates here (swappable-spec design).
+        self.dram_eff_BW_GBs = load_spec("mem_lpddr4x")["eff_BW_GBs"]
 
     def resident(self, nbytes):
         """True iff the working set fits the L2 residency capacity (32 MiB)."""
@@ -35,7 +37,8 @@ class SramTier(UnitEngine):
         """Time a working set against the SRAM tier. If it fits L2 -> SRAM BW + access
         latency; else it RESOLVES to the DRAM tier (never resident) -> DRAM eff_BW. An
         8B weight set (>>32 MiB) always takes the DRAM branch."""
-        nbytes = wl.nbytes if wl.nbytes else wl.kv
+        nbytes = wl.nbytes   # bytes only -- wl.kv is a TOKEN count, not a byte count (do not conflate)
+        assert nbytes, "SramTier.predict needs wl.nbytes (a byte count); wl.kv (tokens) is not bytes"
         if self.resident(nbytes):
             lat = self.latency_ns / 1e3 + nbytes / (self.bw_GBs * 1e9) * 1e6
             prov = (f"analytic SRAM tier (resident, <= L2 {self.l2_MiB}MiB): "

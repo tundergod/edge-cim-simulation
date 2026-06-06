@@ -26,7 +26,9 @@ layers): QK^T (M=heads*1, K=hd, N=kv) + S.V (M=heads*1, K=kv, N=hd), padded to 3
 
 dtypes: INT4/8/16 + FP16 only (datasheet). No RKNPU2 power telemetry -> energy NOT determinable.
 """
+import json
 import math
+from pathlib import Path
 
 from simulator.models.engine import UnitEngine, Workload
 
@@ -34,6 +36,16 @@ from simulator.models.engine import UnitEngine, Workload
 _ORDER_SHAPE_MAX = 6.0      # Fig4: up to 6x order/shape penalty
 _DISPATCH_FLOOR_US = 2.0    # simulated fixed per-op dispatch (no silicon -> nominal, assumption)
 _DTYPE_BYTES = {"int4": 0.5, "int8": 1.0, "int16": 2.0, "fp16": 2.0}
+_ONNXIM = Path(__file__).resolve().parents[2] / "simulated/onnxim/rknpu2_sim_matmul.json"
+
+
+def _onnxim_table():
+    """Phase 1.3 heavy engine: cached ONNXim (generic-systolic RKNPU2-approx) per-shape latency
+    table (produced by tools/onnxim/build.sh + tools/analysis/npu_onnxim_trace.py). Returns {}
+    when absent (the C++ build is deferred) -> documented analytic fallback."""
+    if not _ONNXIM.exists():
+        return {}
+    return {tuple(r["shape"]): r["latency_us"] for r in json.loads(_ONNXIM.read_text())["rows"]}
 
 
 class NpuModel(UnitEngine):
@@ -49,6 +61,9 @@ class NpuModel(UnitEngine):
         self.bw_eff_low = float(bw["eff_low"])     # ~20.1 GB/s
         self.bw_eff_high = float(bw["eff_high"])   # ~22.4 GB/s
         self.dtypes = set(spec["dtypes"])          # restricted to INT4/8/16/FP16 (datasheet)
+        # Phase 1.3 heavy backend: engine='onnxim' replaces the analytic latency with ONNXim's
+        # per-shape sim (same constructor + frozen contract). Empty table -> analytic fallback.
+        self.onnxim = _onnxim_table() if engine == "onnxim" else {}
 
     def _pad(self, x):
         """Pad a dim UP to the borrowed systolic quantum (Fig3 staircase source)."""
@@ -77,12 +92,16 @@ class NpuModel(UnitEngine):
         return self._argmax_bound(compute_us, memory_us)
 
     def _attn_us(self, kv, heads, layers, hd, dtype):
-        """Native attention QK^T + S.V, padded, compute-bound (act x act, no weight stall)."""
-        # QK^T: (heads, hd) x (hd, kv); S.V: (heads, kv) x (kv, hd). padded to sd.
-        qkt = self._pad(heads) * self._pad(hd) * self._pad(kv)
-        sv = self._pad(heads) * self._pad(kv) * self._pad(hd)
-        compute_us = 2.0 * (qkt + sv) / (self.tops * 1e12) * 1e6 * layers
-        return self._argmax_bound(compute_us, 0.0)
+        """Native attention QK^T + S.V, compute-bound (act x act, no weight stall). Heads are the
+        BATCH dimension -- NOT padded into the systolic M slot (padding GQA heads=8 up to sd=32 would
+        4x-over-count the attention MACs); only the matmul dims hd/kv are padded to the 32x32 quantum,
+        then multiplied by the raw head count. The dispatch floor applies PER LAYER, not once for the
+        whole L-layer rollup."""
+        # per head per layer: QK^T (hd x kv) + S.V (kv x hd), padded; x heads (batch).
+        per_head = self._pad(hd) * self._pad(kv) + self._pad(kv) * self._pad(hd)
+        per_layer_us = 2.0 * heads * per_head / (self.tops * 1e12) * 1e6
+        lat = layers * max(per_layer_us, _DISPATCH_FLOOR_US)
+        return lat, ("compute" if per_layer_us >= _DISPATCH_FLOOR_US else "floor")
 
     def _argmax_bound(self, compute_us, memory_us):
         floor = _DISPATCH_FLOOR_US
@@ -100,7 +119,15 @@ class NpuModel(UnitEngine):
         else:
             lat, bound = self._gemm_us(wl.M, wl.K, wl.N, wl.dtype)
             prov = ("simulated: analytic systolic roofline %d TOPS INT8 ceiling + borrowed %dx%d "
-                    "padding (Fig3 staircase) + order/shape factor <=%gx (Fig4); BW band Fig5 "
-                    "59-66%%/68; borrowed, NO silicon (#13)"
-                    % (int(self.tops), self.sd, self.sd, _ORDER_SHAPE_MAX))
+                    "padding (Fig3 staircase) + order/shape factor <=%gx (Fig4); memory roofline at "
+                    "bw_eff_low=%.1f GB/s (Fig5 59%% band); borrowed, NO silicon (#13)"
+                    % (int(self.tops), self.sd, self.sd, _ORDER_SHAPE_MAX, self.bw_eff_low))
+        if self.engine == "onnxim":   # Phase 1.3 heavy backend (drop-in; ONNXim != #13 silicon)
+            hit = self.onnxim.get((wl.M, wl.K, wl.N))
+            if hit is not None:
+                lat, bound = float(hit), "compute"
+                prov = "simulated (ONNXim generic-systolic RKNPU2-approx, NOT silicon; Phase 1.3)"
+            else:
+                prov += ("; engine='onnxim' requested but the ONNXim C++ build is deferred -> "
+                         "ANALYTIC fallback (risk-#7 documented, report user)")
         return {"latency_us": float(lat), "bound": bound, "provenance": prov}

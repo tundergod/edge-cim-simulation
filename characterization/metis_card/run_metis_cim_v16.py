@@ -6,26 +6,31 @@ matmul proxy with axrunmodel (dev FPS = isolated compute) and cross-check vs the
 (both boards 800MHz -> directly comparable, NO clock rescale). We also add the prefill /
 compute-bound shapes Alpha could not reach.
 
-STATUS: UNVERIFIED ON CARD — written from the Alpha script; not yet run (SSH to metiscard was not
-authorized in this session). When SSH is granted:
+STATUS: SPIKE-VERIFIED ON CARD (2026-06-06). The kernel re-validates: square M=1,K=2048,N=2048 =
+Card 200.5 vs Alpha 203.7 GOP/s (1.5%, the committed full-run value). The v1.6 axcompile compiles a single ~2048x2048 tile only up
+to M<=256 (SRAM L1/L2 tiling wall, NOT device-DRAM — the Card's 16GiB does not lift it); larger
+prefill GEMMs are therefore measured tile-by-tile and extrapolated (n_tiles x tile_lat, the Alpha
+run_metis_cim.py method; see measure_op). Run (AXCOMPILE = devkit binary, python needs onnx + axrunmodel on PATH):
     rsync -a characterization/metis_card/ metiscard:~/edge-cim-simulation/characterization/
-    ssh metiscard 'cd ~/edge-cim-simulation/characterization && \
-        source ~/tundergod/voyager-sdk/axelera-env/bin/activate && \
-        python run_metis_cim_v16.py --spike'        # ~30 min feasibility probe first
-    # then full:  python run_metis_cim_v16.py
+    ssh metiscard 'cd ~/edge-cim-simulation/characterization && AXCOMPILE=/tmp/axc/bin/axcompile \
+        PATH=$HOME/tundergod/voyager-sdk/venv/bin:$PATH /tmp/axc/bin/python run_metis_cim_v16.py --spike'
+    # then full:  ... run_metis_cim_v16.py
     rsync -a metiscard:~/edge-cim-simulation/measurements/metis_card/ measurements/metis_card/
 
-COMPILE PATH (the SPIKE question): prefer the LOW-LEVEL `compile` (Alpha used it at
-run_metis_cim.py:65 — NOT deploy.py). voyager-sdk.md:339 records that general MatMul is not a
-deploy.py-supported op (YOLO11 whitelist), so deploy.py is only a best-effort fallback. If
-low-level `compile` is gone in v1.6 AND deploy.py cannot compile a MatMul/conv proxy, the task
-takes the documented fallback (Alpha 13pts calibrated, pending board) and REPORTS the user — it
-does NOT silently switch paths.
+COMPILE PATH (SPIKE-confirmed 2026-06-06): v1.6 ships the compiler as `axcompile` (axelera-devkit
+wheel from Artifactory, officially Beta) — the old `compile` was just renamed, NOT removed. The
+1×1-conv proxy compiles cleanly via `axcompile --input … --input-shape 1,K,1,M --output … --overwrite
+--dataset-len N` (auto-generated calibration, no imageset). Raw MatMul/Gemm still fails
+(ONNXGraphCleanerError: not topologically sorted) → the conv proxy is required. Set AXCOMPILE to the
+devkit venv's binary (e.g. /tmp/axc/bin/axcompile) if it's not on PATH; the runtime `axrunmodel`
+lives in the SDK env. If neither `axcompile` nor `compile` is present, report COMPILER_ABSENT.
 
-Run: python run_metis_cim_v16.py [--spike] [--seconds 5] [--dataset-len 20] [--only GROUP]
+Run: AXCOMPILE=/path/to/axcompile python run_metis_cim_v16.py [--spike] [--seconds 5] [--dataset-len 20] [--only GROUP]
 """
-import argparse, json, re, shutil, subprocess, time
+import argparse, json, os, re, shutil, subprocess, time
 from pathlib import Path
+
+AXCOMPILE = os.environ.get("AXCOMPILE", "axcompile")  # v1.6 devkit compiler; old `compile` is the fallback
 import numpy as np
 import onnx
 from onnx import helper, TensorProto, numpy_helper
@@ -34,7 +39,7 @@ WORK = Path("/tmp/cim_card_work"); WORK.mkdir(parents=True, exist_ok=True)
 SDK = str(Path.home() / "tundergod" / "voyager-sdk")          # Card SDK (Alpha was /home/ubuntu/voyager-sdk)
 RESULTS = WORK / "results.json"
 LOG = WORK / "progress.log"
-FPS_RE = re.compile(r"dev:([\d.]+)\s+host:([\d.]+)\s+system:([\d.]+)fps")
+FPS_RE = re.compile(r"dev:([\d.]+)\s+host:([\d.]+)\s+system:([\d.]+)")  # axrunmodel: "dev:.. host:.. system:.. latency:..ms" (no literal 'fps')
 
 # The 13 Alpha native single-tile throughput points (M=1) — the cross-validation ground truth
 # (mirrors simulator/models/params/m1_cim.json native_throughput_points). dev_gflops here must
@@ -65,23 +70,25 @@ def build_conv_onnx(M, K, N, bias, path):
 
 
 def _try_low_level_compile(d, M, K, residency, dataset_len, timeout):
-    """Alpha's low-level `compile` (1:1). Returns (model_json|None, info). FileNotFoundError on the
-    `compile` binary => v1.6 dropped it (the SPIKE answer)."""
-    cmd = ["compile", "--input", str(d / "m.onnx"), "--input-shape", f"1,{K},1,{M}",
-           "--output", str(d / "out"), "--overwrite", "--log-level", "WARNING",
-           "--dataset-len", str(dataset_len)]
-    if residency:
-        (d / "cfg.json").write_text(json.dumps({"dpu_constants_home": f"global.{residency}"}))
-        cmd += ["--config", str(d / "cfg.json")]
-    try:
-        rc = subprocess.run(cmd, cwd=SDK, capture_output=True, text=True, timeout=timeout)
-    except FileNotFoundError:
-        return None, {"compile_path": "LOW_LEVEL_COMPILE_ABSENT"}   # SPIKE: `compile` gone in v1.6
-    if rc.returncode != 0:
-        return None, {"compile_path": "low_level_compile", "error": "compile", "rc": rc.returncode,
-                      "stderr": rc.stderr[-300:]}
-    mj = list((d / "out").rglob("model.json"))
-    return (mj[0] if mj else None), {"compile_path": "low_level_compile"}
+    """Compile the conv proxy: v1.6 `axcompile` (axelera-devkit) first, old `compile` as fallback.
+    Returns (model_json|None, info). Both absent => COMPILER_ABSENT. model.json lands at
+    out/compiled_model/model.json (rglob finds it)."""
+    for binary, tag in ((AXCOMPILE, "axcompile"), ("compile", "compile")):
+        cmd = [binary, "--input", str(d / "m.onnx"), "--input-shape", f"1,{K},1,{M}",
+               "--output", str(d / "out"), "--overwrite", "--log-level", "WARNING",
+               "--dataset-len", str(dataset_len)]
+        if residency:   # Alpha-era l2/ddr residency; not exercised by the Card alpha13/prefill manifest
+            (d / "cfg.json").write_text(json.dumps({"dpu_constants_home": f"global.{residency}"}))
+            cmd += ["--config", str(d / "cfg.json")]
+        try:
+            rc = subprocess.run(cmd, cwd=SDK, capture_output=True, text=True, timeout=timeout)
+        except FileNotFoundError:
+            continue   # this binary not present; try the next
+        if rc.returncode != 0:
+            return None, {"compile_path": tag, "error": "compile", "rc": rc.returncode, "stderr": rc.stderr[-300:]}
+        mj = list((d / "out").rglob("model.json"))
+        return (mj[0] if mj else None), {"compile_path": tag}
+    return None, {"compile_path": "COMPILER_ABSENT"}   # neither axcompile nor compile present
 
 
 def measure(M, K, N, bias=False, residency=None, seconds=5, dataset_len=20, timeout=900):
@@ -95,13 +102,12 @@ def measure(M, K, N, bias=False, residency=None, seconds=5, dataset_len=20, time
         t0 = time.time()
         mj, info = _try_low_level_compile(d, M, K, residency, dataset_len, timeout)
         ct = time.time() - t0
-        if info.get("compile_path") == "LOW_LEVEL_COMPILE_ABSENT":
-            # The SPIKE verdict. deploy.py fallback needs MatMul support (voyager-sdk.md:339 says
-            # not whitelisted) + INT8 calibration data -> operator decision, not a silent switch.
-            return {"error": "low_level_compile_absent",
-                    "spike": "v1.6 has no low-level `compile`; deploy.py MatMul support unverified "
-                             "(voyager-sdk.md:339). DOCUMENTED FALLBACK: Alpha 13pts calibrated + "
-                             "report user.", "compile_s": round(ct, 1)}
+        if info.get("compile_path") == "COMPILER_ABSENT":
+            # Neither axcompile (devkit) nor compile present -> install axelera-devkit or set AXCOMPILE.
+            return {"error": "compiler_absent",
+                    "spike": "neither `axcompile` (axelera-devkit) nor `compile` found. Install the "
+                             "devkit (pip --extra-index-url …/axelera-pypi/simple 'axelera-devkit[all]') "
+                             "or set AXCOMPILE=/path/to/axcompile. Report user.", "compile_s": round(ct, 1)}
         if mj is None:
             return {**info, "error": info.get("error", "no_model_json"), "compile_s": round(ct, 1)}
         ax = subprocess.run(["axrunmodel", str(mj), "--seconds", str(seconds)],
@@ -123,9 +129,47 @@ def measure(M, K, N, bias=False, residency=None, seconds=5, dataset_len=20, time
             shutil.rmtree(d, ignore_errors=True)
 
 
+SAFE_KN = 2048 * 2048      # 4_194_304 — v1.6 axcompile compiles a single ~2048x2048 tile (at M<=M_MAX)
+M_MAX = 256                # M>256 fails to compile ANY tile (SRAM L1/L2 wall, spike-confirmed) -> prefill cap
+K_TILE = N_TILE = 2048     # AIPU native tile (matches m1_cim native_max_kn); big GEMMs = n_tiles x tile
+_TILE_CACHE = {}           # canonical-tile measurement per M (the prefill M-amortization data)
+
+
+def _ntiles(total, size):
+    return (total + size - 1) // size
+
+
+def measure_op(M, K, N, seconds=5, dataset_len=20):
+    """Direct compile when M<=M_MAX and K*N<=SAFE_KN; else tile into canonical K_TILE x N_TILE blocks
+    (measured once per M, cached) and extrapolate dev_lat = n_tiles * tile_lat (Alpha run_metis_cim.py
+    method). M>M_MAX can't compile any tile (v1.6 SRAM wall) -> error: prefill is measurable to M_MAX,
+    larger M is extrapolated analytically downstream. The cached tile throughput per M IS the
+    prefill M-amortization the decode-only Alpha 13 points could not capture."""
+    if M > M_MAX:
+        return {"error": "M_exceeds_compile_limit",
+                "note": f"M={M}>{M_MAX}: no tile compiles on v1.6 axcompile (SRAM L1/L2)."}
+    if K * N <= SAFE_KN:
+        r = measure(M, K, N, seconds=seconds, dataset_len=dataset_len)
+        if "error" not in r:
+            r["tiles"] = 1
+        return r
+    if M not in _TILE_CACHE:
+        _TILE_CACHE[M] = measure(M, K_TILE, N_TILE, seconds=seconds, dataset_len=dataset_len)
+    t = _TILE_CACHE[M]
+    if "error" in t:
+        return {"error": f"canonical_tile_fail: {t['error']}"}
+    nt = _ntiles(K, K_TILE) * _ntiles(N, N_TILE)
+    dev_lat, flops = nt * t["dev_lat_us"], 2 * M * K * N
+    return {"compile_path": t.get("compile_path"), "tiles": nt, "tiled_extrapolated": True,
+            "dev_lat_us": dev_lat, "system_lat_us": nt * t["system_lat_us"], "dev_gflops": flops / dev_lat / 1e3,
+            "tile_dev_lat_us": t["dev_lat_us"], "tile_dev_gflops": t["dev_gflops"], "tile_dev_fps": t["dev_fps"]}
+
+
 def manifest(spike):
-    """Card tasks: the 13 Alpha cross-validation shapes + prefill/compute-bound (the Alpha gap).
-    --spike trims to a fast feasibility set (square + 2 staircase + 1 prefill)."""
+    """Card tasks: the 13 Alpha cross-validation shapes (M=1, direct) + prefill GEMMs (tiled).
+    Prefill GEMMs exceed SAFE_KN -> measure_op tiles them; the cached tile throughput at the
+    compilable M in {64,128,256} is the new M-amortization fit data (M>256 fails to compile).
+    --spike trims to a fast feasibility set (the 203.7 anchor + one tiled prefill GEMM)."""
     tasks = []
 
     def add(group, family, M, K, N):
@@ -133,25 +177,20 @@ def manifest(spike):
         tasks.append((tid, group, dict(family=family, M=M, K=K, N=N)))
 
     if spike:
-        add("aspect", "square", 1, 2048, 2048)        # the canonical native tile
-        add("staircase64", "stair", 1, 2048, 512)
-        add("staircase64", "stair", 1, 2048, 2048)
-        add("prefill", "gate_up", 256, 4096, 14336)   # compute-bound probe (the Alpha gap)
+        add("alpha13", "native", 1, 2048, 2048)        # the canonical tile @ M=1 (203.7 GOP/s anchor)
+        add("prefill", "gate_up", 128, 4096, 14336)    # exercises measure_op tiling (tile @ M=128 x 14 tiles)
         return tasks
 
-    # cross-validation: re-measure the 13 Alpha native single-tile points (M=1)
+    # cross-validation: re-measure the 13 Alpha native single-tile points (M=1; all K*N<=SAFE_KN -> direct)
     for (N, K) in ALPHA_13:
         add("alpha13", "native", 1, K, N)
-    # channel-64 staircase (M=1, K=2048)
-    for N in [64, 128, 256, 512, 1024, 1536, 2048, 3072]:
-        add("staircase64", "stair", 1, 2048, N)
-    # aspect (equal MAC)
-    add("aspect", "wide", 1, 1024, 4096); add("aspect", "tall", 1, 4096, 1024); add("aspect", "square", 1, 2048, 2048)
-    # PREFILL / compute-bound (the regime Alpha's 1GB-window board could not reach; on-card DRAM helps)
+    # PREFILL M-amortization (the Alpha gap): Llama-3-8B FFN/attn GEMMs, tiled (n_tiles x tile @ M).
+    # The tile throughput at M in {64,128,256} is the fit data; M>256 fails to compile (v1.6 SRAM wall).
     c8 = dict(H=4096, F=14336)
-    for M in [128, 256, 512, 1024, 2048]:
-        add("prefill", "gate_up", M, c8["H"], c8["F"])
-        add("prefill", "q_o", M, c8["H"], c8["H"])
+    for M in [64, 128, 256]:
+        add("prefill", "gate_up", M, c8["H"], c8["F"])   # 14 tiles
+    for M in [128, 256]:
+        add("prefill", "q_o", M, c8["H"], c8["H"])       # 4 tiles (a 2nd shape at the same tile throughput)
     return tasks
 
 
@@ -172,14 +211,19 @@ def main():
         f"{len(todo)} to do; SDK={SDK} ===")
     spike_absent = False
     for i, (tid, group, p) in enumerate(todo):
-        r = measure(p["M"], p["K"], p["N"], seconds=args.seconds, dataset_len=args.dataset_len)
+        r = measure_op(p["M"], p["K"], p["N"], seconds=args.seconds, dataset_len=args.dataset_len)
         results[tid] = {**p, "group": group, **r}
         RESULTS.write_text(json.dumps(results, indent=1))
-        if r.get("error") == "low_level_compile_absent" and not spike_absent:
+        if r.get("error") == "compiler_absent" and not spike_absent:
             spike_absent = True
-            log("!!! SPIKE VERDICT: low-level `compile` ABSENT in v1.6. " + r["spike"])
-        tag = r.get("error", f"dev={r.get('dev_fps',0):.0f}fps {r.get('dev_gflops',0):.1f}GOP/s "
-                             f"[{r.get('compile_path','?')}]")
+            log("!!! SPIKE VERDICT: neither axcompile nor compile present. " + r["spike"])
+        if "error" in r:
+            tag = r["error"]
+        elif r.get("tiled_extrapolated"):
+            tag = (f"TILED x{r['tiles']} tile={r['tile_dev_fps']:.0f}fps -> full {r['dev_gflops']:.0f}GOP/s "
+                   f"{r['dev_lat_us']:.0f}us [{r.get('compile_path','?')}]")
+        else:
+            tag = f"dev={r.get('dev_fps',0):.0f}fps {r.get('dev_gflops',0):.1f}GOP/s [{r.get('compile_path','?')}]"
         log(f"[{i+1}/{len(todo)}] {group}/{p['family']} M{p['M']}K{p['K']}N{p['N']} -> {tag}")
     out = Path.home() / "edge-cim-simulation" / "measurements" / "metis_card"
     out.mkdir(parents=True, exist_ok=True)

@@ -23,7 +23,22 @@ Heavy backend (Ramulator2, `engine='ramulator2'`) = Phase 1.3, same constructor 
 kv-append stays UNVALIDATED (Phase 0.3 did not isolate it; pure-BW form is correct, board
 offline -> re-calibrate the coefficient when recovered).
 """
+import json
+from pathlib import Path
+
 from simulator.models.engine import UnitEngine, Workload, check_return
+from simulator.specs.loader import load_spec
+
+_RAM2 = Path(__file__).resolve().parents[2] / "simulated/ramulator2/lpddr5_eff.json"
+
+
+def _ramulator2_eff_bw(spec):
+    """Phase 1.3 heavy engine: effective BW (GB/s) from a cached Ramulator2 LPDDR5 sweep
+    (produced by tools/ramulator2/build.sh + tools/analysis/mem_ramulator2.py). Returns None
+    when the cache is absent (the C++ build is deferred) -> documented analytic fallback."""
+    if (spec.get("memory_type") or spec.get("dram_type")) != "LPDDR5" or not _RAM2.exists():
+        return None
+    return float(json.loads(_RAM2.read_text())["eff_BW_GBs"])
 
 
 class MemoryModel(UnitEngine):
@@ -33,10 +48,29 @@ class MemoryModel(UnitEngine):
         if self.is_topo:
             self.pcie_BW_GBs = spec["pcie_BW_GBs"] if "pcie_BW_GBs" in spec else None
             self.floor_us = spec.get("per_call_floor_us", 0.0)
-            # the Card streams from on-card DRAM at its measured eff_BW; Alpha has none
-            self.eff_BW_GBs = spec.get("dram_eff_BW_GBs")
+            if spec.get("mem_spec_ref") and not spec.get("on_card_dram"):
+                # EDGE: no dedicated DRAM -> stream from the target SoC memory over the NoC.
+                # eff_BW = the memory spec's eff_BW x noc_efficiency (ASSUMPTION). Start from eff_BW
+                # (already the DRAM-controller-discounted value), NOT peak x noc; and NOT the Card's
+                # topology-specific 24.2. noc_efficiency is the additional on-chip-fabric factor.
+                self.eff_BW_GBs = load_spec(spec["mem_spec_ref"])["eff_BW_GBs"] * spec.get("noc_efficiency", 1.0)
+            else:
+                # the Card streams from on-card DRAM at its measured eff_BW; Alpha has none
+                self.eff_BW_GBs = spec.get("dram_eff_BW_GBs")
         else:
             self.eff_BW_GBs = spec["eff_BW_GBs"]   # mem_lpddr4/4x/5 effective bandwidth
+        # Phase 1.3 heavy backend: engine='ramulator2' swaps in the LPDDR5 sim's effective BW
+        # (same constructor + frozen contract; ADR-0002). Cache absent -> analytic fallback.
+        self.heavy_source = None
+        if engine == "ramulator2":
+            is_lpddr5 = (spec.get("memory_type") or spec.get("dram_type")) == "LPDDR5"
+            bw = _ramulator2_eff_bw(spec)
+            if bw:
+                self.eff_BW_GBs, self.heavy_source = bw, "ramulator2"
+            elif not is_lpddr5:
+                self.heavy_source = "ramulator2-na"          # Ramulator2 models LPDDR5 ONLY -> N/A here
+            else:
+                self.heavy_source = "ramulator2-deferred"    # LPDDR5 but the cache/C++ build is absent
 
     # ---- engine contract -------------------------------------------------
     def predict(self, wl: Workload) -> dict:
@@ -62,6 +96,17 @@ class MemoryModel(UnitEngine):
 
     def _bw_tag(self):
         """Honesty tag for the bound memory's effective BW."""
+        if self.heavy_source == "ramulator2":
+            return "simulated (Ramulator2 LPDDR5 heavy sim, NOT silicon; Phase 1.3)"
+        if self.heavy_source == "ramulator2-na":
+            return ("analytic; engine='ramulator2' N/A for this spec (Ramulator2 models LPDDR5 ONLY, "
+                    "this is %s) -> analytic, NOT a deferred build" % (self.spec.get("memory_type") or self.spec.get("dram_type")))
+        if self.heavy_source == "ramulator2-deferred":
+            return ("simulated (eff 0.65); engine='ramulator2' requested for LPDDR5 but the Ramulator2 "
+                    "C++ build/cache is absent -> ANALYTIC fallback (risk-#6 documented, report user)")
+        if self.spec.get("topology") == "edge":
+            return ("assumption (edge: target LPDDR5 sim eff x noc_efficiency=%s; no edge silicon, "
+                    "NOT the Card's 24.2)" % self.spec.get("noc_efficiency", 1.0))
         mt = self.spec.get("memory_type") or self.spec.get("dram_type")
         if mt == "LPDDR4x":
             return "calibrated (production-card LPDDR4x decode anchor 24.2 GB/s)"
