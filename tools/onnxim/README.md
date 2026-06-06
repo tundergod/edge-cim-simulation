@@ -1,47 +1,44 @@
 # ONNXim heavy backend (Phase 1.3, `engine='onnxim'`)
 
-The `NpuModel(spec, engine='onnxim')` branch (in `simulator/models/m4_npu.py`) is **interface-ready**:
-it reads a cached ONNXim (generic-systolic, RKNPU2-approx) per-shape latency table and uses it in
-place of the analytic systolic-roofline, behind the same constructor + frozen `predict()` contract.
-**Until the cache exists it falls back to the analytic value** with an honest provenance note
-(`risk-#7`). ONNXim is a heavier **simulator**, NOT RKNPU2 silicon (≠ issue #13, which stays
-*superseded-not-satisfied*).
+`NpuModel(spec, engine='onnxim')` (in `simulator/models/m4_npu.py`) reads the cached ONNXim
+(generic-systolic, RKNPU2-approx) per-shape latency table (`simulated/onnxim/rknpu2_sim_matmul.json`)
+and uses it in place of the analytic systolic-roofline, behind the same constructor + frozen
+`predict()` contract. If the cache is absent it falls back to analytic. ONNXim is a heavier
+**simulator**, NOT RKNPU2 silicon (≠ issue #13, which stays *superseded-not-satisfied*).
 
-> **Status (2026-06-06): cloned; build NOT completed (toolchain friction).** ONNXim pins
-> **`conan == 1.57.0`** (conan 1.x), which is incompatible with the modern `conan 2.x` that installs
-> on this Python 3.13; the upstream's recommended path is its **Dockerfile**. Resolving the conan-1.x
-> / Docker build is a bounded follow-up — and ONNXim is the **lower-value** heavy sim (it is
-> *simulator-vs-simulator* against the already-`simulated` analytic NPU, neither being silicon;
-> contrast Ramulator2-vs-analytic, where Ramulator2 is a validated DRAM model). Until built,
-> `engine='onnxim'` falls back to analytic (risk #7).
+> **Status (2026-06-06): LIVE.** ONNXim is Ubuntu-20.04/gcc-10/conan-1.57 only (won't build on macOS;
+> conan 1.57 won't install on Py3.13). Built on **metiscard** (x86 Ubuntu + Docker) via its own
+> `ubuntu:20.04` Dockerfile (pinned commit `a1e86296`, image `onnxim`), configured RKNPU2-approx
+> (`rknpu2_approx.json`: 3×32×32, INT8, 6.14 TOPS, ramulator2-DDR4 25 GB/s). **Result:** ONNXim
+> (cycle-level) vs the analytic roofline — the channel **staircase trend agrees** (monotone, ∝N), but
+> ONNXim sits a *consistent* **~4×** above the analytic (median |delta| 318%): ONNXim models
+> systolic-fill/NoC/DRAM-scheduling overhead the roofline abstracts. Both simulated, neither silicon →
+> the trend agreement is the cross-check; analytic stays primary; ONNXim ≠ #13. See chapter
+> `N-npu-onnxim.md`, report `validation/reports/phase1.3/m4_npu_onnxim.json`, figure `N3`.
 
-## Build (bounded follow-up — needs conan 1.57.0 or Docker)
+## Build (Docker on a Linux host — `metiscard`)
 
 ```bash
-cd tools/onnxim
-git clone --depth 1 https://github.com/PSAL-POSTECH/ONNXim upstream      # gitignored (done)
-# Option A (Docker, upstream-recommended):
-cd upstream && docker build -t onnxim .
-# Option B (conan 1.x in an isolated env — NOT conan 2.x):
-python3 -m venv /tmp/onnxim-conan && /tmp/onnxim-conan/bin/pip install 'conan==1.57.0'
-#   then follow upstream README (conan install + cmake >= 3.22.1)
+ssh metiscard 'cd ~/edge-cim-simulation && git clone https://github.com/PSAL-POSTECH/ONNXim onnxim \
+  && cd onnxim && git checkout a1e86296 && git submodule update --recursive --init \
+  && docker build . -t onnxim'        # ubuntu:20.04 base installs gcc-10, conan 1.57, cmake 3.22, torch
 ```
 
-Configure as **RKNPU2-approx** by reading `simulator/specs/npu_rknpu2.json` (systolic dim borrowed
-Hexagon 32×32, 6 TOPS INT8). Build failure → OVERALL risk #7 fallback (analytic-only / lookup-
-override) + report user.
+CLI is `./build/bin/Simulator --config <hw> --models_list <list>` (NOT `--model`; the README is
+stale). Run INSIDE the image tree (`cd $ONNXIM_HOME=/workspace/ONNXim`) — do NOT bind-mount over
+`/workspace` (it shadows the in-image build). Two gotchas baked into `rknpu2_approx.json`: the
+8×8-template `spad_size:64` is too small for a 32×32 array (div-by-zero in `Mapping.cc` tiling →
+scaled to 2048/512); and ONNXim **SIGFPE-crashes on GEMMs with N≤64** (degenerate tiling) — the
+sweep uses N≥128. `ramulator2` DRAM works (no issue-#32 crash); `dram_type:simple` is the fallback.
 
-## Produce the cache the adapter reads
+## Produce / refresh the cache
 
-Export ONNX for the NPU shapes in `measurements/op_inventory/` (ADR-0007: export is secondary,
-fallback = build the ONNXim input from the traced graph), run ONNXim, and write per-shape latency:
-
+```bash
+.venv/bin/python tools/analysis/npu_onnxim_trace.py        # one docker run on metiscard -> simulated/onnxim/rknpu2_sim_matmul.json
+.venv/bin/python tools/analysis/build_m4_npu_onnxim.py     # -> validation/reports/phase1.3/m4_npu_onnxim.json (per-shape delta; asserts each is an ONNXim hit)
+.venv/bin/python tools/plotting/npu_n3_fig.py              # -> docs/figures/phase1.3/N3.*
 ```
-simulated/onnxim/rknpu2_sim_matmul.json = {"rows": [{"shape": [M, K, N], "latency_us": <float>}, ...],
-                                           "honesty": "simulated (generic-systolic, RKNPU2-approx), NOT silicon"}
-```
 
-A `tools/analysis/npu_onnxim_trace.py` driver writes that file; then `tools/analysis/
-build_m4_npu_onnxim.py` computes the per-shape **ONNXim-vs-1.2-analytic delta** + HeteroInfer trend
-→ `validation/reports/phase1.3/m4_npu_onnxim.json` + figure `N3`. Output lives under `simulated/`
-(NOT `measurements/`) so simulated data is never mixed with silicon.
+The canonical (M,K,N) list lives in `npu_onnxim_trace.py` and is the single source of truth (the
+delta report reads back exactly those shapes — N4). Output is under `simulated/` (NOT
+`measurements/`) so simulated data is never mixed with silicon.

@@ -44,10 +44,22 @@ backends: **ONNXim** (NPU) and **Ramulator2** (memory, LPDDR5). Same constructor
     `M2-ramulator2`, chapter `M-memory-ramulator2.md`.
   - **ADR-0002 open item RESOLVED:** Ramulator2 ships **LPDDR5 only**, no LPDDR4/4x (confirmed by
     building) — so the LPDDR4x anchor can't be Ramulator2-cross-checked without porting a preset.
-- **ONNXim — cloned, build not completed (toolchain friction).** Pins `conan == 1.57.0` (conan 1.x,
-  incompatible with the conan 2.x that installs on Python 3.13); upstream recommends its Dockerfile.
-  Lower-value (sim-vs-sim against the already-`simulated` analytic NPU). `engine='onnxim'` falls back
-  to analytic (risk #7). Follow-up steps in `tools/onnxim/README.md`.
+- **ONNXim — LIVE (Docker on metiscard).** Ubuntu-20.04/gcc-10/conan-1.57 only (won't build on macOS;
+  conan 1.57 won't install on Py3.13). Built on **metiscard** (x86 Ubuntu + Docker) via its own
+  `ubuntu:20.04` Dockerfile (pinned `a1e86296`), configured RKNPU2-approx (3×32×32, INT8, 6.14 TOPS,
+  ramulator2-DDR4). `tools/analysis/npu_onnxim_trace.py` drives one `docker run` over the canonical
+  GEMM shapes; `engine='onnxim'` is now LIVE (`check_phase1_3.py` heavy path).
+  - **Result (the cross-check):** the channel **staircase trend AGREES** (monotone, ∝N) between ONNXim
+    and the analytic roofline, but ONNXim sits a *consistent* **~4×** higher (median |delta| 318%):
+    ONNXim's cycle-level model carries systolic-fill/NoC/DRAM-scheduling overhead the analytic roofline
+    abstracts away. Both are simulated (no RKNPU2 silicon) → the trend agreement is the cross-check
+    value; the ~4× offset says the analytic roofline is an optimistic lower bound vs the detailed
+    model. **ONNXim ≠ issue #13** (it's a heavier simulator, not silicon; #13 stays
+    superseded-not-satisfied). Analytic NPU stays **primary**. Report
+    `validation/reports/phase1.3/m4_npu_onnxim.json`, figure `N3`, chapter `N-npu-onnxim.md`.
+  - **Two honest gotchas** (documented in the config): the 8×8-template `spad_size:64` is too small for
+    32×32 (div-by-zero → scaled to 2048/512); ONNXim SIGFPE-crashes on N≤64 GEMMs (degenerate tiling)
+    → the sweep uses N≥128.
 - **Not produced** (need a clean heavy-sim run): `simulated/{ramulator2,onnxim}/*.json`, the
   delta reports `validation/reports/phase1.3/*.json`, figures `N3`/`M2-ramulator2`, chapters. The
   `engine=` adapters **auto-use** these caches the moment they exist — no engine code change.
