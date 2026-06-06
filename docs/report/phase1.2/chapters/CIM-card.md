@@ -8,26 +8,31 @@ Phase 1.1 的 CIM 計算引擎（M1）校準在 **Metis Alpha 的 13 個 native 
 
 所以 CIM kernel **不是凍結的**：我們可以在 Card 上用同一個 1×1-conv matmul proxy **重新量測/交叉驗證**，並補上 Alpha 量不到的 **prefill / compute-bound** 形狀。這把「Alpha 凍結」的疑慮解除，也補了 decode 量不到的計算上界。
 
-## 方法（已就緒、ready-to-run）
+## 方法（已執行 2026-06-06）
 
-移植 Alpha 的 `characterization/aetina/run_metis_cim.py` 到 Card → `characterization/metis_card/run_metis_cim_v16.py`：
+移植 Alpha 的 `characterization/aetina/run_metis_cim.py` 到 Card → `characterization/metis_card/run_metis_cim_v16.py`，在 metiscard 上用 axelera-devkit 的 **`axcompile`** 編 1×1-conv matmul proxy → `axrunmodel` 量 `dev_fps`（隔離計算）：
 
-- **編譯首選低階 `compile`**（與 Alpha `run_metis_cim.py:65` 同路徑，1:1）；`compile` 在 v1.6 被移除才退 `deploy.py --mode QUANTCOMPILE`。`voyager-sdk.md:339` 記「general MatMul 非 deploy.py 支援 op（YOLO11 whitelist）」→ 所以 deploy.py 只是 best-effort 退路。
-- `--spike` 模式（~30 分）先答可行性：低階 `compile` 在不在 + 1×1-conv proxy 編不編得出 model.json。
-- 交叉驗證腳本 `tools/analysis/validate_cim_card.py`：Card 的 13 個 alpha-shape `dev_gflops` 對 Alpha 13 點算 `median/p95 |rel_diff|`（同顆 AIPU、800 MHz、無 rescale），另列 prefill/compute-bound 新點。
+- **編譯路徑（spike 修正）**：v1.6 把低階 `compile` **改名為 `axcompile`**（Artifactory wheel，官方 Beta），**不是移除**——更正先前「v1.6 無 compiler」的結論。raw `MatMul`/`Gemm` 仍編不出（`ONNXGraphCleanerError`）→ 用 1×1-conv proxy（數學等價）。
+- **decode（M=1）交叉驗證**：Card 重量 Alpha 13 個 native-tile 形狀，`dev_gflops` 直接對 Alpha（同 800 MHz、無 rescale）。
+- **prefill（M>1）—— compiler SRAM-tiling 牆**：v1.6 `axcompile` **編不出大 prefill GEMM**，但**不是** device-DRAM envelope（Card 的 16 GiB 不解此限），而是 **compiler 的 SRAM L1/L2 tiling 牆**：單一 ~2048×2048 tile 只在 **M≤256** 編得出，M=512 或大-N FFN 直接 fail。AIPU 本就把 GEMM 切 native tile，所以照 Alpha 的 `SAFE_KN` 切法量 canonical tile，full GEMM = `(K·N/W²) × tile_lat(M)`（**fractional tile area，非 ceil**：partial-width GEMM 不會被多收一整個 tile）。
 
-## 本期狀態：`DEFERRED_FALLBACK`（誠實標註）
+## 本期狀態：`CARD_REVALIDATED`
 
-本 session **無法上機**：harness 自動把「SSH 進共用 Metis 板」判為未授權動作擋下（量測節點是共用實驗室硬體，需使用者明確授權；當時使用者離線）。**我們不繞過這個 denial。**
+Card 重驗**已執行**（板先前處於 PCIe AER uncorrectable-fault，`axdevice --refresh` 救回）。`validation/reports/phase1.2/cim_card_revalidate.json` 轉 `CARD_REVALIDATED`：
 
-這正是 plan 設計好的 fallback 情境（plan step 18 註 + handoff §5：低階 compile 不在／MatMul 不支援／板不可達 → 退「**Alpha 13 點 calibrated（非凍結、待板）** + Card e2e 驗 memory-wall」並**回報 user**、不靜默改路徑）。所以：
+- **decode 交叉驗證（13 點）**：median `|rel_diff|` **4.8%**、p95 **9.6%**（square M=1,K=2048,N=2048：Card 200.5 vs Alpha 203.7，rel_diff=0.015=1.5%）。Card **系統性略低於** Alpha（12/13 點），小-N 差較大（~10%）、大-N 收斂（~1.5%）——同一 kernel 跨 SDK（Alpha v1.3.1 → Card v1.6）的小偏移。**在 decode 擬合容差內（median≤10%）→ Alpha 的 `G_eff(N,K)` 擬合 Card-confirmed、解凍、不重擬**（`m1_cim.json:decode_card_revalidation`）。
+- **prefill M-amortization（新，Alpha 量不到）**：`tile_lat(M) = 38.81 + 0.1033·M` µs（asymptote ~81 TOPS），**只擬合在真正的 prefill 點 M∈{64,128,256}**（full 2048×2048 tile）；M=1（41.8µs=200.5 GOP/s）是 decode regime、**分開報告、不混入此線**。擬合 max rel-err **0.6%**。`m1_cim_tile.dev_lat_us` 加 M>1 分支（M=1 decode 路徑**逐字不變**），用 fractional area：`dev_lat_us(128,4096,14336)` = 728µs vs 量測 724µs，**消除原本線性-M 外推的 65843µs（~80× 偏離）**。M>256 或 partial-width tile（K 或 N 非 2048 倍數）標 `prefill_extrapolated`（未校準）。
+- **TTFT 交叉驗證（`recompose_e2e.py`，P14）**：8B prefill（M=1024，**> 量測 M_max=256**）擬合 compute = 0.26s = vendor TTFT 3.79s 的 **7%**；舊線性-M decode-GEMV 估計 75s **違界 ~20×（REFUTED）**。狀態 `UNGATED` → **`BOUNDED-EXTRAPOLATED`**（M=1024 為外推）。誠實註記：`compute ≤ TTFT` 對 fitted 模型**鑑別力弱**（任何合理 prefill 長度都遠低於 TTFT，界要到 M≈22000 才 bind）——其價值在**反證線性-M**，而非絕對驗證 fitted。TTFT 餘量 = weight-load 記憶體 + prefill attention + host overhead（Phase-2）。
 
-- **CIM 計算維持 `calibrated`（Alpha 13 點）**——這是 Phase 1.1 已有的、量測級可信的校準，**不受影響**。
-- **Card 重驗延後**，狀態寫進 `validation/reports/phase1.2/cim_card_revalidate.json`（`status: DEFERRED_FALLBACK`），含解鎖步驟。
-- 移植腳本 + validator **已寫好並語法/執行驗證**（validator 跑得出 fallback 報告），**只差授權**。
+## Edge-CIM 記憶體牆（前瞻、assumption）
 
-> **解鎖**：給 SSH 權限（settings 加一條 `ssh metiscard` 的 Bash 規則）後：`rsync` 腳本上 Card → 跑 `run_metis_cim_v16.py --spike`（先看可行性）→ full → `rsync` 拉回 → 重跑 `validate_cim_card.py`。報告會自動從 `DEFERRED_FALLBACK` 變成 `CARD_REVALIDATED`（含 13 點一致性 + prefill 新點）。
+`simulator/specs/cim_topo_edge.json`（topology C）：整合在 mobile SoC 的 edge CIM，**無專屬 on-card DRAM**，weights 從 SoC 共用 **LPDDR5** 經片上 NoC 串流。
+
+- **記憶體牆 = 目標 LPDDR5 eff_BW × noc_efficiency**：`mem_lpddr5.eff_BW_GBs`（33.3，已含 LPDDR5 DRAM-controller 0.65 系統效率）× `noc_efficiency`（0.9，額外 NoC/arbitration overhead，**assumption**）= **30.0 GB/s**。從 eff_BW 起算（**不是** peak×noc，避免丟掉已量到的系統效率）。
+- **不是 Card 的 24.2 GB/s**：24.2 是 Card 專屬 on-card **LPDDR4x** 的 decode 牆（topology-specific、較舊記憶體）；edge 用 LPDDR5 → BW 較高。**24.2 不可移植到 edge**。
+- **CIM 計算 kernel 共用**：同一顆 800 MHz AIPU、Card-revalidated（topology-agnostic）。**未驗證**：無 edge silicon，`noc_efficiency` 是待校準的 assumption（合理區間 [0.7,1.0] → eff_BW [23.3,33.3]）。
+- 註冊進 `validation/contracts/specs.yaml` + `tools/analysis/check_phase1_2.py`（`op="stream"` probe，honesty=assumption，gate exit 0）。
 
 ## 一句話
 
-CIM 計算的可信度**沒有降級**：仍是 Phase 1.1 的 Alpha-13-點量測校準。Card 重驗是**升級路徑**（解凍 + 補 compute-bound），腳本就緒、待一個授權；在那之前，誠實標成 `DEFERRED_FALLBACK`、回報使用者。
+CIM 計算 kernel 在量產 Card 上**重驗通過**（decode 13 點 median 4.8%、解凍 Alpha 擬合；prefill M-amortization 補上、消除 ~80× 偏離），edge 記憶體層以**明標 assumption** 的 target-LPDDR5×NoC 牆建好（非 Card 24.2）。可信度只升不降。

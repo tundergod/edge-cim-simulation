@@ -17,7 +17,7 @@ tunable_params:
   - ops_per_elem / byte_passes  # STRUCTURAL assumption (instruction-count physics; exp()=cost driver)
 gaps:
   - eta_bw_assumption: "no bandwidth-resolved op in the fp32 decode data + no CPU mem-BW micro-benchmark (audit gap). The memory term binds only for the largest working set (qwen vocab -> L3); elsewhere compute/overhead dominate."
-  - fp16_upper_bound: "fp16 = numpy-EMULATED on A76 -> reuses the fp32-calibrated roofline as an UPPER BOUND; swiglu fp16 = mixed precision."
+  - fp16_native_analytic: "dtype='fp16' = analytic native-fp16 (fp16_lanes=8 = 2x fp32 SIMD + 2-byte elems; eta_c borrowed from fp32), NOT calibrated -- the fp16 cpu_ops.json is numpy-EMULATED (~4x slower), unrepresentative. recompose uses fp32. swiglu fp16 = mixed precision."
   - a55_multicore_simulated: "single A76 core single-thread = measured basis; A55 (IPC=1) + multicore = EXTRAPOLATED (simulated)."
 superseded:
   phase_1_1: "validation/reports/phase1.1/m4_cpu.json = the 1.1 measured-constant lookup (softmax linear-in-kv + per-op constants); kept as the 1.1 record, superseded by this instruction-count engine."

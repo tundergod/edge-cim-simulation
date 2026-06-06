@@ -17,7 +17,7 @@ MemoryModel(spec, engine='analytic').predict(Workload) -> {latency_us, bound, pr
 | spec 種類 | 檔案 | 模型 | bound |
 |---|---|---|---|
 | **host DRAM** | `mem_lpddr4` / `mem_lpddr4x` / `mem_lpddr5` | `stream/kv = bytes ÷ eff_BW` | `memory` |
-| **CIM 拓樸** | `cim_topo_alpha` / `cim_topo_card` | `pcie = per_call_floor + bytes ÷ pcie_BW` | `floor`／`memory` |
+| **CIM 拓樸** | `cim_topo_alpha` / `cim_topo_card` / `cim_topo_edge` | `pcie = per_call_floor + bytes ÷ pcie_BW`；edge `stream = bytes ÷ (LPDDR5 eff_BW × noc_eff)` | `floor`／`memory` |
 
 換型號 = 換 spec 檔，引擎碼不動。重型後端（Ramulator2）走**同一個建構簽名**，Phase 1.3 插進來（見 M.5）。
 
@@ -41,8 +41,9 @@ MemoryModel(spec, engine='analytic').predict(Workload) -> {latency_us, bound, pr
 
 同一個 `MemoryModel`，餵 CIM 拓樸 spec 就變成 PCIe 傳輸模型：
 
-- **`cim_topo_alpha`（量測 Alpha）**：`per_call_floor_us = 911`（Phase 0.3 量到的 per-call DMA floor，**measured**）+ `bytes ÷ 3.9 GB/s`。每次離散 host↔device 搬移都付這 911µs → bound = **floor**。
+- **`cim_topo_alpha`（量測 Alpha）**：`per_call_floor_us = 911.1`（Phase 0.3 量到的 per-call DMA floor `pcie_floor_A1d5`，**measured**）+ `bytes ÷ 3.9 GB/s`。每次離散 host↔device 搬移都付這 911µs → bound = **floor**。
 - **`cim_topo_card`（量產 Card）**：`per_call_floor_us = 0`——on-card 串流權重**不**逐次走 PCIe（**architecture**）。
+- **`cim_topo_edge`（前瞻 edge，Phase 1.3 加）**：整合在 SoC、**無專屬 DRAM**，權重從共用 **LPDDR5** 經片上 NoC 串流 → `stream = bytes ÷ (mem_lpddr5.eff_BW 33.3 × noc_efficiency 0.9) = bytes ÷ 30.0 GB/s`，bound = **memory**。**assumption**（無 edge silicon）；**不是** Card 的 24.2（那是 Card 專屬 LPDDR4x，topology-specific）。
 
 **關鍵誠實邊界**：911µs 是 Alpha **沒有 on-card DRAM** 的**拓樸特例**，**不外推**到量產卡（比照 Phase 1.1 A2.2）。floor 只對離散搬移（KV-reload、activation handoff、conversion-op）收費，decode 串流權重的主幹用頻寬項。
 

@@ -1,13 +1,16 @@
 """Phase 1.2 figure N2 — attention offload: CIM/Mali (silicon) vs NPU (simulated) (build artifact).
 
-Per-token attention vs KV length for three offload candidates:
-  - CIM composed (Alpha topology) — SOLID, silicon-backed (measurements/aetina/cim_attention_composed.json)
-  - Mali GPU-native bmm          — SOLID, silicon-backed (simulator/models/params/m4_gpu.json fit)
-  - NPU analytic                 — DASHED, SIMULATED (NpuModel; NO RKNPU2 silicon, issue #13)
+Per-token attention vs KV length for three candidates. NOTE the two BASES are different (do NOT read
+absolute CIM-vs-NPU as like-for-like):
+  - Mali GPU-native bmm  — SOLID, silicon-backed. PER-BMM x 32 query heads (heads=32 is the bmm
+    scaling; kvh=8 is only the KV/memory count). (simulator/models/params/m4_gpu.json fit)
+  - NPU analytic         — DASHED, SIMULATED. Also per-bmm x 32 heads (NpuModel; NO RKNPU2 silicon, #13).
+  - CIM composed         — SOLID. A DIFFERENT BASIS: a WHOLE-MODEL, multi-layer KV-reload penalty
+    (cim_attention_composed.json), an Alpha-topology ESTIMATE (NOT a production-absolute, NOT per-bmm
+    x heads). So the CIM line is not directly comparable head-for-head to the Mali/NPU lines.
 
-The CIM and Mali lines are silicon (the validated Phase-1.1 deliverables); the NPU line is the
-Phase-1.2 analytic estimate and is drawn dashed + labeled simulated so the honesty boundary is
-visible at a glance. Writes docs/figures/phase1.2/.
+Mali = Phase-1.1 silicon fit; CIM = Alpha-topology whole-model estimate (so labeled, not bare
+"silicon"); NPU = Phase-1.2 analytic (dashed + "simulated"). Writes docs/figures/phase1.2/.
 
 Run: ./.venv/bin/python tools/plotting/npu_n2.py
 """
@@ -29,7 +32,8 @@ from simulator.specs.loader import load_spec  # noqa: E402
 
 AET = ROOT / "measurements/aetina"
 FIG = ROOT / "docs/figures/phase1.2"
-HEADS, HD = 8, 128  # 8B-class attention head config for the simulated NPU line
+HEADS, HD = 32, 128  # llama-3.1-8b QUERY attention heads (=32). kvh=8 is the KV/memory count, NOT
+#                      the bmm scaling -- recompose_e2e scales attn bmm by heads=32 (kvh only for kv_bytes)
 
 
 def main():
@@ -50,7 +54,7 @@ def main():
 
     fig, ax = plt.subplots(figsize=(3.6, 2.5))
     ax.plot(cim_kv, cim_ms, "o-", color=S.PALETTE["attention"], ms=4, lw=1.4,
-            label="CIM composed (silicon)")
+            label="CIM composed (Alpha-topo, whole-model basis)")
     ax.plot(cim_kv, mali_ms, "s-", color=S.PALETTE["ffn"], ms=4, lw=1.4,
             label=f"Mali GPU-native (silicon, x{HEADS}h)")
     ax.plot(cim_kv, npu_ms, "^--", color=S.PALETTE["matmul"], ms=4.5, lw=1.4,
@@ -58,8 +62,8 @@ def main():
     ax.set_yscale("log")
     ax.set_xlabel("KV length")
     ax.set_ylabel("per-token attention (ms, log)")
-    ax.set_title("N2  attention offload — CIM/Mali silicon (solid) vs NPU (dashed, sim)",
-                 fontsize=7.2)
+    ax.set_title("N2  attention offload — Mali silicon / CIM Alpha-est (solid) vs NPU (dashed, sim)",
+                 fontsize=6.8)
     ax.legend(loc="center right", fontsize=5.5)
     S.save(fig, str(FIG / "N2_attn_offload"))
     print(f"wrote {FIG/'N2_attn_offload.png'}")

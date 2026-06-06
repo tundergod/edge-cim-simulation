@@ -5,7 +5,7 @@
   "llm_capable": false,
   "transport": "pcie_gen3x4",
   "pcie_BW_GBs": 3.9,
-  "per_call_floor_us": 911,
+  "per_call_floor_us": 911.1,
   "alloc_envelope_MB": 14,
   "alloc_envelope_param_count": 6000000,
   "clock_mhz": 800,

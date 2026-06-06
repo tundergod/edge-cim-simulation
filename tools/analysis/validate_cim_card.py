@@ -17,7 +17,6 @@ honestly — not a silent path change.
 Run: ./.venv/bin/python tools/analysis/validate_cim_card.py
 """
 import json
-import statistics
 import sys
 from pathlib import Path
 
@@ -25,6 +24,19 @@ ROOT = Path(__file__).resolve().parents[2]
 RAW = ROOT / "measurements/metis_card/cim_card_revalidate_raw.json"
 M1 = ROOT / "simulator/models/params/m1_cim.json"
 OUT = ROOT / "validation/reports/phase1.2/cim_card_revalidate.json"
+
+
+def _quantile(sorted_vals, q):
+    """Linear-interpolation quantile (== numpy.percentile default); unbiased for small n, unlike
+    nearest-rank-round-down which collapses to the minimum for n<=few (issue #37)."""
+    if not sorted_vals:
+        return None
+    if len(sorted_vals) == 1:
+        return sorted_vals[0]
+    pos = q * (len(sorted_vals) - 1)
+    lo = int(pos)
+    hi = min(lo + 1, len(sorted_vals) - 1)
+    return sorted_vals[lo] + (pos - lo) * (sorted_vals[hi] - sorted_vals[lo])
 
 
 def main():
@@ -67,21 +79,40 @@ def main():
                           "rel_diff": round(abs(r["dev_gflops"] - a) / a, 3)})
         elif r.get("group") == "prefill":
             prefill.append({"M": M, "K": K, "N": N, "card_gops": round(r["dev_gflops"], 1),
-                            "dev_lat_us": round(r["dev_lat_us"], 1)})
+                            "dev_lat_us": round(r["dev_lat_us"], 1),
+                            "tiled_extrapolated": bool(r.get("tiled_extrapolated"))})
 
-    diffs = [c["rel_diff"] for c in cross]
+    # --- tolerance gate: CARD_REVALIDATED only when the Card TRACKS Alpha within the decode fit
+    # tolerance AND over a minimum number of cross points (a 1-point spike must NOT self-certify). ---
+    TOL_MEDIAN, TOL_P95, MIN_CROSS_N = 0.10, 0.20, 8   # of the 13 alpha13 shapes
+    diffs = sorted(c["rel_diff"] for c in cross)
+    median = round(_quantile(diffs, 0.50), 3) if diffs else None
+    p95 = round(_quantile(diffs, 0.95), 3) if diffs else None   # linear-interp quantile (not nearest-rank-down, #37)
+    if len(cross) < MIN_CROSS_N:
+        status = "INSUFFICIENT_CROSS_POINTS"
+    elif median <= TOL_MEDIAN and p95 <= TOL_P95:
+        status = "CARD_REVALIDATED"
+    else:
+        status = "CARD_DISAGREES"
+    honesty = {
+        "CARD_REVALIDATED": "CIM = Alpha 13pts calibrated + Card-revalidated (same AIPU, 800MHz, no rescale).",
+        "CARD_DISAGREES": "CIM = Alpha 13pts calibrated; Card cross-val median %s / p95 %s EXCEEDS tolerance "
+                          "(%s/%s) -> Card DISAGREES, decode fit NOT confirmed." % (median, p95, TOL_MEDIAN, TOL_P95),
+        "INSUFFICIENT_CROSS_POINTS": "CIM = Alpha 13pts calibrated; only %d/%d cross points (< %d) -> "
+                          "cannot revalidate (a spike does not self-certify)." % (len(cross), 13, MIN_CROSS_N),
+    }[status]
     report = {
         "module": "cim_card_revalidate",
-        "status": "CARD_REVALIDATED" if cross else "NO_CROSS_POINTS",
-        "honesty": "CIM = Alpha 13pts calibrated + Card-revalidated (same AIPU, 800MHz, no rescale).",
+        "status": status,
+        "tolerance": {"median_rel_diff": TOL_MEDIAN, "p95_rel_diff": TOL_P95, "min_cross_n": MIN_CROSS_N},
+        "honesty": honesty,
         "compile_path": next((r.get("compile_path") for r in raw.values() if r.get("compile_path")), "?"),
         "cross_validation_alpha13": cross,
-        "consistency": {"n": len(cross),
-                        "median_rel_diff": round(statistics.median(diffs), 3) if diffs else None,
-                        "p95_rel_diff": round(sorted(diffs)[int(0.95 * (len(diffs) - 1))], 3) if diffs else None},
+        "consistency": {"n": len(cross), "median_rel_diff": median, "p95_rel_diff": p95},
         "prefill_compute_bound_NEW": prefill,
-        "note": "axrunmodel dev FPS = isolated compute (dev/system split). prefill/compute-bound shapes "
-                "fill the Alpha 1GB-window gap.",
+        "note": "axrunmodel dev FPS = isolated compute (dev/system split). prefill rows with "
+                "tiled_extrapolated=true are n_tiles x ONE measured 2048x2048 tile (the full GEMM was "
+                "NOT compiled directly; only the canonical tile was measured) -> card_gops is extrapolated.",
     }
     OUT.write_text(json.dumps(report, indent=1))
     md = report["consistency"]["median_rel_diff"]

@@ -13,13 +13,14 @@ acceptance_criteria:
 specs:                        # spec -> engine + honesty
   cpu_rk3588:      {engine: m4_cpu.CpuModel,          honesty: "calibrated (cpu_ops.json) + assumption (cache BW) + simulated (A55/multicore)"}
   npu_rknpu2:      {engine: m4_npu.NpuModel,          honesty: "simulated/borrowed (NO silicon, issue #13)"}
-  gpu_mali_g610:   {engine: m4_gpu_roofline.GpuRooflineModel, honesty: "simulated (roofline lower bound, FP16-calibrated; INT8 zero data)"}
+  gpu_mali_g610:   {engine: m4_gpu_roofline.GpuRooflineModel, honesty: "simulated (roofline shape-trend, NOT a strict lower bound; FP16-calibrated; INT8 zero data)"}
   mem_lpddr4:      {engine: m2_memory.MemoryModel,    honesty: "assumption (peak) + derived eff_BW"}
   mem_lpddr4x:     {engine: m2_memory.MemoryModel,    honesty: "calibrated (24.2 production-card decode anchor)"}
   mem_lpddr5:      {engine: m2_memory.MemoryModel,    honesty: "simulated (eff 0.65 < measured 0.71); assumption (peak)"}
   sram_metis_aipu: {engine: m1_cim_spm.SramTier,      honesty: "assumption (CACTI BW/latency); architecture-only residency"}
   cim_topo_alpha:  {engine: m2_memory.MemoryModel,    honesty: "measured (911us floor, 3.9 PCIe); assumption (~14MB envelope)"}
-  cim_topo_card:   {engine: m2_memory.MemoryModel,    honesty: "measured (24.2 on-card BW); CIM compute = Alpha 13pts calibrated"}
+  cim_topo_card:   {engine: m2_memory.MemoryModel,    honesty: "measured (24.2 on-card BW); CIM compute = Alpha 13pts calibrated, Card-revalidated"}
+  cim_topo_edge:   {engine: m2_memory.MemoryModel,    honesty: "assumption (edge mem wall = target LPDDR5 eff x noc_efficiency; no edge silicon, NOT Card 24.2); CIM compute = Alpha 13pts, Card-revalidated"}
 notes:
   - "Swapping a model = swapping a spec file; engine code unchanged."
   - "alloc_envelope_param_count (6M, cim_topo_alpha) != native_max_kn (4.19M, m1_cim.json) — different quantities."

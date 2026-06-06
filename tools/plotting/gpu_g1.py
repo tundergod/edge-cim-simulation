@@ -1,9 +1,10 @@
 """Phase 1.2 Fig G1 — Mali-G610 analytic roofline (FP16) vs micro-benchmark points.
 
-Claim (D4): the FP16-calibrated roofline latency = max(compute, memory) is a SHAPE-TREND
-+ LOWER BOUND — it tracks the measured FP16 points (decode = memory-bound, prefill/ksweep
-= compute-bound) but sits AT-OR-BELOW them (an unoptimised kernel, 5 saturation pts -> not
-transferable). INT8 = zero data; this is FP16 only.
+Claim (D4): the FP16-calibrated roofline latency = max(compute, memory) is a SHAPE-TREND fit
+— it tracks the measured FP16 points (decode = memory-bound, prefill/ksweep = compute-bound),
+mostly at-or-below them but NOT a strict lower bound (~1/3 over-predict by up to +5%;
+frac_pred_le_measured~0.53). Unoptimised kernel, 5 saturation pts -> not transferable. INT8 = zero
+data; this is FP16 only.
 
 Reads  validation/reports/phase1.2/m4_gpu_roofline.json (committed, the calibrated fit).
 Writes docs/figures/phase1.2/G1.png (+pdf/svg).
@@ -37,7 +38,7 @@ def fig_g1():
     # --- (a) measured vs roofline-predicted latency (log-log), y=x reference ---
     lim = [5, 1e7]
     ax.plot(lim, lim, ls="--", lw=0.7, color="0.5", zorder=1)
-    ax.fill_between(lim, lim, [lim[0], lim[0]], color="0.93", zorder=0)  # below y=x = lower-bound band
+    ax.fill_between(lim, lim, [lim[0], lim[0]], color="0.93", zorder=0)  # below y=x = pred<=measured region
     seen = set()
     for p in pts:
         mark, col, lbl = _BOUND_MARK[p["bound"]]
@@ -48,7 +49,7 @@ def fig_g1():
     ax.set_xscale("log"); ax.set_yscale("log"); ax.set_xlim(lim); ax.set_ylim(lim)
     ax.set_xlabel("measured FP16 latency (us)")
     ax.set_ylabel("roofline predicted (us)")
-    ax.text(8, 2e6, "roofline ≤ measured\n(lower bound)", fontsize=5.5, color="0.4")
+    ax.text(8, 2e6, "mostly ≤ measured\n(shape-trend, ~1/3 over)", fontsize=5.5, color="0.4")
     ax.set_title("(a) roofline vs micro-benchmark (FP16)", fontsize=7.5)
     ax.legend(fontsize=5.8, loc="lower right")
 
@@ -64,7 +65,7 @@ def fig_g1():
     axr.set_title(f"(b) median|err|={e['median_abs_relerr']:.0%}, p95={e['p95_abs_relerr']:.0%}",
                   fontsize=7.5)
 
-    fig.suptitle(f"Mali-G610 analytic roofline (FP16-calibrated, LOWER BOUND): "
+    fig.suptitle(f"Mali-G610 analytic roofline (FP16-calibrated, shape-trend): "
                  f"ceil={fit['saturated_f16_gflops']:.1f} GFLOP/s, BW={fit['mem_eff_BW_GBs']:.2f} GB/s "
                  f"— INT8: zero data", fontsize=8, y=1.04)
     fig.tight_layout()

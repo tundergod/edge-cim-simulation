@@ -92,12 +92,16 @@ class NpuModel(UnitEngine):
         return self._argmax_bound(compute_us, memory_us)
 
     def _attn_us(self, kv, heads, layers, hd, dtype):
-        """Native attention QK^T + S.V, padded, compute-bound (act x act, no weight stall)."""
-        # QK^T: (heads, hd) x (hd, kv); S.V: (heads, kv) x (kv, hd). padded to sd.
-        qkt = self._pad(heads) * self._pad(hd) * self._pad(kv)
-        sv = self._pad(heads) * self._pad(kv) * self._pad(hd)
-        compute_us = 2.0 * (qkt + sv) / (self.tops * 1e12) * 1e6 * layers
-        return self._argmax_bound(compute_us, 0.0)
+        """Native attention QK^T + S.V, compute-bound (act x act, no weight stall). Heads are the
+        BATCH dimension -- NOT padded into the systolic M slot (padding GQA heads=8 up to sd=32 would
+        4x-over-count the attention MACs); only the matmul dims hd/kv are padded to the 32x32 quantum,
+        then multiplied by the raw head count. The dispatch floor applies PER LAYER, not once for the
+        whole L-layer rollup."""
+        # per head per layer: QK^T (hd x kv) + S.V (kv x hd), padded; x heads (batch).
+        per_head = self._pad(hd) * self._pad(kv) + self._pad(kv) * self._pad(hd)
+        per_layer_us = 2.0 * heads * per_head / (self.tops * 1e12) * 1e6
+        lat = layers * max(per_layer_us, _DISPATCH_FLOOR_US)
+        return lat, ("compute" if per_layer_us >= _DISPATCH_FLOOR_US else "floor")
 
     def _argmax_bound(self, compute_us, memory_us):
         floor = _DISPATCH_FLOOR_US
@@ -115,9 +119,9 @@ class NpuModel(UnitEngine):
         else:
             lat, bound = self._gemm_us(wl.M, wl.K, wl.N, wl.dtype)
             prov = ("simulated: analytic systolic roofline %d TOPS INT8 ceiling + borrowed %dx%d "
-                    "padding (Fig3 staircase) + order/shape factor <=%gx (Fig4); BW band Fig5 "
-                    "59-66%%/68; borrowed, NO silicon (#13)"
-                    % (int(self.tops), self.sd, self.sd, _ORDER_SHAPE_MAX))
+                    "padding (Fig3 staircase) + order/shape factor <=%gx (Fig4); memory roofline at "
+                    "bw_eff_low=%.1f GB/s (Fig5 59%% band); borrowed, NO silicon (#13)"
+                    % (int(self.tops), self.sd, self.sd, _ORDER_SHAPE_MAX, self.bw_eff_low))
         if self.engine == "onnxim":   # Phase 1.3 heavy backend (drop-in; ONNXim != #13 silicon)
             hit = self.onnxim.get((wl.M, wl.K, wl.N))
             if hit is not None:
