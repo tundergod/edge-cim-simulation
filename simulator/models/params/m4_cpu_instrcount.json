@@ -1,0 +1,31 @@
+{
+ "_doc": "CALIBRATED factors for the CPU instruction-count roofline (m4_cpu.py), fit to fp32 cpu_ops.json on a single A76 core. eta_c calibrated; eta_bw=ASSUMPTION (no BW-resolved op in fp32 decode data); overhead_op per op. fp32-only fit; the model's fp16 path is analytic native-fp16 (2x SIMD), NOT fit here.",
+ "eta_c": 0.1521,
+ "eta_bw": 0.6,
+ "eta_bw_tag": "assumption (no CPU mem-BW micro-benchmark; literature-typical cache efficiency)",
+ "overhead_op_us": {
+  "residual": 0.789,
+  "rmsnorm": 16.815,
+  "rope_apply": 22.525,
+  "sampling_argmax": 7.357,
+  "softmax": 15.497,
+  "swiglu": 0.0
+ },
+ "ops_per_elem": {
+  "residual": 1,
+  "rmsnorm": 5,
+  "rope_apply": 6,
+  "swiglu": 34,
+  "softmax": 33,
+  "sampling_argmax": 1
+ },
+ "byte_passes": {
+  "residual": 2,
+  "rmsnorm": 4,
+  "rope_apply": 5,
+  "swiglu": 3,
+  "softmax": 3,
+  "sampling_argmax": 1
+ },
+ "calibration_basis": "single A76 core, single-thread, numpy fp32 (measurements/aetina/cpu_ops.json)"
+}

@@ -87,7 +87,7 @@ transfer_us  = 911 µs          + bytes ÷ 3.9 GB/s
   - 我**先前寫「47% of LPDDR5-51.2」是錯的**——拿量測的 LPDDR4x 去除以 **LPDDR5** 的峰值（不同記憶體）才會看起來異常低。已更正成 71%（對 LPDDR4x）。
 - **模擬的前瞻 SoC 才用 LPDDR5**（橋接假設）：峰值 51.2 GB/s（LPDDR5-6400 4×16b），有效 ≈ 51.2×0.65 ≈ **33 GB/s**。這是**另一塊記憶體、另一個數字**，別跟量測的 24.2 混為一談。
 
-**⚠️ 誠實標註**：DRAM 模型是**解析的**（Ramulator2 後端延 Phase 2，ADR-0002）；量產卡 LPDDR4x 的確切 bus 寬度未公開（`[GAP]`）。驗證 = 合理性檢查：量測有效頻寬落在峰值的 **55–85%**（71% ✓，且對齊上述文獻）。
+**⚠️ 誠實標註**：DRAM 模型是**解析的**（Ramulator2 後端：單串流 LPDDR5 cross-check 在 Phase 1.3、多單元競爭在 Phase 2，ADR-0002）；量產卡 LPDDR4x 的確切 bus 寬度未公開（`[GAP]`）。驗證 = 合理性檢查：量測有效頻寬落在峰值的 **55–85%**（71% ✓，且對齊上述文獻）。
 
 ---
 
@@ -121,7 +121,7 @@ transfer_us  = 911 µs          + bytes ÷ 3.9 GB/s
 | 項目 | 狀態 | 說明 |
 |---|---|---|
 | PCIe floor / BW | ✅ 固定參數 | 911µs + 3.9 GB/s;**無逐點 PCIe 掃描**（Phase 0.3 缺口）→ 不重擬斜率 |
-| DRAM 頻寬 | ⚠️ 解析 | **量測 = LPDDR4x 24.2 GB/s = 71% of ~34 peak**（HeteroInfer 59–66% + web 60–80% 佐證）;模擬 SoC 的 LPDDR5 另計（33/51.2);Ramulator2 延 Phase 2 |
+| DRAM 頻寬 | ⚠️ 解析 | **量測 = LPDDR4x 24.2 GB/s = 71% of ~34 peak**（HeteroInfer 59–66% + web 60–80% 佐證）;模擬 SoC 的 LPDDR5 另計（33/51.2);Ramulator2 單串流在 Phase 1.3、多單元在 Phase 2 |
 | kv_cache append | ❌ 未驗證（暫用) | 解析 `kv_bytes/BW` 當暫時替身（板離線);長文本佔 12.6–33.5% 不可省；待救板補真值 |
 | L1/L2 residency | 🔧 改為要建 | **Phase 1.2 建** L1（4MiB/核）+L2（32MiB 共享）;Alpha 「l2/ddr≈1.0」只是無 on-card DRAM 的拓樸特例，不能外推 |
 | floor 適用邊界 | ✅ 已界定 | 只對離散 host↔device 搬移收費；decode 串流不逐次付（見 A2.2) |

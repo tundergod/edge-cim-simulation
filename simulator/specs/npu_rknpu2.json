@@ -1,0 +1,35 @@
+{
+  "_doc": "RKNPU2 (RK3588 NPU) spec (Phase 1.2 = ANALYTIC). NO RKNPU2 silicon (board offline, issue #13) -> ALL fields simulated/borrowed. Datasheet 6 TOPS INT8; systolic dimension BORROWED from Hexagon 32x32 (HeteroInfer); BW = RK3588 host ~34 GB/s x 59-66% (denominator = 68 peak, HeteroInfer Fig5). No power telemetry -> energy NOT determinable. Upgrade path: issue #13 silicon (superseded-not-satisfied) + ONNXim (Phase 1.3, simulated not silicon).",
+  "unit": "npu",
+  "cores": 3,
+  "freq_ghz": 1.0,
+  "tops_int8": 6,
+  "dtypes": ["int4", "int8", "int16", "fp16"],
+  "systolic_dim": [32, 32],
+  "bw_GBs": {
+    "host_peak": 34.0,
+    "eff_frac_low": 0.59,
+    "eff_frac_high": 0.66,
+    "eff_low": 20.1,
+    "eff_high": 22.4,
+    "heteroinfer_peak_denominator": 68
+  },
+  "honesty": "simulated",
+  "upgrade": {
+    "silicon": "issue #13 RKNPU2 matmul micro-benchmark (NOT collected; superseded-not-satisfied, not achieved)",
+    "heavy_sim": "ONNXim (Phase 1.3; generic-systolic RKNPU2-approx; simulated, NOT silicon)"
+  },
+  "notes": {
+    "dtypes": "INT4/8/16 + FP16 only (no BF16/TF32).",
+    "energy": "no RKNPU2 power telemetry -> energy not determinable.",
+    "bw_denominator": "59-66% is of a 68 GB/s peak (HeteroInfer Fig5 single-proc decode), NOT of RK3588's 34."
+  },
+  "provenance": {
+    "cores": "RKNPU2 datasheet (3-core) [measured-spec]",
+    "tops_int8": "RKNPU2 datasheet 6 TOPS INT8 [assumption]",
+    "freq_ghz": "RKNPU2 ~1 GHz [assumption]",
+    "systolic_dim": "Hexagon 32x32 (HeteroInfer) [borrowed]",
+    "bw_GBs": "RK3588 host ~34 x HeteroInfer Fig5 59-66%/68 [borrowed]",
+    "dtypes": "RKNPU2 datasheet [measured-spec]"
+  }
+}

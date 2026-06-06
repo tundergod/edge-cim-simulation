@@ -1,0 +1,25 @@
+{
+  "_doc": "CIM topology B = production Metis Card. HAS on-card LPDDR4x DRAM; LLM-CAPABLE (runs precompiled INT8 LLMs). Carries TRANSPORT differences only; the CIM COMPUTE engine (M1, m1_cim.json) is topology-agnostic and SHARED with topology A. On-card LPDDR4x decode eff_BW 24.2 GB/s is the MEASURED L4 anchor (the decode memory wall). NO per-call PCIe floor for on-card weight streaming. 16 GiB capacity (machines.md). SAME 800 MHz AIPU as Alpha -> Card axrunmodel dev_lat/dev_gflops are directly comparable to Alpha's 13 points (CIM kernel re-validatable, not frozen).",
+  "topology": "card",
+  "on_card_dram": true,
+  "llm_capable": true,
+  "dram_type": "LPDDR4x",
+  "dram_eff_BW_GBs": 24.2,
+  "dram_capacity_GiB": 16,
+  "per_call_floor_us": 0,
+  "clock_mhz": 800,
+  "cim_compute_params": "simulator/models/params/m1_cim.json",
+  "honesty": "calibrated compute (Alpha 13 pts; Card-revalidatable) + measured on-card BW",
+  "notes": {
+    "floor": "on-card weight streaming pays no per-call PCIe floor (contrast topology A 911 us).",
+    "anchor": "dram_eff_BW 24.2 = on-card LPDDR4x decode wall (L4 anchor, mem_lpddr4x).",
+    "revalidation": "same 800 MHz quad-core AIPU as Alpha; axrunmodel dev_fps = isolated compute -> CIM kernel re-measurable on Card, cross-check vs Alpha 13 pts, no clock rescale.",
+    "clock": "800 MHz both boards (machines.md); fix Card DVFS to 800 if it differs."
+  },
+  "provenance": {
+    "dram_eff_BW_GBs": "production Metis Card on-card LPDDR4x decode 24.2 GB/s (voyager-sdk.md:278) [measured]",
+    "dram_capacity_GiB": "machines.md metis-0:7:0 16 GiB [measured]",
+    "per_call_floor_us": "on-card streaming, no per-call floor [architecture]",
+    "clock_mhz": "machines.md Card clock=800MHz [measured]"
+  }
+}

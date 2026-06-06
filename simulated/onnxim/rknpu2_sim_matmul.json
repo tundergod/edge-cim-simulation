@@ -1,0 +1,128 @@
+{
+ "_doc": "ONNXim va1e86296 RKNPU2-approx (32x32 x3 systolic, INT8, ramulator2-DDR4) per-shape GEMM latency. simulated, NOT silicon; ONNXim != issue #13.",
+ "config": "rknpu2_approx (32x32 x3, INT8, dram=ramulator2)",
+ "onnxim_commit": "a1e86296",
+ "honesty": "simulated (ONNXim generic-systolic, RKNPU2-approx), NOT silicon",
+ "rows": [
+  {
+   "shape": [
+    1,
+    2048,
+    128
+   ],
+   "latency_us": 56.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    256
+   ],
+   "latency_us": 109.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    512
+   ],
+   "latency_us": 217.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    1024
+   ],
+   "latency_us": 433.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    1536
+   ],
+   "latency_us": 705.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    2048
+   ],
+   "latency_us": 846.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    3072
+   ],
+   "latency_us": 1487.0
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    1024
+   ],
+   "latency_us": 921.0
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    4096
+   ],
+   "latency_us": 3121.0
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    14336
+   ],
+   "latency_us": 10291.0
+  },
+  {
+   "shape": [
+    1,
+    14336,
+    4096
+   ],
+   "latency_us": 10000.0
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    1024
+   ],
+   "latency_us": 2124.0
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    4096
+   ],
+   "latency_us": 6725.0
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    14336
+   ],
+   "latency_us": 22364.0
+  },
+  {
+   "shape": [
+    256,
+    14336,
+    4096
+   ],
+   "latency_us": 21933.0
+  }
+ ]
+}

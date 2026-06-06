@@ -1,0 +1,40 @@
+{
+  "_doc": "RK3588 CPU spec (Phase 1.2). big.LITTLE: 4x A76 + 4x A55, NEON 128-bit. CALIBRATION BASIS = single A76 core, single-thread, numpy fp32 (cpu_ops.json); multi-core/A55 are EXTRAPOLATED (simulated). Cache BW = ARM A76 TRM estimate (assumption) and is SELF-CONTAINED here: WP-CPU depends ONLY on this spec, NOT on the memory spec (WP-MEM). These cache tiers are the A76's own SRAM, NOT the Metis AIPU SRAM tier and NOT the production-card LPDDR4x.",
+  "unit": "cpu",
+  "clusters": {
+    "a76": {"cores": 4, "freq_ghz": 2.3, "ipc": 2, "role": "big"},
+    "a55": {"cores": 4, "freq_ghz": 1.8, "ipc": 1, "role": "little"}
+  },
+  "neon": {"width_bits": 128, "fp32_lanes": 4, "fp16_lanes": 8},
+  "cache": {
+    "l1d_KiB_per_core": 64,
+    "l2_KiB_per_core": 512,
+    "l3_MiB_shared": 3
+  },
+  "cache_bw_GBs": {
+    "l1d_per_core": 73.6,
+    "l2_per_core": 36.8,
+    "l3_shared_per_core": 18.4,
+    "host_lpddr4x": 34.1
+  },
+  "calibration_basis": {
+    "core": "single A76",
+    "threads": 1,
+    "dtype": "fp32",
+    "source": "measurements/aetina/cpu_ops.json"
+  },
+  "notes": {
+    "decode_residency": "decode support-op working sets reside in L1/L2/L3 -> memory term uses CACHE BW, never host LPDDR. 'swap LPDDR4->5 recompute' applies to PREFILL only.",
+    "cost_driver": "exp() transcendental (softmax/swiglu) dominates, NOT a reduction/elementwise split.",
+    "fp16": "model dtype='fp16' = ANALYTIC native-fp16 (fp16_lanes=8 = 2x fp32 SIMD + 2-byte elems; eta_c borrowed from fp32), NOT calibrated. The fp16 cpu_ops.json was numpy-EMULATED (~4x slower), unrepresentative of native fp16; recompose uses the fp32 calibrated path.",
+    "multicore": "single-core measured -> multi-core extrapolated; A55 IPC=1 (single NEON pipe); A55+multicore unmeasured = simulated.",
+    "cache_vs_metis": "cache_bw_GBs is the A76's own SRAM (TRM estimate), NOT the Metis AIPU SRAM tier (sram_metis_aipu) and NOT the production-card LPDDR4x (24.2)."
+  },
+  "provenance": {
+    "clusters": "datasheet (RK3588 TRM) [measured]",
+    "neon": "ARMv8.2-A NEON 128-bit [measured]",
+    "cache": "RK3588 / Cortex-A76 TRM [measured]",
+    "cache_bw_GBs": "ARM A76 TRM estimate (2x128-bit load L1; derived L2/L3; host LPDDR4x peak) [assumption]",
+    "calibration_basis": "Phase 0.3 protocol: single A76 core, single-thread, numpy fp32 [measured]"
+  }
+}

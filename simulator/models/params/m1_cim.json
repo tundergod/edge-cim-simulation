@@ -73,5 +73,28 @@
    "K": 2048,
    "gops": 203.7
   }
- ]
+ ],
+ "prefill_tile_a_us": 38.813,
+ "prefill_tile_b_us": 0.1033,
+ "prefill_tile_kn": 4194304,
+ "prefill_M_max": 256,
+ "_prefill_doc": "prefill (M>1): tile_lat(M)=a+b*M fit on full 2048x2048 tiles at M in {64,128,256}; GEMM = (K*N/W^2)*tile_lat (fractional area, not ceil). M>256 / partial-width tiles extrapolated (CimTileModel.prefill_extrapolated).",
+ "decode_card_revalidation": {
+  "median_rel_diff": 0.048,
+  "p95_rel_diff": 0.097,
+  "n": 13,
+  "decision": "CONFIRMED-ON-CARD: kept Alpha fit (un-frozen)",
+  "note": "median |rel_diff| over the alpha13 pts (computed here; matches validate_cim_card). <= 0.10 (with n >= 8) -> the Alpha G_eff is Card-confirmed, freeze lifted."
+ },
+ "prefill_M_fit": [
+  64,
+  128,
+  256
+ ],
+ "prefill_M_decode_anchor": {
+  "M": 1,
+  "tile_lat_us": 41.83,
+  "gops_measured": 200.5,
+  "note": "measured decode (M=1) tile on its measured basis; NOT in the prefill fit (different regime: direct single-column compile, modeled by G_eff)"
+ }
 }

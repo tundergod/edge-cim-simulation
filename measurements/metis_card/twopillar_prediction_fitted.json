@@ -22,7 +22,7 @@
  "GATE_within_25pct": true,
  "standalone_nonstreaming_8b_us": {
   "decode_stream_backbone_us": 409470.5,
-  "cpu_support_us": 62023.4,
+  "cpu_support_us": 15007.0,
   "gpu_offload_attention_us_lowerbound": 260185.0,
   "kv_cache_append_us": 1386.5,
   "_caveat": "already absorbed in BW_eff at the fit point; ADDING double-counts (Phase-2 fidelity, watch-item). GPU attn is heads*layers, lower-bound kernel."
@@ -34,12 +34,21 @@
   ],
   "note": "why offload: CIM attention >> GPU-native; reported, NOT in t_step"
  },
- "prefill_ttft_besteffort_UNGATED": {
+ "prefill_gemm_compute_BOUNDED": {
+  "status": "BOUNDED-EXTRAPOLATED",
   "M_prefill": 1024,
+  "M_measured_max": 256,
+  "extrapolated": true,
   "vendor_ttft_s": 3.794,
-  "implied_prefill_throughput_TOPS": 4.05,
-  "est_using_decode_GEMV_throughput_s": 75.4,
-  "memory_bound_floor_s": 0.409,
-  "note": "UNGATED. Vendor TTFT implies ~4 TOPS effective prefill GEMM throughput, but decode-GEMV throughput (204 GOP/s=0.2 TOPS) gives an absurd 75s -> prefill GEMM runs ~20x faster than decode GEMV and is UNMEASURED (proj M>=512 device-fail; prefill attention S-scaling 1 pt; softmax S x S). Prefill path unvalidated; Phase-2 gap. prefill_ms_median degenerate, unused."
+  "gemm_compute_fitted_s": 0.259,
+  "gemm_compute_frac_of_ttft": 0.068,
+  "memory_floor_s": 0.409,
+  "decode_GEMV_linear_s": 75.4,
+  "model_comparison_compute_le_ttft": {
+   "fitted_consistent": true,
+   "decode_GEMV_linear_consistent": false,
+   "note": "This is a MODEL COMPARISON, not an absolute validation gate: the fitted compute (at any plausible prefill length, the bound binds only above M~22000) sits well under TTFT, so compute<=TTFT has WEAK discriminating power for the fitted model. Its value is REFUTING the linear-M decode-GEMV model, whose compute alone exceeds the measured TTFT ~20x (physically impossible)."
+  },
+  "note": "GEMM compute Card-MEASURED at M<=256 (fit_cim_prefill.py M-amortization); M=1024 is EXTRAPOLATED -> status BOUNDED-EXTRAPOLATED. Fitted 0.26s = 7% of vendor TTFT; linear-M decode-GEMV (75s) REFUTED. TTFT remainder = weight-load memory (~0.41s) + prefill attention (S^2 softmax) + host overhead (Phase-2). prefill_ms_median unused."
  }
 }

@@ -1,0 +1,367 @@
+{
+ "module": "m4_gpu_roofline",
+ "role": "swap slot (analytic roofline); micro-benchmark (m4_gpu) = PRIMARY",
+ "equation": {
+  "latency_us": "max(compute_us, memory_us)",
+  "compute_us": "2*M*K*N / (eff_compute_fp16 * fp16_peak)",
+  "memory_us": "nbytes / mem_eff_BW_GBs",
+  "nbytes_default": "(K*N + M*K + M*N) * bytes_per_elem"
+ },
+ "calibrated_fit": {
+  "_doc": "CALIBRATED roofline slot (FP16, shape-trend fit, not transferable). eff_compute_fp16 = converged f16 GFLOP/s / fp16 peak; mem_eff_BW_GBs = lstsq fit to FP16 decode-GEMV. INT8 = zero data. NOT a strict lower bound (~1/3 of points over-predict by up to +5%; see frac_pred_le_measured).",
+  "eff_compute_fp16": 0.01965,
+  "saturated_f16_gflops": 20.12,
+  "mem_eff_BW_GBs": 1.256,
+  "calibration": "mali_matmul.json FP16 (ksweep 5 pts + 16 decode-GEMV pts)",
+  "honesty": "shape-trend fit, FP16 only; mostly <= measured but ~1/3 over-predict (NOT a strict lower bound)"
+ },
+ "error_vs_1p1_measured": {
+  "n_points": 30,
+  "median_abs_relerr": 0.027,
+  "p95_abs_relerr": 0.361,
+  "max_abs_relerr": 0.658,
+  "frac_within_5pct": 0.667,
+  "frac_pred_le_measured": 0.533,
+  "note": "frac_pred_le_measured = signed rel_err <= 0 (roofline at/below measured) -- this is NOT 1.0: proj_decode shapes over-predict up to +5%, so the roofline is a shape-trend fit, mostly (~2/3) <= measured, not a strict lower bound. frac_within_5pct = |rel_err|<=0.05.",
+  "per_point": [
+   {
+    "group": "proj_decode",
+    "tag": "1b",
+    "M": 1,
+    "K": 2048,
+    "N": 2048,
+    "meas_us": 19552.0,
+    "pred_us": 6685.4,
+    "bound": "memory",
+    "rel_err": -0.658
+   },
+   {
+    "group": "proj_decode",
+    "tag": "1b",
+    "M": 1,
+    "K": 2048,
+    "N": 512,
+    "meas_us": 1596.2,
+    "pred_us": 1673.8,
+    "bound": "memory",
+    "rel_err": 0.049
+   },
+   {
+    "group": "proj_decode",
+    "tag": "1b",
+    "M": 1,
+    "K": 2048,
+    "N": 8192,
+    "meas_us": 27029.9,
+    "pred_us": 26731.6,
+    "bound": "memory",
+    "rel_err": -0.011
+   },
+   {
+    "group": "proj_decode",
+    "tag": "1b",
+    "M": 1,
+    "K": 8192,
+    "N": 2048,
+    "meas_us": 26529.9,
+    "pred_us": 26731.6,
+    "bound": "memory",
+    "rel_err": 0.008
+   },
+   {
+    "group": "proj_decode",
+    "tag": "3b",
+    "M": 1,
+    "K": 3072,
+    "N": 3072,
+    "meas_us": 14742.6,
+    "pred_us": 15037.1,
+    "bound": "memory",
+    "rel_err": 0.02
+   },
+   {
+    "group": "proj_decode",
+    "tag": "3b",
+    "M": 1,
+    "K": 3072,
+    "N": 1024,
+    "meas_us": 4857.2,
+    "pred_us": 5015.6,
+    "bound": "memory",
+    "rel_err": 0.033
+   },
+   {
+    "group": "proj_decode",
+    "tag": "3b",
+    "M": 1,
+    "K": 3072,
+    "N": 8192,
+    "meas_us": 40101.2,
+    "pred_us": 40090.9,
+    "bound": "memory",
+    "rel_err": -0.0
+   },
+   {
+    "group": "proj_decode",
+    "tag": "3b",
+    "M": 1,
+    "K": 8192,
+    "N": 3072,
+    "meas_us": 39148.4,
+    "pred_us": 40090.9,
+    "bound": "memory",
+    "rel_err": 0.024
+   },
+   {
+    "group": "proj_decode",
+    "tag": "8b",
+    "M": 1,
+    "K": 4096,
+    "N": 4096,
+    "meas_us": 26113.9,
+    "pred_us": 26728.4,
+    "bound": "memory",
+    "rel_err": 0.024
+   },
+   {
+    "group": "proj_decode",
+    "tag": "8b",
+    "M": 1,
+    "K": 4096,
+    "N": 1024,
+    "meas_us": 6438.0,
+    "pred_us": 6687.0,
+    "bound": "memory",
+    "rel_err": 0.039
+   },
+   {
+    "group": "proj_decode",
+    "tag": "8b",
+    "M": 1,
+    "K": 4096,
+    "N": 14336,
+    "meas_us": 95088.0,
+    "pred_us": 93532.9,
+    "bound": "memory",
+    "rel_err": -0.016
+   },
+   {
+    "group": "proj_decode",
+    "tag": "8b",
+    "M": 1,
+    "K": 14336,
+    "N": 4096,
+    "meas_us": 92182.3,
+    "pred_us": 93532.9,
+    "bound": "memory",
+    "rel_err": 0.015
+   },
+   {
+    "group": "proj_decode",
+    "tag": "qwen",
+    "M": 1,
+    "K": 3584,
+    "N": 3584,
+    "meas_us": 19886.6,
+    "pred_us": 20465.3,
+    "bound": "memory",
+    "rel_err": 0.029
+   },
+   {
+    "group": "proj_decode",
+    "tag": "qwen",
+    "M": 1,
+    "K": 3584,
+    "N": 512,
+    "meas_us": 2807.3,
+    "pred_us": 2928.5,
+    "bound": "memory",
+    "rel_err": 0.043
+   },
+   {
+    "group": "proj_decode",
+    "tag": "qwen",
+    "M": 1,
+    "K": 3584,
+    "N": 18944,
+    "meas_us": 109779.8,
+    "pred_us": 108149.4,
+    "bound": "memory",
+    "rel_err": -0.015
+   },
+   {
+    "group": "proj_decode",
+    "tag": "qwen",
+    "M": 1,
+    "K": 18944,
+    "N": 3584,
+    "meas_us": 106325.5,
+    "pred_us": 108149.4,
+    "bound": "memory",
+    "rel_err": 0.017
+   },
+   {
+    "group": "proj_prefill",
+    "tag": "8b_gate_up",
+    "M": 128,
+    "K": 4096,
+    "N": 14336,
+    "meas_us": 794804.5,
+    "pred_us": 747077.0,
+    "bound": "compute",
+    "rel_err": -0.06
+   },
+   {
+    "group": "proj_prefill",
+    "tag": "8b_gate_up",
+    "M": 1024,
+    "K": 4096,
+    "N": 14336,
+    "meas_us": 6314684.2,
+    "pred_us": 5976616.4,
+    "bound": "compute",
+    "rel_err": -0.054
+   },
+   {
+    "group": "attn",
+    "tag": "qkT_dec",
+    "M": 1,
+    "K": 128,
+    "N": 129,
+    "meas_us": 43.4,
+    "pred_us": 26.7,
+    "bound": "memory",
+    "rel_err": -0.385
+   },
+   {
+    "group": "attn",
+    "tag": "sv_dec",
+    "M": 1,
+    "K": 129,
+    "N": 128,
+    "meas_us": 40.0,
+    "pred_us": 26.7,
+    "bound": "memory",
+    "rel_err": -0.332
+   },
+   {
+    "group": "attn",
+    "tag": "qkT_dec",
+    "M": 1,
+    "K": 128,
+    "N": 513,
+    "meas_us": 122.1,
+    "pred_us": 105.6,
+    "bound": "memory",
+    "rel_err": -0.135
+   },
+   {
+    "group": "attn",
+    "tag": "sv_dec",
+    "M": 1,
+    "K": 513,
+    "N": 128,
+    "meas_us": 133.7,
+    "pred_us": 105.6,
+    "bound": "memory",
+    "rel_err": -0.21
+   },
+   {
+    "group": "attn",
+    "tag": "qkT_dec",
+    "M": 1,
+    "K": 128,
+    "N": 1025,
+    "meas_us": 222.1,
+    "pred_us": 210.8,
+    "bound": "memory",
+    "rel_err": -0.051
+   },
+   {
+    "group": "attn",
+    "tag": "sv_dec",
+    "M": 1,
+    "K": 1025,
+    "N": 128,
+    "meas_us": 257.7,
+    "pred_us": 210.8,
+    "bound": "memory",
+    "rel_err": -0.182
+   },
+   {
+    "group": "attn",
+    "tag": "qkT_pre",
+    "M": 512,
+    "K": 128,
+    "N": 512,
+    "meas_us": 3336.5,
+    "pred_us": 3335.2,
+    "bound": "compute",
+    "rel_err": -0.0
+   },
+   {
+    "group": "ksweep",
+    "tag": "sq",
+    "M": 64,
+    "K": 64,
+    "N": 64,
+    "meas_us": 33.6,
+    "pred_us": 26.1,
+    "bound": "compute",
+    "rel_err": -0.226
+   },
+   {
+    "group": "ksweep",
+    "tag": "sq",
+    "M": 128,
+    "K": 128,
+    "N": 128,
+    "meas_us": 213.6,
+    "pred_us": 208.4,
+    "bound": "compute",
+    "rel_err": -0.024
+   },
+   {
+    "group": "ksweep",
+    "tag": "sq",
+    "M": 256,
+    "K": 256,
+    "N": 256,
+    "meas_us": 1659.5,
+    "pred_us": 1667.6,
+    "bound": "compute",
+    "rel_err": 0.005
+   },
+   {
+    "group": "ksweep",
+    "tag": "sq",
+    "M": 512,
+    "K": 512,
+    "N": 512,
+    "meas_us": 13233.1,
+    "pred_us": 13340.7,
+    "bound": "compute",
+    "rel_err": 0.008
+   },
+   {
+    "group": "ksweep",
+    "tag": "sq",
+    "M": 1024,
+    "K": 1024,
+    "N": 1024,
+    "meas_us": 106720.0,
+    "pred_us": 106725.3,
+    "bound": "compute",
+    "rel_err": 0.0
+   }
+  ]
+ },
+ "honesty": {
+  "int8": "ZERO INT8 GPU GEMM data; fit + predict are FP16 only.",
+  "measured_point": "Phase 1.1 20.12 GFLOP/s = FP16, NOT INT8.",
+  "fp32_peak_512": "spec assumption (may underestimate 2-4x); this model calibrates against FP16, so it does not depend on the FP32 peak.",
+  "roofline": "shape-trend fit (FP16); mostly <= measured but ~1/3 over-predict by up to +5% (NOT a strict lower bound); 5 saturation pts -> NOT transferable calibration. No numeric acceptance gate (no INT8 silicon).",
+  "ksweep_saturation_M": "DEAD param in spec (kept, not deleted, per audit); unused here.",
+  "primary_vs_slot": "micro-benchmark (m4_gpu.py) PRIMARY; this roofline = model-swap slot."
+ }
+}

@@ -9,8 +9,9 @@ STANDALONE for transparency: they are already absorbed into the effective decode
 the fit point, so ADDING them would double-count (Phase-2 fidelity item; see memory watch-item).
 The Alpha 911 us per-call floor is NOT applied (production = on-card DRAM, topology artifact).
 The CIM-attention penalty (C4) is reported separately as the offload justification, not in t_step.
-prefill TTFT is a best-effort, UNGATED estimate vs vendor ttft_s_median (CIM-prefill inputs
-unmeasured at M>=512; prefill_ms_median is degenerate and unused).
+prefill GEMM compute is now Card-MEASURED (M-amortization fit, fit_cim_prefill.py) and reported
+BOUNDED by compute<=vendor-TTFT (the old linear-M decode-GEMV estimate violates it ~20x). The TTFT
+remainder (weight-load memory + prefill attention + host overhead) stays a Phase-2 item.
 
 Reads  measurements/op_profile/*.json, metis_card/vendor_llm_int8.json,
        aetina/cim_attention_composed.json
@@ -28,6 +29,8 @@ sys.path.insert(0, str(ROOT))
 from simulator.models.m2_memory import MemoryModel       # noqa: E402
 from simulator.models.m4_gpu import MaliGpuModel          # noqa: E402
 from simulator.models.m4_cpu import CpuModel              # noqa: E402
+from simulator.specs.loader import load_spec              # noqa: E402
+from simulator.models.m1_cim_tile import CimTileModel     # noqa: E402
 
 OP = ROOT / "measurements/op_profile"
 MC = ROOT / "measurements/metis_card"
@@ -67,9 +70,14 @@ def main():
     err_8b = abs(pred_8b - meas["llama-3.1-8b"]) / meas["llama-3.1-8b"]
 
     # --- standalone non-streaming terms for 8B (transparency; NOT added -> double-count) ---
-    mem = MemoryModel()
+    # Phase 1.2 spec-based engines (decision A migration). The production card decodes from
+    # on-card LPDDR4x -> bind mem_lpddr4x (eff_BW 24.2, identical to the Phase-1.1 anchor, so the
+    # kv-append term is unchanged). GPU stays the Phase-1.1 micro-benchmark model (MaliGpuModel,
+    # untouched). The CPU support term now reflects the calibrated instruction-count roofline; it is
+    # a STANDALONE transparency value (absorbed into BW, NOT added) so it does not move the gate.
+    mem = MemoryModel(load_spec("mem_lpddr4x"))
     gpu = MaliGpuModel()
-    cpu = CpuModel()
+    cpu = CpuModel(load_spec("cpu_rk3588"))
     c = CFG["llama-3.1-8b"]
     kvbar = 512                                  # avg decode kv at ctx1024 (P + D/2)
     counts = decode_counts_per_token("llama-3.1-8b")
@@ -88,13 +96,22 @@ def main():
     c4 = json.loads((AET / "cim_attention_composed.json").read_text())
     c4_range = [r["composed_us"] / 1000 for r in c4["rows"]]   # ms
 
-    # --- prefill TTFT best-effort (UNGATED): the unmeasured prefill GEMM throughput ---
+    # --- prefill GEMM compute: now Card-MEASURED (M-amortization fit); bounded by compute<=TTFT ---
     M_pf = 1024
+    cim = CimTileModel()                                # m1_cim.json: decode G_eff + prefill a+b*M fit
+    if cim.prefill_a_us is None:                        # keys-dropped window (fit_m1_cim ran without fit_cim_prefill)
+        raise ValueError("prefill (M>1) needs the M-amortization fit; run tools/analysis/fit_cim_prefill.py "
+                         "after fit_m1_cim.py (which rewrites m1_cim.json and drops the prefill keys)")
     pf_flops = 2 * wb["llama-3.1-8b"] * M_pf            # weights x M tokens (prefill GEMM)
-    pf_compute_decodeGEMV_s = pf_flops / (204e9)       # WRONG throughput (decode GEMV) -> absurd
+    # wb is INT8 weight BYTES = GEMM param COUNT (1 byte/param), so wb/W^2 = sum_i (K_i*N_i)/W^2 = the
+    # model's FRACTIONAL tile area summed over all 8B GEMMs -> matches CimTileModel.dev_lat_us exactly
+    # (no ceil divergence). This byte==param identity holds only for INT8.
+    n_tiles_pf = wb["llama-3.1-8b"] / cim.native_max_kn  # fractional 2048x2048 tiles over all 8B GEMM weights
+    pf_compute_fitted_s = n_tiles_pf * (cim.prefill_a_us + cim.prefill_b_us * M_pf) * 1e-6  # M-amortized
+    pf_extrapolated = M_pf > (cim.prefill_M_max or M_pf)  # M=1024 >> the measured M<=256
+    pf_compute_decodeGEMV_s = pf_flops / (204e9)       # OLD linear-M (decode GEMV) -> 76s, refuted
     pf_memory_s = wb["llama-3.1-8b"] / (BW)            # weights streamed once
     ttft_meas = vendor["llama-3.1-8b/1c"]["ttft_s_median"]
-    implied_prefill_tops = pf_flops / ttft_meas / 1e12  # what the vendor TTFT implies
 
     out = {
         "method": "decode backbone = weight-streaming BW (fit 1B+3B -> predict 8B), "
@@ -114,18 +131,30 @@ def main():
                        "(Phase-2 fidelity, watch-item). GPU attn is heads*layers, lower-bound kernel."},
         "cim_attention_penalty_C4_ms": {"range": [round(min(c4_range), 1), round(max(c4_range), 1)],
                                         "note": "why offload: CIM attention >> GPU-native; reported, NOT in t_step"},
-        "prefill_ttft_besteffort_UNGATED": {
+        "prefill_gemm_compute_BOUNDED": {
+            "status": "BOUNDED-EXTRAPOLATED" if pf_extrapolated else "BOUNDED",
             "M_prefill": M_pf,
+            "M_measured_max": cim.prefill_M_max,
+            "extrapolated": bool(pf_extrapolated),
             "vendor_ttft_s": ttft_meas,
-            "implied_prefill_throughput_TOPS": round(implied_prefill_tops, 2),
-            "est_using_decode_GEMV_throughput_s": round(pf_compute_decodeGEMV_s, 1),
-            "memory_bound_floor_s": round(pf_memory_s, 3),
-            "note": "UNGATED. Vendor TTFT implies ~%.0f TOPS effective prefill GEMM throughput, "
-                    "but decode-GEMV throughput (204 GOP/s=0.2 TOPS) gives an absurd %.0fs -> "
-                    "prefill GEMM runs ~20x faster than decode GEMV and is UNMEASURED (proj M>=512 "
-                    "device-fail; prefill attention S-scaling 1 pt; softmax S x S). Prefill path "
-                    "unvalidated; Phase-2 gap. prefill_ms_median degenerate, unused."
-                    % (implied_prefill_tops, pf_compute_decodeGEMV_s)},
+            "gemm_compute_fitted_s": round(pf_compute_fitted_s, 3),
+            "gemm_compute_frac_of_ttft": round(pf_compute_fitted_s / ttft_meas, 3),
+            "memory_floor_s": round(pf_memory_s, 3),
+            "decode_GEMV_linear_s": round(pf_compute_decodeGEMV_s, 1),
+            "model_comparison_compute_le_ttft": {
+                "fitted_consistent": bool(pf_compute_fitted_s < ttft_meas),
+                "decode_GEMV_linear_consistent": bool(pf_compute_decodeGEMV_s < ttft_meas),
+                "note": "This is a MODEL COMPARISON, not an absolute validation gate: the fitted compute "
+                        "(at any plausible prefill length, the bound binds only above M~22000) sits well "
+                        "under TTFT, so compute<=TTFT has WEAK discriminating power for the fitted model. "
+                        "Its value is REFUTING the linear-M decode-GEMV model, whose compute alone exceeds "
+                        "the measured TTFT ~20x (physically impossible)."},
+            "note": "GEMM compute Card-MEASURED at M<=%d (fit_cim_prefill.py M-amortization); M=%d is "
+                    "EXTRAPOLATED -> status BOUNDED-EXTRAPOLATED. Fitted %.2fs = %.0f%% of vendor TTFT; "
+                    "linear-M decode-GEMV (%.0fs) REFUTED. TTFT remainder = weight-load memory (~%.2fs) + "
+                    "prefill attention (S^2 softmax) + host overhead (Phase-2). prefill_ms_median unused."
+                    % (cim.prefill_M_max, M_pf, pf_compute_fitted_s, 100 * pf_compute_fitted_s / ttft_meas,
+                       pf_compute_decodeGEMV_s, pf_memory_s)},
     }
     (MC / "twopillar_prediction_fitted.json").write_text(json.dumps(out, indent=1))
     (ROOT / "validation/reports/phase1.1/recompose.json").write_text(json.dumps(out, indent=1))
@@ -137,8 +166,9 @@ def main():
     print(f"  standalone 8B (us): stream={stream_us:.0f} cpu={cpu_support_us:.0f} "
           f"gpu_attn(LB)={gpu_attn_us:.0f} kv={kv_cache_us:.0f}  [absorbed in BW; not added]")
     print(f"  C4 CIM-attn penalty: {out['cim_attention_penalty_C4_ms']['range']} ms (offload reason)")
-    print(f"  prefill TTFT (ungated): vendor {ttft_meas:.2f}s implies ~{implied_prefill_tops:.1f} TOPS "
-          f"prefill GEMM throughput (UNMEASURED; decode-GEMV would give {pf_compute_decodeGEMV_s:.0f}s)")
+    print(f"  prefill GEMM compute ({out['prefill_gemm_compute_BOUNDED']['status']}): fitted {pf_compute_fitted_s:.2f}s "
+          f"({100*pf_compute_fitted_s/ttft_meas:.0f}% of vendor TTFT {ttft_meas:.2f}s); "
+          f"linear-M decode-GEMV {pf_compute_decodeGEMV_s:.0f}s REFUTED (>TTFT)")
 
 
 if __name__ == "__main__":

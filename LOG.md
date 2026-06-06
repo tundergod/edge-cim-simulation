@@ -9,6 +9,27 @@ Reverse-chronological (newest first).
 
 ---
 
+## 2026-06-06 — Phase 1.2: shared engine interface + spec layer (touches 1.1 callers)
+
+Phase 1.2 introduces `simulator/models/engine.py` (`UnitEngine(spec, engine='analytic')` +
+`Workload` + frozen `predict()` keys `{latency_us, bound, provenance}`) and `simulator/specs/`
+(9 swappable specs + loader). The CPU and memory engines were rewritten from their Phase-1.1
+constructors (`CpuModel(params)`, `MemoryModel(pcie, lpddr5)`) to the spec-based `(spec, engine=)`
+form — which **retroactively touched three already-committed Phase-1.1 callers** (decision A):
+
+- `tools/analysis/recompose_e2e.py` — migrated to the spec engines (`cpu_rk3588`, `mem_lpddr4x`).
+  The 8B decode hold-out **gate is unchanged (9.5%)** — it uses op-profile bytes + vendor tok/s +
+  a BW fit, not the model classes. The only output change: `recompose.json` `cpu_support_us`
+  (62023→15007 µs), a *standalone transparency* term explicitly "absorbed in BW, NOT added".
+- `tools/analysis/fit_m2.py`, `tools/analysis/fit_m4_cpu.py` — migrated; both **regenerate their
+  frozen Phase-1.1 reports/params byte-identical** (verified by empty git-diff).
+
+GPU is additive (new `m4_gpu_roofline.py`; the 1.1 `MaliGpuModel` is untouched). The 1.1 measured
+params (`m2_pcie`, `m2_lpddr5`, `m4_cpu.json`) are superseded by the spec layer but kept as the 1.1
+record. Ramulator2/ONNXim reconcile (the "Phase 2" → "Phase 1.3" wording) is deferred to the 1.3 PR.
+
+---
+
 ## 2026-06-05 — Establish Phase 1.x structure: rename `phase1` → `phase1.1`
 
 Phase 1 (component modeling & validation) is split into two sub-phases by **data source**

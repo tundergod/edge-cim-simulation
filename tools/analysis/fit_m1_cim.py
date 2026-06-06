@@ -83,6 +83,13 @@ def main():
         "native_max_kn": NATIVE_MAX_KN, "alloc_envelope_params": 6_000_000,
         "native_throughput_points": [{"N": N, "K": K, "gops": round(g, 1)} for N, K, g, _, _ in pts],
     }
+    # Preserve prefill / Card-revalidation keys that fit_cim_prefill.py adds later: a standalone decode
+    # re-fit must NOT silently drop the prefill model (issue #28). Merge, don't clobber.
+    if PARAMS.exists():
+        old = json.loads(PARAMS.read_text())
+        for k, v in old.items():
+            if k.startswith("prefill_") or k in ("decode_card_revalidation", "_prefill_doc"):
+                params[k] = v
     PARAMS.write_text(json.dumps(params, indent=1))
     m = CimTileModel(params)
 

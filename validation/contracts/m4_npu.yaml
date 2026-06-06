@@ -1,19 +1,28 @@
 module: m4_npu
-status: BLOCKED
-blocked_on: "GitHub issue #13 — RKNPU2 micro-benchmark not collected (aetina offline)"
+status: SIMULATED            # was BLOCKED on #13; Phase 1.2 (D2) ships an analytic systolic-roofline
+blocked_on: "GitHub issue #13 — RKNPU2 micro-benchmark NOT collected (board offline). Silicon absent."
+honesty: simulated          # ALL outputs simulated/borrowed; NONE calibrated to RKNPU2 silicon
+engine: "analytic systolic-roofline (6 TOPS INT8 ceiling + borrowed 32x32 padding + order/shape factor + native attn bmm)"
 measurement_sources:
-  - measurements/aetina/rknpu2_matmul.json   # NOT YET COLLECTED (#13)
+  - measurements/aetina/rknpu2_matmul.json   # NOT COLLECTED (#13); no silicon exists
 acceptance_criteria:
-  - {type: median_op_error, threshold: 10%}   # applies once #13 resolves
-  - {type: p95_op_error, threshold: 20%}
+  # SIMULATED acceptance: NO per-op numeric gate (no silicon). Trend-SHAPE checks only, all simulated:
+  - {type: trend_staircase_vs_fig3, check: "compute-bound N-sweep monotone non-decreasing AND knee aligned to borrowed 32x32 systolic dim", tag: simulated}
+  - {type: trend_order_shape_vs_fig4, check: "order/shape penalty factor <= 6x", tag: simulated}
+  - {type: trend_bw_frac_vs_fig5, check: "effective-BW fraction in 59-66% of the 68 GB/s peak denominator", tag: simulated}
+no_numeric_gate: "NO per-op median/p95 numeric gate — there is no RKNPU2 silicon to fit against."
+superseded_gate:
+  # The original #13 silicon error gate is NOT achieved; it is superseded by the trend-shape model.
+  - {type: median_op_error, threshold: 10%, state: superseded-not-satisfied}
+  - {type: p95_op_error, threshold: 20%, state: superseded-not-satisfied}
+  note: "ADR-0006 gate revision: #13 median/p95 silicon gate = superseded-not-satisfied (NOT achieved). The analytic trend-shape model SUPERSEDES it as the Phase-1.2 deliverable; it does not ACHIEVE the silicon gate."
 tunable_params:
-  - npu_gemm_gflops          # FLOPs / effective throughput (per shape)
-  - npu_attn_bmm_us_per_kv   # native activation x activation attention (offload candidate)
-dependency: "Fit like m4_gpu (FLOPs/G_eff + native attn bmm) from rknpu2_matmul.json when #13 resolves."
-phase2_plan: "Simulate the NPU with ONNXim (a systolic-NPU simulator; ADR-0007 / OVERALL.md M4 note),
-  then CROSS-CHECK against HeteroInfer (SOSP'25, papers/methodology-and-simulators/) NPU
-  characteristics: Fig 3 stage performance (32x32 systolic staircase), Fig 4 order/shape
-  sensitivity, Fig 8 graph-gen time. If ONNXim (generic systolic) mispredicts RKNPU2's
-  Rockchip-specific behaviour, fall back to a measured lookup-table override (already in the M4
-  design). HeteroInfer's NPU>>GPU-for-matmul + NPU-1 stage-performance findings are the validation targets."
-phase1_note: "Placeholder. NPU is a documented dependency, not a modeled unit. Attention-offload thesis stands on the Mali GPU comparison alone."
+  - npu_systolic_dim         # borrowed 32x32 (Hexagon, HeteroInfer Fig3); padding quantum
+  - npu_tops_int8            # 6 TOPS INT8 datasheet compute ceiling
+  - npu_order_shape_max      # <=6x order/shape penalty (HeteroInfer Fig4)
+  - npu_bw_eff_band          # 59-66% of 68 GB/s peak (HeteroInfer Fig5)
+upgrade:
+  issue_13_silicon: "superseded-not-satisfied (NOT achieved; board offline, micro-benchmark not collected)."
+  onnxim_phase_1_3: "Phase 1.3 drops ONNXim (generic-systolic NPU sim) in behind the same engine= interface and cross-checks these HeteroInfer trends. ONNXim is SIMULATED, NOT silicon."
+  distinction: "issue #13 = real RKNPU2 silicon (absent); ONNXim = a heavier SIMULATOR (Phase 1.3), still not silicon. Neither is calibrated to our RKNPU2 board."
+report: validation/reports/phase1.2/m4_npu.json

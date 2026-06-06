@@ -1,0 +1,26 @@
+{
+  "_doc": "Metis AIPU on-chip SRAM spec (Phase 1.2). CACTI tier, NOT Ramulator2. Quad-core: L1 4 MiB/core + L2 32 MiB shared + D-IMC 1 MiB/core = 52 MiB total. NO published BW/latency -> CACTI/assumption (m1_cim_spm derives/uses these). RESIDENCY = architecture-only: 8B INT8 weights (~8 GB) >> 32 MiB L2, so weights NEVER reside in SRAM (the decode memory wall is host LPDDR, not SRAM); SRAM holds activation/KV tiles only.",
+  "unit": "sram",
+  "cores": 4,
+  "l1_MiB_per_core": 4,
+  "l2_MiB_shared": 32,
+  "dimc_MiB_per_core": 1,
+  "total_MiB": 52,
+  "latency_ns": 5.0,
+  "bw_GBs": 256.0,
+  "residency": "architecture-only",
+  "honesty": "simulated (sizes=datasheet; latency/BW=CACTI assumption)",
+  "notes": {
+    "total": "L1 4x4 + L2 32 + D-IMC 4x1 = 16 + 32 + 4 = 52 MiB.",
+    "residency": "8B weights (~8 GB INT8) >> 32 MiB -> weights never resident; SRAM = activations/KV tiles only; decode wall is host LPDDR.",
+    "bw_latency": "no published Metis SRAM BW/latency; latency_ns/bw_GBs are CACTI-tier representative defaults (assumption); m1_cim_spm may refine."
+  },
+  "provenance": {
+    "l1_MiB_per_core": "ISSCC 2024 / datasheet [measured-spec]",
+    "l2_MiB_shared": "datasheet 32 MiB shared [measured-spec]",
+    "dimc_MiB_per_core": "ISSCC 2024 D-IMC 1 MiB/core [measured-spec]",
+    "latency_ns": "CACTI tier estimate [assumption]",
+    "bw_GBs": "CACTI tier estimate [assumption]",
+    "residency": "architecture-only (8B >> 32 MiB) [assumption]"
+  }
+}

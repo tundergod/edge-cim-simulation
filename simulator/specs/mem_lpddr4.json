@@ -1,0 +1,24 @@
+{
+  "_doc": "LPDDR4 spec (Phase 1.2 analytic). 64-bit bus. JEDEC 3200 MT/s -> 25.6 GB/s peak; board-config 4224 MT/s -> 33.8. Peaks tagged ASSUMPTION (in-repo has no data-rate source). eff 0.71 is the MEASURED efficiency from the production-card LPDDR4x decode anchor (voyager-sdk.md:278), applied here to LPDDR4 (a different but related memory) -> eff_BW is DERIVED. NO discrete-transfer floor (that lives in the CIM topology spec).",
+  "unit": "memory",
+  "memory_type": "LPDDR4",
+  "bus_bits": 64,
+  "mt_s_jedec": 3200,
+  "peak_GBs": 25.6,
+  "mt_s_board": 4224,
+  "board_peak_GBs": 33.8,
+  "efficiency": 0.71,
+  "eff_BW_GBs": 18.2,
+  "honesty": "analytic (peak=assumption, eff=measured-on-4x applied)",
+  "notes": {
+    "math": "MT/s x 8 bytes (64-bit) = GB/s: 3200x8=25.6, 4224x8=33.8.",
+    "eff": "0.71 measured on production-card LPDDR4x decode (voyager-sdk.md:278); applied to LPDDR4 -> eff_BW derived.",
+    "floor": "no per-call discrete-transfer floor here; PCIe/DMA floor is in cim_topo_alpha."
+  },
+  "provenance": {
+    "peak_GBs": "3200 MT/s x 64-bit (in-repo no data-rate source) [assumption]",
+    "board_peak_GBs": "4224 MT/s x 64-bit [assumption]",
+    "efficiency": "production-card LPDDR4x decode 24.2/34.1=0.71 (voyager-sdk.md:278) [measured]",
+    "eff_BW_GBs": "peak x efficiency [assumption (derived)]"
+  }
+}

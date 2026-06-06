@@ -19,6 +19,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from simulator.models.m4_cpu import CpuModel  # noqa: E402
+from simulator.specs.loader import load_spec  # noqa: E402
 
 AET = ROOT / "measurements/aetina"
 CONST_OPS = ["rmsnorm", "rope_apply", "residual", "swiglu", "sampling_argmax"]
@@ -50,7 +51,10 @@ def main():
                       "constants. fp16=emulated UPPER BOUND (provenance phase0.3-findings).",
               "const_us": const, "softmax_linear": softmax_linear}
     (ROOT / "simulator/models/params/m4_cpu.json").write_text(json.dumps(params, indent=1))
-    m = CpuModel(params)
+    # Phase 1.1 measured-constant fit (this file). The Phase 1.2 engine is the calibrated
+    # instruction-count roofline (fit_m4_cpu_instrcount.py); here the engine is used only for the
+    # monotonicity sanity below (decision-A migration: spec-based constructor).
+    m = CpuModel(load_spec("cpu_rk3588"))
 
     # sanity: softmax increases with kv; rmsnorm increases with model hidden (observation, not law)
     sm_mono = all(

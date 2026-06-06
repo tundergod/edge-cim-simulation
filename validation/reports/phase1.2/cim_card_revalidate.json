@@ -1,0 +1,152 @@
+{
+ "module": "cim_card_revalidate",
+ "status": "CARD_REVALIDATED",
+ "tolerance": {
+  "median_rel_diff": 0.1,
+  "p95_rel_diff": 0.2,
+  "min_cross_n": 8
+ },
+ "honesty": "CIM = Alpha 13pts calibrated + Card-revalidated (same AIPU, 800MHz, no rescale).",
+ "compile_path": "axcompile",
+ "cross_validation_alpha13": [
+  {
+   "N": 64,
+   "K": 2048,
+   "card_gops": 24.0,
+   "alpha_gops": 26.6,
+   "rel_diff": 0.096
+  },
+  {
+   "N": 128,
+   "K": 2048,
+   "card_gops": 43.9,
+   "alpha_gops": 48.6,
+   "rel_diff": 0.098
+  },
+  {
+   "N": 256,
+   "K": 2048,
+   "card_gops": 71.8,
+   "alpha_gops": 78.0,
+   "rel_diff": 0.079
+  },
+  {
+   "N": 480,
+   "K": 2048,
+   "card_gops": 99.4,
+   "alpha_gops": 105.5,
+   "rel_diff": 0.058
+  },
+  {
+   "N": 512,
+   "K": 2048,
+   "card_gops": 106.0,
+   "alpha_gops": 112.7,
+   "rel_diff": 0.059
+  },
+  {
+   "N": 512,
+   "K": 3584,
+   "card_gops": 152.9,
+   "alpha_gops": 147.4,
+   "rel_diff": 0.038
+  },
+  {
+   "N": 544,
+   "K": 2048,
+   "card_gops": 106.1,
+   "alpha_gops": 111.8,
+   "rel_diff": 0.051
+  },
+  {
+   "N": 1000,
+   "K": 2048,
+   "card_gops": 157.9,
+   "alpha_gops": 165.6,
+   "rel_diff": 0.046
+  },
+  {
+   "N": 1024,
+   "K": 2048,
+   "card_gops": 161.7,
+   "alpha_gops": 169.8,
+   "rel_diff": 0.048
+  },
+  {
+   "N": 1024,
+   "K": 3072,
+   "card_gops": 178.2,
+   "alpha_gops": 182.3,
+   "rel_diff": 0.023
+  },
+  {
+   "N": 1024,
+   "K": 4096,
+   "card_gops": 219.6,
+   "alpha_gops": 227.2,
+   "rel_diff": 0.033
+  },
+  {
+   "N": 1536,
+   "K": 2048,
+   "card_gops": 195.7,
+   "alpha_gops": 204.0,
+   "rel_diff": 0.04
+  },
+  {
+   "N": 2048,
+   "K": 2048,
+   "card_gops": 200.5,
+   "alpha_gops": 203.7,
+   "rel_diff": 0.015
+  }
+ ],
+ "consistency": {
+  "n": 13,
+  "median_rel_diff": 0.048,
+  "p95_rel_diff": 0.097
+ },
+ "prefill_compute_bound_NEW": [
+  {
+   "M": 64,
+   "K": 4096,
+   "N": 14336,
+   "card_gops": 11764.3,
+   "dev_lat_us": 638.9,
+   "tiled_extrapolated": true
+  },
+  {
+   "M": 128,
+   "K": 4096,
+   "N": 14336,
+   "card_gops": 20761.0,
+   "dev_lat_us": 724.1,
+   "tiled_extrapolated": true
+  },
+  {
+   "M": 256,
+   "K": 4096,
+   "N": 14336,
+   "card_gops": 32854.1,
+   "dev_lat_us": 915.1,
+   "tiled_extrapolated": true
+  },
+  {
+   "M": 128,
+   "K": 4096,
+   "N": 4096,
+   "card_gops": 20761.0,
+   "dev_lat_us": 206.9,
+   "tiled_extrapolated": true
+  },
+  {
+   "M": 256,
+   "K": 4096,
+   "N": 4096,
+   "card_gops": 32854.1,
+   "dev_lat_us": 261.5,
+   "tiled_extrapolated": true
+  }
+ ],
+ "note": "axrunmodel dev FPS = isolated compute (dev/system split). prefill rows with tiled_extrapolated=true are n_tiles x ONE measured 2048x2048 tile (the full GEMM was NOT compiled directly; only the canonical tile was measured) -> card_gops is extrapolated."
+}

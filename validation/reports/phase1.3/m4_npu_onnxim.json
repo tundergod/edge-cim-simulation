@@ -1,0 +1,183 @@
+{
+ "module": "m4_npu_onnxim",
+ "phase": "1.3",
+ "engine": "NpuModel(npu_rknpu2, engine='onnxim')",
+ "source": "ONNXim a1e86296, RKNPU2-approx (rknpu2_approx (32x32 x3, INT8, dram=ramulator2))",
+ "honesty": "simulated (ONNXim generic-systolic, RKNPU2-approx), NOT silicon",
+ "n_shapes": 15,
+ "median_abs_delta_pct": 317.9,
+ "max_abs_delta_pct": 493.4,
+ "staircase_monotone_vs_heteroinfer": true,
+ "per_shape": [
+  {
+   "shape": [
+    1,
+    2048,
+    128
+   ],
+   "onnxim_us": 56.0,
+   "analytic_us": 13.042,
+   "delta_pct": 329.4,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    256
+   ],
+   "onnxim_us": 109.0,
+   "analytic_us": 26.084,
+   "delta_pct": 317.9,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    512
+   ],
+   "onnxim_us": 217.0,
+   "analytic_us": 52.168,
+   "delta_pct": 316.0,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    1024
+   ],
+   "onnxim_us": 433.0,
+   "analytic_us": 104.336,
+   "delta_pct": 315.0,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    1536
+   ],
+   "onnxim_us": 705.0,
+   "analytic_us": 156.504,
+   "delta_pct": 350.5,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    2048
+   ],
+   "onnxim_us": 846.0,
+   "analytic_us": 208.672,
+   "delta_pct": 305.4,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    3072
+   ],
+   "onnxim_us": 1487.0,
+   "analytic_us": 313.008,
+   "delta_pct": 375.1,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    1024
+   ],
+   "onnxim_us": 921.0,
+   "analytic_us": 208.672,
+   "delta_pct": 341.4,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    4096
+   ],
+   "onnxim_us": 3121.0,
+   "analytic_us": 834.687,
+   "delta_pct": 273.9,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    14336
+   ],
+   "onnxim_us": 10291.0,
+   "analytic_us": 2921.406,
+   "delta_pct": 252.3,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    1,
+    14336,
+    4096
+   ],
+   "onnxim_us": 10000.0,
+   "analytic_us": 2921.406,
+   "delta_pct": 242.3,
+   "bound": "memory"
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    1024
+   ],
+   "onnxim_us": 2124.0,
+   "analytic_us": 357.914,
+   "delta_pct": 493.4,
+   "bound": "compute"
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    4096
+   ],
+   "onnxim_us": 6725.0,
+   "analytic_us": 1431.656,
+   "delta_pct": 369.7,
+   "bound": "compute"
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    14336
+   ],
+   "onnxim_us": 22364.0,
+   "analytic_us": 20104.604,
+   "delta_pct": 11.2,
+   "bound": "compute"
+  },
+  {
+   "shape": [
+    256,
+    14336,
+    4096
+   ],
+   "onnxim_us": 21933.0,
+   "analytic_us": 5010.795,
+   "delta_pct": 337.7,
+   "bound": "compute"
+  }
+ ],
+ "upgrade": {
+  "issue_13_silicon": "superseded-not-satisfied (independent; RKNPU2 micro-benchmark NOT collected, board offline). ONNXim is a heavier SIMULATOR, NOT RKNPU2 silicon \u2014 it does NOT achieve the #13 gate.",
+  "onnxim_vs_13": "ONNXim != issue #13: ONNXim cross-checks the analytic systolic-roofline (sim-vs-sim); neither is calibrated to RKNPU2 silicon."
+ },
+ "note": "Both ONNXim and the analytic NPU are simulated (no RKNPU2 silicon). This is a sim-vs-sim trend cross-check; the analytic NpuModel stays the Phase-1.2 deliverable."
+}

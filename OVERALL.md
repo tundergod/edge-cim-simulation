@@ -98,8 +98,9 @@
 | **Phase 0.4** | **溫度／熱特性量測**（兩平台；耗時較久）。可與 Phase 1/2 並行。 | 熱模組（M8，選用）才加入 |
 | **Phase 1**（傘狀：component 建模與驗證） | 每個 component 的建模與驗證：對每組量測擬合**方程式**（取代龐大 lookup table）；逐一驗證各 component 準確度與需調參數。分兩個子階段（依**資料來源**切，不依模組）：見下兩列。 | 得到校好、誠實標註的 component 模型，交給 Phase 2 |
 | &nbsp;&nbsp;**Phase 1.1**（已完成 ✅） | **以自家 Metis silicon 量測校準並通過 ADR-0006 gate 的 component**：M1-CIM（2D G_eff，2.7%）、M4-GPU（Mali）、M4-CPU（softmax/elementwise 已量測部分）、M2-DRAM（量產卡 LPDDR4x）、M5-trace、M7-energy，外加端到端 recompose hold-out（8B 9.5%）。報告 `docs/report/phase1.1/`。 | 量測級可信的核心 decode 路徑（CIM 算 + 記憶體搬） |
-| &nbsp;&nbsp;**Phase 1.2**（進行中） | **缺自家 silicon 量測、需以模擬器／datasheet／文獻補的 component**：**NPU**（aetina 離線 #13 → ONNXim 模擬 + HeteroInfer 交叉驗證）、**DRAM SoC 階層**（LPDDR5 + L1/L2 SRAM residency，量產卡是 LPDDR4x、Alpha 無 on-card DRAM）、**CPU 完整計算模型**（承接 1.1 的 softmax 量測，補任意 support op）。這些 model 明確標 **simulated, not silicon-validated**（gate 較弱，對外部參照而非自家量測）；板子回線可再補量測升級。 | 補齊 offload 第二候選（NPU）與記憶體階層，所有 component 齊備 |
-| **Phase 2** | 模擬器實作（整合）：**等 Phase 1.1 + 1.2 所有 component 都建好、測過**，把校好的 component 整合成端到端 event-driven 模擬器（M3 事件引擎 + M6 排程器），跑完整 prefill+decode，做 L4/L6 端到端驗證、L5 敏感度、混合精度。 | 完整模擬器 |
+| &nbsp;&nbsp;**Phase 1.2**（Wave 1，✅ analytic 層完成；PR 待 merge） | **模組化「engine + 可換 spec」校準-analytic 元件層**（每個非-micro-benchmark 單元 = 模型引擎 + 可換 spec 模組，換型號=換 spec 檔）：**CPU**（instruction-count roofline + 多核/big.LITTLE，calibrated 殘差中位 1.15%）、**NPU**（解析 systolic-roofline，datasheet+HeteroInfer trend，**simulated**、no-fake-gate、#13 superseded-not-satisfied）、**記憶體**（analytic 全-spec LPDDR4/4X/5 + SRAM CACTI tier）、**GPU**（micro-benchmark + 可換 roofline 槽，FP16 下界、INT8 零資料）、**CIM 雙拓樸**（Alpha 無 on-card DRAM / Metis Card 有）。共用介面 `engine.py` + 9 份 spec + `check_phase1_2.py`。**CIM-Card 重驗**：同一顆 AIPU 在 Card 上活著、`axrunmodel` 可量 → CIM kernel **非凍結、可重驗**；本期 **`DEFERRED_FALLBACK`**（SSH 未授權，CIM 維持 Alpha 13pts calibrated，移植腳本就緒待授權）。非-測得標 `simulated`。報告 `docs/report/phase1.2/`、findings `docs/phase1.2-findings.md`。 | 完整、可換型號的模擬器（all components 齊備，輕引擎） |
+| &nbsp;&nbsp;**Phase 1.3**（Wave 2，介面就緒；C++ build 待授權） | **重型保真模擬引擎**插進 1.2 就緒的同一介面（`engine=` drop-in 互換）：**ONNXim**（NPU）、**Ramulator2**（記憶體 DRAM，內建 LPDDR5）。本期驗 1.2 analytic 的單串流趨勢 + 介面就緒；**招牌價值（多單元競爭、逐 token 整機）在 Phase 2**。C++ build 失敗退 fallback、不影響 1.2。 | 高保真引擎就緒，Phase 2 一接即用 |
+| **Phase 2** | 模擬器實作（整合）：**等 1.1+1.2(+1.3) component 齊備**，整合成端到端 event-driven 模擬器（M3 事件引擎=記憶體競爭/重疊 + M6 排程器），跑完整 prefill+decode，做 L4/L6 端到端驗證、L5 敏感度、混合精度。 | 完整模擬器 |
 | **（深入討論）** | 完成上述後，針對 Phase 0/1 做更深入的架構與實作確認（見文末檢查點）。 | 確認方向正確再大量實作 |
 
 > **資料與圖的可重現原則（所有量測 phase 一律遵守）**：每次量測一律存**原始數據**——所有 timed iteration 的原值 + 每個 sweep 點的兩軸值 + config + 單位，**不只存 median/p95 摘要**；板上 raw log 原檔（`axllm --show-stats`、rknn profile、`axrunmodel` bench）一併納版控。所有圖都是 **build artifact**：`tools/plotting/` 每張圖一支 script，只吃 committed 數據重產（roofline、op-breakdown、Fig 1/3/4/5 對應圖），**絕不手繪**；任何人可從 repo 一鍵重畫每張圖。
@@ -410,7 +411,7 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 3. **HPIM 搶先在頂會發表**（最接近競品，[筆記](papers/pim-llm-accelerators/hpim-arxiv2025.md)）。即使 HPIM 先落地，我們的差異化（mobile-SoC、真實晶片校準、混合精度、特性量測驅動分工）仍成立。
 4. **agent 自主性在模擬器規模未經驗證** — 第一次 M1 迭代才是真正的考驗。緩解：若 agent 多個 session 仍不收斂，退回人工開發。
 5. **HuggingFace ONNX export 品質（已大幅降風險，見 ADR-0007）** — op inventory 改用 PyTorch runtime tracer（meta/FakeTensor），不靠 `torch.onnx.export`，故主路徑不受其 custom-op/dynamic-shape 亂象影響。ONNX export 只剩 ONNXim NPU 路徑會用到，且有 fallback（從 traced graph 組 ONNXim 輸入 / M4 lookup-override）。
-6. **Ramulator2 LPDDR5 + PIM-like 延伸覆蓋度** — 我們的 LPDDR5-PIM-like 用法非 Ramulator2 預設；可能需自寫 plug-in。M2 要預留。
+6. **Ramulator2 LPDDR5 + PIM-like 延伸覆蓋度** — 我們的 LPDDR5-PIM-like 用法非 Ramulator2 預設；可能需自寫 plug-in。M2 要預留。（**Phase 1.3** 以 `MemoryModel(spec, engine='ramulator2')` drop-in 做 LPDDR5 **單串流** cross-check；**多單元競爭在 Phase 2**。LPDDR4/4x 無 Ramulator2 preset = `assumption`、build 時看 `src/dram/impl/` 確認。）
 7. **ONNXim 對 RKNPU2 的契合度** — ONNXim 建模通用 systolic NPU；RKNPU2 有 Rockchip 特有行為（op-mix 敏感、depthwise+Swish 弱項 — Step-1 資料）。Plan B：lookup-table override（已在 M4 設計內）。
 8. **Aetina 的 SSH 可用性** — 整個 sim 開發期間須可達。若離線，標記 blocker 並用快取量測繼續。
 
