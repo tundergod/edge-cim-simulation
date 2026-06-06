@@ -179,8 +179,9 @@ class CpuModel(UnitEngine):
 
     def op_us(self, op, model, dtype="fp32", kv=None):
         """Convenience: per-token support-op latency (us) for a named model. Returns predict().latency_us.
-        Defaults to fp32 = the CALIBRATED quantity (the model is fit on fp32 cpu_ops.json; fp16/int8 are
-        NOT separately modeled, so a non-fp32 dtype returns the fp32 value, not an fp16 bound)."""
+        Defaults to fp32 = the CALIBRATED quantity (the model is fit on fp32 cpu_ops.json). dtype='fp16'
+        returns an ANALYTIC native-fp16 estimate (fp16_lanes=8 = 2x fp32 SIMD + 2-byte elems; eta_c
+        borrowed from fp32), NOT calibrated; recompose uses the fp32 path."""
         wl = Workload(op="softmax" if op.startswith("softmax") else op, kv=kv or 0,
                       extra={"model": model, "dtype": dtype})
         return self.predict(wl)["latency_us"]

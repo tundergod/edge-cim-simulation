@@ -10,7 +10,8 @@ up to +5%; the micro-benchmark model stays PRIMARY, this roofline is the model-s
   - eff_compute_fp16 = saturated f16 GFLOP/s (ksweep, 5 pts) / fp16 peak (1024) -> compute ceiling
   - mem_eff_BW_GBs   = lstsq fit of FP16 decode-GEMV latency vs nbytes (line through origin)
 Records error vs the 1.1 measured points. HONESTY: FP16 only (INT8 = zero data);
-5 saturation points -> not transferable; predicted < measured is the expected direction.
+5 saturation points -> not transferable; a shape-trend fit, mostly (~2/3) <= measured but NOT a
+strict lower bound (~1/3 over-predict by up to +5%).
 
 Run: ./.venv/bin/python tools/analysis/fit_gpu_roofline.py
 """

@@ -66,7 +66,15 @@ class CimTileModel:
         with the actual K*N -- a partial-width GEMM is not over-charged a full tile, and the value
         equals the integer tile count for W-multiple shapes. Linear-in-M extrapolation of the DECODE
         law would over-predict ~80x. UNVALIDATED where prefill_extrapolated() is True: M>prefill_M_max
-        (256), or partial-width tiles (K or N not a multiple of W) -- the fit used only full tiles.
+        (256), M<prefill_M_min (the 1<M<64 below-fit band), or partial-width tiles (K or N not a
+        multiple of W) -- the fit used only full tiles at M in {64,128,256}.
+
+        NO monotonicity clamp across the decode<->prefill boundary (issues #35/#39): decode (M=1) and
+        prefill (M>=64) are two separately-calibrated models with NO data between, disagreeing up to
+        ~2.5x at the narrow-K corner. Any clamp either over-charges partial-width (#39) or mixes cost
+        bases (#35). So the un-bridged region -- where the prefill value can dip BELOW the M=1 decode
+        value -- is surfaced HONESTLY by prefill_extrapolated()==True rather than fake-monotonized. In
+        the CALIBRATED region (M>=64, full-width) prefill is monotone in M and sits above the M=1 decode.
         """
         if M <= 1:
             return self._decode_lat_us(K, N) * M   # M=1 = the calibrated decode floor (linear in M)
@@ -75,11 +83,7 @@ class CimTileModel:
                              "run tools/analysis/fit_cim_prefill.py")
         W = self.width   # canonical tile edge (= n_cores*512 = 2048); native_max_kn = W*W
         area = (K * N) / (W * W)   # fractional tile area (not ceil): no padded-tile over-charge
-        prefill_lat = area * (self.prefill_a_us + self.prefill_b_us * M)
-        # monotone floor on the SAME fractional-area basis: ONE canonical tile's M=1 decode cost scaled
-        # by area. (Clamping to _decode_lat_us(K,N) -- full-width N-passes -- mixes bases and inflates
-        # partial-width tiles ~2.3x, issue #39.) This lifts the M=2 full-tile value above M=1 decode.
-        return max(prefill_lat, area * self._decode_lat_us(W, W))
+        return area * (self.prefill_a_us + self.prefill_b_us * M)
 
     def _decode_lat_us(self, K, N):
         """M=1 decode latency (us): output N tiled into passes of width <= W, each costed by its own
