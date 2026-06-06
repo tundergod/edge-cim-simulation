@@ -40,8 +40,8 @@ def main():
 
     # --- compute ceiling: saturated f16 throughput (ksweep, the 5 calibration pts) ---
     ksweep = [(r["M"], r["f16_gflops"]) for r in res if r["group"] == "ksweep"]
-    g_sat = max(g for _, g in ksweep)                       # 20.29 GFLOP/s
-    eff_compute = g_sat / spec["fp16_peak_gflops"]          # vs 1024 peak (assumption)
+    g_sat = max(ksweep, key=lambda mg: mg[0])[1]            # converged tail = highest-M pt (~20.12), NOT
+    eff_compute = g_sat / spec["fp16_peak_gflops"]          # the noisy M=512 peak (20.29); spec-consistent
 
     # --- memory BW: lstsq fit of FP16 decode-GEMV latency vs nbytes (line through origin) ---
     dec = [r for r in res if r["group"] == "proj_decode"]
@@ -51,14 +51,15 @@ def main():
     mem_eff_BW_GBs = float(1.0 / slope[0] / 1e3)            # bytes/us -> GB/s
 
     fit = {
-        "_doc": "CALIBRATED roofline slot (FP16, LOWER BOUND, not transferable). "
-                "eff_compute_fp16 = saturated f16 GFLOP/s / fp16 peak; mem_eff_BW_GBs = "
-                "lstsq fit to FP16 decode-GEMV. INT8 = zero data.",
+        "_doc": "CALIBRATED roofline slot (FP16, shape-trend fit, not transferable). "
+                "eff_compute_fp16 = converged f16 GFLOP/s / fp16 peak; mem_eff_BW_GBs = "
+                "lstsq fit to FP16 decode-GEMV. INT8 = zero data. NOT a strict lower bound "
+                "(~1/3 of points over-predict by up to +5%; see frac_pred_le_measured).",
         "eff_compute_fp16": round(float(eff_compute), 5),
         "saturated_f16_gflops": round(float(g_sat), 2),
         "mem_eff_BW_GBs": round(mem_eff_BW_GBs, 3),
         "calibration": "mali_matmul.json FP16 (ksweep 5 pts + 16 decode-GEMV pts)",
-        "honesty": "shape-trend + lower bound; predicted < measured expected; FP16 only",
+        "honesty": "shape-trend fit, FP16 only; mostly <= measured but ~1/3 over-predict (NOT a strict lower bound)",
     }
     spec["roofline_fit"] = fit
     SPEC.write_text(json.dumps(spec, indent=2) + "\n")
@@ -91,8 +92,11 @@ def main():
             "median_abs_relerr": round(float(statistics.median(abs_re)), 3),
             "p95_abs_relerr": round(float(np.percentile(abs_re, 95)), 3),
             "max_abs_relerr": round(float(max(abs_re)), 3),
-            "frac_pred_le_measured": round(float(np.mean([r <= 0.05 for r in relerr])), 3),
-            "note": "signed rel_err < 0 = roofline below measured (expected for a lower bound)",
+            "frac_within_5pct": round(float(np.mean([abs(r) <= 0.05 for r in relerr])), 3),
+            "frac_pred_le_measured": round(float(np.mean([r <= 0.0 for r in relerr])), 3),
+            "note": "frac_pred_le_measured = signed rel_err <= 0 (roofline at/below measured) -- this is "
+                    "NOT 1.0: proj_decode shapes over-predict up to +5%, so the roofline is a shape-trend "
+                    "fit, mostly (~2/3) <= measured, not a strict lower bound. frac_within_5pct = |rel_err|<=0.05.",
             "per_point": pts,
         },
         "honesty": {
@@ -100,8 +104,9 @@ def main():
             "measured_point": "Phase 1.1 20.12 GFLOP/s = FP16, NOT INT8.",
             "fp32_peak_512": "spec assumption (may underestimate 2-4x); this model calibrates "
                              "against FP16, so it does not depend on the FP32 peak.",
-            "roofline": "shape-trend + absolute LOWER BOUND only; 5 saturation pts -> NOT "
-                        "transferable calibration. No numeric acceptance gate (no INT8 silicon).",
+            "roofline": "shape-trend fit (FP16); mostly <= measured but ~1/3 over-predict by up to "
+                        "+5% (NOT a strict lower bound); 5 saturation pts -> NOT transferable "
+                        "calibration. No numeric acceptance gate (no INT8 silicon).",
             "ksweep_saturation_M": "DEAD param in spec (kept, not deleted, per audit); unused here.",
             "primary_vs_slot": "micro-benchmark (m4_gpu.py) PRIMARY; this roofline = model-swap slot.",
         },

@@ -83,7 +83,9 @@ def trend_bw_frac(spec):
         "frac_high": round(frac_high, 4),
         "rknpu2_abs_band_GBs": [bw["eff_low"], bw["eff_high"]],  # 34 x frac (separate, RKNPU2 host)
         "target_band": [0.59, 0.66],
-        "pass_simulated": bool(0.59 - 1e-9 <= frac_low and frac_high <= 0.66 + 1e-9),
+        # discriminating check: the spec's fractions must reproduce the Fig5 SOURCE band (40-45 GB/s over
+        # the 68 peak), so a spec edit breaking frac<->band consistency FAILS (not the self-true 0.59<=0.59).
+        "pass_simulated": bool(abs(frac_low * denom - 40.0) <= 1.0 and abs(frac_high * denom - 45.0) <= 1.0),
         "note": "59-66% is of the 68 GB/s peak (Fig5 40-45/68), NOT of RK3588's ~34 host BW; the "
                 "RKNPU2 absolute band (34 x frac) is recorded separately.",
         "tag": "simulated/borrowed (Fig5 band; NO silicon, #13)",

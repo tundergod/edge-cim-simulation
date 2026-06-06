@@ -45,6 +45,10 @@ def main():
     if RAM2.exists():
         chk("Ramulator2 LPDDR5 heavy sim" in r["provenance"], "Ramulator2 build present -> heavy path used")
         chk("NOT silicon" in r["provenance"], "Ramulator2 honestly tagged simulated, NOT silicon")
+        # numeric (not string-only): ramulator device-eff (~0.92) > analytic system-eff (0.65) -> FASTER,
+        # but within a sane factor (~0.71x). A wrong ramulator number outside (0.5x, 1.0x) of analytic fails.
+        chk(0.5 * a["latency_us"] < r["latency_us"] < a["latency_us"],
+            f"Ramulator2 latency {r['latency_us']:.1f}us in (0.5x,1.0x) of analytic {a['latency_us']:.1f}us")
     else:
         chk(abs(a["latency_us"] - r["latency_us"]) < 1e-9, "build deferred -> faithful analytic fallback (same latency)")
         chk("ANALYTIC fallback" in r["provenance"] and "ramulator2" in r["provenance"], "fallback honestly noted in provenance")

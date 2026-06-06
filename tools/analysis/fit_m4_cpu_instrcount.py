@@ -74,12 +74,22 @@ def main():
     spec = json.loads((ROOT / "simulator/specs/cpu_rk3588.json").read_text())
     rows = _rows(ops, spec)
 
-    # Calibrate ONE eta_c + per-op overhead on the compute-bound ops: med = (1/eta_c)*compute_raw + ovh[op].
+    # Calibrate ONE eta_c + per-op overhead: med = (1/eta_c)*compute_raw + ovh[op]. predict() returns
+    # max(compute, memory), so eta_c must be fit ONLY on rows where the COMPUTE term binds -- a row the
+    # memory term dominates (e.g. qwen sampling_argmax, V=152064 -> L3) was fit on a term predict() does
+    # not return for it. 2-pass: solve on all compute-ops, then drop the memory-bound rows and re-solve.
     cops = sorted(set(COMPUTE_OPS))
-    A = [[cr] + [1.0 if base == o else 0.0 for o in cops]
-         for base, _, _, cr, _ in rows if base in COMPUTE_OPS]
-    y = [med for base, _, med, _, _ in rows if base in COMPUTE_OPS]
-    sol, *_ = np.linalg.lstsq(np.array(A), np.array(y), rcond=None)
+    comp_rows = [(base, med, cr, mem) for base, _, med, cr, mem in rows if base in COMPUTE_OPS]
+
+    def _solve(inv_prev):
+        sel = [(b, med, cr) for (b, med, cr, mem) in comp_rows if inv_prev is None or cr * inv_prev >= mem]
+        A = [[cr] + [1.0 if b == o else 0.0 for o in cops] for (b, med, cr) in sel]
+        y = [med for (b, med, cr) in sel]
+        sol, *_ = np.linalg.lstsq(np.array(A), np.array(y), rcond=None)
+        return sol
+
+    sol = _solve(None)                  # pass 1: all compute-ops
+    sol = _solve(float(sol[0]))         # pass 2: only rows where compute binds at the pass-1 eta_c
     inv_eta_c = float(sol[0])
     eta_c = 1.0 / inv_eta_c
     overhead = {o: max(0.0, float(v)) for o, v in zip(cops, sol[1:])}

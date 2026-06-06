@@ -30,7 +30,7 @@ Engine(spec, engine='analytic').predict(workload) -> {latency_us, bound, provena
 
 每個數字都帶 provenance 標籤：**`calibrated`**（對我們手上的 silicon 擬合）／**`simulated`**／**`assumption`**／**`borrowed`**。最重要的一條鐵律是 **no fake gate**——**沒有 silicon 就不假裝有數值 gate**。RKNPU2（無板）與 GPU INT8（零資料）因此**沒有** per-op 數值驗收門檻，只有 trend-shape／下界的接受準則，並明寫 issue #13 的 silicon gate 是 *superseded-not-satisfied*（被取代、非達成）。
 
-> **可重現原則（沿用）**：每張圖都是 build artifact（`tools/plotting/` 一圖一 script，只吃 committed 數據重產）；每份 report JSON 都能由 `tools/analysis/` 的 fit/build script 重生。整合 cross-check：`tools/analysis/check_phase1_2.py`（載入九份 spec → 餵各引擎 → 驗凍結 key + 標註一致性 + no-fake-gate）。
+> **可重現原則（沿用）**：每張圖都是 build artifact（`tools/plotting/` 一圖一 script，只吃 committed 數據重產）；每份 report JSON 都能由 `tools/analysis/` 的 fit/build script 重生。整合 cross-check：`tools/analysis/check_phase1_2.py`（載入十份 spec，含 Phase-1.3 加的 `cim_topo_edge` → 餵各引擎 → 驗凍結 key + 標註一致性 + no-fake-gate + 合約 sanity rules）。
 
 ## 與 Phase 1.1 / 1.3 的界線
 

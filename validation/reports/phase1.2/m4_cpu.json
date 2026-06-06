@@ -33,8 +33,8 @@
   "residual": 0.789,
   "rmsnorm": 16.815,
   "rope_apply": 22.525,
-  "sampling_argmax": 7.321,
-  "softmax": 15.498,
+  "sampling_argmax": 7.357,
+  "softmax": 15.497,
   "swiglu": 0.0
  },
  "residuals_pct": {
@@ -61,7 +61,7 @@
   },
   "sampling_argmax": {
    "median": 1.1,
-   "max": 1.42,
+   "max": 1.48,
    "bound": [
     "compute",
     "memory"
@@ -83,7 +83,7 @@
   }
  },
  "overall_residual_pct": {
-  "median": 1.15,
+  "median": 1.18,
   "p95": 7.31,
   "max": 13.12
  },

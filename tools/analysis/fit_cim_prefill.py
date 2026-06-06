@@ -97,14 +97,17 @@ def main():
     if not diffs:
         sys.exit("fit_cim_prefill: no alpha13 cross points in the raw file -> cannot assess the decode "
                  "revalidation; run the Card measurement first")
+    MIN_CROSS_N = 8                                          # a spike (n=1) must not self-certify (#36)
     med = round(statistics.median(diffs), 3)
-    p95 = round(sorted(diffs)[int(0.95 * (len(diffs) - 1))], 3)
+    p95 = round(float(np.percentile(diffs, 95)), 3)          # linear-interp quantile, not nearest-rank-down (#37)
+    decision = ("INSUFFICIENT-CROSS-POINTS: only %d/%d alpha13 pts (< %d) -> decode revalidation unconfirmed"
+                % (len(diffs), 13, MIN_CROSS_N) if len(diffs) < MIN_CROSS_N
+                else "CONFIRMED-ON-CARD: kept Alpha fit (un-frozen)" if med <= 0.10
+                else "RE-FIT NEEDED: Card cross-val exceeds the 0.10 decode tolerance")
     params["decode_card_revalidation"] = {
-        "median_rel_diff": med, "p95_rel_diff": p95, "n": len(diffs),
-        "decision": ("CONFIRMED-ON-CARD: kept Alpha fit (un-frozen)" if med <= 0.10
-                     else "RE-FIT NEEDED: Card cross-val exceeds the 0.10 decode tolerance"),
+        "median_rel_diff": med, "p95_rel_diff": p95, "n": len(diffs), "decision": decision,
         "note": "median |rel_diff| over the alpha13 pts (computed here; matches validate_cim_card). "
-                "<= 0.10 -> the Alpha-calibrated G_eff is Card-confirmed, freeze lifted, params unchanged."}
+                "<= 0.10 (with n >= %d) -> the Alpha G_eff is Card-confirmed, freeze lifted." % MIN_CROSS_N}
     PARAMS.write_text(json.dumps(params, indent=1))
     m = CimTileModel(params)
 

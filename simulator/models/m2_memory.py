@@ -63,11 +63,14 @@ class MemoryModel(UnitEngine):
         # (same constructor + frozen contract; ADR-0002). Cache absent -> analytic fallback.
         self.heavy_source = None
         if engine == "ramulator2":
+            is_lpddr5 = (spec.get("memory_type") or spec.get("dram_type")) == "LPDDR5"
             bw = _ramulator2_eff_bw(spec)
             if bw:
                 self.eff_BW_GBs, self.heavy_source = bw, "ramulator2"
+            elif not is_lpddr5:
+                self.heavy_source = "ramulator2-na"          # Ramulator2 models LPDDR5 ONLY -> N/A here
             else:
-                self.heavy_source = "ramulator2-deferred"   # C++ build not available -> analytic fallback
+                self.heavy_source = "ramulator2-deferred"    # LPDDR5 but the cache/C++ build is absent
 
     # ---- engine contract -------------------------------------------------
     def predict(self, wl: Workload) -> dict:
@@ -95,9 +98,12 @@ class MemoryModel(UnitEngine):
         """Honesty tag for the bound memory's effective BW."""
         if self.heavy_source == "ramulator2":
             return "simulated (Ramulator2 LPDDR5 heavy sim, NOT silicon; Phase 1.3)"
+        if self.heavy_source == "ramulator2-na":
+            return ("analytic; engine='ramulator2' N/A for this spec (Ramulator2 models LPDDR5 ONLY, "
+                    "this is %s) -> analytic, NOT a deferred build" % (self.spec.get("memory_type") or self.spec.get("dram_type")))
         if self.heavy_source == "ramulator2-deferred":
-            return ("simulated (eff 0.65); engine='ramulator2' requested but the Ramulator2 C++ "
-                    "build is deferred -> ANALYTIC fallback (risk-#6 documented, report user)")
+            return ("simulated (eff 0.65); engine='ramulator2' requested for LPDDR5 but the Ramulator2 "
+                    "C++ build/cache is absent -> ANALYTIC fallback (risk-#6 documented, report user)")
         if self.spec.get("topology") == "edge":
             return ("assumption (edge: target LPDDR5 sim eff x noc_efficiency=%s; no edge silicon, "
                     "NOT the Card's 24.2)" % self.spec.get("noc_efficiency", 1.0))

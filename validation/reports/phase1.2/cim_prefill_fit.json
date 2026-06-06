@@ -107,10 +107,10 @@
  },
  "decode_card_revalidation": {
   "median_rel_diff": 0.048,
-  "p95_rel_diff": 0.096,
+  "p95_rel_diff": 0.097,
   "n": 13,
   "decision": "CONFIRMED-ON-CARD: kept Alpha fit (un-frozen)",
-  "note": "median |rel_diff| over the alpha13 pts (computed here; matches validate_cim_card). <= 0.10 -> the Alpha-calibrated G_eff is Card-confirmed, freeze lifted, params unchanged."
+  "note": "median |rel_diff| over the alpha13 pts (computed here; matches validate_cim_card). <= 0.10 (with n >= 8) -> the Alpha G_eff is Card-confirmed, freeze lifted."
  },
  "ttft_cross_val_note": "8B prefill TTFT cross-validation (linear-M refuted vs M-amortized) is in recompose_e2e.py (P14) -> twopillar_prediction_fitted.json.",
  "extrapolation_note": "M>256 OR partial-width tiles (K or N not a multiple of 2048) extrapolate beyond the full-tile measured range; CimTileModel.prefill_extrapolated flags them."

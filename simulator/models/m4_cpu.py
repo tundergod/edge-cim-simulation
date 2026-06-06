@@ -30,8 +30,10 @@ an ASSUMPTION (no bandwidth-resolved op in the fp32 decode data; no CPU mem-BW m
 memory term only binds for the largest working set (qwen vocab -> L3). OPS_PER_ELEM / BYTE_PASSES are
 structural `assumption`s (instruction-count physics).
 
-HONESTY: CPU = CALIBRATED to fp32 cpu_ops.json. fp16 = numpy-EMULATED on the A76 -> UPPER BOUND;
-swiglu fp16 = mixed precision. A55 + multicore = SIMULATED (extrapolated, not measured).
+HONESTY: CPU = CALIBRATED to fp32 cpu_ops.json. fp16/int8 are NOT separately modeled -- predict()
+returns the fp32-calibrated latency for ANY dtype; it does NOT capture the A76's fp16 numpy-emulation
+overhead (measured fp16 is ~4x SLOWER than fp32), so it does NOT upper-bound fp16. The recompose CPU-
+support term is therefore fp32. A55 + multicore = SIMULATED (extrapolated, not measured).
 """
 import json
 from pathlib import Path
@@ -126,8 +128,9 @@ class CpuModel(UnitEngine):
         """max(compute, memory) + overhead_op -> (latency_us, bound)."""
         peak = _peak_lane_ops(self.spec, cores, cluster)
         compute_us = n_elem * OPS_PER_ELEM[base] / peak * 1e6 / self.eta_c
-        wsb = _working_set_bytes(base, n_elem)
-        memory_us = wsb / (_tier_bw(self.spec, wsb) * ETA_BW * 1e9) * 1e6
+        wsb = _working_set_bytes(base, n_elem)            # total streamed bytes (the BW volume)
+        single_copy = n_elem * 4                          # cache RESIDENCY = single-copy footprint, NOT x passes
+        memory_us = wsb / (_tier_bw(self.spec, single_copy) * ETA_BW * 1e9) * 1e6
         ovh = self.overhead[base]
         core = max(compute_us, memory_us)
         bound = "compute" if compute_us >= memory_us else "memory"
@@ -141,14 +144,15 @@ class CpuModel(UnitEngine):
         # element count: prefer explicit Workload size vars; fall back to a named model in extra.
         if "model" in wl.extra:
             c = dict(MODELS[wl.extra["model"]], kv=wl.kv)
-            n_elem = _n_elem(wl.op if wl.op != "softmax" else "softmax", c)
+            n_elem = _n_elem(base, c)   # base normalizes softmax* -> 'softmax' (uses c['kv'], not an op-string kv)
         else:
             n_elem = self._n_elem_from_wl(base, wl)
         lat, bound = self._latency(base, n_elem, cores, cluster)
         dtype = wl.extra.get("dtype", wl.dtype)
         sim = cluster != "a76" or cores != 1
         tag = ("CALIBRATED to fp32 cpu_ops.json (1 A76 core)" if dtype == "fp32"
-               else "fp16 = numpy-EMULATED UPPER BOUND (calibrated eta_c on fp32)")
+               else "fp32-calibrated value returned for dtype=%s; fp16 numpy-emulation overhead NOT "
+                    "modeled -> does NOT upper-bound fp16" % dtype)
         if sim:
             tag += "; A55/multicore EXTRAPOLATED = simulated"
         prov = (f"{tag}: max(compute,memory)+overhead_op; eta_c calibrated, eta_bw=assumption; "
@@ -168,9 +172,10 @@ class CpuModel(UnitEngine):
             return wl.N or wl.K or 1
         raise KeyError(f"unknown CPU op: {wl.op}")
 
-    def op_us(self, op, model, dtype="fp16", kv=None):
-        """Convenience: per-token support-op latency (us) for a named model. Returns predict().latency_us
-        so the recompose migration is ~2 lines. fp16 = emulated upper bound."""
+    def op_us(self, op, model, dtype="fp32", kv=None):
+        """Convenience: per-token support-op latency (us) for a named model. Returns predict().latency_us.
+        Defaults to fp32 = the CALIBRATED quantity (the model is fit on fp32 cpu_ops.json; fp16/int8 are
+        NOT separately modeled, so a non-fp32 dtype returns the fp32 value, not an fp16 bound)."""
         wl = Workload(op="softmax" if op.startswith("softmax") else op, kv=kv or 0,
                       extra={"model": model, "dtype": dtype})
         return self.predict(wl)["latency_us"]

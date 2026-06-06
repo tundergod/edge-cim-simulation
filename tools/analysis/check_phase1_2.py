@@ -92,7 +92,23 @@ def main():
     chk("Alpha 13" in cim_r["honesty"] and ("CALIBRATED" in cim_r["honesty"] or "calibrated" in cim_r["honesty"]),
         f"CIM = Alpha 13pts calibrated (status={cim_r['status']})")
 
-    print("\n=== 5. engine interface conformance test still green ===")
+    print("\n=== 5. declared contract sanity rules are ENFORCED (not just named in *.yaml) ===")
+    # specs.yaml: peak_BW_math_consistent -- peak x efficiency == eff_BW for every memory spec.
+    for n in ("mem_lpddr4", "mem_lpddr4x", "mem_lpddr5"):
+        s = load_spec(n)
+        eff = s.get("efficiency", s.get("efficiency_sim"))
+        chk(eff is not None and abs(s["peak_GBs"] * eff - s["eff_BW_GBs"]) < 0.1,
+            f"{n}: peak_BW_math_consistent ({s['peak_GBs']} x {eff} == {s['eff_BW_GBs']})")
+    # m4_cpu.yaml: monotonic_in_op_size + multicore_lowers_compute.
+    cpu_c = CpuModel(load_spec("cpu_rk3588"))
+    sm_lo = cpu_c.op_us("softmax_kv128", "llama-3.1-8b", kv=128)
+    sm_hi = cpu_c.op_us("softmax_kv1024", "llama-3.1-8b", kv=1024)
+    chk(sm_hi > sm_lo, f"CPU monotonic_in_op_size: softmax kv1024 {sm_hi:.1f}us > kv128 {sm_lo:.1f}us")
+    c1 = cpu_c.predict(Workload(op="swiglu", N=14336, extra={"model": "llama-3.1-8b", "cores": 1}))["latency_us"]
+    c2 = cpu_c.predict(Workload(op="swiglu", N=14336, extra={"model": "llama-3.1-8b", "cores": 2}))["latency_us"]
+    chk(c2 < c1, f"CPU multicore_lowers_compute: swiglu 2-core {c2:.1f}us < 1-core {c1:.1f}us")
+
+    print("\n=== 6. engine interface conformance test still green ===")
     import subprocess
     r = subprocess.run([sys.executable, str(ROOT / "tests/test_engine_iface.py")], capture_output=True, text=True)
     chk(r.returncode == 0, "tests/test_engine_iface.py: " + (r.stdout.strip().splitlines()[-1] if r.stdout else "FAIL"))

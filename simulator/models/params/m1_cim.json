@@ -81,10 +81,10 @@
  "_prefill_doc": "prefill (M>1): tile_lat(M)=a+b*M fit on full 2048x2048 tiles at M in {64,128,256}; GEMM = (K*N/W^2)*tile_lat (fractional area, not ceil). M>256 / partial-width tiles extrapolated (CimTileModel.prefill_extrapolated).",
  "decode_card_revalidation": {
   "median_rel_diff": 0.048,
-  "p95_rel_diff": 0.096,
+  "p95_rel_diff": 0.097,
   "n": 13,
   "decision": "CONFIRMED-ON-CARD: kept Alpha fit (un-frozen)",
-  "note": "median |rel_diff| over the alpha13 pts (computed here; matches validate_cim_card). <= 0.10 -> the Alpha-calibrated G_eff is Card-confirmed, freeze lifted, params unchanged."
+  "note": "median |rel_diff| over the alpha13 pts (computed here; matches validate_cim_card). <= 0.10 (with n >= 8) -> the Alpha G_eff is Card-confirmed, freeze lifted."
  },
  "prefill_M_fit": [
   64,

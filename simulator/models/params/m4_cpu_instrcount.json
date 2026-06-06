@@ -7,8 +7,8 @@
   "residual": 0.789,
   "rmsnorm": 16.815,
   "rope_apply": 22.525,
-  "sampling_argmax": 7.321,
-  "softmax": 15.498,
+  "sampling_argmax": 7.357,
+  "softmax": 15.497,
   "swiglu": 0.0
  },
  "ops_per_elem": {
