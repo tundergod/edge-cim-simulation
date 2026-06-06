@@ -1,0 +1,102 @@
+{
+ "module": "cim_prefill_fit",
+ "honesty": "Prefill GEMM M-amortization MEASURED on the Card (1x1-conv proxy, dev FPS) at M in {1,64,128,256}; M>256 fails to compile (v1.6 SRAM wall) -> affine extrapolation. Decode (M=1) G_eff fit unchanged.",
+ "tile": {
+  "kn": 4194304,
+  "shape": "2048x2048"
+ },
+ "affine_fit_tile_lat_us": {
+  "a_weight_load_us": 40.562,
+  "b_per_col_us": 0.0942,
+  "asymptote_TOPS": 89.0
+ },
+ "fit_points": [
+  {
+   "M": 1,
+   "meas_us": 41.83,
+   "pred_us": 40.66,
+   "rel_err": 0.028
+  },
+  {
+   "M": 64,
+   "meas_us": 45.64,
+   "pred_us": 46.59,
+   "rel_err": 0.021
+  },
+  {
+   "M": 128,
+   "meas_us": 51.72,
+   "pred_us": 52.62,
+   "rel_err": 0.017
+  },
+  {
+   "M": 256,
+   "meas_us": 65.36,
+   "pred_us": 64.68,
+   "rel_err": 0.01
+  }
+ ],
+ "fit_quality": {
+  "median_rel_err": 0.019,
+  "max_rel_err": 0.028,
+  "pass_max_le_0.05": true
+ },
+ "full_gemm_meas_vs_pred": [
+  {
+   "M": 64,
+   "K": 4096,
+   "N": 14336,
+   "tiles": 14,
+   "meas_us": 638.9,
+   "pred_us": 652.3,
+   "rel_err": 0.021
+  },
+  {
+   "M": 128,
+   "K": 4096,
+   "N": 14336,
+   "tiles": 14,
+   "meas_us": 724.1,
+   "pred_us": 736.7,
+   "rel_err": 0.017
+  },
+  {
+   "M": 256,
+   "K": 4096,
+   "N": 14336,
+   "tiles": 14,
+   "meas_us": 915.1,
+   "pred_us": 905.5,
+   "rel_err": 0.011
+  },
+  {
+   "M": 128,
+   "K": 4096,
+   "N": 4096,
+   "tiles": 4,
+   "meas_us": 206.9,
+   "pred_us": 210.5,
+   "rel_err": 0.017
+  },
+  {
+   "M": 256,
+   "K": 4096,
+   "N": 4096,
+   "tiles": 4,
+   "meas_us": 261.5,
+   "pred_us": 258.7,
+   "rel_err": 0.011
+  }
+ ],
+ "tile_throughput_monotone_in_M": {
+  "GOP_s_by_M": {
+   "1": 206.3,
+   "64": 11522.9,
+   "128": 20405.3,
+   "256": 33202.2
+  },
+  "monotone_increasing": true
+ },
+ "ttft_cross_val_note": "8B prefill TTFT cross-validation (linear-M refuted vs M-amortized bounded by compute<=TTFT) is in recompose_e2e.py (P14) -> twopillar_prediction_fitted.json:prefill_gemm_compute_BOUNDED.",
+ "extrapolation_note": "M>256 (incl. the 8B S=1024 e2e use) extrapolates the affine tile law beyond the compilable measured range; UNVALIDATED above M=256."
+}

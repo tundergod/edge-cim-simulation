@@ -1,20 +1,142 @@
 {
  "module": "cim_card_revalidate",
- "status": "SPIKE_OK",
- "honesty": "CIM = Alpha 13pts CALIBRATED. SPIKE (2026-06-06) confirms the production Card reproduces the kernel on the same 800MHz AIPU (square M=1,K=2048,N=2048: Card 200.8 vs Alpha 203.7 GOP/s, |diff|=1.4%, no rescale). Full revalidation + prefill GEMM pending (F-gate, user OK).",
- "spike": {
-  "compiler": "v1.6 ships `axcompile` (axelera-devkit 1.6.1, Artifactory, no entitlement block beyond the URL; officially Beta). The old `compile` was renamed, NOT removed (corrects the prior 'no compiler' conclusion).",
-  "conv_proxy_compiles": "YES via axcompile --input … --input-shape 1,K,1,M --output … --overwrite --dataset-len N (auto-generated INT8 calibration, no imageset).",
-  "raw_gemm": "raw MatMul/Gemm FAILS to compile (ONNXGraphCleanerError: not topologically sorted) -> the 1x1-conv proxy is required (confirmed).",
-  "board": "was in a PCIe AER uncorrectable-fault state (kernel auto-recovery failed); recovered via `axdevice --refresh` (pcie-rescan + reload-firmware). Now metis-0:7:0 16GiB clock=800MHz mvm=100%.",
-  "square_revalidation_point": {"shape_MKN": [1, 2048, 2048], "card_dev_fps": 23948.3, "card_dev_lat_us": 41.8,
-                                "card_dev_gflops": 200.8, "alpha_gflops": 203.7, "rel_diff_pct": 1.4}
+ "status": "CARD_REVALIDATED",
+ "honesty": "CIM = Alpha 13pts calibrated + Card-revalidated (same AIPU, 800MHz, no rescale).",
+ "compile_path": "axcompile",
+ "cross_validation_alpha13": [
+  {
+   "N": 64,
+   "K": 2048,
+   "card_gops": 24.0,
+   "alpha_gops": 26.6,
+   "rel_diff": 0.096
+  },
+  {
+   "N": 128,
+   "K": 2048,
+   "card_gops": 43.9,
+   "alpha_gops": 48.6,
+   "rel_diff": 0.098
+  },
+  {
+   "N": 256,
+   "K": 2048,
+   "card_gops": 71.8,
+   "alpha_gops": 78.0,
+   "rel_diff": 0.079
+  },
+  {
+   "N": 480,
+   "K": 2048,
+   "card_gops": 99.4,
+   "alpha_gops": 105.5,
+   "rel_diff": 0.058
+  },
+  {
+   "N": 512,
+   "K": 2048,
+   "card_gops": 106.0,
+   "alpha_gops": 112.7,
+   "rel_diff": 0.059
+  },
+  {
+   "N": 512,
+   "K": 3584,
+   "card_gops": 152.9,
+   "alpha_gops": 147.4,
+   "rel_diff": 0.038
+  },
+  {
+   "N": 544,
+   "K": 2048,
+   "card_gops": 106.1,
+   "alpha_gops": 111.8,
+   "rel_diff": 0.051
+  },
+  {
+   "N": 1000,
+   "K": 2048,
+   "card_gops": 157.9,
+   "alpha_gops": 165.6,
+   "rel_diff": 0.046
+  },
+  {
+   "N": 1024,
+   "K": 2048,
+   "card_gops": 161.7,
+   "alpha_gops": 169.8,
+   "rel_diff": 0.048
+  },
+  {
+   "N": 1024,
+   "K": 3072,
+   "card_gops": 178.2,
+   "alpha_gops": 182.3,
+   "rel_diff": 0.023
+  },
+  {
+   "N": 1024,
+   "K": 4096,
+   "card_gops": 219.6,
+   "alpha_gops": 227.2,
+   "rel_diff": 0.033
+  },
+  {
+   "N": 1536,
+   "K": 2048,
+   "card_gops": 195.7,
+   "alpha_gops": 204.0,
+   "rel_diff": 0.04
+  },
+  {
+   "N": 2048,
+   "K": 2048,
+   "card_gops": 200.5,
+   "alpha_gops": 203.7,
+   "rel_diff": 0.015
+  }
+ ],
+ "consistency": {
+  "n": 13,
+  "median_rel_diff": 0.048,
+  "p95_rel_diff": 0.096
  },
- "alpha_13_points_NK_gops": {
-  "N64K2048": 26.6, "N128K2048": 48.6, "N256K2048": 78.0, "N480K2048": 105.5, "N512K2048": 112.7,
-  "N512K3584": 147.4, "N544K2048": 111.8, "N1000K2048": 165.6, "N1024K2048": 169.8, "N1024K3072": 182.3,
-  "N1024K4096": 227.2, "N1536K2048": 204.0, "N2048K2048": 203.7
- },
- "next": "F-gate (user OK): run run_metis_cim_v16.py full (alpha13 13 pts + prefill M>=128 + matmul_sweep) -> measurements/metis_card/metis_card_matmul.json -> validate_cim_card.py -> CARD_REVALIDATED; then prefill-GEMM fit (the ~80x-mispredict gap) + edge-CIM memory layer.",
- "both_boards_800MHz": "machines.md: Alpha + Card both clock=800MHz -> dev_gflops directly comparable, no rescale."
+ "prefill_compute_bound_NEW": [
+  {
+   "M": 64,
+   "K": 4096,
+   "N": 14336,
+   "card_gops": 11764.3,
+   "dev_lat_us": 638.9
+  },
+  {
+   "M": 128,
+   "K": 4096,
+   "N": 14336,
+   "card_gops": 20761.0,
+   "dev_lat_us": 724.1
+  },
+  {
+   "M": 256,
+   "K": 4096,
+   "N": 14336,
+   "card_gops": 32854.1,
+   "dev_lat_us": 915.1
+  },
+  {
+   "M": 128,
+   "K": 4096,
+   "N": 4096,
+   "card_gops": 20761.0,
+   "dev_lat_us": 206.9
+  },
+  {
+   "M": 256,
+   "K": 4096,
+   "N": 4096,
+   "card_gops": 32854.1,
+   "dev_lat_us": 261.5
+  }
+ ],
+ "note": "axrunmodel dev FPS = isolated compute (dev/system split). prefill/compute-bound shapes fill the Alpha 1GB-window gap."
 }

@@ -73,5 +73,16 @@
    "K": 2048,
    "gops": 203.7
   }
- ]
+ ],
+ "prefill_tile_a_us": 40.562,
+ "prefill_tile_b_us": 0.0942,
+ "prefill_tile_kn": 4194304,
+ "prefill_M_measured": [
+  1,
+  64,
+  128,
+  256
+ ],
+ "prefill_M_max": 256,
+ "_prefill_doc": "prefill (M>1): tile_lat(M)=a+b*M on the canonical 2048x2048 tile (Card-measured, M<=256; M>256 extrapolated). dev_lat = n_tiles*tile_lat."
 }

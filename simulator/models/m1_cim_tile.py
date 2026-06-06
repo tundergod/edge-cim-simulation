@@ -37,6 +37,11 @@ class CimTileModel:
         self.Kb = p["G_eff_Kb"]
         self.native_max_kn = p.get("native_max_kn", 4_194_304)  # 2048*2048; above = extrapolated
         self.alloc_envelope = p.get("alloc_envelope_params", 6_000_000)  # SDK weight-alloc limit
+        # prefill (M>1): canonical-tile latency is AFFINE in M, tile_lat=a+b*M (Card-measured by
+        # fit_cim_prefill.py at M<={1,64,128,256}; M>prefill_M_max extrapolated). None until fit.
+        self.prefill_a_us = p.get("prefill_tile_a_us")
+        self.prefill_b_us = p.get("prefill_tile_b_us")
+        self.prefill_M_max = p.get("prefill_M_max")
 
     @property
     def width(self):
@@ -47,19 +52,31 @@ class CimTileModel:
         return self.Gmax * (N / (N + self.Na)) * (K / (K + self.Kb))
 
     def dev_lat_us(self, M, K, N):
-        """Device compute latency (us) of (M,K)x(K,N). M=1 = decode (calibrated path).
+        """Device compute latency (us) of (M,K)x(K,N). Two regimes:
 
-        Tiles the output N into passes of width <= n_cores*512; each pass costs by its OWN
-        size via the 2D throughput, so latency keeps rising across tiles (a partial last
-        tile adds less, not a full tile). K*N > native_max_kn is UNVALIDATED extrapolation.
+        M<=1 (DECODE, calibrated): tile the output N into passes of width <= n_cores*512; each
+        pass costs by its OWN size via the 2D throughput, so latency keeps rising across tiles
+        (a partial last tile adds less, not a full tile). K*N > native_max_kn is extrapolation.
+
+        M>1 (PREFILL, Card-measured): the 2048x2048 weight tile's load is amortized over M
+        activation columns -> per-tile latency is AFFINE in M (a + b*M, fit_cim_prefill.py), so a
+        full GEMM = n_tiles(K,N) * (a + b*M). Linear-in-M extrapolation of the DECODE law would
+        over-predict ~80x. M>prefill_M_max (256) extrapolates the affine law (UNVALIDATED).
         """
-        W = self.width
-        lat, rem = 0.0, N
-        while rem > 0:
-            n = min(W, rem)
-            lat += 2.0 * M * K * n / (self.g_eff(n, K) * 1e9) * 1e6
-            rem -= n
-        return lat
+        if M <= 1:
+            W = self.width
+            lat, rem = 0.0, N
+            while rem > 0:
+                n = min(W, rem)
+                lat += 2.0 * M * K * n / (self.g_eff(n, K) * 1e9) * 1e6
+                rem -= n
+            return lat
+        if self.prefill_a_us is None:
+            raise ValueError("prefill (M>1) latency needs the M-amortization fit; "
+                             "run tools/analysis/fit_cim_prefill.py")
+        W = self.width   # canonical tile edge (= n_cores*512 = 2048); native_max_kn = W*W
+        n_tiles = math.ceil(K / W) * math.ceil(N / W)
+        return n_tiles * (self.prefill_a_us + self.prefill_b_us * M)
 
     def is_extrapolated(self, K, N):
         """True if (K,N) is beyond the largest natively measured single tile."""
