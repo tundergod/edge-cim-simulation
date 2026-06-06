@@ -1,24 +1,20 @@
 {
  "module": "cim_card_revalidate",
- "status": "DEFERRED_FALLBACK",
- "honesty": "CIM = Alpha 13pts CALIBRATED (non-frozen, pending board); Card revalidation DEFERRED.",
- "reason": "SSH to metiscard was not authorized this session (harness denied remote-shell to the shared board; user asleep). No Card raw measurements available.",
- "fallback_per_plan": "plans/phase-1.2.md step 18 note + handoff \u00a75: low-level compile absent / MatMul unsupported / board unreachable -> 'Alpha 13pts calibrated (pending board) + Card e2e validates memory-wall', report user.",
- "alpha_13_points_NK_gops": {
-  "N64K2048": 26.6,
-  "N128K2048": 48.6,
-  "N256K2048": 78.0,
-  "N480K2048": 105.5,
-  "N512K2048": 112.7,
-  "N512K3584": 147.4,
-  "N544K2048": 111.8,
-  "N1000K2048": 165.6,
-  "N1024K2048": 169.8,
-  "N1024K3072": 182.3,
-  "N1024K4096": 227.2,
-  "N1536K2048": 204.0,
-  "N2048K2048": 203.7
+ "status": "SPIKE_OK",
+ "honesty": "CIM = Alpha 13pts CALIBRATED. SPIKE (2026-06-06) confirms the production Card reproduces the kernel on the same 800MHz AIPU (square M=1,K=2048,N=2048: Card 200.8 vs Alpha 203.7 GOP/s, |diff|=1.4%, no rescale). Full revalidation + prefill GEMM pending (F-gate, user OK).",
+ "spike": {
+  "compiler": "v1.6 ships `axcompile` (axelera-devkit 1.6.1, Artifactory, no entitlement block beyond the URL; officially Beta). The old `compile` was renamed, NOT removed (corrects the prior 'no compiler' conclusion).",
+  "conv_proxy_compiles": "YES via axcompile --input … --input-shape 1,K,1,M --output … --overwrite --dataset-len N (auto-generated INT8 calibration, no imageset).",
+  "raw_gemm": "raw MatMul/Gemm FAILS to compile (ONNXGraphCleanerError: not topologically sorted) -> the 1x1-conv proxy is required (confirmed).",
+  "board": "was in a PCIe AER uncorrectable-fault state (kernel auto-recovery failed); recovered via `axdevice --refresh` (pcie-rescan + reload-firmware). Now metis-0:7:0 16GiB clock=800MHz mvm=100%.",
+  "square_revalidation_point": {"shape_MKN": [1, 2048, 2048], "card_dev_fps": 23948.3, "card_dev_lat_us": 41.8,
+                                "card_dev_gflops": 200.8, "alpha_gflops": 203.7, "rel_diff_pct": 1.4}
  },
- "to_unblock": "grant SSH (add Bash rule for `ssh metiscard`), then: rsync the port to the Card, run `python run_metis_cim_v16.py --spike` (feasibility), then full, rsync results back, re-run this validator.",
- "both_boards_800MHz": "machines.md: Alpha + Card both clock=800MHz -> dev_gflops directly comparable, no rescale (applies once Card data exists)."
+ "alpha_13_points_NK_gops": {
+  "N64K2048": 26.6, "N128K2048": 48.6, "N256K2048": 78.0, "N480K2048": 105.5, "N512K2048": 112.7,
+  "N512K3584": 147.4, "N544K2048": 111.8, "N1000K2048": 165.6, "N1024K2048": 169.8, "N1024K3072": 182.3,
+  "N1024K4096": 227.2, "N1536K2048": 204.0, "N2048K2048": 203.7
+ },
+ "next": "F-gate (user OK): run run_metis_cim_v16.py full (alpha13 13 pts + prefill M>=128 + matmul_sweep) -> measurements/metis_card/metis_card_matmul.json -> validate_cim_card.py -> CARD_REVALIDATED; then prefill-GEMM fit (the ~80x-mispredict gap) + edge-CIM memory layer.",
+ "both_boards_800MHz": "machines.md: Alpha + Card both clock=800MHz -> dev_gflops directly comparable, no rescale."
 }

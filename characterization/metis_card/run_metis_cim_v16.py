@@ -15,17 +15,20 @@ authorized in this session). When SSH is granted:
     # then full:  python run_metis_cim_v16.py
     rsync -a metiscard:~/edge-cim-simulation/measurements/metis_card/ measurements/metis_card/
 
-COMPILE PATH (the SPIKE question): prefer the LOW-LEVEL `compile` (Alpha used it at
-run_metis_cim.py:65 — NOT deploy.py). voyager-sdk.md:339 records that general MatMul is not a
-deploy.py-supported op (YOLO11 whitelist), so deploy.py is only a best-effort fallback. If
-low-level `compile` is gone in v1.6 AND deploy.py cannot compile a MatMul/conv proxy, the task
-takes the documented fallback (Alpha 13pts calibrated, pending board) and REPORTS the user — it
-does NOT silently switch paths.
+COMPILE PATH (SPIKE-confirmed 2026-06-06): v1.6 ships the compiler as `axcompile` (axelera-devkit
+wheel from Artifactory, officially Beta) — the old `compile` was just renamed, NOT removed. The
+1×1-conv proxy compiles cleanly via `axcompile --input … --input-shape 1,K,1,M --output … --overwrite
+--dataset-len N` (auto-generated calibration, no imageset). Raw MatMul/Gemm still fails
+(ONNXGraphCleanerError: not topologically sorted) → the conv proxy is required. Set AXCOMPILE to the
+devkit venv's binary (e.g. /tmp/axc/bin/axcompile) if it's not on PATH; the runtime `axrunmodel`
+lives in the SDK env. If neither `axcompile` nor `compile` is present, report COMPILER_ABSENT.
 
-Run: python run_metis_cim_v16.py [--spike] [--seconds 5] [--dataset-len 20] [--only GROUP]
+Run: AXCOMPILE=/path/to/axcompile python run_metis_cim_v16.py [--spike] [--seconds 5] [--dataset-len 20] [--only GROUP]
 """
-import argparse, json, re, shutil, subprocess, time
+import argparse, json, os, re, shutil, subprocess, time
 from pathlib import Path
+
+AXCOMPILE = os.environ.get("AXCOMPILE", "axcompile")  # v1.6 devkit compiler; old `compile` is the fallback
 import numpy as np
 import onnx
 from onnx import helper, TensorProto, numpy_helper
@@ -65,23 +68,25 @@ def build_conv_onnx(M, K, N, bias, path):
 
 
 def _try_low_level_compile(d, M, K, residency, dataset_len, timeout):
-    """Alpha's low-level `compile` (1:1). Returns (model_json|None, info). FileNotFoundError on the
-    `compile` binary => v1.6 dropped it (the SPIKE answer)."""
-    cmd = ["compile", "--input", str(d / "m.onnx"), "--input-shape", f"1,{K},1,{M}",
-           "--output", str(d / "out"), "--overwrite", "--log-level", "WARNING",
-           "--dataset-len", str(dataset_len)]
-    if residency:
-        (d / "cfg.json").write_text(json.dumps({"dpu_constants_home": f"global.{residency}"}))
-        cmd += ["--config", str(d / "cfg.json")]
-    try:
-        rc = subprocess.run(cmd, cwd=SDK, capture_output=True, text=True, timeout=timeout)
-    except FileNotFoundError:
-        return None, {"compile_path": "LOW_LEVEL_COMPILE_ABSENT"}   # SPIKE: `compile` gone in v1.6
-    if rc.returncode != 0:
-        return None, {"compile_path": "low_level_compile", "error": "compile", "rc": rc.returncode,
-                      "stderr": rc.stderr[-300:]}
-    mj = list((d / "out").rglob("model.json"))
-    return (mj[0] if mj else None), {"compile_path": "low_level_compile"}
+    """Compile the conv proxy: v1.6 `axcompile` (axelera-devkit) first, old `compile` as fallback.
+    Returns (model_json|None, info). Both absent => COMPILER_ABSENT. model.json lands at
+    out/compiled_model/model.json (rglob finds it)."""
+    for binary, tag in ((AXCOMPILE, "axcompile"), ("compile", "compile")):
+        cmd = [binary, "--input", str(d / "m.onnx"), "--input-shape", f"1,{K},1,{M}",
+               "--output", str(d / "out"), "--overwrite", "--log-level", "WARNING",
+               "--dataset-len", str(dataset_len)]
+        if residency:   # Alpha-era l2/ddr residency; not exercised by the Card alpha13/prefill manifest
+            (d / "cfg.json").write_text(json.dumps({"dpu_constants_home": f"global.{residency}"}))
+            cmd += ["--config", str(d / "cfg.json")]
+        try:
+            rc = subprocess.run(cmd, cwd=SDK, capture_output=True, text=True, timeout=timeout)
+        except FileNotFoundError:
+            continue   # this binary not present; try the next
+        if rc.returncode != 0:
+            return None, {"compile_path": tag, "error": "compile", "rc": rc.returncode, "stderr": rc.stderr[-300:]}
+        mj = list((d / "out").rglob("model.json"))
+        return (mj[0] if mj else None), {"compile_path": tag}
+    return None, {"compile_path": "COMPILER_ABSENT"}   # neither axcompile nor compile present
 
 
 def measure(M, K, N, bias=False, residency=None, seconds=5, dataset_len=20, timeout=900):
@@ -95,13 +100,12 @@ def measure(M, K, N, bias=False, residency=None, seconds=5, dataset_len=20, time
         t0 = time.time()
         mj, info = _try_low_level_compile(d, M, K, residency, dataset_len, timeout)
         ct = time.time() - t0
-        if info.get("compile_path") == "LOW_LEVEL_COMPILE_ABSENT":
-            # The SPIKE verdict. deploy.py fallback needs MatMul support (voyager-sdk.md:339 says
-            # not whitelisted) + INT8 calibration data -> operator decision, not a silent switch.
-            return {"error": "low_level_compile_absent",
-                    "spike": "v1.6 has no low-level `compile`; deploy.py MatMul support unverified "
-                             "(voyager-sdk.md:339). DOCUMENTED FALLBACK: Alpha 13pts calibrated + "
-                             "report user.", "compile_s": round(ct, 1)}
+        if info.get("compile_path") == "COMPILER_ABSENT":
+            # Neither axcompile (devkit) nor compile present -> install axelera-devkit or set AXCOMPILE.
+            return {"error": "compiler_absent",
+                    "spike": "neither `axcompile` (axelera-devkit) nor `compile` found. Install the "
+                             "devkit (pip --extra-index-url …/axelera-pypi/simple 'axelera-devkit[all]') "
+                             "or set AXCOMPILE=/path/to/axcompile. Report user.", "compile_s": round(ct, 1)}
         if mj is None:
             return {**info, "error": info.get("error", "no_model_json"), "compile_s": round(ct, 1)}
         ax = subprocess.run(["axrunmodel", str(mj), "--seconds", str(seconds)],
