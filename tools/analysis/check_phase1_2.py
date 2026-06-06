@@ -27,7 +27,7 @@ from simulator.models.m1_cim_spm import SramTier                   # noqa: E402
 
 REP = ROOT / "validation/reports/phase1.2"
 SPECS = ["cpu_rk3588", "npu_rknpu2", "gpu_mali_g610", "mem_lpddr4", "mem_lpddr4x",
-         "mem_lpddr5", "sram_metis_aipu", "cim_topo_alpha", "cim_topo_card"]
+         "mem_lpddr5", "sram_metis_aipu", "cim_topo_alpha", "cim_topo_card", "cim_topo_edge"]
 fails = []
 
 
@@ -58,6 +58,7 @@ def main():
         probes.append((sp, MemoryModel(load_spec(sp)).predict(Workload(op="stream", nbytes=1_000_000))))
     probes.append(("cim_topo_alpha", MemoryModel(load_spec("cim_topo_alpha")).predict(Workload(op="pcie", nbytes=0))))
     probes.append(("cim_topo_card", MemoryModel(load_spec("cim_topo_card")).predict(Workload(op="stream", nbytes=1_000_000))))
+    probes.append(("cim_topo_edge", MemoryModel(load_spec("cim_topo_edge")).predict(Workload(op="stream", nbytes=1_000_000))))
     for name, out in probes:
         try:
             check_return(out)
@@ -73,6 +74,8 @@ def main():
     chk("simulated" in dict(probes)["mem_lpddr5"]["provenance"], "LPDDR5 = simulated")
     chk("assumption" in dict(probes)["mem_lpddr4"]["provenance"], "LPDDR4 = assumption (derived)")
     chk(dict(probes)["cim_topo_alpha"]["bound"] == "floor", "Alpha pays the per-call floor (bound=floor)")
+    chk("assumption" in dict(probes)["cim_topo_edge"]["provenance"] and dict(probes)["cim_topo_edge"]["bound"] == "memory",
+        "edge CIM = assumption memory wall (target LPDDR5 x noc_eff, NOT Card 24.2)")
 
     print("\n=== 4. NO FAKE GATE (units with no silicon carry no numeric silicon gate) ===")
     npu_r = json.loads((REP / "m4_npu.json").read_text())

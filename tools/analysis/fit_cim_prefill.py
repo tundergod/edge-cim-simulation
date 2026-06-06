@@ -67,6 +67,18 @@ def main():
     params["prefill_M_max"] = 256
     params["_prefill_doc"] = ("prefill (M>1): tile_lat(M)=a+b*M on the canonical 2048x2048 tile "
                               "(Card-measured, M<=256; M>256 extrapolated). dev_lat = n_tiles*tile_lat.")
+    # E16: the decode G_eff(N,K) fit (Alpha 13 pts) is Card-CONFIRMED when the cross-val is within
+    # the decode fit tolerance (median |rel_diff| <= 0.10) -> kept (un-frozen), NOT re-fit.
+    rev = ROOT / "validation/reports/phase1.2/cim_card_revalidate.json"
+    if rev.exists():
+        cons = json.loads(rev.read_text()).get("consistency", {})
+        med = cons.get("median_rel_diff")
+        params["decode_card_revalidation"] = {
+            "median_rel_diff": med, "p95_rel_diff": cons.get("p95_rel_diff"),
+            "decision": ("CONFIRMED-ON-CARD: kept Alpha fit (un-frozen)" if med is not None and med <= 0.10
+                         else "RE-FIT NEEDED: Card cross-val exceeds the 0.10 decode tolerance"),
+            "note": "decode G_eff is Alpha-calibrated; the Card re-measures the same 800MHz AIPU "
+                    "(validate_cim_card.py). Within tolerance -> the freeze is lifted, params unchanged."}
     PARAMS.write_text(json.dumps(params, indent=1))
     m = CimTileModel(params)
 

@@ -19,7 +19,8 @@ specs:                        # spec -> engine + honesty
   mem_lpddr5:      {engine: m2_memory.MemoryModel,    honesty: "simulated (eff 0.65 < measured 0.71); assumption (peak)"}
   sram_metis_aipu: {engine: m1_cim_spm.SramTier,      honesty: "assumption (CACTI BW/latency); architecture-only residency"}
   cim_topo_alpha:  {engine: m2_memory.MemoryModel,    honesty: "measured (911us floor, 3.9 PCIe); assumption (~14MB envelope)"}
-  cim_topo_card:   {engine: m2_memory.MemoryModel,    honesty: "measured (24.2 on-card BW); CIM compute = Alpha 13pts calibrated"}
+  cim_topo_card:   {engine: m2_memory.MemoryModel,    honesty: "measured (24.2 on-card BW); CIM compute = Alpha 13pts calibrated, Card-revalidated"}
+  cim_topo_edge:   {engine: m2_memory.MemoryModel,    honesty: "assumption (edge mem wall = target LPDDR5 eff x noc_efficiency; no edge silicon, NOT Card 24.2); CIM compute = Alpha 13pts, Card-revalidated"}
 notes:
   - "Swapping a model = swapping a spec file; engine code unchanged."
   - "alloc_envelope_param_count (6M, cim_topo_alpha) != native_max_kn (4.19M, m1_cim.json) — different quantities."

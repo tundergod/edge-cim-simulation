@@ -84,5 +84,11 @@
   256
  ],
  "prefill_M_max": 256,
- "_prefill_doc": "prefill (M>1): tile_lat(M)=a+b*M on the canonical 2048x2048 tile (Card-measured, M<=256; M>256 extrapolated). dev_lat = n_tiles*tile_lat."
+ "_prefill_doc": "prefill (M>1): tile_lat(M)=a+b*M on the canonical 2048x2048 tile (Card-measured, M<=256; M>256 extrapolated). dev_lat = n_tiles*tile_lat.",
+ "decode_card_revalidation": {
+  "median_rel_diff": 0.048,
+  "p95_rel_diff": 0.096,
+  "decision": "CONFIRMED-ON-CARD: kept Alpha fit (un-frozen)",
+  "note": "decode G_eff is Alpha-calibrated; the Card re-measures the same 800MHz AIPU (validate_cim_card.py). Within tolerance -> the freeze is lifted, params unchanged."
+ }
 }
