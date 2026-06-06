@@ -66,11 +66,13 @@ order/shape 乘數在一個寬到 N=K·64 的 aspect 掃描上，**最大值 = 6
 
 ### attention offload：NPU 是模擬、Mali 是 silicon、CIM 是 Alpha-topology 估計
 
-**圖 N2（attention offload）— Mali 實線=silicon／CIM 實線=Alpha-topology 估計，NPU 虛線=SIMULATED**（三條線皆 scaled 到 llama-3.1-8b 的 **32 個 query head**——`heads=32` 才是 attention bmm 的縮放量，`kvh=8` 只用於 KV bytes）
+**圖 N2（attention offload）— Mali 實線=silicon／CIM 實線=Alpha-topology 估計，NPU 虛線=SIMULATED**
 ![N2](../../../figures/phase1.2/N2_attn_offload.png)
 
-- **Mali GPU-native（綠，實線）**：Phase 1.1 的 **silicon** fit（`m4_gpu.json`）。
-- **CIM composed（橘，實線）**：**Alpha-topology 罰則估計**（含 Alpha 的 KV-reload 罰則），**不是**量產絕對值（`cim_attention_composed.json` 註明）——所以標「Alpha-topo est.」、不是裸 silicon。
+> ⚠️ **兩種 basis、不可逐 head 直比**：**Mali 與 NPU** 線是 **per-bmm × 32 個 query head**（`heads=32` 才是 attention bmm 的縮放量，`kvh=8` 只用於 KV bytes）；**CIM** 線是**整模型、多層的 KV-reload 罰則**（`cim_attention_composed.json`，per-token whole-model，**不是** per-bmm × heads）。所以 CIM 對 Mali/NPU 的**絕對值**不是 like-for-like。
+
+- **Mali GPU-native（綠，實線）**：Phase 1.1 的 **silicon** fit（`m4_gpu.json`），per-bmm × 32 heads。
+- **CIM composed（橘，實線）**：**Alpha-topology 整模型罰則估計**（含 Alpha 的 KV-reload 罰則，**不同 basis**），**不是**量產絕對值（`cim_attention_composed.json` 註明）——所以標「Alpha-topo, whole-model」、不是裸 silicon。
 - **NPU analytic（藍，虛線）**：本章的解析估計，**畫成虛線 + 標 SIMULATED**，讓誠實邊界一眼可見。
 - **⚠️ 重要誠實標註**：NPU 的**絕對值**是 6 TOPS 解析天花板的直接輸出——attention 的 FLOPs 對 6 TOPS 來說極小（GQA heads 走 batch 維、**不**補進 systolic M 槽，否則會 4× 高估），所以模型算出很快。這**和 HeteroInfer「NPU ≫ GPU for matmul」的方向一致**，但**絕對值未經 silicon 驗證**，只能當趨勢方向。要把它變成可信的絕對數字，得等 #13 silicon 或 Phase 1.3 ONNXim。
 

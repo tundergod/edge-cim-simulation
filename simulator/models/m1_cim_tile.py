@@ -76,9 +76,10 @@ class CimTileModel:
         W = self.width   # canonical tile edge (= n_cores*512 = 2048); native_max_kn = W*W
         area = (K * N) / (W * W)   # fractional tile area (not ceil): no padded-tile over-charge
         prefill_lat = area * (self.prefill_a_us + self.prefill_b_us * M)
-        # latency must be monotone non-decreasing in M: never below the M=1 decode value for the same
-        # tile (the affine line, extrapolated below its M>=64 fit basis, can dip under it -> clamp).
-        return max(prefill_lat, self._decode_lat_us(K, N))
+        # monotone floor on the SAME fractional-area basis: ONE canonical tile's M=1 decode cost scaled
+        # by area. (Clamping to _decode_lat_us(K,N) -- full-width N-passes -- mixes bases and inflates
+        # partial-width tiles ~2.3x, issue #39.) This lifts the M=2 full-tile value above M=1 decode.
+        return max(prefill_lat, area * self._decode_lat_us(W, W))
 
     def _decode_lat_us(self, K, N):
         """M=1 decode latency (us): output N tiled into passes of width <= W, each costed by its own

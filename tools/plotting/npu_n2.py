@@ -1,14 +1,16 @@
 """Phase 1.2 figure N2 — attention offload: CIM/Mali (silicon) vs NPU (simulated) (build artifact).
 
-Per-token attention vs KV length (scaled to llama-3.1-8b's 32 query heads) for three candidates:
-  - CIM composed (Alpha topology) — SOLID. Alpha-topology penalty ESTIMATE (includes the Alpha
-    KV-reload penalty); NOT a production-absolute (cim_attention_composed.json note).
-  - Mali GPU-native bmm          — SOLID, silicon-backed (simulator/models/params/m4_gpu.json fit)
-  - NPU analytic                 — DASHED, SIMULATED (NpuModel; NO RKNPU2 silicon, issue #13)
+Per-token attention vs KV length for three candidates. NOTE the two BASES are different (do NOT read
+absolute CIM-vs-NPU as like-for-like):
+  - Mali GPU-native bmm  — SOLID, silicon-backed. PER-BMM x 32 query heads (heads=32 is the bmm
+    scaling; kvh=8 is only the KV/memory count). (simulator/models/params/m4_gpu.json fit)
+  - NPU analytic         — DASHED, SIMULATED. Also per-bmm x 32 heads (NpuModel; NO RKNPU2 silicon, #13).
+  - CIM composed         — SOLID. A DIFFERENT BASIS: a WHOLE-MODEL, multi-layer KV-reload penalty
+    (cim_attention_composed.json), an Alpha-topology ESTIMATE (NOT a production-absolute, NOT per-bmm
+    x heads). So the CIM line is not directly comparable head-for-head to the Mali/NPU lines.
 
-Mali is a Phase-1.1 silicon fit; the CIM line is an Alpha-topology estimate (so labeled, not bare
-"silicon"); the NPU line is the Phase-1.2 analytic estimate (dashed + "simulated"). Heads=32 (query
-heads) matches the bmm scaling the rest of the codebase uses. Writes docs/figures/phase1.2/.
+Mali = Phase-1.1 silicon fit; CIM = Alpha-topology whole-model estimate (so labeled, not bare
+"silicon"); NPU = Phase-1.2 analytic (dashed + "simulated"). Writes docs/figures/phase1.2/.
 
 Run: ./.venv/bin/python tools/plotting/npu_n2.py
 """
@@ -52,7 +54,7 @@ def main():
 
     fig, ax = plt.subplots(figsize=(3.6, 2.5))
     ax.plot(cim_kv, cim_ms, "o-", color=S.PALETTE["attention"], ms=4, lw=1.4,
-            label="CIM composed (Alpha-topo est.)")
+            label="CIM composed (Alpha-topo, whole-model basis)")
     ax.plot(cim_kv, mali_ms, "s-", color=S.PALETTE["ffn"], ms=4, lw=1.4,
             label=f"Mali GPU-native (silicon, x{HEADS}h)")
     ax.plot(cim_kv, npu_ms, "^--", color=S.PALETTE["matmul"], ms=4.5, lw=1.4,

@@ -26,7 +26,7 @@
   "notes": {
     "decode_residency": "decode support-op working sets reside in L1/L2/L3 -> memory term uses CACHE BW, never host LPDDR. 'swap LPDDR4->5 recompute' applies to PREFILL only.",
     "cost_driver": "exp() transcendental (softmax/swiglu) dominates, NOT a reduction/elementwise split.",
-    "fp16": "numpy-emulated on A76 -> UPPER BOUND; swiglu fp16 = mixed precision.",
+    "fp16": "model dtype='fp16' = ANALYTIC native-fp16 (fp16_lanes=8 = 2x fp32 SIMD + 2-byte elems; eta_c borrowed from fp32), NOT calibrated. The fp16 cpu_ops.json was numpy-EMULATED (~4x slower), unrepresentative of native fp16; recompose uses the fp32 calibrated path.",
     "multicore": "single-core measured -> multi-core extrapolated; A55 IPC=1 (single NEON pipe); A55+multicore unmeasured = simulated.",
     "cache_vs_metis": "cache_bw_GBs is the A76's own SRAM (TRM estimate), NOT the Metis AIPU SRAM tier (sram_metis_aipu) and NOT the production-card LPDDR4x (24.2)."
   },

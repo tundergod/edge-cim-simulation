@@ -1,5 +1,5 @@
 {
- "_doc": "CALIBRATED factors for the CPU instruction-count roofline (m4_cpu.py), fit to fp32 cpu_ops.json on a single A76 core. eta_c calibrated; eta_bw=ASSUMPTION (no BW-resolved op in fp32 decode data); overhead_op per op. fp16 = emulated upper bound (not fit).",
+ "_doc": "CALIBRATED factors for the CPU instruction-count roofline (m4_cpu.py), fit to fp32 cpu_ops.json on a single A76 core. eta_c calibrated; eta_bw=ASSUMPTION (no BW-resolved op in fp32 decode data); overhead_op per op. fp32-only fit; the model's fp16 path is analytic native-fp16 (2x SIMD), NOT fit here.",
  "eta_c": 0.1521,
  "eta_bw": 0.6,
  "eta_bw_tag": "assumption (no CPU mem-BW micro-benchmark; literature-typical cache efficiency)",

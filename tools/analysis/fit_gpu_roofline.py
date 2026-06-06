@@ -5,8 +5,8 @@ Writes simulator/specs/gpu_mali_g610.json     ('roofline_fit' block, calibrated)
        validation/reports/phase1.2/m4_gpu_roofline.json
        (figure: tools/plotting/gpu_g1.py -> docs/figures/phase1.2/G1.png)
 
-Two FP16-calibrated axes (both LOWER BOUND; the micro-benchmark model stays PRIMARY,
-this roofline is the model-swap slot):
+Two FP16-calibrated axes (shape-trend fit, NOT a strict lower bound -- ~1/3 of points over-predict by
+up to +5%; the micro-benchmark model stays PRIMARY, this roofline is the model-swap slot):
   - eff_compute_fp16 = saturated f16 GFLOP/s (ksweep, 5 pts) / fp16 peak (1024) -> compute ceiling
   - mem_eff_BW_GBs   = lstsq fit of FP16 decode-GEMV latency vs nbytes (line through origin)
 Records error vs the 1.1 measured points. HONESTY: FP16 only (INT8 = zero data);
@@ -40,8 +40,12 @@ def main():
 
     # --- compute ceiling: saturated f16 throughput (ksweep, the 5 calibration pts) ---
     ksweep = [(r["M"], r["f16_gflops"]) for r in res if r["group"] == "ksweep"]
-    g_sat = max(ksweep, key=lambda mg: mg[0])[1]            # converged tail = highest-M pt (~20.12), NOT
-    eff_compute = g_sat / spec["fp16_peak_gflops"]          # the noisy M=512 peak (20.29); spec-consistent
+    # converged tail = highest-M ksweep pt (~20.12 at M=1024), NOT the intermediate M=512 peak (20.29):
+    # throughput saturates by M>=128 and 20.12 is the converged value the spec records as
+    # measured_fp16_gflops; the M=512 bump is a transient measurement peak, so the tail is the
+    # spec-consistent (slightly conservative) ceiling.
+    g_sat = max(ksweep, key=lambda mg: mg[0])[1]
+    eff_compute = g_sat / spec["fp16_peak_gflops"]
 
     # --- memory BW: lstsq fit of FP16 decode-GEMV latency vs nbytes (line through origin) ---
     dec = [r for r in res if r["group"] == "proj_decode"]
@@ -72,7 +76,7 @@ def main():
         meas = r["f16_ms"] * 1e3
         wl = Workload(op="gemm", M=r["M"], K=r["K"], N=r["N"], dtype="fp16")
         out = m.predict(wl)
-        re = (out["latency_us"] - meas) / meas              # signed; <0 = lower bound below measured
+        re = (out["latency_us"] - meas) / meas              # signed; <0 = roofline below measured
         pts.append({"group": r["group"], "tag": r["tag"], "M": r["M"], "K": r["K"], "N": r["N"],
                     "meas_us": round(meas, 1), "pred_us": round(out["latency_us"], 1),
                     "bound": out["bound"], "rel_err": round(re, 3)})
@@ -118,7 +122,7 @@ def main():
     print(f"GPU roofline: ceil={m.ceil_gflops:.2f} GFLOP/s (eff_compute={eff_compute:.4f} vs "
           f"{spec['fp16_peak_gflops']} peak) | mem BW={mem_eff_BW_GBs:.3f} GB/s")
     print(f"  error vs 1.1 ({e['n_points']} pts): median|re|={e['median_abs_relerr']} "
-          f"p95={e['p95_abs_relerr']} max={e['max_abs_relerr']} (lower bound)")
+          f"p95={e['p95_abs_relerr']} max={e['max_abs_relerr']} (shape-trend; pred<=meas {e['frac_pred_le_measured']})")
 
 
 if __name__ == "__main__":

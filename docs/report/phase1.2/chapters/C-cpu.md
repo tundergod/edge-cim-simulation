@@ -84,7 +84,7 @@ memory_us  = working_set_bytes / (BW_tier(working_set) · η_bw)
 - **`exp()` 的 `ops_per_elem`、byte-passes = `assumption`**：指令數的物理估計，不是 fit 出來的（fit 的只有 `η_c` 和 per-op overhead）。
 - **`η_bw` = `assumption`，不是校準**：這份 fp32 decode 資料裡**沒有任何「純頻寬解析」的算子**——每個算子的工作集都進得了 L1/L2/L3，而且每個都是 compute-bound 或 overhead-bound；加上 repo 裡**沒有 CPU mem-BW micro-benchmark**（稽核缺口）。所以 `η_bw=0.6` 是文獻常見的快取效率**佔位值**，memory 項只在最大工作集（qwen vocab→L3）才**真的綁住**，而那一點的量測**佐證（不否證）** 這個假設（誤差 1.4%）。它的存在是為了 prefill / 架構研究的更大工作集。
 - **residual 誤差 5.8%（最大 13.1%）在它自己的量測噪音內**：residual 是所有算子裡**最吵的**（cpu_ops.json 的 cov 高達 **0.25**，即 25% 量測抖動），值本身只有 1.75–2.04µs（接近 `perf_counter` 解析度、量化成幾個離散階）。它是 **overhead 主導**（固定 floor ~0.8µs），模型誤差小於它自己的量測噪音。
-- **fp16 = `simulated` 上界**：fp16 在 A76 上是 **numpy 模擬**（非原生）→ 視為**上界**。引擎的 roofline 校準在 fp32；fp16 路徑回傳同一條 compute roofline（provenance 字串標明「fp16 = emulated UPPER BOUND」）。**swiglu fp16 = 混精度**（silu 的 `exp` 走 fp32）。
+- **fp16 = `simulated` 解析原生 fp16**：引擎的 roofline 校準在 **fp32**；`dtype='fp16'` 路徑用 **`fp16_lanes=8`（= 2× fp32 NEON SIMD）+ 2-byte 元素**算一個**原生 fp16 解析估計**（eta_c 沿用 fp32），**非校準**——cpu_ops.json 的 fp16 是 **numpy 模擬**（~4× 慢）、不代表原生 fp16。recompose 用 fp32（校準路徑）。**swiglu fp16 = 混精度**（silu 的 `exp` 走 fp32）。（注：P5b 圖用的是**另一個** lookup 模型 `m4_cpu.json` 的 numpy-模擬 fp16 量測常數，與此 roofline 的原生-fp16 是不同來源。）
 - **A55 / 多核 = `simulated`**：校準基準是單 A76 核單緒；多核把核數加進 `Σ`（外推）、A55 用 IPC=1。provenance 字串在非單-A76 路徑會附「A55/multicore EXTRAPOLATED = simulated」。
 - **NO FAKE GATE**：沒有發明數值 gate。校準項報的是**對 fp32 silicon 的 per-op 殘差**（真實數字）；非校準項（η_bw、fp16、A55/多核）都明標 assumption/simulated。
 

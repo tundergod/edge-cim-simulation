@@ -21,7 +21,9 @@ micro-benchmark (audit gap). eta_bw=0.6 is a literature-typical cache-efficiency
 memory term only binds for the largest working set (qwen vocab -> L3) where it is corroborated (not
 contradicted) by the data. It is present for prefill / architecture-study working sets.
 
-fp16 cpu_ops.json rows are numpy-EMULATED on the A76 -> UPPER BOUND, NOT calibrated here (fp32 only).
+This fit is fp32-ONLY (fp16 cpu_ops.json rows are numpy-EMULATED, unrepresentative of native fp16, so
+NOT fit here). The engine's dtype='fp16' path is an ANALYTIC native-fp16 estimate (fp16_lanes=8 = 2x
+fp32 SIMD; eta_c borrowed from fp32), NOT calibrated -- see m4_cpu.py.
 
 Reads  measurements/aetina/cpu_ops.json
 Writes simulator/models/params/m4_cpu_instrcount.json   (calibrated factors the engine consumes)
@@ -111,7 +113,8 @@ def main():
     params = {
         "_doc": "CALIBRATED factors for the CPU instruction-count roofline (m4_cpu.py), fit to fp32 "
                 "cpu_ops.json on a single A76 core. eta_c calibrated; eta_bw=ASSUMPTION (no BW-resolved "
-                "op in fp32 decode data); overhead_op per op. fp16 = emulated upper bound (not fit).",
+                "op in fp32 decode data); overhead_op per op. fp32-only fit; the model's fp16 path is "
+                "analytic native-fp16 (2x SIMD), NOT fit here.",
         "eta_c": round(eta_c, 4),
         "eta_bw": ETA_BW,
         "eta_bw_tag": "assumption (no CPU mem-BW micro-benchmark; literature-typical cache efficiency)",
@@ -124,9 +127,10 @@ def main():
 
     report = {
         "module": "m4_cpu",
-        "honesty": "CALIBRATED to fp32 cpu_ops.json (single A76 core, single-thread). fp16 = numpy "
-                   "UPPER BOUND (emulated); swiglu fp16 = mixed precision; A55 / multicore = simulated "
-                   "(IPC=1 little, single-core measured -> extrapolated). eta_bw = ASSUMPTION.",
+        "honesty": "CALIBRATED to fp32 cpu_ops.json (single A76 core, single-thread). dtype='fp16' = "
+                   "ANALYTIC native-fp16 (fp16_lanes=8 = 2x fp32 SIMD), NOT calibrated (emulated fp16 "
+                   "unrepresentative); A55 / multicore = simulated (IPC=1 little, single-core measured "
+                   "-> extrapolated). eta_bw = ASSUMPTION.",
         "equation": "latency_us = max(compute_us, memory_us) + overhead_op; "
                     "compute_us = n_elem*ops_per_elem/(W*IPC*freq)/eta_c; "
                     "memory_us = working_set_bytes/(BW_tier*eta_bw)",
