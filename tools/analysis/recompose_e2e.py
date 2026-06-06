@@ -99,6 +99,9 @@ def main():
     # --- prefill GEMM compute: now Card-MEASURED (M-amortization fit); bounded by compute<=TTFT ---
     M_pf = 1024
     cim = CimTileModel()                                # m1_cim.json: decode G_eff + prefill a+b*M fit
+    if cim.prefill_a_us is None:                        # keys-dropped window (fit_m1_cim ran without fit_cim_prefill)
+        raise ValueError("prefill (M>1) needs the M-amortization fit; run tools/analysis/fit_cim_prefill.py "
+                         "after fit_m1_cim.py (which rewrites m1_cim.json and drops the prefill keys)")
     pf_flops = 2 * wb["llama-3.1-8b"] * M_pf            # weights x M tokens (prefill GEMM)
     n_tiles_pf = wb["llama-3.1-8b"] / cim.native_max_kn  # 2048x2048 weight tiles over all 8B GEMMs
     pf_compute_fitted_s = n_tiles_pf * (cim.prefill_a_us + cim.prefill_b_us * M_pf) * 1e-6  # M-amortized
