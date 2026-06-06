@@ -7,7 +7,7 @@ matmul proxy with axrunmodel (dev FPS = isolated compute) and cross-check vs the
 compute-bound shapes Alpha could not reach.
 
 STATUS: SPIKE-VERIFIED ON CARD (2026-06-06). The kernel re-validates: square M=1,K=2048,N=2048 =
-Card 200.8 vs Alpha 203.7 GOP/s (1.4%). The v1.6 axcompile compiles a single ~2048x2048 tile only up
+Card 200.5 vs Alpha 203.7 GOP/s (1.5%, the committed full-run value). The v1.6 axcompile compiles a single ~2048x2048 tile only up
 to M<=256 (SRAM L1/L2 tiling wall, NOT device-DRAM — the Card's 16GiB does not lift it); larger
 prefill GEMMs are therefore measured tile-by-tile and extrapolated (n_tiles x tile_lat, the Alpha
 run_metis_cim.py method; see measure_op). Run (AXCOMPILE = devkit binary, python needs onnx + axrunmodel on PATH):

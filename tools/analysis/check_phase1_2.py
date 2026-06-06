@@ -74,8 +74,9 @@ def main():
     chk("simulated" in dict(probes)["mem_lpddr5"]["provenance"], "LPDDR5 = simulated")
     chk("assumption" in dict(probes)["mem_lpddr4"]["provenance"], "LPDDR4 = assumption (derived)")
     chk(dict(probes)["cim_topo_alpha"]["bound"] == "floor", "Alpha pays the per-call floor (bound=floor)")
-    chk("assumption" in dict(probes)["cim_topo_edge"]["provenance"] and dict(probes)["cim_topo_edge"]["bound"] == "memory",
-        "edge CIM = assumption memory wall (target LPDDR5 x noc_eff, NOT Card 24.2)")
+    edge_prov = dict(probes)["cim_topo_edge"]["provenance"]   # bound is always 'memory' for stream -> no signal;
+    chk("assumption" in edge_prov and "noc_efficiency" in edge_prov,                    # check the derivation path instead
+        "edge CIM stream = assumption (target LPDDR5 eff x noc_efficiency), not a measured anchor")
 
     print("\n=== 4. NO FAKE GATE (units with no silicon carry no numeric silicon gate) ===")
     npu_r = json.loads((REP / "m4_npu.json").read_text())

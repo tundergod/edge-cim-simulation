@@ -103,8 +103,12 @@ def main():
         raise ValueError("prefill (M>1) needs the M-amortization fit; run tools/analysis/fit_cim_prefill.py "
                          "after fit_m1_cim.py (which rewrites m1_cim.json and drops the prefill keys)")
     pf_flops = 2 * wb["llama-3.1-8b"] * M_pf            # weights x M tokens (prefill GEMM)
-    n_tiles_pf = wb["llama-3.1-8b"] / cim.native_max_kn  # 2048x2048 weight tiles over all 8B GEMMs
+    # wb is INT8 weight BYTES = GEMM param COUNT (1 byte/param), so wb/W^2 = sum_i (K_i*N_i)/W^2 = the
+    # model's FRACTIONAL tile area summed over all 8B GEMMs -> matches CimTileModel.dev_lat_us exactly
+    # (no ceil divergence). This byte==param identity holds only for INT8.
+    n_tiles_pf = wb["llama-3.1-8b"] / cim.native_max_kn  # fractional 2048x2048 tiles over all 8B GEMM weights
     pf_compute_fitted_s = n_tiles_pf * (cim.prefill_a_us + cim.prefill_b_us * M_pf) * 1e-6  # M-amortized
+    pf_extrapolated = M_pf > (cim.prefill_M_max or M_pf)  # M=1024 >> the measured M<=256
     pf_compute_decodeGEMV_s = pf_flops / (204e9)       # OLD linear-M (decode GEMV) -> 76s, refuted
     pf_memory_s = wb["llama-3.1-8b"] / (BW)            # weights streamed once
     ttft_meas = vendor["llama-3.1-8b/1c"]["ttft_s_median"]
@@ -128,21 +132,28 @@ def main():
         "cim_attention_penalty_C4_ms": {"range": [round(min(c4_range), 1), round(max(c4_range), 1)],
                                         "note": "why offload: CIM attention >> GPU-native; reported, NOT in t_step"},
         "prefill_gemm_compute_BOUNDED": {
+            "status": "BOUNDED-EXTRAPOLATED" if pf_extrapolated else "BOUNDED",
             "M_prefill": M_pf,
+            "M_measured_max": cim.prefill_M_max,
+            "extrapolated": bool(pf_extrapolated),
             "vendor_ttft_s": ttft_meas,
             "gemm_compute_fitted_s": round(pf_compute_fitted_s, 3),
             "gemm_compute_frac_of_ttft": round(pf_compute_fitted_s / ttft_meas, 3),
             "memory_floor_s": round(pf_memory_s, 3),
             "decode_GEMV_linear_s": round(pf_compute_decodeGEMV_s, 1),
-            "physical_bound_compute_le_ttft": {
-                "fitted_PASS": bool(pf_compute_fitted_s < ttft_meas),
-                "decode_GEMV_linear_PASS": bool(pf_compute_decodeGEMV_s < ttft_meas)},
-            "note": "GEMM compute now Card-MEASURED (fit_cim_prefill.py M-amortization, M<=256; M=%d "
-                    "extrapolated). Fitted %.2fs = %.0f%% of vendor TTFT, satisfying compute<=TTFT; the "
-                    "linear-M decode-GEMV estimate (%.0fs) VIOLATES the bound ~20x (REFUTED). TTFT "
-                    "remainder = weight-load memory (~%.2fs) + prefill attention (S^2 softmax) + host "
-                    "overhead (Phase-2 fidelity). prefill_ms_median degenerate, unused."
-                    % (M_pf, pf_compute_fitted_s, 100 * pf_compute_fitted_s / ttft_meas,
+            "model_comparison_compute_le_ttft": {
+                "fitted_consistent": bool(pf_compute_fitted_s < ttft_meas),
+                "decode_GEMV_linear_consistent": bool(pf_compute_decodeGEMV_s < ttft_meas),
+                "note": "This is a MODEL COMPARISON, not an absolute validation gate: the fitted compute "
+                        "(at any plausible prefill length, the bound binds only above M~22000) sits well "
+                        "under TTFT, so compute<=TTFT has WEAK discriminating power for the fitted model. "
+                        "Its value is REFUTING the linear-M decode-GEMV model, whose compute alone exceeds "
+                        "the measured TTFT ~20x (physically impossible)."},
+            "note": "GEMM compute Card-MEASURED at M<=%d (fit_cim_prefill.py M-amortization); M=%d is "
+                    "EXTRAPOLATED -> status BOUNDED-EXTRAPOLATED. Fitted %.2fs = %.0f%% of vendor TTFT; "
+                    "linear-M decode-GEMV (%.0fs) REFUTED. TTFT remainder = weight-load memory (~%.2fs) + "
+                    "prefill attention (S^2 softmax) + host overhead (Phase-2). prefill_ms_median unused."
+                    % (cim.prefill_M_max, M_pf, pf_compute_fitted_s, 100 * pf_compute_fitted_s / ttft_meas,
                        pf_compute_decodeGEMV_s, pf_memory_s)},
     }
     (MC / "twopillar_prediction_fitted.json").write_text(json.dumps(out, indent=1))
@@ -155,9 +166,9 @@ def main():
     print(f"  standalone 8B (us): stream={stream_us:.0f} cpu={cpu_support_us:.0f} "
           f"gpu_attn(LB)={gpu_attn_us:.0f} kv={kv_cache_us:.0f}  [absorbed in BW; not added]")
     print(f"  C4 CIM-attn penalty: {out['cim_attention_penalty_C4_ms']['range']} ms (offload reason)")
-    print(f"  prefill GEMM compute (bounded): fitted {pf_compute_fitted_s:.2f}s "
-          f"({100*pf_compute_fitted_s/ttft_meas:.0f}% of vendor TTFT {ttft_meas:.2f}s, compute<=TTFT PASS); "
-          f"decode-GEMV linear {pf_compute_decodeGEMV_s:.0f}s REFUTED (>TTFT)")
+    print(f"  prefill GEMM compute ({out['prefill_gemm_compute_BOUNDED']['status']}): fitted {pf_compute_fitted_s:.2f}s "
+          f"({100*pf_compute_fitted_s/ttft_meas:.0f}% of vendor TTFT {ttft_meas:.2f}s); "
+          f"linear-M decode-GEMV {pf_compute_decodeGEMV_s:.0f}s REFUTED (>TTFT)")
 
 
 if __name__ == "__main__":

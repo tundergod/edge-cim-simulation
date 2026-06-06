@@ -67,21 +67,39 @@ def main():
                           "rel_diff": round(abs(r["dev_gflops"] - a) / a, 3)})
         elif r.get("group") == "prefill":
             prefill.append({"M": M, "K": K, "N": N, "card_gops": round(r["dev_gflops"], 1),
-                            "dev_lat_us": round(r["dev_lat_us"], 1)})
+                            "dev_lat_us": round(r["dev_lat_us"], 1),
+                            "tiled_extrapolated": bool(r.get("tiled_extrapolated"))})
 
+    # --- tolerance gate: CARD_REVALIDATED only when the Card actually TRACKS Alpha within the decode
+    # fit tolerance (matches fit_m1_cim's native gate). Otherwise the status must say it DISAGREES. ---
+    TOL_MEDIAN, TOL_P95 = 0.10, 0.20
     diffs = [c["rel_diff"] for c in cross]
+    median = round(statistics.median(diffs), 3) if diffs else None
+    p95 = round(sorted(diffs)[int(0.95 * (len(diffs) - 1))], 3) if diffs else None
+    if not cross:
+        status = "NO_CROSS_POINTS"
+    elif median <= TOL_MEDIAN and p95 <= TOL_P95:
+        status = "CARD_REVALIDATED"
+    else:
+        status = "CARD_DISAGREES"
+    honesty = {
+        "CARD_REVALIDATED": "CIM = Alpha 13pts calibrated + Card-revalidated (same AIPU, 800MHz, no rescale).",
+        "CARD_DISAGREES": "CIM = Alpha 13pts calibrated; Card cross-val median %s / p95 %s EXCEEDS tolerance "
+                          "(%s/%s) -> Card DISAGREES, decode fit NOT confirmed." % (median, p95, TOL_MEDIAN, TOL_P95),
+        "NO_CROSS_POINTS": "CIM = Alpha 13pts calibrated; no Card cross points (cannot revalidate).",
+    }[status]
     report = {
         "module": "cim_card_revalidate",
-        "status": "CARD_REVALIDATED" if cross else "NO_CROSS_POINTS",
-        "honesty": "CIM = Alpha 13pts calibrated + Card-revalidated (same AIPU, 800MHz, no rescale).",
+        "status": status,
+        "tolerance": {"median_rel_diff": TOL_MEDIAN, "p95_rel_diff": TOL_P95},
+        "honesty": honesty,
         "compile_path": next((r.get("compile_path") for r in raw.values() if r.get("compile_path")), "?"),
         "cross_validation_alpha13": cross,
-        "consistency": {"n": len(cross),
-                        "median_rel_diff": round(statistics.median(diffs), 3) if diffs else None,
-                        "p95_rel_diff": round(sorted(diffs)[int(0.95 * (len(diffs) - 1))], 3) if diffs else None},
+        "consistency": {"n": len(cross), "median_rel_diff": median, "p95_rel_diff": p95},
         "prefill_compute_bound_NEW": prefill,
-        "note": "axrunmodel dev FPS = isolated compute (dev/system split). prefill/compute-bound shapes "
-                "fill the Alpha 1GB-window gap.",
+        "note": "axrunmodel dev FPS = isolated compute (dev/system split). prefill rows with "
+                "tiled_extrapolated=true are n_tiles x ONE measured 2048x2048 tile (the full GEMM was "
+                "NOT compiled directly; only the canonical tile was measured) -> card_gops is extrapolated.",
     }
     OUT.write_text(json.dumps(report, indent=1))
     md = report["consistency"]["median_rel_diff"]

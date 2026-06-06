@@ -1,6 +1,10 @@
 {
  "module": "cim_card_revalidate",
  "status": "CARD_REVALIDATED",
+ "tolerance": {
+  "median_rel_diff": 0.1,
+  "p95_rel_diff": 0.2
+ },
  "honesty": "CIM = Alpha 13pts calibrated + Card-revalidated (same AIPU, 800MHz, no rescale).",
  "compile_path": "axcompile",
  "cross_validation_alpha13": [
@@ -107,36 +111,41 @@
    "K": 4096,
    "N": 14336,
    "card_gops": 11764.3,
-   "dev_lat_us": 638.9
+   "dev_lat_us": 638.9,
+   "tiled_extrapolated": true
   },
   {
    "M": 128,
    "K": 4096,
    "N": 14336,
    "card_gops": 20761.0,
-   "dev_lat_us": 724.1
+   "dev_lat_us": 724.1,
+   "tiled_extrapolated": true
   },
   {
    "M": 256,
    "K": 4096,
    "N": 14336,
    "card_gops": 32854.1,
-   "dev_lat_us": 915.1
+   "dev_lat_us": 915.1,
+   "tiled_extrapolated": true
   },
   {
    "M": 128,
    "K": 4096,
    "N": 4096,
    "card_gops": 20761.0,
-   "dev_lat_us": 206.9
+   "dev_lat_us": 206.9,
+   "tiled_extrapolated": true
   },
   {
    "M": 256,
    "K": 4096,
    "N": 4096,
    "card_gops": 32854.1,
-   "dev_lat_us": 261.5
+   "dev_lat_us": 261.5,
+   "tiled_extrapolated": true
   }
  ],
- "note": "axrunmodel dev FPS = isolated compute (dev/system split). prefill/compute-bound shapes fill the Alpha 1GB-window gap."
+ "note": "axrunmodel dev FPS = isolated compute (dev/system split). prefill rows with tiled_extrapolated=true are n_tiles x ONE measured 2048x2048 tile (the full GEMM was NOT compiled directly; only the canonical tile was measured) -> card_gops is extrapolated."
 }
