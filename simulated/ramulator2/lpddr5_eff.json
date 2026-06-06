@@ -1,0 +1,15 @@
+{
+ "_doc": "Ramulator2 v2.1 LPDDR5_6400 saturated-streaming BW cross-check. efficiency = achievable / max_theoretical (single x16 channel); eff_BW = 51.2 * efficiency (scaled onto the 64-bit spec peak; LPDDR5 has no pseudochannel doubling so efficiency transfers).",
+ "eff_BW_GBs": 47.1,
+ "efficiency": 0.9204,
+ "peak_efficiency_saturation": 0.986,
+ "channel_width": 16,
+ "bytes_per_req": 32,
+ "rate": 6400,
+ "peak_GBs_single_channel": 12.8,
+ "achievable_GBs_single_channel": 11.78,
+ "refresh_mode": "AllBank",
+ "v2_1_commit": "278f1effc3838099a6ffe0ad5f9f572fea80c948",
+ "analytic_efficiency_compared": 0.65,
+ "honesty": "simulated (Ramulator2 v2.1 LPDDR5_6400 streaming), NOT silicon"
+}

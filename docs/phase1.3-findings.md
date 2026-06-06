@@ -27,16 +27,23 @@ backends: **ONNXim** (NPU) and **Ramulator2** (memory, LPDDR5). Same constructor
 
 ## Heavy-sim builds (authorized 2026-06-06) — Ramulator2 BUILT, ONNXim toolchain-blocked
 
-- **Ramulator2 — BUILT + DDR4-verified.** `tools/ramulator2/build.sh` builds it on macOS after two
-  toolchain patches (Apple-clang-17 `template`-keyword at `param.h:91`; cmake-4.x
-  `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` for bundled yaml-cpp). The binary runs a DDR4 stream e2e clean
-  (`ddr4_smoke.yaml`: 20000 req, 248476 cycles). **ADR-0002 open item RESOLVED:** Ramulator2 ships
-  **LPDDR5 only**, no LPDDR4/4x (confirmed in `src/dram/impl/`).
-  - **Bounded follow-up:** the LPDDR5 single-stream BW number — `lpddr5.yaml` aborts with `Failed to
-    send refresh!` under saturation (a ramulator2/LPDDR5 refresh-config interaction; DDR4 runs
-    identically, so it's not the build). Until resolved, `engine='ramulator2'` falls back to analytic
-    — which is the plan's stated position anyway (analytic LPDDR5 is primary; Ramulator2's signature
-    multi-unit-contention value is Phase 2).
+- **Ramulator2 — LIVE (v2.1).** The main-branch LPDDR5 `Failed to send refresh!` abort is a known bug
+  fixed on the **v2.1 branch** (maintainer, issues #58/#60/#89). Built v2.1 (Python-bindings-only;
+  pinned commit `278f1ef`; one Apple-clang-17 `template`-keyword patch in `base/param.h`; `cmake
+  -DPython_EXECUTABLE=.venv`). `tools/analysis/mem_ramulator2.py` drives v2.1's own
+  `latency_throughput` harness in-process and reads `total_throughput_MBps` (no hand-rolled tCK).
+  LPDDR5_6400 saturated streaming runs clean (**peak 98.6% of theoretical = saturation proof**), and
+  `engine='ramulator2'` is now LIVE (`check_phase1_3.py` hits the heavy path).
+  - **Result (the cross-check):** Ramulator2 (DRAM-**device**) single-stream efficiency **0.92**
+    (47.1 GB/s) vs the analytic **system-level 0.65** (33.3 GB/s). NOT a contradiction — the gap is
+    the controller/NoC/queueing overhead the analytic captures (silicon-calibrated to the 24.2 GB/s
+    decode wall) and Ramulator2's device model omits. This **validates ADR-0002**: the DRAM device is
+    not the single-stream bottleneck, and system efficiency is rightly calibrated from silicon, not
+    imported from Ramulator2. Analytic 33.3 stays **primary**; Ramulator2's signature multi-unit
+    contention value is Phase 2. Report: `validation/reports/phase1.3/m2_ramulator2.json`, figure
+    `M2-ramulator2`, chapter `M-memory-ramulator2.md`.
+  - **ADR-0002 open item RESOLVED:** Ramulator2 ships **LPDDR5 only**, no LPDDR4/4x (confirmed by
+    building) — so the LPDDR4x anchor can't be Ramulator2-cross-checked without porting a preset.
 - **ONNXim — cloned, build not completed (toolchain friction).** Pins `conan == 1.57.0` (conan 1.x,
   incompatible with the conan 2.x that installs on Python 3.13); upstream recommends its Dockerfile.
   Lower-value (sim-vs-sim against the already-`simulated` analytic NPU). `engine='onnxim'` falls back
