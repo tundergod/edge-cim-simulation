@@ -7,17 +7,24 @@ place of the analytic systolic-roofline, behind the same constructor + frozen `p
 (`risk-#7`). ONNXim is a heavier **simulator**, NOT RKNPU2 silicon (≠ issue #13, which stays
 *superseded-not-satisfied*).
 
-> **Status: build deferred.** This session could not build ONNXim — the harness did not authorize
-> cloning/building external code (user offline), and ONNXim's `conan` dependency manager is absent.
-> The adapter + this runbook are ready; building is one authorization away.
+> **Status (2026-06-06): cloned; build NOT completed (toolchain friction).** ONNXim pins
+> **`conan == 1.57.0`** (conan 1.x), which is incompatible with the modern `conan 2.x` that installs
+> on this Python 3.13; the upstream's recommended path is its **Dockerfile**. Resolving the conan-1.x
+> / Docker build is a bounded follow-up — and ONNXim is the **lower-value** heavy sim (it is
+> *simulator-vs-simulator* against the already-`simulated` analytic NPU, neither being silicon;
+> contrast Ramulator2-vs-analytic, where Ramulator2 is a validated DRAM model). Until built,
+> `engine='onnxim'` falls back to analytic (risk #7).
 
-## Build (after authorizing external builds)
+## Build (bounded follow-up — needs conan 1.57.0 or Docker)
 
 ```bash
-.venv/bin/pip install conan         # ONNXim's dependency manager (absent in this venv)
 cd tools/onnxim
-git clone --depth 1 https://github.com/PSAL-POSTECH/ONNXim upstream      # gitignored
-cd upstream && ./build.sh           # follow upstream README (conan + cmake)
+git clone --depth 1 https://github.com/PSAL-POSTECH/ONNXim upstream      # gitignored (done)
+# Option A (Docker, upstream-recommended):
+cd upstream && docker build -t onnxim .
+# Option B (conan 1.x in an isolated env — NOT conan 2.x):
+python3 -m venv /tmp/onnxim-conan && /tmp/onnxim-conan/bin/pip install 'conan==1.57.0'
+#   then follow upstream README (conan install + cmake >= 3.22.1)
 ```
 
 Configure as **RKNPU2-approx** by reading `simulator/specs/npu_rknpu2.json` (systolic dim borrowed

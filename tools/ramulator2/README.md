@@ -5,19 +5,22 @@ The `MemoryModel(spec, engine='ramulator2')` branch (in `simulator/models/m2_mem
 for the analytic eff_BW, behind the same constructor + frozen `predict()` contract. **Until the
 cache exists it falls back to the analytic value** with an honest provenance note (`risk-#6`).
 
-> **Status: build deferred.** This session could not build Ramulator2 — the harness did not authorize
-> cloning/building external code (user offline). The adapter + this runbook are ready; building is
-> one authorization away.
+> **Status (2026-06-06): BUILT + DDR4-verified.** `./build.sh` builds Ramulator2 on macOS (Apple
+> clang 17, cmake 4.3) after two toolchain patches (captured in `build.sh`): (1) `param.h:91` needs
+> the `template` keyword for a dependent template name; (2) cmake 4.x needs
+> `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` for the bundled `yaml-cpp`. The binary runs a DDR4 stream e2e
+> clean (`ddr4_smoke.yaml`: 20000 req, 248476 cycles). **LPDDR5 single-stream BW is a bounded
+> follow-up** — `lpddr5.yaml` aborts with `Failed to send refresh!` under saturation (a
+> ramulator2/LPDDR5 refresh-config interaction; DDR4 runs identically, so the build is fine). Until
+> resolved, `engine='ramulator2'` falls back to analytic (the plan's position).
+>
+> **ADR-0002 open item RESOLVED:** `src/dram/impl/` ships DDR3/4/5, GDDR6, HBM/2/3, and **LPDDR5
+> only** — no LPDDR4/4x preset (confirmed by building).
 
-## Build (after authorizing external builds)
+## Build
 
 ```bash
-cd tools/ramulator2
-git clone --depth 1 https://github.com/CMU-SAFARI/ramulator2 upstream   # gitignored
-cd upstream && mkdir -p build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Release && make -j4                          # C++20 (Apple clang 17 OK)
-# confirm LPDDR4/4x presence (ADR-0002 open item — Ramulator2 ships LPDDR5):
-ls ../src/dram/impl/   # expect LPDDR5; LPDDR4/4x = assumption until seen here
+cd tools/ramulator2 && ./build.sh    # clone + 2 patches + cmake + make (upstream/ gitignored)
 ```
 
 ## Produce the cache the adapter reads

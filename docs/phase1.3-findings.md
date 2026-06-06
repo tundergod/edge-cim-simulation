@@ -25,26 +25,28 @@ backends: **ONNXim** (NPU) and **Ramulator2** (memory, LPDDR5). Same constructor
   `docs/phase1.1-findings.md`, `docs/report/phase1.1/chapters/A2-m2-memory.md`,
   `tools/analysis/fit_m2.py` (+ regenerated `m2_lpddr5.json`).
 
-## ⛔ Deferred (C++ build not authorized this session)
+## Heavy-sim builds (authorized 2026-06-06) — Ramulator2 BUILT, ONNXim toolchain-blocked
 
-The harness did not authorize **cloning/building external code** (Ramulator2 / ONNXim), the same
-class of guardrail that blocked the CIM-Card SSH — and the user was offline to grant it. So, per the
-plan's documented C++-build fallback (**single-point failure → documented fallback, does NOT affect
-the merged 1.2**):
+- **Ramulator2 — BUILT + DDR4-verified.** `tools/ramulator2/build.sh` builds it on macOS after two
+  toolchain patches (Apple-clang-17 `template`-keyword at `param.h:91`; cmake-4.x
+  `-DCMAKE_POLICY_VERSION_MINIMUM=3.5` for bundled yaml-cpp). The binary runs a DDR4 stream e2e clean
+  (`ddr4_smoke.yaml`: 20000 req, 248476 cycles). **ADR-0002 open item RESOLVED:** Ramulator2 ships
+  **LPDDR5 only**, no LPDDR4/4x (confirmed in `src/dram/impl/`).
+  - **Bounded follow-up:** the LPDDR5 single-stream BW number — `lpddr5.yaml` aborts with `Failed to
+    send refresh!` under saturation (a ramulator2/LPDDR5 refresh-config interaction; DDR4 runs
+    identically, so it's not the build). Until resolved, `engine='ramulator2'` falls back to analytic
+    — which is the plan's stated position anyway (analytic LPDDR5 is primary; Ramulator2's signature
+    multi-unit-contention value is Phase 2).
+- **ONNXim — cloned, build not completed (toolchain friction).** Pins `conan == 1.57.0` (conan 1.x,
+  incompatible with the conan 2.x that installs on Python 3.13); upstream recommends its Dockerfile.
+  Lower-value (sim-vs-sim against the already-`simulated` analytic NPU). `engine='onnxim'` falls back
+  to analytic (risk #7). Follow-up steps in `tools/onnxim/README.md`.
+- **Not produced** (need a clean heavy-sim run): `simulated/{ramulator2,onnxim}/*.json`, the
+  delta reports `validation/reports/phase1.3/*.json`, figures `N3`/`M2-ramulator2`, chapters. The
+  `engine=` adapters **auto-use** these caches the moment they exist — no engine code change.
 
-- The heavy engines **fall back to the Phase-1.2 analytic result** with an honest provenance note
-  (`engine='ramulator2'|'onnxim' requested but C++ build deferred -> ANALYTIC fallback`, risk #6/#7).
-- **Not produced** (need the built sims): the heavy-sim per-shape data
-  (`simulated/{ramulator2,onnxim}/*.json`), the ONNXim-vs-analytic and Ramulator2-vs-analytic
-  **delta reports** (`validation/reports/phase1.3/*.json`), figures `N3` / `M2-ramulator2`, and
-  their report chapters. The driver scripts (`mem_ramulator2.py`, `npu_onnxim_trace.py`,
-  `build_*`) are specified in the READMEs but not written, since they are untestable without the
-  built binaries.
-- **Open item (couldn't check without building):** whether Ramulator2 ships an LPDDR4/4x preset —
-  ADR-0002 flags it `assumption`, "confirm against `src/dram/impl/` when building".
+## To finish
 
-## To unblock
-
-Grant external-build authorization (add a Bash permission rule for the clone/build commands), then
-follow `tools/ramulator2/README.md` + `tools/onnxim/README.md`. The adapters **automatically** use
-the cache once it exists — no engine code change. CIM trust and the 1.2 analytic layer are unaffected.
+Resolve the Ramulator2 LPDDR5 refresh-config item (then `mem_ramulator2.py` writes
+`simulated/ramulator2/lpddr5_eff.json` and `engine='ramulator2'` goes live); build ONNXim via Docker
+or conan 1.57.0. CIM trust and the 1.2 analytic layer are unaffected throughout.
