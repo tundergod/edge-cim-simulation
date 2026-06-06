@@ -22,7 +22,7 @@ regenerable** from committed JSON via `tools/analysis/{fit,build,check}_*.py` an
 | **Memory** (M) | analytic all-spec eff-BW + PCIe floor | `mem_lpddr4/4x/5`, `cim_topo_alpha/card` | **mix**: LPDDR4x 24.2=calibrated anchor; LPDDR5 33.3=simulated; peaks=assumption; Alpha 911µs floor=measured | LPDDR5→33.3, LPDDR4x→24.2, alpha floor / card 0; monotone |
 | **SRAM** (M) | CACTI tier + residency | `sram_metis_aipu` | **assumption** (CACTI BW/latency); **architecture-only** residency | 8B weights (≫32 MiB) → DRAM tier (never resident) |
 | **GPU** (G) | analytic roofline SLOT (coexists with the 1.1 micro-benchmark model) | `gpu_mali_g610` | **simulated** (roofline lower bound, FP16-calibrated; **INT8 zero data**) | error vs 1.1 pts median 3.1% (lower-bound tail); no INT8 gate |
-| **CIM-Card** | re-measure the same AIPU on the production card | `cim_topo_card` + `m1_cim.json` | **calibrated** (Alpha 13pts) + Card-revalidatable | `DEFERRED_FALLBACK` (SSH not authorized) — see below |
+| **CIM-Card** | re-measure the same AIPU on the production card | `cim_topo_card` + `m1_cim.json` | **calibrated** (Alpha 13pts) + **Card-revalidated** | `CARD_REVALIDATED` — 13-pt cross-val median 4.8% / p95 9.7% (PR #25) — see below |
 
 ## Audit corrections baked in (the §audit list)
 
@@ -40,16 +40,17 @@ All three were migrated and **re-verified**: `recompose_e2e.py` still gives the 
 *standalone transparency* CPU term shifted, 62→15 ms, which is explicitly "absorbed in BW, not
 added"); `fit_m2.py` and `fit_m4_cpu.py` regenerate their frozen 1.1 reports **byte-identical**.
 
-## CIM-Card revalidation — deferred fallback (honest)
+## CIM-Card revalidation — CARD_REVALIDATED (executed in PR #25)
 
 The CIM compute kernel is **not frozen**: the same 800 MHz quad-core AIPU is alive on the production
-card, so it can be re-measured and cross-checked vs the Alpha 13 points (no clock rescale). This
-session **could not SSH** (the harness blocked remote-shell to the shared board; user offline) — so
-per the plan's documented fallback, **CIM stays Alpha-13-pts calibrated (non-frozen, pending board)**
-and Card revalidation is **deferred**, surfaced as `status: DEFERRED_FALLBACK` in
-`validation/reports/phase1.2/cim_card_revalidate.json`. The port (`run_metis_cim_v16.py`, with the
-low-level `compile`→`deploy.py` fallback + `--spike`) and validator are written and verified; only an
-SSH authorization is needed to run them. CIM trust is **not** downgraded.
+card, so it can be re-measured and cross-checked vs the Alpha 13 points (no clock rescale). During the
+1.2 analytic session this was **deferred** (SSH not yet authorized). It was subsequently **executed**
+once board access was authorized (PR #25, `run_metis_cim_v16.py` via `axcompile`): the Card 13-point
+cross-validation against the Alpha fit gives **median rel-diff 4.8%, p95 9.7%** (tolerance 10%/20%, no
+clock rescale), so `validation/reports/phase1.2/cim_card_revalidate.json` now reports
+`status: CARD_REVALIDATED`. CIM is therefore **Alpha-13-pts calibrated + Card-revalidated** (same
+AIPU, 800 MHz). _(This section originally recorded `DEFERRED_FALLBACK`; corrected after PR #25 — the
+JSON artifact is authoritative.)_
 
 ## What's ready for Phase 1.3
 

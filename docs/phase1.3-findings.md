@@ -25,7 +25,7 @@ backends: **ONNXim** (NPU) and **Ramulator2** (memory, LPDDR5). Same constructor
   `docs/phase1.1-findings.md`, `docs/report/phase1.1/chapters/A2-m2-memory.md`,
   `tools/analysis/fit_m2.py` (+ regenerated `m2_lpddr5.json`).
 
-## Heavy-sim builds (authorized 2026-06-06) — Ramulator2 BUILT, ONNXim toolchain-blocked
+## Heavy-sim builds (authorized 2026-06-06) — Ramulator2 LIVE, ONNXim LIVE via Docker
 
 - **Ramulator2 — LIVE (v2.1).** The main-branch LPDDR5 `Failed to send refresh!` abort is a known bug
   fixed on the **v2.1 branch** (maintainer, issues #58/#60/#89). Built v2.1 (Python-bindings-only;
@@ -60,12 +60,16 @@ backends: **ONNXim** (NPU) and **Ramulator2** (memory, LPDDR5). Same constructor
   - **Two honest gotchas** (documented in the config): the 8×8-template `spad_size:64` is too small for
     32×32 (div-by-zero → scaled to 2048/512); ONNXim SIGFPE-crashes on N≤64 GEMMs (degenerate tiling)
     → the sweep uses N≥128.
-- **Not produced** (need a clean heavy-sim run): `simulated/{ramulator2,onnxim}/*.json`, the
-  delta reports `validation/reports/phase1.3/*.json`, figures `N3`/`M2-ramulator2`, chapters. The
-  `engine=` adapters **auto-use** these caches the moment they exist — no engine code change.
+- **Produced (this branch):** the caches `simulated/ramulator2/lpddr5_eff.json` +
+  `simulated/onnxim/rknpu2_sim_matmul.json`, the delta reports
+  `validation/reports/phase1.3/{m2_ramulator2,m4_npu_onnxim}.json`, figures `M2-ramulator2` + `N3`,
+  and chapters `M-memory-ramulator2.md` + `N-npu-onnxim.md` all exist. The `engine=` adapters auto-use
+  these caches.
 
-## To finish
+## Status
 
-Resolve the Ramulator2 LPDDR5 refresh-config item (then `mem_ramulator2.py` writes
-`simulated/ramulator2/lpddr5_eff.json` and `engine='ramulator2'` goes live); build ONNXim via Docker
-or conan 1.57.0. CIM trust and the 1.2 analytic layer are unaffected throughout.
+Both heavy sims are **LIVE** (Ramulator2 v2.1 in-process; ONNXim via Docker on metiscard) and their
+single-stream cross-checks are recorded above. Both remain **simulated, not silicon** (ONNXim ≠ issue
+#13). The 1.2 analytic layer stays primary; CIM trust is unaffected. _(An earlier draft of this file
+carried stale "Not produced / To finish" sections from before the builds completed — removed; the
+JSON/figure/chapter artifacts are authoritative.)_
