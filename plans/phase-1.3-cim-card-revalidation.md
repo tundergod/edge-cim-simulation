@@ -1,7 +1,9 @@
 # Plan: Phase 1.3 — CIM-Card 重驗 + edge-CIM 記憶體層 + prefill GEMM 擬合
 
-分支：`phase-1.3`（沿用）。執行序：Gate → Spike →（gate）→ Full → Fit → Cross-val → Edge-mem → Honesty/PR。
+分支：`phase-1.3`（沿用）；實際執行於 `phase-1.3-cim-card`（隔離 worktree）。執行序：Gate → Spike →（gate）→ Full → Fit → Cross-val → Edge-mem → Honesty/PR。
 板存取需使用者授權；Spike 或 Artifactory 不過即 STOP+回報，不進下一段。
+
+> **執行偏差（2026-06-06，已與使用者確認）**：spike 發現大 prefill GEMM 在 v1.6 `axcompile` 編不出（compiler SRAM L1/L2 tiling 牆，非 device-DRAM envelope；單 ~2048×2048 tile 僅 M≤256 可編）。經使用者選定改用 **tile-based prefill**：量 canonical tile 於 M∈{1,64,128,256}、`tile_lat(M)=a+b·M`、full GEMM = `n_tiles×tile_lat`（步驟 9 的 prefill M∈{128..2048} 直接量、步驟 10 的 `matmul_sweep` 群組因此**取消**）。步驟 9/10 的原文僅作歷史紀錄；實況見 `docs/report/phase1.2/chapters/CIM-card.md`。
 
 ## G. 前置 Gate（板存取）
 
@@ -21,7 +23,7 @@
 
 9. 跑 `run_metis_cim_v16.py` full：`alpha13`（13 形狀）+ `prefill` M∈{128,256,512,1024,2048}（gate_up/q_o/down）。 → verify：alpha13 13 點皆有 `dev_gflops`；prefill M≥512 不再 `no_model_json`。
 10. `manifest()` 加一個固定小群組 `matmul_sweep`，從 `sweep_matrix.json` 的 `matrix.matmul` 取一組固定形狀（decode-GEMV M=1, K∈{2048,3072,4096} × N∈{1024,2048,8192} + prefill M∈{128,512}）；無新 flag。 → verify：群組形狀皆量到或各自記 `error`。
-11. rsync 結果回庫 → `measurements/metis_card/metis_card_matmul.json`。 → verify：檔在、含 alpha13 + prefill + matmul_sweep 群組。
+11. rsync 結果回庫 → `measurements/metis_card/cim_card_revalidate_raw.json`。 → verify：檔在、含 alpha13 + prefill + matmul_sweep 群組。
 
 ## P. Prefill GEMM 擬合
 
@@ -47,4 +49,4 @@
 22. 更新 `validation/reports/phase1.2/cim_card_revalidate.json`：以 axcompile/devkit 發現取代舊「SSH 未授權 / compile 不在」理由，寫最終狀態；保留 `honesty` 欄含 "Alpha 13"+"calibrated"（或 `CARD_REVALIDATED`），勿破壞 `check_phase1_2.py:87-89` gate。 → verify：報告 reason 與現況一致、`check_phase1_2.py` 仍 exit 0。
 23. `gh pr create`（`phase-1.3` → `main`）：摘要 + verify 結果。 → verify：PR 開出。
 
-Outputs: `measurements/metis_card/metis_card_matmul.json`；更新後 `m1_cim.json`(+prefill 參數) 與 `m1_cim_tile.py`；`tools/analysis/fit_cim_prefill.py`；`simulator/specs/cim_topo_edge.json` + `m2_memory.py` edge 分支；更新後 `run_metis_cim_v16.py`、`recompose_e2e.py`、`check_phase1_2.py`、`specs.yaml`；`cim_card_revalidate.json`(`CARD_REVALIDATED`)；`validate_cim_card.py` 報告；CIM-card 章節；`docs/voyager-sdk.md` 更新。
+Outputs: `measurements/metis_card/cim_card_revalidate_raw.json`；更新後 `m1_cim.json`(+prefill 參數) 與 `m1_cim_tile.py`；`tools/analysis/fit_cim_prefill.py`；`simulator/specs/cim_topo_edge.json` + `m2_memory.py` edge 分支；更新後 `run_metis_cim_v16.py`、`recompose_e2e.py`、`check_phase1_2.py`、`specs.yaml`；`cim_card_revalidate.json`(`CARD_REVALIDATED`)；`validate_cim_card.py` 報告；CIM-card 章節；`docs/voyager-sdk.md` 更新。
