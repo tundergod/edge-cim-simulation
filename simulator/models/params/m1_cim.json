@@ -74,11 +74,11 @@
    "gops": 203.7
   }
  ],
- "prefill_tile_a_us": 38.813,
- "prefill_tile_b_us": 0.1033,
+ "prefill_tile_a_us": 40.836,
+ "prefill_tile_b_us": 0.0941,
  "prefill_tile_kn": 4194304,
- "prefill_M_max": 256,
- "_prefill_doc": "prefill (M>1): tile_lat(M)=a+b*M fit on full 2048x2048 tiles at M in {64,128,256}; GEMM = (K*N/W^2)*tile_lat (fractional area, not ceil). M>256 / partial-width tiles extrapolated (CimTileModel.prefill_extrapolated).",
+ "prefill_M_max": 508,
+ "_prefill_doc": "prefill (M>1): tile_lat(M)=a+b*M fit on the dense Phase-1.5 canonical-tile sweep M=2..prefill_M_max (max compiled 508; M=511/512 fail -> old M_MAX=256 'wall' was ~2x low, real wall ~M=510); GEMM = (K*N/W^2)*tile_lat (fractional area, not ceil). M>prefill_M_max or partial-width tiles extrapolated (CimTileModel.prefill_extrapolated).",
  "decode_card_revalidation": {
   "median_rel_diff": 0.048,
   "p95_rel_diff": 0.097,
@@ -87,14 +87,48 @@
   "note": "median |rel_diff| over the alpha13 pts (computed here; matches validate_cim_card). <= 0.10 (with n >= 8) -> the Alpha G_eff is Card-confirmed, freeze lifted."
  },
  "prefill_M_fit": [
+  2,
+  4,
+  8,
+  16,
+  32,
+  48,
   64,
+  96,
   128,
-  256
+  192,
+  224,
+  248,
+  252,
+  254,
+  255,
+  256,
+  257,
+  258,
+  260,
+  264,
+  272,
+  288,
+  320,
+  384,
+  448,
+  456,
+  464,
+  480,
+  496,
+  504,
+  508
  ],
  "prefill_M_decode_anchor": {
   "M": 1,
   "tile_lat_us": 41.83,
   "gops_measured": 200.5,
   "note": "measured decode (M=1) tile on its measured basis; NOT in the prefill fit (different regime: direct single-column compile, modeled by G_eff)"
- }
+ },
+ "multitile_knee_kn": 8159232,
+ "multitile_resident_a_us": 15.149,
+ "multitile_resident_b_us": 5.7801e-06,
+ "multitile_floor_gops": 69.9,
+ "native_envelope_kn": 16777216,
+ "_multitile_doc": "native M=1 multi-tile RESIDENCY CLIFF (Card, Phase 1.5): resident (K*N<=knee) lat=a+b*K*N (SRAM-resident); spill (K*N>knee) lat=2*K*N/(floor_gops) (DRAM-bound). Replaced the tile-sum (over below knee / ~-65% under above; +31% abs median overall). K*N>native_envelope_kn = floor-extrapolated."
 }

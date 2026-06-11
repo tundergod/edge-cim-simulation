@@ -48,7 +48,7 @@ SRAM tier 歸屬 M1-SPM（`sram_metis_aipu` spec），不在 M2 主路徑；但 
 
 ### 3.1.4　KV-cache append（2c）
 
-`kv_append_us = kv_bytes / eff_BW_GBs`——純頻寬形式，係數仍**未驗證**（見 §3.3）[^mem10]。
+`kv_append_us = kv_bytes / eff_BW_GBs`——純頻寬形式，BW 取 M2 量測的 DRAM streaming 值（{{kv.spike_m2_bw}} GB/s）。**Phase 1.5 isolation SPIKE = INCONCLUSIVE**：K=1 memory-bound proxy 的 eff_BW 隨傳輸量上升不收斂（{{kv.spike_bw_lo}}→{{kv.spike_bw_hi}} GB/s），其 working set 在編譯牆前都小於 SRAM knee → 一直 SRAM-resident、進不了 DRAM regime，無法獨立量到 kv-append 的 DRAM BW（見 §3.3）[^mem10]。
 
 ---
 
@@ -71,7 +71,7 @@ SRAM tier 歸屬 M1-SPM（`sram_metis_aipu` spec），不在 M2 主路徑；但 
 | SRAM L2 32 MiB | 32 MiB | measured-spec | datasheet |
 | SRAM BW 256 GB/s | 256 GB/s | assumption | CACTI tier 代表值 |
 | SRAM latency 5 ns | 5 ns | assumption | CACTI tier 代表值 |
-| KV-append 係數 | — | **unvalidated** | Phase 0.3 未隔離；板子離線 |
+| KV-append BW | M2 量測 {{kv.spike_m2_bw}} GB/s | **inconclusive**（Phase 1.5 SPIKE） | K=1 proxy SRAM-bound、不收斂（{{kv.spike_bw_lo}}→{{kv.spike_bw_hi}}）；維持 analytic |
 
 **為什麼 LPDDR5 效率不用 0.71**：LPDDR5 是模擬前瞻 SoC 的記憶體；量測到的 0.71 來自量產卡上 **LPDDR4x**——這是另一塊記憶體。將量測效率直接移植到不同型號的記憶體上，等於假設兩者完全一樣好；保守折扣到 0.65 才誠實[^mem6]。
 
@@ -130,9 +130,9 @@ SRAM tier 歸屬 M1-SPM（`sram_metis_aipu` spec），不在 M2 主路徑；但 
 
 **注意**：Ramulator2 v2.1 僅有 LPDDR5 preset，無 LPDDR4/4x preset；LPDDR4x 錨點（24.2）無法用 Ramulator2 直接交叉驗證[^mem16]。
 
-### 3.3.5　KV-cache append — 未驗證
+### 3.3.5　KV-cache append — isolation SPIKE 為 INCONCLUSIVE（proxy 進不了 DRAM）
 
-解析式形式正確（純頻寬 op），但係數未被 Phase 0.3 隔離量測。板子離線期間無法補量。Phase 0.2 統計顯示，LongBench（prompt ~11800 token）decode 階段的 KV bytes 佔比為 12.6–33.5%（8B 模型 22.2%、3B 最高 33.5%）——長文本下不可省略[^mem10]。
+解析式形式正確（純頻寬 op），BW 取 M2 量測的 DRAM streaming 值 {{kv.spike_m2_bw}} GB/s。**Phase 1.5 試圖在 Card 上隔離量 kv-append 的 DRAM BW，結論是 proxy 結構上做不到**：K=1 memory-bound conv proxy 的 eff_BW 沿 grow-M 掃描**持續上升、未平台化**（{{kv.spike_bw_lo}}→{{kv.spike_bw_hi}} GB/s，grow-M 最大一步仍 +24%）；把同一 working set 改用 grow-N（M=512/N=4096）量,得到的 BW 幾乎相同（~44 GB/s）——證實上升是傳輸量驅動、與形狀無關,不是 DRAM 收斂。原因是**proxy 的編譯牆比 DRAM knee 還低**——掃 (M,N) 後最大只能編到 working set ~{{kv.spike_proxy_max}}M output elements（≥4.19M 即 `no_model_json`），而 DRAM-spill knee 在 ~{{kv.spike_knee}}M；所以 proxy **永遠編不出大到會溢出 SRAM 的 case**，全程 SRAM-resident、量到的是 on-chip throughput 而非 DRAM BW。先前「M=256 ≈ M2」是上升曲線恰好穿過的巧合。**但收斂的 on-card DRAM BW 是有的**——來自 residency-cliff 的 **spill regime**（M=1 GEMV、K·N>knee、權重從 DRAM 串流）：DRAM weight-read BW **{{kv.spike_dram_bw}} GB/s，在 K·N 8–17M 之間平坦（已收斂）**。所以 kv-append 的 DRAM BW 落在 ~{{kv.spike_m2_bw}}–{{kv.spike_dram_bw}} GB/s（M2 有效值 vs spill weight-read，同數量級）；維持 analytic 用保守的 M2 {{kv.spike_m2_bw}}，**kv-append（strided write）的精確係數 = Phase 2 待解**。Phase 0.2 統計顯示，LongBench（prompt ~11800 token）decode 階段的 KV bytes 佔比為 12.6–33.5%（8B 22.2%、3B 最高 33.5%）——長文本下不可省略[^mem10]。
 
 ---
 
@@ -148,7 +148,7 @@ SRAM tier 歸屬 M1-SPM（`sram_metis_aipu` spec），不在 M2 主路徑；但 
 | PCIe per-shape 斜率 | ❌ 未掃描 | 固定 3.9 GB/s | Phase 0.3 缺口；無逐點重擬 |
 | SRAM BW / latency | ❌ 未公開 | CACTI 代表值 | 256 GB/s / 5 ns |
 | SRAM residency | architecture-only | 8B >> 32 MiB → DRAM | 不宣稱現在的權重放得下 |
-| KV-cache 係數 | ❌ 未隔離 | 純 `kv_bytes/BW` | board offline；形式對、係數待確認 |
+| KV-cache BW | ⚠ SPIKE inconclusive | 純 `kv_bytes/BW`（M2 {{kv.spike_m2_bw}}） | proxy SRAM-bound、不收斂；DRAM BW 未獨立驗證，Phase 2 待解 |
 | Ramulator2 LPDDR5 device | ✅ sim（非矽晶） | — | 驗證 ADR-0002；single-stream only |
 | Ramulator2 多單元競爭 | ❌ 未做 | — | Phase 2 |
 | Ramulator2 LPDDR4x | ❌ 無 preset | — | 需自行 port timing config |
