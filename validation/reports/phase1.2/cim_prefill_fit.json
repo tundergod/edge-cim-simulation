@@ -1,15 +1,15 @@
 {
  "module": "cim_prefill_fit",
- "honesty": "Prefill GEMM M-amortization MEASURED on the Card (1x1-conv proxy, dev FPS) at the FULL-tile prefill points M in {64,128,256}; M>256 fails to compile (v1.6 SRAM wall) -> extrapolation. The M=1 decode point is reported separately (different regime), NOT in the prefill fit. Decode (M=1) G_eff fit unchanged.",
+ "honesty": "Prefill GEMM M-amortization MEASURED on the Card (1x1-conv proxy, dev FPS) over the DENSE Phase-1.5 canonical-tile sweep M in {2..320} (the old M_MAX=256 'SRAM wall' was a false assumption \u2014 M compiles to >=320). The M=1 decode point is the anchor (different regime, reported separately). Decode (M=1) G_eff fit unchanged.",
  "tile": {
   "kn": 4194304,
   "shape": "2048x2048"
  },
  "affine_fit_tile_lat_us": {
-  "a_weight_load_us": 38.813,
-  "b_per_col_us": 0.1033,
-  "asymptote_TOPS": 81.2,
-  "fit_basis": "M in {64,128,256} (prefill only; M=1 decode excluded)"
+  "a_weight_load_us": 40.068,
+  "b_per_col_us": 0.0997,
+  "asymptote_TOPS": 84.2,
+  "fit_basis": "M in {2..320} (23 dense pts; M=1 decode excluded)"
  },
  "decode_anchor_M1_measured": {
   "M": 1,
@@ -19,29 +19,182 @@
  },
  "fit_points": [
   {
+   "M": 2,
+   "meas_us": 41.28,
+   "pred_us": 40.27,
+   "rel_err": 0.025
+  },
+  {
+   "M": 4,
+   "meas_us": 41.41,
+   "pred_us": 40.47,
+   "rel_err": 0.023
+  },
+  {
+   "M": 8,
+   "meas_us": 41.61,
+   "pred_us": 40.87,
+   "rel_err": 0.018
+  },
+  {
+   "M": 16,
+   "meas_us": 42.13,
+   "pred_us": 41.66,
+   "rel_err": 0.011
+  },
+  {
+   "M": 32,
+   "meas_us": 43.13,
+   "pred_us": 43.26,
+   "rel_err": 0.003
+  },
+  {
+   "M": 48,
+   "meas_us": 44.29,
+   "pred_us": 44.85,
+   "rel_err": 0.013
+  },
+  {
    "M": 64,
    "meas_us": 45.64,
-   "pred_us": 45.42,
-   "rel_err": 0.005
+   "pred_us": 46.45,
+   "rel_err": 0.018
+  },
+  {
+   "M": 96,
+   "meas_us": 48.6,
+   "pred_us": 49.64,
+   "rel_err": 0.021
   },
   {
    "M": 128,
    "meas_us": 51.72,
-   "pred_us": 52.04,
-   "rel_err": 0.006
+   "pred_us": 52.83,
+   "rel_err": 0.021
+  },
+  {
+   "M": 192,
+   "meas_us": 57.25,
+   "pred_us": 59.21,
+   "rel_err": 0.034
+  },
+  {
+   "M": 224,
+   "meas_us": 61.54,
+   "pred_us": 62.39,
+   "rel_err": 0.014
+  },
+  {
+   "M": 248,
+   "meas_us": 64.45,
+   "pred_us": 64.79,
+   "rel_err": 0.005
+  },
+  {
+   "M": 252,
+   "meas_us": 65.05,
+   "pred_us": 65.19,
+   "rel_err": 0.002
+  },
+  {
+   "M": 254,
+   "meas_us": 65.19,
+   "pred_us": 65.38,
+   "rel_err": 0.003
+  },
+  {
+   "M": 255,
+   "meas_us": 66.81,
+   "pred_us": 65.48,
+   "rel_err": 0.02
   },
   {
    "M": 256,
-   "meas_us": 65.36,
-   "pred_us": 65.26,
+   "meas_us": 65.73,
+   "pred_us": 65.58,
+   "rel_err": 0.002
+  },
+  {
+   "M": 257,
+   "meas_us": 67.12,
+   "pred_us": 65.68,
+   "rel_err": 0.021
+  },
+  {
+   "M": 258,
+   "meas_us": 65.83,
+   "pred_us": 65.78,
+   "rel_err": 0.001
+  },
+  {
+   "M": 260,
+   "meas_us": 66.14,
+   "pred_us": 65.98,
+   "rel_err": 0.002
+  },
+  {
+   "M": 264,
+   "meas_us": 66.45,
+   "pred_us": 66.38,
+   "rel_err": 0.001
+  },
+  {
+   "M": 272,
+   "meas_us": 67.37,
+   "pred_us": 67.18,
+   "rel_err": 0.003
+  },
+  {
+   "M": 288,
+   "meas_us": 69.19,
+   "pred_us": 68.77,
+   "rel_err": 0.006
+  },
+  {
+   "M": 320,
+   "meas_us": 72.12,
+   "pred_us": 71.96,
    "rel_err": 0.002
   }
  ],
  "fit_quality": {
-  "median_rel_err": 0.005,
-  "max_rel_err": 0.006,
+  "median_rel_err": 0.011,
+  "max_rel_err": 0.034,
   "pass_max_le_0.05": true,
   "enforced": "main() sys.exit if max_rel_err > 0.05 -> params not written"
+ },
+ "holdout": {
+  "n_fit": 12,
+  "n_pred": 11,
+  "median_rel_err": 0.009,
+  "max_rel_err": 0.037,
+  "note": "affine fit on every-other M, predict the rest (guards against overfit)"
+ },
+ "m_axis_tiling": {
+  "note": "Axis C \u2014 serve M>compile-range as n chunks of the compiled tile; total = n x per-chunk, m_tiled_chunked (NOT a fused large-M compile). per_chunk_overhead = host/DMA per resident-model inference.",
+  "rows": [
+   {
+    "M_eff": 512,
+    "chunk": 256,
+    "n_chunks": 2,
+    "total_dev_lat_us": 1833.7,
+    "per_chunk_overhead_us": 1989.5
+   },
+   {
+    "M_eff": 1024,
+    "chunk": 256,
+    "n_chunks": 4,
+    "total_dev_lat_us": 3667.4,
+    "per_chunk_overhead_us": 1989.5
+   },
+   {
+    "M_eff": 2048,
+    "chunk": 256,
+    "n_chunks": 8,
+    "total_dev_lat_us": 7334.8,
+    "per_chunk_overhead_us": 1989.5
+   }
+  ]
  },
  "full_gemm_meas_vs_pred": [
   {
@@ -51,8 +204,8 @@
    "tiles": 14,
    "extrapolated": false,
    "meas_us": 638.9,
-   "pred_us": 635.9,
-   "rel_err": 0.005
+   "pred_us": 650.3,
+   "rel_err": 0.018
   },
   {
    "M": 128,
@@ -61,8 +214,8 @@
    "tiles": 14,
    "extrapolated": false,
    "meas_us": 724.1,
-   "pred_us": 728.5,
-   "rel_err": 0.006
+   "pred_us": 739.6,
+   "rel_err": 0.021
   },
   {
    "M": 256,
@@ -71,8 +224,8 @@
    "tiles": 14,
    "extrapolated": false,
    "meas_us": 915.1,
-   "pred_us": 913.6,
-   "rel_err": 0.002
+   "pred_us": 918.3,
+   "rel_err": 0.003
   },
   {
    "M": 128,
@@ -81,8 +234,8 @@
    "tiles": 4,
    "extrapolated": false,
    "meas_us": 206.9,
-   "pred_us": 208.1,
-   "rel_err": 0.006
+   "pred_us": 211.3,
+   "rel_err": 0.021
   },
   {
    "M": 256,
@@ -91,19 +244,39 @@
    "tiles": 4,
    "extrapolated": false,
    "meas_us": 261.5,
-   "pred_us": 261.0,
-   "rel_err": 0.002
+   "pred_us": 262.4,
+   "rel_err": 0.003
   }
  ],
  "tile_throughput_monotone_in_M": {
   "GOP_s_by_M": {
    "1": 200.5,
-   "64": 11819.0,
-   "128": 20634.7,
-   "256": 32907.3
+   "2": 416.6,
+   "4": 829.2,
+   "8": 1642.2,
+   "16": 3221.5,
+   "32": 6205.5,
+   "48": 8977.3,
+   "64": 11558.7,
+   "96": 16224.0,
+   "128": 20326.0,
+   "192": 27204.0,
+   "224": 30115.6,
+   "248": 32111.2,
+   "252": 32429.6,
+   "254": 32587.3,
+   "255": 32665.8,
+   "256": 32744.1,
+   "257": 32822.1,
+   "258": 32899.9,
+   "260": 33054.7,
+   "264": 33361.7,
+   "272": 33964.7,
+   "288": 35128.7,
+   "320": 37302.0
   },
   "monotone_increasing": true,
-  "note": "M=1 on the measured decode basis; M>=64 from the fit"
+  "note": "M=1 on the measured decode basis; M>1 from the fit"
  },
  "decode_card_revalidation": {
   "median_rel_diff": 0.048,
@@ -113,5 +286,5 @@
   "note": "median |rel_diff| over the alpha13 pts (computed here; matches validate_cim_card). <= 0.10 (with n >= 8) -> the Alpha G_eff is Card-confirmed, freeze lifted."
  },
  "ttft_cross_val_note": "8B prefill TTFT cross-validation (linear-M refuted vs M-amortized) is in recompose_e2e.py (P14) -> twopillar_prediction_fitted.json.",
- "extrapolation_note": "M>256 OR partial-width tiles (K or N not a multiple of 2048) extrapolate beyond the full-tile measured range; CimTileModel.prefill_extrapolated flags them."
+ "extrapolation_note": "M>prefill_M_max (the max compiled M) OR partial-width tiles (K or N not a multiple of 2048) extrapolate beyond the measured range; prefill_extrapolated flags them."
 }

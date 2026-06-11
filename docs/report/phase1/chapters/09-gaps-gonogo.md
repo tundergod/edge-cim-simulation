@@ -2,7 +2,7 @@
 
 本章是這份 review 的結論。先把所有缺口攤開分三類，再給帶條件的 GO/NO-GO。
 
-> **這裡的分類是工程判斷，最終由你（專案負責人）拍板。** 每一項都附「為何這樣歸類」，你可以推翻任何一格——特別是 multi-tile 的歸類，會直接影響結論強度。
+> **這裡的分類是工程判斷，最終由你（專案負責人）拍板。** 每一項都附「為何這樣歸類」，你可以推翻任何一格。Phase 1.5 已把原本最影響結論強度的 multi-tile / prefill 缺口補成 Card-native 校準（見下方 B 類註解）。
 
 ## 9.1　結論摘要（兩段式）
 
@@ -23,9 +23,9 @@
 
 | 缺口 | 為何歸 B（非 blocking，但要解） | 大致解法方向 |
 |---|---|---|
-| **prefill 整條路徑未端到端驗證** | decode 已驗、prefill 只到 BOUNDED-EXTRAPOLATED（反證了線性-M 錯誤模型，但無正面 gate）。Phase 2 本就要建並驗 prefill 路徑。 | Phase 2 整合後對 vendor TTFT 做端到端 prefill 驗證；補 prefill attention S×S softmax 與 host overhead。 |
-| **CIM multi-tile（K·N>4.19M）未驗證** | 影響 lm_head 與大 prefill 形狀；唯一 native 點 over-predict +36%。板離線是外部限制。 | 板恢復時重量多-tile 點重校；在此之前該區域標 extrapolated。若板長期離線 → 降為 C 類 limitation。 |
-| **KV-cache 係數未隔離量測** | 形式正確、係數未驗；decode 受影響小（已部分吸收進 recompose BW_eff）。 | 板恢復時補 kv_append micro-benchmark 重校。 |
+| **prefill 整條路徑未端到端驗證** | 元件層 prefill 已於 Phase 1.5 dense 校準（M∈{2..{{cim.prefill_m_max}}}、留出 {{cim.prefill_holdout_pct}}%），但整條 TTFT 路徑（含 attention S×S softmax + host overhead）尚未端到端對 vendor 驗。 | Phase 2 整合後對 vendor TTFT 做端到端 prefill 驗證——元件已備，缺的是組裝。 |
+
+> **Phase 1.5 已解（原 B 類兩項）：**（1）**CIM multi-tile**——不再是缺口：Card-native 直接量到 K·N≤{{cim.native_envelope_m}}M，建立 residency-cliff 模型（median {{cim.multitile_new_median_pct}}%、留出 {{cim.multitile_holdout_pct}}%；取代舊 tile-sum 的 {{cim.multitile_old_median_pct}}%）。（2）**KV-cache 係數**——isolation SPIKE 量到 memory-bound proxy BW {{kv.spike_proxy_bw}} GB/s ≈ M2 {{kv.spike_m2_bw}} GB/s，analytic kv_append 的 BW 假設 board-confirmed（維持 analytic，不需重校）。
 
 ### C 類 — 可接受的 limitation（誠實標註後不擋路）
 
@@ -45,15 +45,15 @@
 
 **附帶條件（綁在特定宣稱上，非綁在開工上）：**
 
-- **prefill / multi-tile 宣稱的前置條件**：任何 prefill 端到端或大形狀（lm_head、長 prefill）的定量宣稱，需在 Phase 2 取得板存取後以量測支撐；在此之前一律維持 extrapolated 標註。
+- **prefill 端到端宣稱的前置條件**：元件層 prefill 與 multi-tile 已於 Phase 1.5 Card-native 校準（M∈{2..{{cim.prefill_m_max}}}、multi-tile cliff 模型 median {{cim.multitile_new_median_pct}}%），故大形狀的**元件級**定量已有量測支撐。剩下的是整條 **prefill TTFT 端到端**驗證（attention + host overhead 組裝），屬 Phase 2 整合工作。
 
 > **混合精度成本基礎（非量測前置條件）**：conversion-op（CIM-INT8 × GPU-FP16 邊界的 dequant/requant）於 Phase 2 **解析建模**——memory-bound cast，由既有 M2/M4 per-op 模型 × M6 邊界穿越次數計價（ADR-0004 已於 2026-06-11 修訂）。精度固定於單元，故非量測缺口；Phase 2 把 cast op 插進 op stream 計價即可。
 
-**這份報告不保證模擬器完美；它保證我們精確知道自己站在哪、缺什麼、那些缺口會不會擋住 Phase 2。** 答案是：decode 地基穩固，整合可以開始；prefill / 大形狀宣稱在 Phase 2 取得板存取量測前維持 extrapolated 標註，混合精度成本則於 Phase 2 解析建模。
+**這份報告不保證模擬器完美；它保證我們精確知道自己站在哪、缺什麼、那些缺口會不會擋住 Phase 2。** 答案是：decode 地基穩固，整合可以開始；Phase 1.5 把 prefill / multi-tile / KV-BW 的元件級量測補齊（並修正了兩個過保守的編譯假設），剩 prefill TTFT 端到端組裝屬 Phase 2；混合精度成本則於 Phase 2 解析建模。
 
 ## 9.4　待你拍板的歸類
 
-以下我做了判斷，但你可能有不同看法，請確認或推翻：
-- **CIM multi-tile**：我歸 **B（待板重校）**。若板恢復無望，應下調為 **C（limitation）** 並在論文明列為範圍限制。
+- **CIM multi-tile**：原列 B（待板重校），**Phase 1.5 已解**——Card-native 量測 + residency-cliff 模型（calibrated）。原「若板長期離線降為 C」的退路已不需要。
+- **prefill M>256 / SRAM 牆**：原假設證實**不存在**（編到 M={{cim.prefill_m_max}}），不再是 limitation。
 
-（conversion-op 成本已不在此清單：ADR-0004 修訂後它是 Phase 2 解析建模項，非缺口、非量測前置條件。）
+（conversion-op 成本不在此清單：ADR-0004 修訂後它是 Phase 2 解析建模項，非缺口、非量測前置條件。）

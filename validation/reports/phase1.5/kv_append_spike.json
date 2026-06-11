@@ -1,0 +1,34 @@
+{
+ "module": "kv_append_spike",
+ "status": "CONFIRMED-CONSISTENT",
+ "honesty": "kv_append stays ANALYTIC (kv_bytes / M2 eff_BW). This SPIKE is a VALIDATION, not a recalibration: a K=1 memory-bound conv proxy (intensity ~2) measures the AIPU's memory-bound BW; at the steady-state point it tracks M2's measured streaming BW, so the analytic assumption is board-supported. Small-M points are overhead-dominated.",
+ "verdict": {
+  "steady_M": 256,
+  "proxy_eff_BW_GBs": 26.7,
+  "m2_measured_eff_BW_GBs": 24.2,
+  "rel_diff": 0.103,
+  "tolerance": 0.15,
+  "all_points_memory_bound": true
+ },
+ "proxy_points": [
+  {
+   "M": 64,
+   "eff_BW_GBs": 9.6,
+   "arith_intensity": 1.97,
+   "compute_negligible": true
+  },
+  {
+   "M": 128,
+   "eff_BW_GBs": 17.0,
+   "arith_intensity": 1.98,
+   "compute_negligible": true
+  },
+  {
+   "M": 256,
+   "eff_BW_GBs": 26.7,
+   "arith_intensity": 1.99,
+   "compute_negligible": true
+  }
+ ],
+ "note": "kv_append BW assumption confirmed within tolerance; no kv-specific coefficient added (M2 eff_BW is the right BW). The recompose decode gate's fitted BW_eff is untouched."
+}

@@ -88,7 +88,8 @@ def main():
     if PARAMS.exists():
         old = json.loads(PARAMS.read_text())
         for k, v in old.items():
-            if k.startswith("prefill_") or k in ("decode_card_revalidation", "_prefill_doc"):
+            if (k.startswith("prefill_") or k.startswith("multitile_")
+                    or k in ("decode_card_revalidation", "_prefill_doc", "_multitile_doc", "native_envelope_kn")):
                 params[k] = v
     PARAMS.write_text(json.dumps(params, indent=1))
     m = CimTileModel(params)

@@ -63,8 +63,8 @@
    "N": 512,
    "K": 3584,
    "meas_us": 24.9,
-   "pred_us": 27.1,
-   "rel_err": 0.09,
+   "pred_us": 25.3,
+   "rel_err": 0.018,
    "group": "proj_decode"
   },
   {
@@ -95,16 +95,16 @@
    "N": 1024,
    "K": 3072,
    "meas_us": 34.5,
-   "pred_us": 35.0,
-   "rel_err": 0.014,
+   "pred_us": 33.0,
+   "rel_err": 0.043,
    "group": "proj_decode"
   },
   {
    "N": 1024,
    "K": 4096,
    "meas_us": 36.9,
-   "pred_us": 44.8,
-   "rel_err": 0.214,
+   "pred_us": 39.2,
+   "rel_err": 0.061,
    "group": "aspect"
   },
   {
@@ -129,8 +129,8 @@
    "N": 4096,
    "K": 1024,
    "meas_us": 37.1,
-   "pred_us": 50.3,
-   "rel_err": 0.356,
+   "pred_us": 39.2,
+   "rel_err": 0.056,
    "note": "the only native multi-tile point; tests continued-rise tiling"
   }
  ],

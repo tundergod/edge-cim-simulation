@@ -1,0 +1,304 @@
+{
+ "module": "cim_multitile",
+ "honesty": "native M=1 multi-tile (some dim > 2048) measured DIRECTLY on the Card (axcompile compiles multi-tile natively up to K*N~16.8M; the old SAFE_KN=4.19M 'wall' was a conservative assumption). The +36% Alpha tile-sum point is SUPERSEDED by this Card-native characterization. K*N > native_envelope_kn is floor-extrapolated.",
+ "model": {
+  "knee_kn": 8159232,
+  "knee_M_params": 8.16,
+  "resident_a_us": 14.593,
+  "resident_b_us_per_param": 5.8569e-06,
+  "spill_floor_gops": 69.7,
+  "native_envelope_kn": 16777216,
+  "physical": "knee ~ on-chip SRAM weight capacity; below = compute-bound (resident), above = memory-bound (DRAM spill, ~M2 streaming BW)."
+ },
+ "resident_fit": {
+  "n": 19,
+  "median_relerr": 0.024,
+  "max_relerr": 0.065
+ },
+ "resident_holdout": {
+  "n_fit": 9,
+  "n_pred": 10,
+  "median_relerr": 0.029,
+  "max_relerr": 0.083,
+  "gate": "median <= 0.10 (enforced; main() sys.exit otherwise)"
+ },
+ "spill_fit": {
+  "n": 5,
+  "floor_gops": 69.7,
+  "max_relerr": 0.045
+ },
+ "old_vs_new": {
+  "n": 24,
+  "old_tilesum_median": 0.313,
+  "old_tilesum_max": 0.724,
+  "new_cliff_median": 0.024,
+  "new_cliff_max": 0.065
+ },
+ "per_point": [
+  {
+   "K": 3584,
+   "N": 512,
+   "kn_M": 1.84,
+   "regime": "resident",
+   "meas_us": 24.0,
+   "old_tilesum_us": 27.1,
+   "new_cliff_us": 25.3,
+   "old_relerr": 0.131,
+   "new_relerr": 0.056
+  },
+  {
+   "K": 3072,
+   "N": 1024,
+   "kn_M": 3.15,
+   "regime": "resident",
+   "meas_us": 35.3,
+   "old_tilesum_us": 35.0,
+   "new_cliff_us": 33.0,
+   "old_relerr": 0.009,
+   "new_relerr": 0.065
+  },
+  {
+   "K": 4096,
+   "N": 1024,
+   "kn_M": 4.19,
+   "regime": "resident",
+   "meas_us": 38.2,
+   "old_tilesum_us": 44.8,
+   "new_cliff_us": 39.2,
+   "old_relerr": 0.173,
+   "new_relerr": 0.025
+  },
+  {
+   "K": 1024,
+   "N": 4096,
+   "kn_M": 4.19,
+   "regime": "resident",
+   "meas_us": 38.4,
+   "old_tilesum_us": 50.3,
+   "new_cliff_us": 39.2,
+   "old_relerr": 0.31,
+   "new_relerr": 0.02
+  },
+  {
+   "K": 2048,
+   "N": 2304,
+   "kn_M": 4.72,
+   "regime": "resident",
+   "meas_us": 41.4,
+   "old_tilesum_us": 54.4,
+   "new_cliff_us": 42.2,
+   "old_relerr": 0.314,
+   "new_relerr": 0.021
+  },
+  {
+   "K": 2304,
+   "N": 2048,
+   "kn_M": 4.72,
+   "regime": "resident",
+   "meas_us": 43.2,
+   "old_tilesum_us": 45.3,
+   "new_cliff_us": 42.2,
+   "old_relerr": 0.047,
+   "new_relerr": 0.023
+  },
+  {
+   "K": 2048,
+   "N": 2560,
+   "kn_M": 5.24,
+   "regime": "resident",
+   "meas_us": 44.2,
+   "old_tilesum_us": 58.4,
+   "new_cliff_us": 45.3,
+   "old_relerr": 0.322,
+   "new_relerr": 0.026
+  },
+  {
+   "K": 2560,
+   "N": 2048,
+   "kn_M": 5.24,
+   "regime": "resident",
+   "meas_us": 47.2,
+   "old_tilesum_us": 49.3,
+   "new_cliff_us": 45.3,
+   "old_relerr": 0.044,
+   "new_relerr": 0.041
+  },
+  {
+   "K": 2048,
+   "N": 3072,
+   "kn_M": 6.29,
+   "regime": "resident",
+   "meas_us": 50.2,
+   "old_tilesum_us": 66.4,
+   "new_cliff_us": 51.4,
+   "old_relerr": 0.323,
+   "new_relerr": 0.024
+  },
+  {
+   "K": 3072,
+   "N": 2048,
+   "kn_M": 6.29,
+   "regime": "resident",
+   "meas_us": 50.5,
+   "old_tilesum_us": 57.4,
+   "new_cliff_us": 51.4,
+   "old_relerr": 0.137,
+   "new_relerr": 0.02
+  },
+  {
+   "K": 2560,
+   "N": 2560,
+   "kn_M": 6.55,
+   "regime": "resident",
+   "meas_us": 55.5,
+   "old_tilesum_us": 69.8,
+   "new_cliff_us": 53.0,
+   "old_relerr": 0.258,
+   "new_relerr": 0.045
+  },
+  {
+   "K": 2048,
+   "N": 3328,
+   "kn_M": 6.82,
+   "regime": "resident",
+   "meas_us": 53.6,
+   "old_tilesum_us": 70.4,
+   "new_cliff_us": 54.5,
+   "old_relerr": 0.314,
+   "new_relerr": 0.017
+  },
+  {
+   "K": 3328,
+   "N": 2048,
+   "kn_M": 6.82,
+   "regime": "resident",
+   "meas_us": 53.2,
+   "old_tilesum_us": 61.4,
+   "new_cliff_us": 54.5,
+   "old_relerr": 0.154,
+   "new_relerr": 0.025
+  },
+  {
+   "K": 2304,
+   "N": 3072,
+   "kn_M": 7.08,
+   "regime": "resident",
+   "meas_us": 58.3,
+   "old_tilesum_us": 72.9,
+   "new_cliff_us": 56.0,
+   "old_relerr": 0.25,
+   "new_relerr": 0.039
+  },
+  {
+   "K": 2560,
+   "N": 2816,
+   "kn_M": 7.21,
+   "regime": "resident",
+   "meas_us": 60.4,
+   "old_tilesum_us": 74.6,
+   "new_cliff_us": 56.8,
+   "old_relerr": 0.234,
+   "new_relerr": 0.06
+  },
+  {
+   "K": 2048,
+   "N": 3584,
+   "kn_M": 7.34,
+   "regime": "resident",
+   "meas_us": 56.5,
+   "old_tilesum_us": 74.5,
+   "new_cliff_us": 57.6,
+   "old_relerr": 0.319,
+   "new_relerr": 0.02
+  },
+  {
+   "K": 2048,
+   "N": 3840,
+   "kn_M": 7.86,
+   "regime": "resident",
+   "meas_us": 59.8,
+   "old_tilesum_us": 78.5,
+   "new_cliff_us": 60.7,
+   "old_relerr": 0.312,
+   "new_relerr": 0.014
+  },
+  {
+   "K": 3072,
+   "N": 2560,
+   "kn_M": 7.86,
+   "regime": "resident",
+   "meas_us": 59.5,
+   "old_tilesum_us": 81.2,
+   "new_cliff_us": 60.7,
+   "old_relerr": 0.364,
+   "new_relerr": 0.019
+  },
+  {
+   "K": 2816,
+   "N": 2816,
+   "kn_M": 7.93,
+   "regime": "resident",
+   "meas_us": 60.0,
+   "old_tilesum_us": 80.7,
+   "new_cliff_us": 61.0,
+   "old_relerr": 0.344,
+   "new_relerr": 0.017
+  },
+  {
+   "K": 2048,
+   "N": 4096,
+   "kn_M": 8.39,
+   "regime": "spill",
+   "meas_us": 232.2,
+   "old_tilesum_us": 82.5,
+   "new_cliff_us": 240.7,
+   "old_relerr": 0.645,
+   "new_relerr": 0.036
+  },
+  {
+   "K": 4096,
+   "N": 2048,
+   "kn_M": 8.39,
+   "regime": "spill",
+   "meas_us": 236.0,
+   "old_tilesum_us": 73.5,
+   "new_cliff_us": 240.7,
+   "old_relerr": 0.689,
+   "new_relerr": 0.02
+  },
+  {
+   "K": 3072,
+   "N": 3072,
+   "kn_M": 9.44,
+   "regime": "spill",
+   "meas_us": 264.4,
+   "old_tilesum_us": 92.4,
+   "new_cliff_us": 270.8,
+   "old_relerr": 0.651,
+   "new_relerr": 0.024
+  },
+  {
+   "K": 2048,
+   "N": 8192,
+   "kn_M": 16.78,
+   "regime": "spill",
+   "meas_us": 504.2,
+   "old_tilesum_us": 165.0,
+   "new_cliff_us": 481.4,
+   "old_relerr": 0.673,
+   "new_relerr": 0.045
+  },
+  {
+   "K": 8192,
+   "N": 2048,
+   "kn_M": 16.78,
+   "regime": "spill",
+   "meas_us": 500.1,
+   "old_tilesum_us": 137.9,
+   "new_cliff_us": 481.4,
+   "old_relerr": 0.724,
+   "new_relerr": 0.037
+  }
+ ],
+ "phase2_note": "real decode FFN/lm_head GEMVs (K*N >= 16M) live in the SPILL regime; the old tile-sum under-predicted them ~3x. The per-op M1 latency the Phase-2 event engine consumes is now cliff-correct, not just the aggregate recompose BW."
+}

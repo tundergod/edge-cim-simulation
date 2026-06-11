@@ -13,7 +13,15 @@ Device latency (decode/memory-bound regime; M=1 is the calibrated path):
 where G_eff(N,K) (GOP/s) is the effective throughput, rising with BOTH the output width
 N and input depth K (2D fill), fit on native single-tile points (K*N <= 4.19M). Tiling
 along N keeps the latency RISING (a partial last tile adds its own smaller latency, not a
-full tile). Everything above one native tile (K*N > 4.19M) is UNVALIDATED extrapolation.
+full tile).
+
+Multi-tile M=1 (some dim > W), Card-measured Phase 1.5 — RESIDENCY CLIFF (_decode_multitile_lat_us):
+resident (K*N <= knee ~8M) the weights fit on-chip SRAM and latency is affine in K*N; above the
+knee they spill to DRAM and throughput collapses ~3.5x to a memory-bound floor (~70 GOP/s). This
+replaced the old tile-sum extrapolation (over below the knee, ~-65% under above it; +31% abs median
+overall). Native envelope measured to K*N ~16.8M; beyond that the floor extrapolates (memory-bound
+linear). NB a ~5% latency seam at the single-tile<->resident boundary (K*N=4.19M): two independently
+calibrated models, no data exactly at the seam (cf. the decode<->prefill seam) — left un-clamped, not faked.
 
 The 911 us per-call host<->device DMA floor is M2's, not M1's. The compute ceiling
 (~52 TOPS/core) is NOT modeled: decode never approaches it (issue #16).
@@ -35,8 +43,17 @@ class CimTileModel:
         self.Gmax = p["G_eff_Gmax_gops"]
         self.Na = p["G_eff_Na"]
         self.Kb = p["G_eff_Kb"]
-        self.native_max_kn = p.get("native_max_kn", 4_194_304)  # 2048*2048; above = extrapolated
+        self.native_max_kn = p.get("native_max_kn", 4_194_304)  # 2048*2048 = one combined tile
         self.alloc_envelope = p.get("alloc_envelope_params", 6_000_000)  # SDK weight-alloc limit
+        # native multi-tile (M=1, some dim > W): RESIDENCY CLIFF (Card-measured, Phase 1.5). Resident
+        # (K*N <= knee) the weights fit on-chip SRAM -> latency affine in K*N; above the knee they
+        # spill to DRAM -> memory-bound floor throughput (~3.5x slower). Replaces the old tile-sum
+        # (over below the knee, ~-65% under above it; +31% abs median overall). None until fit_cim_multitile.py.
+        self.mt_knee_kn = p.get("multitile_knee_kn")
+        self.mt_resident_a_us = p.get("multitile_resident_a_us")
+        self.mt_resident_b_us = p.get("multitile_resident_b_us")   # us per K*N param (resident slope)
+        self.mt_floor_gops = p.get("multitile_floor_gops")         # DRAM-spill memory-bound floor
+        self.native_envelope_kn = p.get("native_envelope_kn", self.native_max_kn)  # max natively measured K*N
         # prefill (M>1): canonical-tile latency is AFFINE in M, tile_lat=a+b*M (Card-measured by
         # fit_cim_prefill.py at M<={1,64,128,256}; M>prefill_M_max extrapolated). None until fit.
         self.prefill_a_us = p.get("prefill_tile_a_us")
@@ -77,7 +94,7 @@ class CimTileModel:
         the CALIBRATED region (M>=64, full-width) prefill is monotone in M and sits above the M=1 decode.
         """
         if M <= 1:
-            return self._decode_lat_us(K, N) * M   # M=1 = the calibrated decode floor (linear in M)
+            return self._decode_lat_us_full(K, N) * M   # M=1 = the calibrated decode floor (linear in M)
         if self.prefill_a_us is None:
             raise ValueError("prefill (M>1) latency needs the M-amortization fit; "
                              "run tools/analysis/fit_cim_prefill.py")
@@ -87,7 +104,9 @@ class CimTileModel:
 
     def _decode_lat_us(self, K, N):
         """M=1 decode latency (us): output N tiled into passes of width <= W, each costed by its own
-        size via the 2D throughput (partial-fill-aware). The calibrated path."""
+        size via the 2D throughput (partial-fill-aware). The calibrated single-tile path; for genuine
+        multi-tile (some dim > W) this is the TILE-SUM — replaced by the cliff model, kept as the
+        fallback + the old-vs-new baseline for fit_cim_multitile."""
         W = self.width
         lat, rem = 0.0, N
         while rem > 0:
@@ -96,9 +115,28 @@ class CimTileModel:
             rem -= n
         return lat
 
+    def _decode_lat_us_full(self, K, N):
+        """M=1 latency dispatcher: single-tile (both dims <= W) uses the G_eff tiling fit; genuine
+        multi-tile (some dim > W) uses the native residency-cliff model when fit, else the tile-sum."""
+        if (K <= self.width and N <= self.width) or self.mt_knee_kn is None:
+            return self._decode_lat_us(K, N)
+        return self._decode_multitile_lat_us(K, N)
+
+    def _decode_multitile_lat_us(self, K, N):
+        """Native multi-tile M=1 latency (us), Card-calibrated (Phase 1.5). Resident (K*N <= knee):
+        weights fit SRAM -> latency affine in K*N. Spill (K*N > knee): weights stream from DRAM ->
+        memory-bound floor throughput. K*N > native_envelope_kn is floor-extrapolated (memory-bound
+        linear, low risk; is_extrapolated flags it)."""
+        kn = K * N
+        if kn <= self.mt_knee_kn:
+            return self.mt_resident_a_us + self.mt_resident_b_us * kn
+        return 2.0 * kn / (self.mt_floor_gops * 1e9) * 1e6
+
     def is_extrapolated(self, K, N):
-        """True if (K,N) is beyond the largest natively measured single tile (decode regime)."""
-        return K * N > self.native_max_kn
+        """True if (K,N) is beyond the natively measured envelope. Single-tile (both dims <= W) and
+        multi-tile up to native_envelope_kn are Card-measured; beyond that the spill floor is
+        memory-bound-linear extrapolated."""
+        return K * N > self.native_envelope_kn
 
     def prefill_extrapolated(self, M, K, N):
         """True if an M>1 prefill prediction is outside the calibrated range: M>prefill_M_max (only

@@ -59,6 +59,9 @@ def load():
     rc = _load("phase1.1/recompose.json")
     card = _load("phase1.2/cim_card_revalidate.json")
     pref = _load("phase1.2/cim_prefill_fit.json")
+    mt = _load("phase1.5/cim_multitile.json")
+    kv = _load("phase1.5/kv_append_spike.json")
+    m1p = _load_param("m1_cim")
     m4cpu12 = _load("phase1.2/m4_cpu.json")
     gpurf = _load("phase1.2/m4_gpu_roofline.json")
     ram2 = _load("phase1.3/m2_ramulator2.json")
@@ -71,11 +74,26 @@ def load():
         "cim.decode_median_pct": _p1(g1["median"]),                                   # 2.7
         "cim.decode_p95_pct":    _p1(g1["p95"]),                                      # 14.9
         "cim.decode_max_pct":    _p1(g1["max"]),                                      # 17.6
-        "cim.multitile_overpred_pct": _p0(m1["tiling_validation_native_multitile"][0]["rel_err"]),  # 36
         "cim.card_median_pct":   _p1(card["consistency"]["median_rel_diff"]),         # 4.8
         "cim.card_p95_pct":      _p1(card["consistency"]["p95_rel_diff"]),            # 9.7
-        "cim.prefill_median_pct": _p1(pref["fit_quality"]["median_rel_err"]),         # 0.5
-        "cim.prefill_fullgemm_max_pct": _p1(pref["fit_quality"]["max_rel_err"]),      # 0.6
+        "cim.prefill_median_pct": _p1(pref["fit_quality"]["median_rel_err"]),         # 1.1
+        "cim.prefill_fit_max_pct": _p1(pref["fit_quality"]["max_rel_err"]),           # 3.4 (affine tile fit max)
+        "cim.prefill_holdout_pct": _p1(pref["holdout"]["median_rel_err"]),            # 0.9
+        "cim.prefill_m_max":     _i(m1p["prefill_M_max"]),                            # 320
+        "cim.prefill_affine_a":  _f(pref["affine_fit_tile_lat_us"]["a_weight_load_us"], 1),  # 40.1
+        "cim.prefill_affine_b":  _f(pref["affine_fit_tile_lat_us"]["b_per_col_us"], 3),      # 0.100
+        # CIM multi-tile residency-cliff (Phase 1.5, Card-native): old tile-sum -> new cliff model
+        "cim.multitile_old_median_pct": _p0(mt["old_vs_new"]["old_tilesum_median"]),  # 31
+        "cim.multitile_old_max_pct":    _p0(mt["old_vs_new"]["old_tilesum_max"]),     # 72
+        "cim.multitile_new_median_pct": _p1(mt["old_vs_new"]["new_cliff_median"]),    # 2.4
+        "cim.multitile_new_max_pct":    _p1(mt["old_vs_new"]["new_cliff_max"]),       # 6.5
+        "cim.multitile_holdout_pct":    _p1(mt["resident_holdout"]["median_relerr"]), # 2.3
+        "cim.cliff_knee_m":   _f(mt["model"]["knee_M_params"], 1),                    # 8.2
+        "cim.cliff_floor_gops": _i(mt["model"]["spill_floor_gops"]),                  # 70
+        "cim.native_envelope_m": _i(mt["model"]["native_envelope_kn"] / 1e6),         # 17
+        # KV-cache isolation SPIKE (Phase 1.5)
+        "kv.spike_proxy_bw": _f(kv["verdict"]["proxy_eff_BW_GBs"], 1),                # 26.7
+        "kv.spike_m2_bw":    _f(kv["verdict"]["m2_measured_eff_BW_GBs"], 1),          # 24.2
         # Memory (M2)
         "mem.lpddr4x_eff":     _f(m2["params"]["measured_eff_BW_GBs"], 1),            # 24.2
         "mem.lpddr4x_peak":    _i(m2["params"]["measured_peak_GBs"]),                 # 34

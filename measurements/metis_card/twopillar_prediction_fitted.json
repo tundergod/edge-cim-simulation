@@ -37,11 +37,11 @@
  "prefill_gemm_compute_BOUNDED": {
   "status": "BOUNDED-EXTRAPOLATED",
   "M_prefill": 1024,
-  "M_measured_max": 256,
+  "M_measured_max": 320,
   "extrapolated": true,
   "vendor_ttft_s": 3.794,
-  "gemm_compute_fitted_s": 0.259,
-  "gemm_compute_frac_of_ttft": 0.068,
+  "gemm_compute_fitted_s": 0.254,
+  "gemm_compute_frac_of_ttft": 0.067,
   "memory_floor_s": 0.409,
   "decode_GEMV_linear_s": 75.4,
   "model_comparison_compute_le_ttft": {
@@ -49,6 +49,6 @@
    "decode_GEMV_linear_consistent": false,
    "note": "This is a MODEL COMPARISON, not an absolute validation gate: the fitted compute (at any plausible prefill length, the bound binds only above M~22000) sits well under TTFT, so compute<=TTFT has WEAK discriminating power for the fitted model. Its value is REFUTING the linear-M decode-GEMV model, whose compute alone exceeds the measured TTFT ~20x (physically impossible)."
   },
-  "note": "GEMM compute Card-MEASURED at M<=256 (fit_cim_prefill.py M-amortization); M=1024 is EXTRAPOLATED -> status BOUNDED-EXTRAPOLATED. Fitted 0.26s = 7% of vendor TTFT; linear-M decode-GEMV (75s) REFUTED. TTFT remainder = weight-load memory (~0.41s) + prefill attention (S^2 softmax) + host overhead (Phase-2). prefill_ms_median unused."
+  "note": "GEMM compute Card-MEASURED at M<=320 (fit_cim_prefill.py M-amortization); M=1024 is EXTRAPOLATED -> status BOUNDED-EXTRAPOLATED. Fitted 0.25s = 7% of vendor TTFT; linear-M decode-GEMV (75s) REFUTED. TTFT remainder = weight-load memory (~0.41s) + prefill attention (S^2 softmax) + host overhead (Phase-2). prefill_ms_median unused."
  }
 }
