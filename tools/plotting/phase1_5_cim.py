@@ -119,8 +119,8 @@ def panel_prefill(ax, pref, P):
                label="M=1 decode anchor")
     ax.axvline(256, ls=":", color="#bbb", lw=1.0)
     ax.text(248, 44, "old assumed\nM_MAX=256\n(2× too low)", fontsize=5.0, color="#999", va="top", ha="right")
-    ax.axvline(512, ls="--", color=SPILL, lw=1.1)
-    ax.text(508, 90, f"real wall\nM≥512 fails\n(max compiled {M_max})", fontsize=5.2, color=SPILL, va="top", ha="right")
+    ax.axvline(510, ls="--", color=SPILL, lw=1.1)
+    ax.text(506, 90, f"real wall ~M=510\n(M={M_max} ok, 511 fails)", fontsize=5.2, color=SPILL, va="top", ha="right")
     ax.set_xlim(-15, 560)
     ax.set_xlabel("activation columns  M  (canonical 2048×2048 tile)")
     ax.set_ylabel("tile latency (µs)")
@@ -132,30 +132,33 @@ def panel_prefill(ax, pref, P):
 
 
 def panel_kv(ax, kv):
-    """(d) KV SPIKE: proxy eff_BW vs transfer size RISES and never converges -> SRAM-bound, INCONCLUSIVE."""
+    """(d) KV SPIKE: proxy can't reach DRAM (compile wall < knee, eff_BW rises non-converged); the
+    CONVERGED DRAM BW comes from the cliff spill regime (flat across K·N 8-17M)."""
     pts = kv["proxy_points"]
-    ws = np.array([p["workset_elems"] / 1e6 for p in pts])   # output working set (M-elements)
-    bw = np.array([p["eff_BW_GBs"] for p in pts])
+    ws = np.array([p["workset_elems"] / 1e6 for p in pts]); bw = np.array([p["eff_BW_GBs"] for p in pts])
+    sp = kv["spill_regime_dram_bw"]
+    sx = np.array([s["kn_M"] for s in sp]); sy = np.array([s["dram_BW_GBs"] for s in sp])
     v = kv["verdict"]
-    m2, floor, knee = v["m2_measured_eff_BW_GBs"], v["spill_floor_dram_BW_GBs"], v["sram_knee_M_elems"]
-    ax.plot(ws, bw, "-o", color=KVC, ms=4, lw=1.3, zorder=4, label="K=1 proxy eff_BW")
-    for x, y, p in zip(ws, bw, pts):
-        ax.annotate(f"M={p['M']}", (x, y), textcoords="offset points", xytext=(2, 4), fontsize=4.6, color="#666")
+    m2, knee, dram = v["m2_measured_eff_BW_GBs"], v["sram_knee_M_elems"], v["spill_dram_BW_GBs_converged"]
+    ax.axvspan(0.05, knee, color="#eef2f6", zorder=0)
+    ax.axvline(knee, ls=":", color="#999", lw=0.9)
+    ax.text(knee * 0.9, 49, "SRAM | DRAM\nknee", fontsize=4.8, color="#888", ha="right", va="top")
+    ax.plot(ws, bw, "-o", color=KVC, ms=4, lw=1.3, zorder=4, label="K=1 proxy (rises, SRAM-resident)")
+    ax.plot(sx, sy, "s", color=SPILL, ms=4.5, zorder=5, label=f"cliff spill = DRAM-bound ({dram:.0f} GB/s, flat)")
+    ax.axhline(dram, ls="-", color=SPILL, lw=0.9, alpha=0.6, zorder=2)
     ax.axhline(m2, ls="--", color=RESID, lw=1.0, zorder=2)
-    ax.text(0.018, m2 + 0.9, f"M2 LPDDR4x DRAM BW {m2:.1f}", transform=ax.get_yaxis_transform(), fontsize=5.0, color=RESID)
-    ax.axhline(floor, ls="-.", color=SPILL, lw=1.0, zorder=2)
-    ax.text(0.018, floor + 0.9, f"cliff spill floor {floor:.0f} (DRAM-bound)", transform=ax.get_yaxis_transform(), fontsize=5.0, color=SPILL)
-    ax.axvline(knee, ls=":", color="#aaa", lw=0.9)
-    ax.text(knee * 0.92, 6, "SRAM knee\n(proxy never\nreaches DRAM)", fontsize=5.0, color="#888", ha="right", va="bottom")
+    ax.text(0.06, m2 - 3.3, f"M2 effective {m2:.1f}", fontsize=5.0, color=RESID)
+    ax.annotate("compile wall\n(proxy can't grow\npast here)", xy=(2.1, 44.4), xytext=(0.42, 30),
+                fontsize=4.8, color="#666", ha="center",
+                arrowprops=dict(arrowstyle="->", color="#aaa", lw=0.7))
     ax.set_xscale("log")
-    ax.set_xlabel("proxy working set (M-elements, output N·M)")
-    ax.set_ylabel("apparent eff_BW (GB/s)")
-    ax.set_title("d · KV-append BW SPIKE — inconclusive", loc="left", fontweight="bold")
-    ax.set_ylim(0, 52)
-    ax.set_xlim(0.08, 12)
-    ax.text(0.97, 0.06, "BW rises, never converges\n→ proxy is SRAM-staging-bound\n→ cannot validate DRAM BW",
-            transform=ax.transAxes, fontsize=5.2, ha="right", color=SPILL)
-    ax.legend(fontsize=5.2, loc="upper left")
+    ax.set_xlabel("data size (M-elements):  proxy N·M  /  spill K·N")
+    ax.set_ylabel("bandwidth (GB/s)")
+    ax.set_title("d · KV-append BW — proxy fails, spill converges", loc="left", fontweight="bold")
+    ax.set_ylim(0, 52); ax.set_xlim(0.1, 22)
+    ax.text(0.97, 0.05, "proxy never reaches DRAM\n→ CONVERGED DRAM BW from\n   cliff spill regime",
+            transform=ax.transAxes, fontsize=5.0, ha="right", color=SPILL)
+    ax.legend(fontsize=5.0, loc="upper left")
 
 
 def main():
@@ -165,7 +168,7 @@ def main():
     panel_oldnew(axes[0, 1], mt)
     panel_prefill(axes[1, 0], pref, P)
     panel_kv(axes[1, 1], kv)
-    fig.suptitle("Phase 1.5 — CIM compute supplement: on-Card measurement campaign (Metis Card, 101 tasks)",
+    fig.suptitle(f"Phase 1.5 — CIM compute supplement: on-Card measurement campaign (Metis Card, {len(raw)} tasks)",
                  fontsize=8.5, fontweight="bold", y=1.0)
     fig.tight_layout(rect=(0, 0, 1, 0.98))
     S.save(fig, str(FIG / "phase1_5_cim_campaign"))

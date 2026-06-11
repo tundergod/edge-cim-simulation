@@ -52,7 +52,7 @@
 
 **這是必須講清楚的誠實項。** Phase 1 的校準幾乎全在 **decode** 路徑；**prefill 整條路徑沒有端到端的 silicon 驗證 gate。** 各單元的 prefill 元件成熟度不一：
 
-- **CIM prefill GEMM**：dense M∈{2..448} 在 Card 上量測並擬合（M-amortization，見第 2 章；舊 M_MAX=256 假設低估約 2×，真牆 M=512），但典型 LLM prefill 長度（如 8B、M=1024）**仍落在外推區**（M>448 無法編譯量測）。
+- **CIM prefill GEMM**：dense M∈{2..508} 在 Card 上量測並擬合（M-amortization，見第 2 章；舊 M_MAX=256 假設低估約 2×，真牆 ~M=510），但典型 LLM prefill 長度（如 8B、M=1024）**仍落在外推區**（M>508 無法編譯量測）。
 - **prefill attention 的 S×S softmax scaling**、host overhead：未涵蓋。
 
 目前能說的，是一個**模型比較**而非絕對驗證 gate：以 vendor TTFT 3.794 s 為錨，擬合的 prefill GEMM compute 在 M=1024 約 0.259 s（佔 TTFT 6.8%），記憶體 floor 約 0.409 s。[^e2e3] 這個比較的**鑑別力很弱**（compute ≤ TTFT 對擬合模型幾乎必然成立，界要到 M≈22000 才 bind），其真正價值在**反證**線性-M decode-GEMV 外推——後者單是 compute 就 75.4 s，超過實測 TTFT 約 20×，物理上不可能。[^e2e4]

@@ -249,7 +249,8 @@ def manifest(spike):
     #     PROBES the compile wall instead of short-circuiting on M_MAX. Fail-tolerant.
     for M in [2, 4, 8, 16, 32, 48, 96, 192, 224,
               248, 252, 254, 255, 256, 257, 258, 260, 264, 272, 288, 320,
-              384, 448, 512, 640, 768, 1024, 1536, 2048, 3072, 4096]:   # probe the REAL M ceiling
+              384, 448, 456, 464, 480, 496, 504, 508, 511, 512,           # pin the exact wall in (448,512]
+              640, 768, 1024, 1536, 2048, 3072, 4096]:
         add("prefill_msweep", "tile", M, 2048, 2048)
     # B — more tile SHAPES @ M in {64,128,256}: does (a,b) depend on (K,N) or only tile-count?
     for fam, K, N in [("down_proj", 14336, 4096), ("lm_head", 4096, 128256),
@@ -266,6 +267,10 @@ def manifest(spike):
                    (2560, 2048), (3072, 2048), (4096, 2048), (2560, 2560), (3072, 3072),
                    (2048, 8192), (8192, 2048)]:
         add("envelope_probe", "native", 1, K, N)
+    # K-staircase: is K=2048 a limit on the CONTRACTION dim, or does K>2048 compile natively? Fixed
+    # small N=512 (single N-tile) so K*N stays small; sweep K natively (measure() direct) to high K.
+    for K in [512, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384]:
+        add("k_staircase", "native", 1, K, 512)
     # D.1b — CLIFF map: native M=1 throughput collapses ~3.5x (≈220-250 -> ~70 GOP/s) past a knee at
     #        ~2 tiles' work (K*N ≈ 6.5-8.4M, envelope_probe finding). Densify to pin the knee.
     for (K, N) in [(2048, 3328), (2048, 3584), (2048, 3840), (2304, 3072),
@@ -282,6 +287,11 @@ def manifest(spike):
     # convergence evidence). N=2048 (single tile, no N-tiling); grow M to amortize per-inference overhead.
     for M in [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384]:
         add("kv_proxy", "mem", M, 1, 2048)
+    # DRAM-push: vary (M,N) to drive the working set (N*M) ACROSS the ~8M SRAM knee — can the proxy
+    # ever reach the DRAM regime (where eff_BW would converge to the DRAM floor), or does the K=1
+    # compile wall (~output-size limit) sit BELOW the knee so it structurally can't?
+    for (M, N) in [(512, 4096), (1024, 4096), (2048, 4096), (1024, 8192), (2048, 8192), (4096, 4096)]:
+        add("kv_proxy", "mem", M, 1, N)
     return tasks
 
 
@@ -303,11 +313,11 @@ def main():
     spike_absent = False
     for i, (tid, group, p) in enumerate(todo):
         # Dispatch by group: native attempt (probes the compile wall) / M-chunk / mem-proxy / tiled.
-        if group in ("prefill_msweep", "envelope_probe", "cliff_map", "multitile"):
+        if group in ("prefill_msweep", "envelope_probe", "cliff_map", "multitile", "k_staircase"):
             r = measure(p["M"], p["K"], p["N"], seconds=args.seconds, dataset_len=args.dataset_len)
             if "error" not in r:
                 r["tiles"] = 1
-            if group in ("envelope_probe", "cliff_map", "multitile"):
+            if group in ("envelope_probe", "cliff_map", "multitile", "k_staircase"):
                 r["compiles_native"] = "error" not in r
         elif group == "mtile":
             r = measure_m_chunks(p["M"], p["K"], p["N"], seconds=args.seconds, dataset_len=args.dataset_len)

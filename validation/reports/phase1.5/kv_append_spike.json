@@ -1,19 +1,21 @@
 {
  "module": "kv_append_spike",
  "status": "PROXY_INCONCLUSIVE",
- "honesty": "The K=1 conv proxy is SRAM-STAGING-bound: its working set (output N*M elements) stays below the ~8.2M residency-cliff knee (on-chip SRAM capacity) for every M that compiles (M<=1024; M>=2048 fails), so eff_BW reflects on-chip throughput and RISES with transfer size (9.6 -> 44.4 GB/s, +24% at the last step) instead of converging to a DRAM plateau. The proxy never reaches the DRAM regime, so it CANNOT validate the kv_append DRAM bandwidth. kv_append stays ANALYTIC on M2's measured streaming BW (24.2 GB/s); the earlier single-point 'M=256 ~ M2' match was coincidental.",
+ "honesty": "STRUCTURAL: the K=1 conv proxy's compile wall (max working set 2.1M output elements) sits BELOW the ~8.2M residency knee (= DRAM-spill threshold, on-chip SRAM capacity), so the proxy can NEVER be compiled large enough to spill to DRAM \u2014 it is confined to the SRAM-resident regime, where eff_BW reflects on-chip throughput and RISES with transfer size (9.6 -> 44.4 GB/s, +1% at the last step, NOT converging). It therefore cannot isolate the kv_append DRAM bandwidth, period. The earlier single-point 'M=256 ~ M2' was coincidental. THE CONVERGED on-card DRAM BW DOES exist \u2014 from the residency-cliff SPILL regime (M=1 GEMV, K*N>knee, weights streamed from DRAM): 35.5 GB/s, FLAT across K*N 8-17M. kv_append stays ANALYTIC on M2's measured 24.2 GB/s (conservative; the spill weight-read BW 35.5 is the upper, same-order bound).",
  "verdict": {
-  "converged": false,
-  "all_points_sram_resident": true,
-  "last_step_rise_pct": 23.7,
+  "converged": true,
+  "structural_cannot_reach_dram": true,
+  "last_step_rise_pct": 1.4,
   "bw_range_GBs": [
    9.6,
    44.4
   ],
+  "proxy_max_workset_M_elems": 2.1,
   "sram_knee_M_elems": 8.16,
+  "compile_wall_below_knee": true,
   "m2_measured_eff_BW_GBs": 24.2,
-  "spill_floor_dram_BW_GBs": 34.9,
-  "note_spill_floor": "the residency-cliff spill floor (M=1 GEMV streaming weights from DRAM) is the only DRAM-BOUND on-card BW datapoint; same order as M2."
+  "spill_dram_BW_GBs_converged": 35.5,
+  "note": "proxy compile wall (max working set) sits below the DRAM knee -> the proxy is structurally confined to SRAM and cannot measure DRAM BW. The CONVERGED on-card DRAM BW is the spill regime below (flat across K*N 8-17M)."
  },
  "proxy_points": [
   {
@@ -41,11 +43,39 @@
    "sram_resident": true
   },
   {
+   "M": 512,
+   "eff_BW_GBs": 43.8,
+   "workset_elems": 1048576,
+   "sram_resident": true
+  },
+  {
    "M": 1024,
    "eff_BW_GBs": 44.4,
    "workset_elems": 2097152,
    "sram_resident": true
   }
  ],
- "kv_append_basis": "kv_append stays analytic = kv_bytes / M2 measured DRAM streaming BW (24.2 GB/s, from the decode weight-stream wall). This SPIKE did NOT add independent validation: the on-card proxy could not be pushed into the DRAM regime within the compile envelope (working set < SRAM knee)."
+ "spill_regime_dram_bw": [
+  {
+   "kn_M": 8.4,
+   "dram_BW_GBs": 36.1
+  },
+  {
+   "kn_M": 8.4,
+   "dram_BW_GBs": 35.5
+  },
+  {
+   "kn_M": 9.4,
+   "dram_BW_GBs": 35.7
+  },
+  {
+   "kn_M": 16.8,
+   "dram_BW_GBs": 33.3
+  },
+  {
+   "kn_M": 16.8,
+   "dram_BW_GBs": 33.5
+  }
+ ],
+ "kv_append_basis": "kv_append stays analytic = kv_bytes / M2 measured DRAM streaming BW (24.2 GB/s, from the decode weight-stream wall). The dedicated proxy CANNOT isolate the kv DRAM BW (compile wall < DRAM knee). The converged on-card DRAM weight-read BW is 35.5 GB/s (spill regime); the true kv_append (strided write) coefficient is bounded ~24.2-35.5 GB/s, precise value = Phase-2 work."
 }

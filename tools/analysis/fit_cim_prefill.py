@@ -110,8 +110,8 @@ def main():
         "note": "measured decode (M=1) tile on its measured basis; NOT in the prefill fit (different "
                 "regime: direct single-column compile, modeled by G_eff)"} if decode_pt else None)
     params["_prefill_doc"] = ("prefill (M>1): tile_lat(M)=a+b*M fit on the dense Phase-1.5 canonical-tile "
-                              "sweep M=2..prefill_M_max (max compiled; M>=512 fail -> old M_MAX=256 'wall' was "
-                              "~2x low, real wall M=512); GEMM = (K*N/W^2)*tile_lat (fractional area, not ceil). "
+                              "sweep M=2..prefill_M_max (max compiled 508; M=511/512 fail -> old M_MAX=256 'wall' "
+                              "was ~2x low, real wall ~M=510); GEMM = (K*N/W^2)*tile_lat (fractional area, not ceil). "
                               "M>prefill_M_max or partial-width tiles extrapolated (CimTileModel.prefill_extrapolated).")
     # E16 (SELF-CONTAINED, no dep on validate_cim_card.py's output -> no run-order hazard): the decode
     # G_eff fit is Card-CONFIRMED when the cross-val median is within the decode tolerance. Compute it
@@ -159,9 +159,9 @@ def main():
     report = {
         "module": "cim_prefill_fit",
         "honesty": "Prefill GEMM M-amortization MEASURED on the Card (1x1-conv proxy, dev FPS) over the "
-                   "DENSE Phase-1.5 canonical-tile sweep (M=2..448 all compile; M>=512 fail with no_model_json). "
-                   "The old M_MAX=256 'SRAM wall' was ~2x too low: a real wall exists at M=512, not 256. "
-                   "The M=1 decode point is the anchor (different regime, reported separately). Decode G_eff unchanged.",
+                   "DENSE Phase-1.5 canonical-tile sweep (dense M=2..508 compile; M=511/512 fail with "
+                   "no_model_json). The old M_MAX=256 'SRAM wall' was ~2x too low: the real wall is ~M=510, "
+                   "not 256. The M=1 decode point is the anchor (different regime). Decode G_eff unchanged.",
         "tile": {"kn": TILE_KN, "shape": "2048x2048"},
         "affine_fit_tile_lat_us": {"a_weight_load_us": round(float(a), 3), "b_per_col_us": round(float(b), 4),
                                    "asymptote_TOPS": round(float(asymptote_tops), 1),

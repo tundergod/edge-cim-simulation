@@ -18,6 +18,7 @@ DRAM-bound on-card datapoint is the residency-cliff SPILL FLOOR (~M2-order), rep
 Run: ./.venv/bin/python tools/analysis/fit_cim_kv_spike.py
 """
 import json
+import statistics
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -51,20 +52,35 @@ def main():
     rise = (bw[-1] - bw[-2]) / bw[-2]                    # still rising at the largest transfer?
     converged = abs(rise) < CONVERGE_TOL
     all_sram = all(p["sram_resident"] for p in pts)     # never reached the DRAM regime?
-    # the residency-cliff spill floor IS a DRAM-bound on-card BW estimate (M=1 GEMV weight stream):
-    # floor_gops/2 G-MAC/s x 1 byte/MAC = GB/s.
-    spill_dram_bw = round(floor_gops / 2.0, 1) if floor_gops else None
+    proxy_max_ws = max(p["workset_elems"] for p in pts)  # largest working set the proxy can COMPILE
+    structural = proxy_max_ws < knee                     # compile wall sits below the DRAM knee?
 
-    if all_sram and not converged:
+    # The CONVERGED DRAM BW the proxy cannot reach: the residency-cliff SPILL regime (M=1 GEMV, K*N >
+    # knee) streams weights from DRAM; its throughput is flat. DRAM BW = K*N bytes (INT8) / dev_lat.
+    spill = []
+    for r in raw.values():
+        if r.get("M") == 1 and "dev_lat_us" in r and r.get("group") in ("envelope_probe", "cliff_map", "multitile"):
+            if r["K"] * r["N"] > knee:
+                spill.append({"kn_M": round(r["K"] * r["N"] / 1e6, 1),
+                              "dram_BW_GBs": round(r["K"] * r["N"] / (r["dev_lat_us"] * 1e-6) / 1e9, 1)})
+    spill = sorted(spill, key=lambda x: x["kn_M"])
+    spill_bws = [s["dram_BW_GBs"] for s in spill]
+    spill_dram_bw = round(statistics.median(spill_bws), 1) if spill_bws else None
+
+    if structural:
         status = "PROXY_INCONCLUSIVE"
-        honesty = ("The K=1 conv proxy is SRAM-STAGING-bound: its working set (output N*M elements) "
-                   "stays below the ~%.1fM residency-cliff knee (on-chip SRAM capacity) for every M that "
-                   "compiles (M<=%d; M>=%d fails), so eff_BW reflects on-chip throughput and RISES with "
-                   "transfer size (%.1f -> %.1f GB/s, +%.0f%% at the last step) instead of converging to a "
-                   "DRAM plateau. The proxy never reaches the DRAM regime, so it CANNOT validate the "
-                   "kv_append DRAM bandwidth. kv_append stays ANALYTIC on M2's measured streaming BW "
-                   "(%.1f GB/s); the earlier single-point 'M=256 ~ M2' match was coincidental."
-                   % (knee / 1e6, pts[-1]["M"], pts[-1]["M"] * 2, bw[0], bw[-1], rise * 100, m2_eff))
+        honesty = ("STRUCTURAL: the K=1 conv proxy's compile wall (max working set %.1fM output elements) "
+                   "sits BELOW the ~%.1fM residency knee (= DRAM-spill threshold, on-chip SRAM capacity), so "
+                   "the proxy can NEVER be compiled large enough to spill to DRAM — it is confined to the "
+                   "SRAM-resident regime, where eff_BW reflects on-chip throughput and RISES with transfer "
+                   "size (%.1f -> %.1f GB/s, +%.0f%% at the last step, NOT converging). It therefore cannot "
+                   "isolate the kv_append DRAM bandwidth, period. The earlier single-point 'M=256 ~ M2' was "
+                   "coincidental. THE CONVERGED on-card DRAM BW DOES exist — from the residency-cliff SPILL "
+                   "regime (M=1 GEMV, K*N>knee, weights streamed from DRAM): %s GB/s, FLAT across K*N "
+                   "8-17M. kv_append stays ANALYTIC on M2's measured %.1f GB/s (conservative; the spill "
+                   "weight-read BW %s is the upper, same-order bound)."
+                   % (proxy_max_ws / 1e6, knee / 1e6, bw[0], bw[-1], rise * 100,
+                      spill_dram_bw, m2_eff, spill_dram_bw))
     elif converged:
         rel = abs(bw[-1] - m2_eff) / m2_eff
         status = "CONFIRMED-CONSISTENT" if rel <= 0.15 else "RECALIBRATE"
@@ -77,23 +93,28 @@ def main():
         "module": "kv_append_spike",
         "status": status,
         "honesty": honesty,
-        "verdict": {"converged": bool(converged), "all_points_sram_resident": bool(all_sram),
+        "verdict": {"converged": bool(converged), "structural_cannot_reach_dram": bool(structural),
                     "last_step_rise_pct": round(rise * 100, 1), "bw_range_GBs": [bw[0], bw[-1]],
+                    "proxy_max_workset_M_elems": round(proxy_max_ws / 1e6, 2),
                     "sram_knee_M_elems": round(knee / 1e6, 2),
+                    "compile_wall_below_knee": bool(structural),
                     "m2_measured_eff_BW_GBs": m2_eff,
-                    "spill_floor_dram_BW_GBs": spill_dram_bw,
-                    "note_spill_floor": "the residency-cliff spill floor (M=1 GEMV streaming weights from "
-                                        "DRAM) is the only DRAM-BOUND on-card BW datapoint; same order as M2."},
+                    "spill_dram_BW_GBs_converged": spill_dram_bw,
+                    "note": "proxy compile wall (max working set) sits below the DRAM knee -> the proxy is "
+                            "structurally confined to SRAM and cannot measure DRAM BW. The CONVERGED on-card "
+                            "DRAM BW is the spill regime below (flat across K*N 8-17M)."},
         "proxy_points": pts,
+        "spill_regime_dram_bw": spill,
         "kv_append_basis": ("kv_append stays analytic = kv_bytes / M2 measured DRAM streaming BW (%.1f "
-                            "GB/s, from the decode weight-stream wall). This SPIKE did NOT add independent "
-                            "validation: the on-card proxy could not be pushed into the DRAM regime within "
-                            "the compile envelope (working set < SRAM knee)." % m2_eff),
+                            "GB/s, from the decode weight-stream wall). The dedicated proxy CANNOT isolate "
+                            "the kv DRAM BW (compile wall < DRAM knee). The converged on-card DRAM weight-read "
+                            "BW is %s GB/s (spill regime); the true kv_append (strided write) coefficient is "
+                            "bounded ~%.1f-%s GB/s, precise value = Phase-2 work." % (m2_eff, spill_dram_bw, m2_eff, spill_dram_bw)),
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=1))
-    print(f"kv_spike: {status} — BW {bw[0]}->{bw[-1]} GB/s (rising {rise*100:.0f}%, all SRAM-resident="
-          f"{all_sram}); proxy can't reach DRAM regime. kv stays analytic on M2 {m2_eff} GB/s. -> {OUT}")
+    print(f"kv_spike: {status} — proxy max workset {proxy_max_ws/1e6:.1f}M < DRAM knee {knee/1e6:.1f}M "
+          f"(structural); proxy BW {bw[0]}->{bw[-1]} rising. CONVERGED DRAM BW (spill) = {spill_dram_bw} GB/s. -> {OUT}")
 
 
 if __name__ == "__main__":

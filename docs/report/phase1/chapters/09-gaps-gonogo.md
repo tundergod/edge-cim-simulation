@@ -56,6 +56,7 @@
 ## 9.4　待你拍板的歸類
 
 - **CIM multi-tile**：原列 B（待板重校），**Phase 1.5 已解**——Card-native 量測 + residency-cliff 模型（calibrated）。原「若板長期離線降為 C」的退路已不需要。
-- **prefill M>256 / SRAM 牆**：原 M_MAX=256 假設**低估約 2×**——真牆在 M=512（max compiled M={{cim.prefill_m_max}}，M≥512 編譯失敗）。牆是真的、但比假設高一倍；prefill 校準到 M≤{{cim.prefill_m_max}}，M> 此外推。
+- **prefill M>256 / SRAM 牆**：原 M_MAX=256 假設**低估約 2×**——真牆釘在 **~M=510**（max compiled M={{cim.prefill_m_max}}，M=511 起編譯失敗）。牆是真的、但比假設高一倍；prefill 校準到 M≤{{cim.prefill_m_max}}，M> 此外推。
+- **K=2048 不是 K 的極限**：K（contraction 維）native 編到 ≥16384（K-staircase 驗證），K>2048 不需 tiling；2048 只是輸出 N 寬度。cliff 是 K·N 總量效應（K 或 N 任一方向皆同 knee）。
 
 （conversion-op 成本不在此清單：ADR-0004 修訂後它是 Phase 2 解析建模項，非缺口、非量測前置條件。）

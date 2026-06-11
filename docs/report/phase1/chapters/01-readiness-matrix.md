@@ -7,7 +7,7 @@
 | 元件 | 模擬什麼 | provenance（誠實標籤） | 驗證狀態 | 進 Phase 2 就緒度 |
 |---|---|---|---|---|
 | **CIM decode（M1）** | 2D `G_eff(N,K)` 閉式吞吐 | **calibrated**（Alpha 13 點 + Card 重驗） | median **{{cim.decode_median_pct}}%** / p95 **{{cim.decode_p95_pct}}%**；Card 交叉驗證 median **{{cim.card_median_pct}}%** / p95 **{{cim.card_p95_pct}}%**（`CARD_REVALIDATED`） | ✅ 就緒（decode 主路徑量測級可信） |
-| **CIM prefill（M1）** | affine M-amortization | **calibrated**（Card，dense M∈{2..{{cim.prefill_m_max}}}） | 擬合 median {{cim.prefill_median_pct}}%、留出 **{{cim.prefill_holdout_pct}}%**；舊 M_MAX=256 低估約 2×（真牆 M=512） | ✅ 就緒（校準到 M≤{{cim.prefill_m_max}}；M> 此才外推） |
+| **CIM prefill（M1）** | affine M-amortization | **calibrated**（Card，dense M∈{2..{{cim.prefill_m_max}}}） | 擬合 median {{cim.prefill_median_pct}}%、留出 **{{cim.prefill_holdout_pct}}%**；舊 M_MAX=256 低估約 2×（真牆 ~M=510，max compiled {{cim.prefill_m_max}}） | ✅ 就緒（校準到 M≤{{cim.prefill_m_max}}；M> 此才外推） |
 | **CIM multi-tile（M1）** | residency-cliff 模型 | **calibrated**（Card-native，K·N≤{{cim.native_envelope_m}}M） | cliff 模型 median **{{cim.multitile_new_median_pct}}%** / 留出 {{cim.multitile_holdout_pct}}%（舊 tile-sum 為 {{cim.multitile_old_median_pct}}%）；knee≈{{cim.cliff_knee_m}}M、floor≈{{cim.cliff_floor_gops}} GOP/s | ✅ 就緒（K·N>{{cim.native_envelope_m}}M 才 spill-floor 外推） |
 | **記憶體 LPDDR4x（M2）** | eff-BW streaming | **calibrated**（量產卡 decode wall） | {{mem.lpddr4x_eff}} GB/s（峰值 {{mem.lpddr4x_eff_pct}}%），r²=0.997 | ✅ 就緒 |
 | **記憶體 LPDDR5（M2）** | eff-BW（前瞻 SoC） | **simulated**（eff {{mem.ram2_system_eff}} 保守） | Ramulator2 device {{mem.ram2_device_eff}} vs system {{mem.ram2_system_eff}} 交叉驗證一致（驗證 ADR-0002） | ✅ 就緒（標籤＝simulated；非本 silicon 量測） |

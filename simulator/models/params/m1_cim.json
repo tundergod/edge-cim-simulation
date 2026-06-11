@@ -74,11 +74,11 @@
    "gops": 203.7
   }
  ],
- "prefill_tile_a_us": 40.265,
- "prefill_tile_b_us": 0.0981,
+ "prefill_tile_a_us": 40.836,
+ "prefill_tile_b_us": 0.0941,
  "prefill_tile_kn": 4194304,
- "prefill_M_max": 448,
- "_prefill_doc": "prefill (M>1): tile_lat(M)=a+b*M fit on the dense Phase-1.5 canonical-tile sweep M=2..prefill_M_max (max compiled; M>=512 fail -> old M_MAX=256 'wall' was ~2x low, real wall M=512); GEMM = (K*N/W^2)*tile_lat (fractional area, not ceil). M>prefill_M_max or partial-width tiles extrapolated (CimTileModel.prefill_extrapolated).",
+ "prefill_M_max": 508,
+ "_prefill_doc": "prefill (M>1): tile_lat(M)=a+b*M fit on the dense Phase-1.5 canonical-tile sweep M=2..prefill_M_max (max compiled 508; M=511/512 fail -> old M_MAX=256 'wall' was ~2x low, real wall ~M=510); GEMM = (K*N/W^2)*tile_lat (fractional area, not ceil). M>prefill_M_max or partial-width tiles extrapolated (CimTileModel.prefill_extrapolated).",
  "decode_card_revalidation": {
   "median_rel_diff": 0.048,
   "p95_rel_diff": 0.097,
@@ -111,7 +111,13 @@
   288,
   320,
   384,
-  448
+  448,
+  456,
+  464,
+  480,
+  496,
+  504,
+  508
  ],
  "prefill_M_decode_anchor": {
   "M": 1,
@@ -120,9 +126,9 @@
   "note": "measured decode (M=1) tile on its measured basis; NOT in the prefill fit (different regime: direct single-column compile, modeled by G_eff)"
  },
  "multitile_knee_kn": 8159232,
- "multitile_resident_a_us": 14.593,
- "multitile_resident_b_us": 5.8569e-06,
- "multitile_floor_gops": 69.7,
+ "multitile_resident_a_us": 15.905,
+ "multitile_resident_b_us": 5.6698e-06,
+ "multitile_floor_gops": 70.1,
  "native_envelope_kn": 16777216,
  "_multitile_doc": "native M=1 multi-tile RESIDENCY CLIFF (Card, Phase 1.5): resident (K*N<=knee) lat=a+b*K*N (SRAM-resident); spill (K*N>knee) lat=2*K*N/(floor_gops) (DRAM-bound). Replaced the tile-sum (over below knee / ~-65% under above; +31% abs median overall). K*N>native_envelope_kn = floor-extrapolated."
 }
