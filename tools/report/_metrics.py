@@ -91,9 +91,11 @@ def load():
         "cim.cliff_knee_m":   _f(mt["model"]["knee_M_params"], 1),                    # 8.2
         "cim.cliff_floor_gops": _i(mt["model"]["spill_floor_gops"]),                  # 70
         "cim.native_envelope_m": _i(mt["model"]["native_envelope_kn"] / 1e6),         # 17
-        # KV-cache isolation SPIKE (Phase 1.5)
-        "kv.spike_proxy_bw": _f(kv["verdict"]["proxy_eff_BW_GBs"], 1),                # 26.7
+        # KV-cache isolation SPIKE (Phase 1.5) — PROXY_INCONCLUSIVE (proxy SRAM-bound, never converges)
+        "kv.spike_bw_lo":    _f(kv["verdict"]["bw_range_GBs"][0], 1),                 # 9.6
+        "kv.spike_bw_hi":    _f(kv["verdict"]["bw_range_GBs"][1], 1),                 # 44.4
         "kv.spike_m2_bw":    _f(kv["verdict"]["m2_measured_eff_BW_GBs"], 1),          # 24.2
+        "kv.spike_floor_bw": _f(kv["verdict"]["spill_floor_dram_BW_GBs"], 1),         # 34.8
         # Memory (M2)
         "mem.lpddr4x_eff":     _f(m2["params"]["measured_eff_BW_GBs"], 1),            # 24.2
         "mem.lpddr4x_peak":    _i(m2["params"]["measured_peak_GBs"]),                 # 34

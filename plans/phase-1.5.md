@@ -35,13 +35,13 @@ Outputs: `characterization/metis_card/run_metis_cim_v16.py`; refreshed `measurem
 ## Execution record (campaign run 2026-06-12, 85 tasks, 0 errors)
 
 **Two prior assumptions overturned by the probes:**
-- **M_MAX=256 wall is FALSE.** prefill_msweep compiled the canonical tile cleanly up to **M=320** (max tested); none errored. The "M>256 SRAM wall" was a conservative harness assumption, not an axcompile limit. → prefill calibrated range extends to ≥320.
+- **M_MAX=256 wall was ~2x too LOW (not absent).** prefill_msweep compiled the canonical tile cleanly up to **M=448**; **M>=512 fail** (no_model_json, consistent through 4096). So a real SRAM wall exists — at M=512, ~2x the assumed 256. prefill calibrated to M<=448 (M>448 extrapolated).
 - **SAFE_KN=2048×2048 native wall is FALSE.** envelope_probe natively compiled multi-tile GEMMs up to **K·N=16.78M**.
 
 **Axis A — prefill M-amortization:** dense sweep M∈{2..320} → affine `tile_lat = 40.27 + 0.0991·M` µs, residual median 0.66% / max 3.56%. Bridges to the M=1 decode anchor (41.83µs) within 3.5% — the old "no-bridge 2.5× gap" was a sparse-fit artifact; M-amortization is continuous M=1→320.
 
 **Axis D — native multi-tile RESIDENCY CLIFF (the headline).** M=1 native throughput rises smoothly to ~264 GOP/s up to a knee at **K·N ≈ 8.0M** (resident, weights in SRAM), then **collapses ~3.5× to a ~69.7 GOP/s floor** (DRAM spill). Knee sharply bracketed: resident max 7.93M ↔ spill min 8.39M. New 2-regime model — resident `lat=14.58+5.84·(K·N/1e6)` µs, spill `lat=2·K·N/(69.7·1e9)` — **held-out median 2.0% / max 9.6%**; vs all 26 native pts it beats the old tile-sum **31%/72% → 2.3%/6.7%**. The old model was +31% over (sub-knee) and −65% under (supra-knee, the cliff it lacks). Matters for Phase 2: real decode FFN/lm_head GEMVs (K·N≥16M) live in the spill regime.
 
-**Axis C — M-tiling:** chunked serving is additive (total = n×chunk); per-chunk host/DMA overhead ~1989µs for the 14-tile gate_up GEMM. NB premise weakened — native M compiles to ≥320, so chunking is only for beyond the (higher, unprobed) real M wall.
+**Axis C — M-tiling:** chunked serving is additive (total = n×chunk); per-chunk host/DMA overhead ~1989µs for the 14-tile gate_up GEMM. NB premise weakened — native M compiles to 448, so chunking is only for M>448 (the real wall at 512).
 
-**Axis E — KV SPIKE = CONFIRMED-CONSISTENT.** K=1 memory-bound proxy hits eff_BW 26.7 GB/s at M=256 (9.6/17.0/26.7 for M=64/128/256; small-M overhead-dominated) ≈ M2 LPDDR4x 24.2 GB/s. The analytic kv_append BW assumption is board-supported within ~10%; kv stays analytic (no recalibration needed), now with evidence.
+**Axis E — KV SPIKE = PROXY_INCONCLUSIVE (honest negative).** The K=1 memory-bound proxy eff_BW RISES with transfer size and never converges (9.6/17.0/26.7/35.9/44.4 GB/s for M=64..1024; M>=2048 fail). Every compilable point's working set (output N·M ≤ 2.1M elems) is BELOW the ~8M SRAM knee → the proxy is SRAM-staging-bound, never reaches the DRAM regime, so it CANNOT isolate the kv_append DRAM BW. The earlier 'M=256 ≈ M2' was coincidental. kv_append stays analytic on M2's measured DRAM streaming BW (24.2); the only DRAM-bound on-card datapoint is the cliff spill floor (~34.8 GB/s, same order). DRAM-BW independent validation → Phase 2.

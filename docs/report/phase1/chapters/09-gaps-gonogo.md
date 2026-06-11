@@ -25,7 +25,9 @@
 |---|---|---|
 | **prefill 整條路徑未端到端驗證** | 元件層 prefill 已於 Phase 1.5 dense 校準（M∈{2..{{cim.prefill_m_max}}}、留出 {{cim.prefill_holdout_pct}}%），但整條 TTFT 路徑（含 attention S×S softmax + host overhead）尚未端到端對 vendor 驗。 | Phase 2 整合後對 vendor TTFT 做端到端 prefill 驗證——元件已備，缺的是組裝。 |
 
-> **Phase 1.5 已解（原 B 類兩項）：**（1）**CIM multi-tile**——不再是缺口：Card-native 直接量到 K·N≤{{cim.native_envelope_m}}M，建立 residency-cliff 模型（median {{cim.multitile_new_median_pct}}%、留出 {{cim.multitile_holdout_pct}}%；取代舊 tile-sum 的 {{cim.multitile_old_median_pct}}%）。（2）**KV-cache 係數**——isolation SPIKE 量到 memory-bound proxy BW {{kv.spike_proxy_bw}} GB/s ≈ M2 {{kv.spike_m2_bw}} GB/s，analytic kv_append 的 BW 假設 board-confirmed（維持 analytic，不需重校）。
+> **Phase 1.5 已解（原 B 類）：CIM multi-tile**——不再是缺口：Card-native 直接量到 K·N≤{{cim.native_envelope_m}}M，建立 residency-cliff 模型（median {{cim.multitile_new_median_pct}}%、留出 {{cim.multitile_holdout_pct}}%；取代舊 tile-sum 的 {{cim.multitile_old_median_pct}}%）。
+>
+> **Phase 1.5 嘗試但未解：KV-cache BW**——isolation SPIKE 為 **INCONCLUSIVE**：K=1 memory-bound proxy 的 eff_BW 不收斂（{{kv.spike_bw_lo}}→{{kv.spike_bw_hi}} GB/s），working set 在編譯牆前都 < SRAM knee，proxy 進不了 DRAM regime，無法獨立量到 kv-append 的 DRAM BW。kv-append 維持 analytic（靠 M2 量測的 {{kv.spike_m2_bw}} GB/s）；DRAM BW 的獨立驗證仍是 Phase 2 待解項。
 
 ### C 類 — 可接受的 limitation（誠實標註後不擋路）
 
@@ -54,6 +56,6 @@
 ## 9.4　待你拍板的歸類
 
 - **CIM multi-tile**：原列 B（待板重校），**Phase 1.5 已解**——Card-native 量測 + residency-cliff 模型（calibrated）。原「若板長期離線降為 C」的退路已不需要。
-- **prefill M>256 / SRAM 牆**：原假設證實**不存在**（編到 M={{cim.prefill_m_max}}），不再是 limitation。
+- **prefill M>256 / SRAM 牆**：原 M_MAX=256 假設**低估約 2×**——真牆在 M=512（max compiled M={{cim.prefill_m_max}}，M≥512 編譯失敗）。牆是真的、但比假設高一倍；prefill 校準到 M≤{{cim.prefill_m_max}}，M> 此外推。
 
 （conversion-op 成本不在此清單：ADR-0004 修訂後它是 Phase 2 解析建模項，非缺口、非量測前置條件。）

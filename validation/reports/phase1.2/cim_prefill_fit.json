@@ -1,15 +1,15 @@
 {
  "module": "cim_prefill_fit",
- "honesty": "Prefill GEMM M-amortization MEASURED on the Card (1x1-conv proxy, dev FPS) over the DENSE Phase-1.5 canonical-tile sweep M in {2..320} (the old M_MAX=256 'SRAM wall' was a false assumption \u2014 M compiles to >=320). The M=1 decode point is the anchor (different regime, reported separately). Decode (M=1) G_eff fit unchanged.",
+ "honesty": "Prefill GEMM M-amortization MEASURED on the Card (1x1-conv proxy, dev FPS) over the DENSE Phase-1.5 canonical-tile sweep (M=2..448 all compile; M>=512 fail with no_model_json). The old M_MAX=256 'SRAM wall' was ~2x too low: a real wall exists at M=512, not 256. The M=1 decode point is the anchor (different regime, reported separately). Decode G_eff unchanged.",
  "tile": {
   "kn": 4194304,
   "shape": "2048x2048"
  },
  "affine_fit_tile_lat_us": {
-  "a_weight_load_us": 40.068,
-  "b_per_col_us": 0.0997,
-  "asymptote_TOPS": 84.2,
-  "fit_basis": "M in {2..320} (23 dense pts; M=1 decode excluded)"
+  "a_weight_load_us": 40.265,
+  "b_per_col_us": 0.0981,
+  "asymptote_TOPS": 85.5,
+  "fit_basis": "M in {2..448} (25 dense pts; M=1 decode excluded)"
  },
  "decode_anchor_M1_measured": {
   "M": 1,
@@ -21,153 +21,165 @@
   {
    "M": 2,
    "meas_us": 41.28,
-   "pred_us": 40.27,
-   "rel_err": 0.025
+   "pred_us": 40.46,
+   "rel_err": 0.02
   },
   {
    "M": 4,
    "meas_us": 41.41,
-   "pred_us": 40.47,
-   "rel_err": 0.023
+   "pred_us": 40.66,
+   "rel_err": 0.018
   },
   {
    "M": 8,
    "meas_us": 41.61,
-   "pred_us": 40.87,
-   "rel_err": 0.018
+   "pred_us": 41.05,
+   "rel_err": 0.013
   },
   {
    "M": 16,
    "meas_us": 42.13,
-   "pred_us": 41.66,
-   "rel_err": 0.011
+   "pred_us": 41.83,
+   "rel_err": 0.007
   },
   {
    "M": 32,
    "meas_us": 43.13,
-   "pred_us": 43.26,
-   "rel_err": 0.003
+   "pred_us": 43.4,
+   "rel_err": 0.006
   },
   {
    "M": 48,
    "meas_us": 44.29,
-   "pred_us": 44.85,
-   "rel_err": 0.013
+   "pred_us": 44.97,
+   "rel_err": 0.015
   },
   {
    "M": 64,
    "meas_us": 45.64,
-   "pred_us": 46.45,
-   "rel_err": 0.018
+   "pred_us": 46.54,
+   "rel_err": 0.02
   },
   {
    "M": 96,
    "meas_us": 48.6,
-   "pred_us": 49.64,
-   "rel_err": 0.021
+   "pred_us": 49.68,
+   "rel_err": 0.022
   },
   {
    "M": 128,
    "meas_us": 51.72,
-   "pred_us": 52.83,
+   "pred_us": 52.82,
    "rel_err": 0.021
   },
   {
    "M": 192,
    "meas_us": 57.25,
-   "pred_us": 59.21,
-   "rel_err": 0.034
+   "pred_us": 59.1,
+   "rel_err": 0.032
   },
   {
    "M": 224,
    "meas_us": 61.54,
-   "pred_us": 62.39,
-   "rel_err": 0.014
+   "pred_us": 62.24,
+   "rel_err": 0.011
   },
   {
    "M": 248,
    "meas_us": 64.45,
-   "pred_us": 64.79,
-   "rel_err": 0.005
+   "pred_us": 64.6,
+   "rel_err": 0.002
   },
   {
    "M": 252,
    "meas_us": 65.05,
-   "pred_us": 65.19,
-   "rel_err": 0.002
+   "pred_us": 64.99,
+   "rel_err": 0.001
   },
   {
    "M": 254,
    "meas_us": 65.19,
-   "pred_us": 65.38,
-   "rel_err": 0.003
+   "pred_us": 65.19,
+   "rel_err": 0.0
   },
   {
    "M": 255,
    "meas_us": 66.81,
-   "pred_us": 65.48,
-   "rel_err": 0.02
+   "pred_us": 65.28,
+   "rel_err": 0.023
   },
   {
    "M": 256,
    "meas_us": 65.73,
-   "pred_us": 65.58,
-   "rel_err": 0.002
+   "pred_us": 65.38,
+   "rel_err": 0.005
   },
   {
    "M": 257,
    "meas_us": 67.12,
-   "pred_us": 65.68,
-   "rel_err": 0.021
+   "pred_us": 65.48,
+   "rel_err": 0.024
   },
   {
    "M": 258,
    "meas_us": 65.83,
-   "pred_us": 65.78,
-   "rel_err": 0.001
+   "pred_us": 65.58,
+   "rel_err": 0.004
   },
   {
    "M": 260,
    "meas_us": 66.14,
-   "pred_us": 65.98,
-   "rel_err": 0.002
+   "pred_us": 65.78,
+   "rel_err": 0.006
   },
   {
    "M": 264,
    "meas_us": 66.45,
-   "pred_us": 66.38,
-   "rel_err": 0.001
+   "pred_us": 66.17,
+   "rel_err": 0.004
   },
   {
    "M": 272,
    "meas_us": 67.37,
-   "pred_us": 67.18,
-   "rel_err": 0.003
+   "pred_us": 66.95,
+   "rel_err": 0.006
   },
   {
    "M": 288,
    "meas_us": 69.19,
-   "pred_us": 68.77,
-   "rel_err": 0.006
+   "pred_us": 68.52,
+   "rel_err": 0.01
   },
   {
    "M": 320,
    "meas_us": 72.12,
-   "pred_us": 71.96,
-   "rel_err": 0.002
+   "pred_us": 71.66,
+   "rel_err": 0.006
+  },
+  {
+   "M": 384,
+   "meas_us": 77.36,
+   "pred_us": 77.94,
+   "rel_err": 0.008
+  },
+  {
+   "M": 448,
+   "meas_us": 83.11,
+   "pred_us": 84.22,
+   "rel_err": 0.013
   }
  ],
  "fit_quality": {
-  "median_rel_err": 0.011,
-  "max_rel_err": 0.034,
+  "median_rel_err": 0.01,
+  "max_rel_err": 0.032,
   "pass_max_le_0.05": true,
   "enforced": "main() sys.exit if max_rel_err > 0.05 -> params not written"
  },
  "holdout": {
-  "n_fit": 12,
-  "n_pred": 11,
-  "median_rel_err": 0.009,
-  "max_rel_err": 0.037,
+  "n_fit": 13,
+  "n_pred": 12,
+  "median_rel_err": 0.006,
+  "max_rel_err": 0.035,
   "note": "affine fit on every-other M, predict the rest (guards against overfit)"
  },
  "m_axis_tiling": {
@@ -204,8 +216,8 @@
    "tiles": 14,
    "extrapolated": false,
    "meas_us": 638.9,
-   "pred_us": 650.3,
-   "rel_err": 0.018
+   "pred_us": 651.6,
+   "rel_err": 0.02
   },
   {
    "M": 128,
@@ -214,7 +226,7 @@
    "tiles": 14,
    "extrapolated": false,
    "meas_us": 724.1,
-   "pred_us": 739.6,
+   "pred_us": 739.5,
    "rel_err": 0.021
   },
   {
@@ -224,8 +236,8 @@
    "tiles": 14,
    "extrapolated": false,
    "meas_us": 915.1,
-   "pred_us": 918.3,
-   "rel_err": 0.003
+   "pred_us": 915.3,
+   "rel_err": 0.0
   },
   {
    "M": 128,
@@ -244,36 +256,38 @@
    "tiles": 4,
    "extrapolated": false,
    "meas_us": 261.5,
-   "pred_us": 262.4,
-   "rel_err": 0.003
+   "pred_us": 261.5,
+   "rel_err": 0.0
   }
  ],
  "tile_throughput_monotone_in_M": {
   "GOP_s_by_M": {
    "1": 200.5,
-   "2": 416.6,
-   "4": 829.2,
-   "8": 1642.2,
-   "16": 3221.5,
-   "32": 6205.5,
-   "48": 8977.3,
-   "64": 11558.7,
-   "96": 16224.0,
-   "128": 20326.0,
-   "192": 27204.0,
-   "224": 30115.6,
-   "248": 32111.2,
-   "252": 32429.6,
-   "254": 32587.3,
-   "255": 32665.8,
-   "256": 32744.1,
-   "257": 32822.1,
-   "258": 32899.9,
-   "260": 33054.7,
-   "264": 33361.7,
-   "272": 33964.7,
-   "288": 35128.7,
-   "320": 37302.0
+   "2": 414.7,
+   "4": 825.3,
+   "8": 1634.8,
+   "16": 3208.3,
+   "32": 6184.5,
+   "48": 8953.0,
+   "64": 11534.6,
+   "96": 16208.6,
+   "128": 20326.9,
+   "192": 27250.9,
+   "224": 30189.0,
+   "248": 32205.1,
+   "252": 32526.9,
+   "254": 32686.4,
+   "255": 32765.7,
+   "256": 32844.9,
+   "257": 32923.8,
+   "258": 33002.4,
+   "260": 33159.0,
+   "264": 33469.5,
+   "272": 34079.4,
+   "288": 35257.4,
+   "320": 37458.5,
+   "384": 41328.7,
+   "448": 44621.8
   },
   "monotone_increasing": true,
   "note": "M=1 on the measured decode basis; M>1 from the fit"

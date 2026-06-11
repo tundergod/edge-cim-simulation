@@ -111,13 +111,17 @@ def panel_prefill(ax, pref, P):
     M = np.array([r["M"] for r in fp]); lat = np.array([r["meas_us"] for r in fp])
     a, b = pref["affine_fit_tile_lat_us"]["a_weight_load_us"], pref["affine_fit_tile_lat_us"]["b_per_col_us"]
     anchor = pref["decode_anchor_M1_measured"]
-    xs = np.linspace(1, 330, 50)
+    M_max = P["prefill_M_max"]
+    xs = np.linspace(1, M_max + 15, 60)
     ax.plot(xs, a + b * xs, "-", color=INK, lw=1.1, zorder=2, label=f"affine  {a:.1f}+{b:.3f}·M")
     ax.scatter(M, lat, s=13, c=RESID, zorder=4, label="dense sweep (measured)")
     ax.scatter([anchor["M"]], [anchor["tile_lat_us"]], s=34, c=SPILL, marker="*", zorder=5,
                label="M=1 decode anchor")
-    ax.axvline(256, ls=":", color=SPILL, lw=1.0)
-    ax.text(258, 47, "old M_MAX=256\n'wall' — FALSE\n(compiles to ≥320)", fontsize=5.2, color=SPILL, va="top")
+    ax.axvline(256, ls=":", color="#bbb", lw=1.0)
+    ax.text(248, 44, "old assumed\nM_MAX=256\n(2× too low)", fontsize=5.0, color="#999", va="top", ha="right")
+    ax.axvline(512, ls="--", color=SPILL, lw=1.1)
+    ax.text(508, 90, f"real wall\nM≥512 fails\n(max compiled {M_max})", fontsize=5.2, color=SPILL, va="top", ha="right")
+    ax.set_xlim(-15, 560)
     ax.set_xlabel("activation columns  M  (canonical 2048×2048 tile)")
     ax.set_ylabel("tile latency (µs)")
     ax.set_title("c · prefill M-amortization, dense", loc="left", fontweight="bold")
@@ -128,22 +132,30 @@ def panel_prefill(ax, pref, P):
 
 
 def panel_kv(ax, kv):
-    """(d) KV-cache isolation SPIKE: memory-bound proxy BW vs M, ~ M2 streaming BW."""
+    """(d) KV SPIKE: proxy eff_BW vs transfer size RISES and never converges -> SRAM-bound, INCONCLUSIVE."""
     pts = kv["proxy_points"]
-    M = [str(p["M"]) for p in pts]; bw = [p["eff_BW_GBs"] for p in pts]
-    m2 = kv["verdict"]["m2_measured_eff_BW_GBs"]
-    bars = ax.bar(M, bw, color=KVC, width=0.62, zorder=3, edgecolor=INK, linewidth=0.5)
-    for b_, v in zip(bars, bw):
-        ax.text(b_.get_x() + b_.get_width() / 2, v + 0.5, f"{v:.1f}", ha="center", fontsize=5.4, color=INK)
-    ax.axhline(m2, ls="--", color=RESID, lw=1.1, zorder=2)
-    ax.text(0.03, m2 + 0.6, f"M2 LPDDR4x analytic BW = {m2:.1f} GB/s", transform=ax.get_yaxis_transform(),
-            fontsize=5.4, color=RESID)
-    ax.set_xlabel("memory-bound proxy size  M  (K=1 conv)")
-    ax.set_ylabel("effective BW (GB/s)")
-    ax.set_title("d · KV-append BW SPIKE", loc="left", fontweight="bold")
-    ax.set_ylim(0, 32)
-    ax.text(0.97, 0.05, f"largest-M proxy ≈ M2\n(rel ~{kv['verdict']['rel_diff']*100:.0f}%, CONSISTENT)",
-            transform=ax.transAxes, fontsize=5.3, ha="right", color="#666")
+    ws = np.array([p["workset_elems"] / 1e6 for p in pts])   # output working set (M-elements)
+    bw = np.array([p["eff_BW_GBs"] for p in pts])
+    v = kv["verdict"]
+    m2, floor, knee = v["m2_measured_eff_BW_GBs"], v["spill_floor_dram_BW_GBs"], v["sram_knee_M_elems"]
+    ax.plot(ws, bw, "-o", color=KVC, ms=4, lw=1.3, zorder=4, label="K=1 proxy eff_BW")
+    for x, y, p in zip(ws, bw, pts):
+        ax.annotate(f"M={p['M']}", (x, y), textcoords="offset points", xytext=(2, 4), fontsize=4.6, color="#666")
+    ax.axhline(m2, ls="--", color=RESID, lw=1.0, zorder=2)
+    ax.text(0.018, m2 + 0.9, f"M2 LPDDR4x DRAM BW {m2:.1f}", transform=ax.get_yaxis_transform(), fontsize=5.0, color=RESID)
+    ax.axhline(floor, ls="-.", color=SPILL, lw=1.0, zorder=2)
+    ax.text(0.018, floor + 0.9, f"cliff spill floor {floor:.0f} (DRAM-bound)", transform=ax.get_yaxis_transform(), fontsize=5.0, color=SPILL)
+    ax.axvline(knee, ls=":", color="#aaa", lw=0.9)
+    ax.text(knee * 0.92, 6, "SRAM knee\n(proxy never\nreaches DRAM)", fontsize=5.0, color="#888", ha="right", va="bottom")
+    ax.set_xscale("log")
+    ax.set_xlabel("proxy working set (M-elements, output N·M)")
+    ax.set_ylabel("apparent eff_BW (GB/s)")
+    ax.set_title("d · KV-append BW SPIKE — inconclusive", loc="left", fontweight="bold")
+    ax.set_ylim(0, 52)
+    ax.set_xlim(0.08, 12)
+    ax.text(0.97, 0.06, "BW rises, never converges\n→ proxy is SRAM-staging-bound\n→ cannot validate DRAM BW",
+            transform=ax.transAxes, fontsize=5.2, ha="right", color=SPILL)
+    ax.legend(fontsize=5.2, loc="upper left")
 
 
 def main():
@@ -153,7 +165,7 @@ def main():
     panel_oldnew(axes[0, 1], mt)
     panel_prefill(axes[1, 0], pref, P)
     panel_kv(axes[1, 1], kv)
-    fig.suptitle("Phase 1.5 — CIM compute supplement: on-Card measurement campaign (Metis Card, 85 tasks)",
+    fig.suptitle("Phase 1.5 — CIM compute supplement: on-Card measurement campaign (Metis Card, 101 tasks)",
                  fontsize=8.5, fontweight="bold", y=1.0)
     fig.tight_layout(rect=(0, 0, 1, 0.98))
     S.save(fig, str(FIG / "phase1_5_cim_campaign"))

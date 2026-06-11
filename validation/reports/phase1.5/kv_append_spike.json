@@ -1,34 +1,51 @@
 {
  "module": "kv_append_spike",
- "status": "CONFIRMED-CONSISTENT",
- "honesty": "kv_append stays ANALYTIC (kv_bytes / M2 eff_BW). This SPIKE is a VALIDATION, not a recalibration: a K=1 memory-bound conv proxy (intensity ~2) measures the AIPU's memory-bound BW; at the steady-state point it tracks M2's measured streaming BW, so the analytic assumption is board-supported. Small-M points are overhead-dominated.",
+ "status": "PROXY_INCONCLUSIVE",
+ "honesty": "The K=1 conv proxy is SRAM-STAGING-bound: its working set (output N*M elements) stays below the ~8.2M residency-cliff knee (on-chip SRAM capacity) for every M that compiles (M<=1024; M>=2048 fails), so eff_BW reflects on-chip throughput and RISES with transfer size (9.6 -> 44.4 GB/s, +24% at the last step) instead of converging to a DRAM plateau. The proxy never reaches the DRAM regime, so it CANNOT validate the kv_append DRAM bandwidth. kv_append stays ANALYTIC on M2's measured streaming BW (24.2 GB/s); the earlier single-point 'M=256 ~ M2' match was coincidental.",
  "verdict": {
-  "steady_M": 256,
-  "proxy_eff_BW_GBs": 26.7,
+  "converged": false,
+  "all_points_sram_resident": true,
+  "last_step_rise_pct": 23.7,
+  "bw_range_GBs": [
+   9.6,
+   44.4
+  ],
+  "sram_knee_M_elems": 8.16,
   "m2_measured_eff_BW_GBs": 24.2,
-  "rel_diff": 0.103,
-  "tolerance": 0.15,
-  "all_points_memory_bound": true
+  "spill_floor_dram_BW_GBs": 34.9,
+  "note_spill_floor": "the residency-cliff spill floor (M=1 GEMV streaming weights from DRAM) is the only DRAM-BOUND on-card BW datapoint; same order as M2."
  },
  "proxy_points": [
   {
    "M": 64,
    "eff_BW_GBs": 9.6,
-   "arith_intensity": 1.97,
-   "compute_negligible": true
+   "workset_elems": 131072,
+   "sram_resident": true
   },
   {
    "M": 128,
    "eff_BW_GBs": 17.0,
-   "arith_intensity": 1.98,
-   "compute_negligible": true
+   "workset_elems": 262144,
+   "sram_resident": true
   },
   {
    "M": 256,
    "eff_BW_GBs": 26.7,
-   "arith_intensity": 1.99,
-   "compute_negligible": true
+   "workset_elems": 524288,
+   "sram_resident": true
+  },
+  {
+   "M": 512,
+   "eff_BW_GBs": 35.9,
+   "workset_elems": 1048576,
+   "sram_resident": true
+  },
+  {
+   "M": 1024,
+   "eff_BW_GBs": 44.4,
+   "workset_elems": 2097152,
+   "sram_resident": true
   }
  ],
- "note": "kv_append BW assumption confirmed within tolerance; no kv-specific coefficient added (M2 eff_BW is the right BW). The recompose decode gate's fitted BW_eff is untouched."
+ "kv_append_basis": "kv_append stays analytic = kv_bytes / M2 measured DRAM streaming BW (24.2 GB/s, from the decode weight-stream wall). This SPIKE did NOT add independent validation: the on-card proxy could not be pushed into the DRAM regime within the compile envelope (working set < SRAM knee)."
 }

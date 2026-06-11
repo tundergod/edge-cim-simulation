@@ -248,7 +248,8 @@ def manifest(spike):
     #     tile measured DIRECTLY (group routed to measure(), NOT measure_op) so M>M_MAX genuinely
     #     PROBES the compile wall instead of short-circuiting on M_MAX. Fail-tolerant.
     for M in [2, 4, 8, 16, 32, 48, 96, 192, 224,
-              248, 252, 254, 255, 256, 257, 258, 260, 264, 272, 288, 320]:
+              248, 252, 254, 255, 256, 257, 258, 260, 264, 272, 288, 320,
+              384, 448, 512, 640, 768, 1024, 1536, 2048, 3072, 4096]:   # probe the REAL M ceiling
         add("prefill_msweep", "tile", M, 2048, 2048)
     # B — more tile SHAPES @ M in {64,128,256}: does (a,b) depend on (K,N) or only tile-count?
     for fam, K, N in [("down_proj", 14336, 4096), ("lm_head", 4096, 128256),
@@ -276,8 +277,10 @@ def manifest(spike):
         add("multitile", "decode", 1, K, N)
     for M in [64, 128]:
         add("multitile", "prefill", M, 2048, 3072)
-    # E — KV-cache isolation SPIKE: memory-bound K=1 conv proxy (measure_mem -> eff_BW).
-    for M in [64, 128, 256]:
+    # E — KV-cache isolation SPIKE: memory-bound K=1 conv proxy (measure_mem -> eff_BW). Transfer-size
+    # sweep (bytes ~ N*M) to demonstrate eff_BW CONVERGES to a sustained plateau (3 rising points is not
+    # convergence evidence). N=2048 (single tile, no N-tiling); grow M to amortize per-inference overhead.
+    for M in [64, 128, 256, 512, 1024, 2048, 4096, 8192, 16384]:
         add("kv_proxy", "mem", M, 1, 2048)
     return tasks
 

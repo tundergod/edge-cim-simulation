@@ -7,7 +7,7 @@
 | 元件 | 模擬什麼 | provenance（誠實標籤） | 驗證狀態 | 進 Phase 2 就緒度 |
 |---|---|---|---|---|
 | **CIM decode（M1）** | 2D `G_eff(N,K)` 閉式吞吐 | **calibrated**（Alpha 13 點 + Card 重驗） | median **{{cim.decode_median_pct}}%** / p95 **{{cim.decode_p95_pct}}%**；Card 交叉驗證 median **{{cim.card_median_pct}}%** / p95 **{{cim.card_p95_pct}}%**（`CARD_REVALIDATED`） | ✅ 就緒（decode 主路徑量測級可信） |
-| **CIM prefill（M1）** | affine M-amortization | **calibrated**（Card，dense M∈{2..{{cim.prefill_m_max}}}） | 擬合 median {{cim.prefill_median_pct}}%、留出 **{{cim.prefill_holdout_pct}}%**；M>256「牆」證實不存在 | ✅ 就緒（校準到 M≤{{cim.prefill_m_max}}；M> 此才外推） |
+| **CIM prefill（M1）** | affine M-amortization | **calibrated**（Card，dense M∈{2..{{cim.prefill_m_max}}}） | 擬合 median {{cim.prefill_median_pct}}%、留出 **{{cim.prefill_holdout_pct}}%**；舊 M_MAX=256 低估約 2×（真牆 M=512） | ✅ 就緒（校準到 M≤{{cim.prefill_m_max}}；M> 此才外推） |
 | **CIM multi-tile（M1）** | residency-cliff 模型 | **calibrated**（Card-native，K·N≤{{cim.native_envelope_m}}M） | cliff 模型 median **{{cim.multitile_new_median_pct}}%** / 留出 {{cim.multitile_holdout_pct}}%（舊 tile-sum 為 {{cim.multitile_old_median_pct}}%）；knee≈{{cim.cliff_knee_m}}M、floor≈{{cim.cliff_floor_gops}} GOP/s | ✅ 就緒（K·N>{{cim.native_envelope_m}}M 才 spill-floor 外推） |
 | **記憶體 LPDDR4x（M2）** | eff-BW streaming | **calibrated**（量產卡 decode wall） | {{mem.lpddr4x_eff}} GB/s（峰值 {{mem.lpddr4x_eff_pct}}%），r²=0.997 | ✅ 就緒 |
 | **記憶體 LPDDR5（M2）** | eff-BW（前瞻 SoC） | **simulated**（eff {{mem.ram2_system_eff}} 保守） | Ramulator2 device {{mem.ram2_device_eff}} vs system {{mem.ram2_system_eff}} 交叉驗證一致（驗證 ADR-0002） | ✅ 就緒（標籤＝simulated；非本 silicon 量測） |
@@ -31,4 +31,4 @@
 - **⚠**：有缺口或限制，需在第 9 章歸類（必須先解 / Phase 2 內處理 / 可接受 limitation）。
 - **⛔ Phase 2 工作**：M3/M6 未實作是專案設計（Phase 2 才實作整合），不是 Phase 1 缺失。conversion-op 成本不是缺口，是 Phase 2 的解析建模項（memory-bound cast，既有 M2/M4 × 邊界穿越）。
 
-**一句話總結：** decode 主路徑（CIM 算 + 記憶體搬 + GPU attention + CPU 支援 + 端到端 recompose）達量測級可信；Phase 1.5 再把 CIM prefill（dense M∈{2..{{cim.prefill_m_max}}}）、multi-tile（Card-native residency-cliff 模型）、KV-append BW 補到量測級（並推翻 M>256 與 SAFE_KN 兩個過保守假設）；剩 NPU silicon 是誠實標註的元件缺口、prefill TTFT 端到端與整合層待 Phase 2 建；conversion-op 成本是 Phase 2 解析建模項（非量測）。詳細判定見第 9 章。
+**一句話總結：** decode 主路徑（CIM 算 + 記憶體搬 + GPU attention + CPU 支援 + 端到端 recompose）達量測級可信；Phase 1.5 再把 CIM prefill（dense M∈{2..{{cim.prefill_m_max}}}）、multi-tile（Card-native residency-cliff 模型）補到量測級（並修正 M_MAX=256 低估 2×、SAFE_KN 兩個過保守的編譯假設）；**KV-append BW 的 isolation SPIKE 為 inconclusive**（proxy SRAM-bound、進不了 DRAM），維持 analytic、Phase 2 待獨立驗證；剩 NPU silicon 是誠實標註的元件缺口、prefill TTFT 端到端與整合層待 Phase 2 建；conversion-op 成本是 Phase 2 解析建模項（非量測）。詳細判定見第 9 章。
