@@ -73,7 +73,7 @@ roofline 的兩軸均對 `mali_matmul.json` FP16 點校準（ksweep 5 點 + deco
 | 512 | 255.7 | 254.1 | −0.6% |
 | 1024 | 479.7 | 480.4 | +0.1% |
 
-**median 0.6%、p95 1.1%，max 1.1%，全部通過。**[^gpu9] 這是全報告擬合誤差最低的單元，反映 attention 對 GPU 是規律的線性工作。
+**median {{gpu.attn_median_pct}}%、p95 {{gpu.attn_p95_pct}}%，max {{gpu.attn_max_pct}}%，全部通過。**[^gpu9] 這是全報告擬合誤差最低的單元，反映 attention 對 GPU 是規律的線性工作。
 
 ![M4gpu_attn_fit](../../../figures/phase1.1/M4gpu_attn_fit.png)
 
@@ -86,9 +86,9 @@ roofline 的兩軸均對 `mali_matmul.json` FP16 點校準（ksweep 5 點 + deco
 | 統計量 | 值 |
 |---|---|
 | 點數 | 30 |
-| median \|相對誤差\| | 2.7% |
-| p95 \|相對誤差\| | 36.1% |
-| max \|相對誤差\| | 65.8% |
+| median \|相對誤差\| | {{gpu.roofline_median_pct}}% |
+| p95 \|相對誤差\| | {{gpu.roofline_p95_pct}}% |
+| max \|相對誤差\| | {{gpu.roofline_max_pct}}% |
 | frac\_within\_5pct | 0.667 |
 | frac\_pred\_le\_measured | 0.533 |
 

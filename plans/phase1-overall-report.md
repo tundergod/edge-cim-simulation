@@ -4,6 +4,8 @@
 > 流程（輕量版 B）：branch → plan → **subagent plan review loop（fix→review 直到 reviewer 無 issue）** → 使用者批准 → 執行 → fact-check subagent 對帳 → build PDF → 開**報告 PR**（舊報告仍在，便於對照）給使用者最終 review → merge → 另開 **cleanup PR** 刪舊報告 → merge。
 > Model 分配：chapter 草稿 + fact-check = **Sonnet**；框架／缺口三分類／GO-NO-GO／最終縫合 = **Opus**。
 
+> **更新（Phase 1.4, 2026-06-11）— 數字由 JSON 生成，取代 fact-check 對帳。** 報告章節的數字格改為 `{{key}}` placeholder，build 時由 `tools/report/_metrics.py`（讀 `validation/reports/*.json`）填入、未解析即 build 失敗；findings 的 gate 數字由 `tests/test_report_metrics.py` 守住不漂移。因此**上面流程裡的兩輪「fact-check subagent 對帳」（步驟 6–7、11）已不需要**——數字無法手打錯，review 只需看散文詮釋。
+
 ## 鎖定決策（grill 產出，執行時不得偏離）
 
 - **核心結論兩段式**：(1) Phase 1 是否按其誠實標準交付＋驗證（逐 component 給證據）；(2) 帶條件的 GO/NO-GO，缺口分三類（進 Phase 2 前必須解 / 可在 Phase 2 內處理 / 可接受 limitation）。**不得宣稱「all components ready」**（M3/M6 未實作是設計使然＝Phase 2 工作內容，非 Phase 1 缺失）。

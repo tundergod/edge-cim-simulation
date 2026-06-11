@@ -29,3 +29,8 @@ tools/plotting/_out/
 docs/_build/
 tools/ramulator2/upstream/
 tools/onnxim/upstream/
+
+# Figures: commit one format (PNG, which the report builder base64-embeds).
+# PDF/SVG are regenerable build artifacts (tools/plotting/*.py) — kept on disk, not tracked.
+docs/figures/**/*.pdf
+docs/figures/**/*.svg

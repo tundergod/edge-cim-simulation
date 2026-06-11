@@ -58,14 +58,14 @@ SRAM tier 歸屬 M1-SPM（`sram_metis_aipu` spec），不在 M2 主路徑；但 
 
 | 參數 | 數值 | 誠實標籤 | 出處 |
 |---|---|---|---|
-| PCIe floor（median） | 911.1 µs | **measured** | `measurements/aetina/metis_alpha_matmul.json` › `pcie_floor_A1d5` |
-| PCIe floor（p95） | 1111.7 µs | **measured** | `m2_pcie.json` › `fixed_overhead_us_p95` |
-| PCIe BW | 3.9 GB/s | **measured** | voyager-sdk.md:246（Phase 0.3 Gen3 ×4 量測，[MEASURED]） |
-| LPDDR4x eff_BW | 24.2 GB/s | **calibrated** | `voyager-sdk.md:278`（decode time ∝ weight bytes，r²=0.997） |
-| LPDDR4x peak | 34.1 GB/s | assumption | 4266 MT/s × 64-bit（in-repo 無 data-rate 出處）[^mem3] |
+| PCIe floor（median） | {{mem.pcie_floor_full}} µs | **measured** | `measurements/aetina/metis_alpha_matmul.json` › `pcie_floor_A1d5` |
+| PCIe floor（p95） | {{mem.pcie_p95}} µs | **measured** | `m2_pcie.json` › `fixed_overhead_us_p95` |
+| PCIe BW | {{mem.pcie_bw}} GB/s | **measured** | voyager-sdk.md:246（Phase 0.3 Gen3 ×4 量測，[MEASURED]） |
+| LPDDR4x eff_BW | {{mem.lpddr4x_eff}} GB/s | **calibrated** | `voyager-sdk.md:278`（decode time ∝ weight bytes，r²=0.997） |
+| LPDDR4x peak | {{mem.lpddr4x_peak_full}} GB/s | assumption | 4266 MT/s × 64-bit（in-repo 無 data-rate 出處）[^mem3] |
 | LPDDR4x 效率 | 0.71 | calibrated | 24.2 / 34.1 = 0.71 |
-| LPDDR5 peak | 51.2 GB/s | assumption | 6400 MT/s × 64-bit |
-| LPDDR5 eff_BW | 33.3 GB/s | **simulated** | 51.2 × 0.65（保守折扣，LPDDR5 未在本 silicon 量測） |
+| LPDDR5 peak | {{mem.lpddr5_peak}} GB/s | assumption | 6400 MT/s × 64-bit |
+| LPDDR5 eff_BW | {{mem.lpddr5_eff}} GB/s | **simulated** | {{mem.lpddr5_peak}} × {{mem.ram2_system_eff}}（保守折扣，LPDDR5 未在本 silicon 量測） |
 | LPDDR5 效率 | 0.65 | assumption | 低於量測的 0.71；不假設兩種記憶體效率相同 |
 | SRAM L1 4 MiB/核 | 4 MiB | measured-spec | ISSCC 2024 / datasheet |
 | SRAM L2 32 MiB | 32 MiB | measured-spec | datasheet |
@@ -87,7 +87,7 @@ SRAM tier 歸屬 M1-SPM（`sram_metis_aipu` spec），不在 M2 主路徑；但 
 
 ![M2_pcie_floor](../../../figures/phase1.1/M2_pcie_floor.png)
 
-30 個單-tile 形狀，各別量 system latency − device latency = per-call floor，落在 805–1120 µs 帶內，中位數 911 µs、p95 1111.7 µs。Floor 主導（對應的 `bytes/BW` ≈ 0.x µs）；floor 隨運算規模微降（r ≈ −0.86，約 −7 µs/µs），可能源於大運算時 DMA 與計算局部重疊（double-buffering），但幅度（~300 µs）遠小於 floor 本身，一階固定常數近似合理[^mem1]。
+30 個單-tile 形狀，各別量 system latency − device latency = per-call floor，落在 805–1120 µs 帶內，中位數 {{mem.pcie_floor_us}} µs、p95 {{mem.pcie_p95}} µs。Floor 主導（對應的 `bytes/BW` ≈ 0.x µs）；floor 隨運算規模微降（r ≈ −0.86，約 −7 µs/µs），可能源於大運算時 DMA 與計算局部重疊（double-buffering），但幅度（~300 µs）遠小於 floor 本身，一階固定常數近似合理[^mem1]。
 
 **驗證結論**：sanity pass（正且單調）；eff_BW 落在量測峰值的 60–80%（71% ✓）[^mem12]。
 
@@ -117,8 +117,8 @@ SRAM tier 歸屬 M1-SPM（`sram_metis_aipu` spec），不在 M2 主路徑；但 
 
 | | 效率 | eff BW | 層級 |
 |---|---|---|---|
-| Ramulator2 v2.1（DRAM device） | **0.92** | 47.1 GB/s[^mem13] | DRAM 元件時序（refresh + bank conflict） |
-| 解析（system-level） | **0.65** | 33.3 GB/s | 系統級，校準到矽晶 decode 牆 |
+| Ramulator2 v2.1（DRAM device） | **{{mem.ram2_device_eff}}** | {{mem.ram2_device_bw}} GB/s[^mem13] | DRAM 元件時序（refresh + bank conflict） |
+| 解析（system-level） | **{{mem.ram2_system_eff}}** | {{mem.lpddr5_eff}} GB/s | 系統級，校準到矽晶 decode 牆 |
 
 差距 = 0.92 − 0.65 = **0.27**（eff BW 比 1.41×）[^mem14]。這**不是矛盾**：
 

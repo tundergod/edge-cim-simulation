@@ -24,7 +24,7 @@
 
 **模型從哪來。** **assumption（全部係數皆規格推算，非量測）**——CIM 15 TOPS/W（廠商 INT8）、LPDDR5 4 pJ/bit、PCIe 5 pJ/bit、A76 0.75 W/core × 4 核。[^m7a] 板子無 on-board 功耗儀表，故能耗一律是**估計、非量測**。[^m7b]
 
-**驗證狀態。** 不做數值 gate（無量測可對），只做 sanity + 敏感度。8B decode 每 token：CIM 投影 1.001 mJ、DRAM streaming 240.149 mJ、CPU 支援 15.0 mJ，合計 256.15 mJ，**主導項為 DRAM streaming**。[^m7c] 對每個係數做 ±20% 共 16 組 corner 的敏感度，**結論翻轉 0 次**——「能耗由記憶體搬移主導」這個結論對 ±20% 穩健。[^m7d] 隱含平均功耗 0.692 W，量級合理。[^m7e]
+**驗證狀態。** 不做數值 gate（無量測可對），只做 sanity + 敏感度。8B decode 每 token：CIM 投影 {{energy.cim_mj}} mJ、DRAM streaming {{energy.dram_mj}} mJ、CPU 支援 {{energy.cpu_mj}} mJ，合計 {{energy.total_mj}} mJ，**主導項為 DRAM streaming**。[^m7c] 對每個係數做 ±20% 共 {{energy.corners}} 組 corner 的敏感度，**結論翻轉 {{energy.flips}} 次**——「能耗由記憶體搬移主導」這個結論對 ±20% 穩健。[^m7d] 隱含平均功耗 0.692 W，量級合理。[^m7e]
 
 **缺口 / 外推區。** 整個模型是估計值，**沒有任何一點對到真實功耗量測**。RKNPU2 無功耗遙測，NPU 能耗不可定。CPU 支援時間是粗略的 per-token 估計。[^m7b] 結論的價值在「**哪一項主導**」（記憶體），而非絕對 mJ 數字的精確度。
 
@@ -42,7 +42,7 @@
 | llama-3.2-3b | 3.214 | 6.38 |
 | llama-3.1-8b（hold-out） | 7.507 | 2.7 |
 
-擬合有效頻寬 18.33 GB/s；**8B 預測 2.44 tok/s vs 量測 2.7 tok/s，相對誤差 9.5%**，通過 ≤25% gate。[^e2e1] 這個結果是 model-independent 的（只用 op-profile bytes + vendor tok/s + 一個 BW fit），因此 Phase 1.2 把 CPU/記憶體改成 spec-based 引擎後重跑**仍是 9.5%**。
+擬合有效頻寬 {{recompose.fit_bw}} GB/s；**8B 預測 {{recompose.pred_8b}} tok/s vs 量測 {{recompose.meas_8b_1}} tok/s，相對誤差 {{recompose.err_8b_pct}}%**，通過 ≤25% gate。[^e2e1] 這個結果是 model-independent 的（只用 op-profile bytes + vendor tok/s + 一個 BW fit），因此 Phase 1.2 把 CPU/記憶體改成 spec-based 引擎後重跑**仍是 9.5%**。
 
 **重要 watch-item（Phase 2）：** 非-streaming 項（CPU 支援 15007 µs、GPU offload attention 下界 260185 µs、KV-cache append 1386.5 µs）在擬合點**已被吸收進 BW_eff**；Phase 2 若把它們再加上去會**重複計算**。[^e2e2] 這是 Phase 2 保真度的已知注意事項，不是 Phase 1 的錯誤。
 

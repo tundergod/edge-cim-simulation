@@ -113,8 +113,8 @@ wide-activation 掃描（N/K 從 1:2 到 64:1）：order/shape factor 最大值 
 | 結果面向 | 值 |
 |---|---|
 | staircase 單調遞增 | True（與解析同形狀，HeteroInfer Fig3） |
-| median \|delta\| | **317.9%**（ONNXim vs 解析） |
-| max \|delta\| | **493.4%** |
+| median \|delta\| | **{{npu.onnxim_median_delta_pct}}%**（ONNXim vs 解析） |
+| max \|delta\| | **{{npu.onnxim_max_delta_pct}}%** |
 | 典型例：(1,4096,4096) | ONNXim 3121 µs vs 解析 835 µs（+274%） |
 | 典型例：(256,4096,14336) | ONNXim 22364 µs vs 解析 20105 µs（+11%，compute-bound 收斂） |
 

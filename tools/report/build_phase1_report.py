@@ -10,9 +10,13 @@ Run: ./.venv/bin/python tools/report/build_phase1_report.py
 import base64
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 import markdown as md
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import _metrics  # noqa: E402  — single source of truth for {{key}} metric numbers
 
 ROOT = Path(__file__).resolve().parents[2]
 CH = ROOT / "docs/report/phase1/chapters"
@@ -51,10 +55,13 @@ def embed_figs(html):
 
 def main():
     conv = md.Markdown(extensions=["tables", "fenced_code", "sane_lists", "footnotes"])
+    metrics = _metrics.load()
     toc, body = [], []
     for stem in ORDER:
         conv.reset()
-        text = (CH / f"{stem}.md").read_text()
+        # Resolve {{key}} metric placeholders from committed JSON BEFORE figure regex /
+        # markdown render; raises if any placeholder is unresolved (fail the build loudly).
+        text = _metrics.substitute((CH / f"{stem}.md").read_text(), metrics)
         m = re.search(r"^#\s+(.+)$", text, re.M)
         title = m.group(1).strip() if m else stem
         anchor = f"ch-{stem}"

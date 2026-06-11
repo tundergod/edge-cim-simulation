@@ -8,18 +8,18 @@ acceptance_criteria:                  # ADR-0006 Phase-2 SYSTEM thresholds
   - {type: e2e_latency_or_toks, threshold: 15%}
   - {type: sota_reproduction, ref: ADR-0003}
 tunable_params:
-  - precision_boundary_conversion_op_cost   # HEADLINE GAP — see measurement_gap below
+  - precision_boundary_conversion_op_cost   # analytic, no calibration target — see phase2_modeling_item below
   - op_to_unit_mapping_policy               # CIM / GPU / NPU / CPU assignment
   - precision_boundary_placement            # which unit pays the conversion (ADR-0003/0004)
   - memory_placement
-measurement_gap:
+phase2_modeling_item:
   id: conversion_op_cost
-  adr: ADR-0004
-  issue: "ADR-0004 specifies the precision-boundary quant/dequant conversion-op cost is
-    calibrated in Phase 0.2 — but it was NEVER collected (grep quant measurements/ = 0;
-    conversion is not one of the 9 traced op categories; it is scheduler-inserted, not in
-    the HF eager trace). The headline mixed-precision contribution (CIM-INT8 x GPU-FP16)
-    therefore runs on an op with no cost basis. Phase 2 MUST measure dequant/requant
-    (cheap elementwise, measurable on CPU/NPU) before the mixed-precision claim is sound."
+  adr: ADR-0004   # revised 2026-06-11
+  note: "Precision is fixed per unit (CIM=INT8, GPU=FP16; ADR-0004c), so a precision-boundary
+    dequant/requant is a deterministic memory-bound cast. Its cost is modeled ANALYTICALLY in
+    Phase 2 — the existing M2/M4 per-op (memory/elementwise) models x the number of boundary
+    crossings the scheduler inserts — NOT a measurement target. Phase 2 inserts the cast op into
+    the op stream and prices it with the existing models."
 note: "Phase 1 defines the contract + tunable params only. M6 is the contribution layer;
-  behavioral validation is Phase 2. The conversion-op cost is a tracked tunable + measurement gap."
+  behavioral validation is Phase 2. The conversion-op cost is a tracked tunable + Phase-2
+  analytic modeling item (not a measurement gap)."
