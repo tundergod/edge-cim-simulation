@@ -27,7 +27,6 @@ M2 = ROOT / "validation/reports/phase1.1/m2.json"
 PARAMS = ROOT / "simulator/models/params/m1_cim.json"
 OUT = ROOT / "validation/reports/phase1.5/kv_append_spike.json"
 CONVERGE_TOL = 0.08   # |last-prev|/prev below this = plateau reached
-N_PROXY = 2048        # proxy output width (single tile)
 
 
 def main():
@@ -48,8 +47,11 @@ def main():
             "reason": "need >=3 kv_proxy points (run the campaign)."}, indent=1))
         print("kv_spike: NO_DATA"); return
 
-    bw = [p["eff_BW_GBs"] for p in pts]
-    rise = (bw[-1] - bw[-2]) / bw[-2]                    # still rising at the largest transfer?
+    # rise / convergence are assessed on the CLEAN grow-M sweep at N=2048 (the N-varied DRAM-push points
+    # sit at the same working set for a shape cross-check and would otherwise muddy the last-step delta).
+    msweep = sorted((p for p in pts if p["N"] == 2048), key=lambda x: x["workset_elems"])
+    mbw = [p["eff_BW_GBs"] for p in msweep]
+    rise = (mbw[-1] - mbw[-2]) / mbw[-2] if len(mbw) >= 2 else 0.0   # last step of the grow-M sweep
     converged = abs(rise) < CONVERGE_TOL
     all_sram = all(p["sram_resident"] for p in pts)     # never reached the DRAM regime?
     proxy_max_ws = max(p["workset_elems"] for p in pts)  # largest working set the proxy can COMPILE
@@ -73,18 +75,18 @@ def main():
                    "sits BELOW the ~%.1fM residency knee (= DRAM-spill threshold, on-chip SRAM capacity), so "
                    "the proxy can NEVER be compiled large enough to spill to DRAM — it is confined to the "
                    "SRAM-resident regime, where eff_BW reflects on-chip throughput and RISES with transfer "
-                   "size (%.1f -> %.1f GB/s, +%.0f%% at the last step, NOT converging). It therefore cannot "
-                   "isolate the kv_append DRAM bandwidth, period. The earlier single-point 'M=256 ~ M2' was "
-                   "coincidental. THE CONVERGED on-card DRAM BW DOES exist — from the residency-cliff SPILL "
-                   "regime (M=1 GEMV, K*N>knee, weights streamed from DRAM): %s GB/s, FLAT across K*N "
-                   "8-17M. kv_append stays ANALYTIC on M2's measured %.1f GB/s (conservative; the spill "
-                   "weight-read BW %s is the upper, same-order bound)."
-                   % (proxy_max_ws / 1e6, knee / 1e6, bw[0], bw[-1], rise * 100,
+                   "size across the grow-M sweep (%.1f -> %.1f GB/s, +%.0f%% at the largest step, NOT "
+                   "plateauing to a DRAM floor). It therefore cannot isolate the kv_append DRAM bandwidth, "
+                   "period. The earlier single-point 'M=256 ~ M2' was coincidental. THE CONVERGED on-card "
+                   "DRAM BW DOES exist — from the residency-cliff SPILL regime (M=1 GEMV, K*N>knee, weights "
+                   "streamed from DRAM): %s GB/s, FLAT across K*N 8-17M. kv_append stays ANALYTIC on M2's "
+                   "measured %.1f GB/s (conservative; the spill weight-read BW %s is the upper, same-order bound)."
+                   % (proxy_max_ws / 1e6, knee / 1e6, mbw[0], mbw[-1], rise * 100,
                       spill_dram_bw, m2_eff, spill_dram_bw))
     elif converged:
-        rel = abs(bw[-1] - m2_eff) / m2_eff
+        rel = abs(mbw[-1] - m2_eff) / m2_eff
         status = "CONFIRMED-CONSISTENT" if rel <= 0.15 else "RECALIBRATE"
-        honesty = ("eff_BW plateaued at %.1f GB/s; vs M2 %.1f GB/s rel %.0f%%." % (bw[-1], m2_eff, rel * 100))
+        honesty = ("eff_BW plateaued at %.1f GB/s; vs M2 %.1f GB/s rel %.0f%%." % (mbw[-1], m2_eff, rel * 100))
     else:
         status = "INCONCLUSIVE"
         honesty = "eff_BW neither plateaued nor cleanly SRAM-bound; inconclusive."
@@ -94,7 +96,7 @@ def main():
         "status": status,
         "honesty": honesty,
         "verdict": {"converged": bool(converged), "structural_cannot_reach_dram": bool(structural),
-                    "last_step_rise_pct": round(rise * 100, 1), "bw_range_GBs": [bw[0], bw[-1]],
+                    "msweep_last_step_rise_pct": round(rise * 100, 1), "bw_range_GBs": [mbw[0], mbw[-1]],
                     "proxy_max_workset_M_elems": round(proxy_max_ws / 1e6, 2),
                     "sram_knee_M_elems": round(knee / 1e6, 2),
                     "compile_wall_below_knee": bool(structural),
@@ -114,7 +116,7 @@ def main():
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps(report, indent=1))
     print(f"kv_spike: {status} — proxy max workset {proxy_max_ws/1e6:.1f}M < DRAM knee {knee/1e6:.1f}M "
-          f"(structural); proxy BW {bw[0]}->{bw[-1]} rising. CONVERGED DRAM BW (spill) = {spill_dram_bw} GB/s. -> {OUT}")
+          f"(structural); grow-M proxy BW {mbw[0]}->{mbw[-1]} rising. CONVERGED DRAM BW (spill) = {spill_dram_bw} GB/s. -> {OUT}")
 
 
 if __name__ == "__main__":

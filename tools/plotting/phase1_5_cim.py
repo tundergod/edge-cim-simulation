@@ -1,11 +1,12 @@
 """Phase 1.5 CIM compute 補量 — campaign result figure (build artifact, nature-figure style).
 
-One 4-panel quantitative grid, regenerable from committed JSON (validation/reports/phase1.5/ +
+One 5-panel quantitative grid, regenerable from committed JSON (validation/reports/phase1.5/ +
 phase1.2/ + measurements/metis_card/cim_card_revalidate_raw.json + params/m1_cim.json):
   (a) HERO — native M=1 multi-tile RESIDENCY CLIFF: throughput vs K*N, measured + 2-regime model.
-  (b) old tile-sum vs new cliff model: measured-vs-predicted latency (31% median -> 2.4%).
-  (c) dense prefill M-sweep: tile_lat vs M, affine fit; the old M_MAX=256 'wall' is busted (M<=320).
-  (d) KV-cache isolation SPIKE: memory-bound proxy eff_BW vs M, ~ M2 LPDDR4x streaming BW.
+  (b) old tile-sum vs new cliff model: measured-vs-predicted latency (31% median -> 2.8%).
+  (c) dense prefill M-sweep: tile_lat vs M, affine fit; old M_MAX=256 'wall' busted (real wall ~M=510).
+  (d) KV-cache isolation SPIKE: proxy can't reach DRAM (structural); converged DRAM BW from spill regime.
+  (e) K & N staircases: both compile natively past 2048 (= output tile width W), same K*N cliff.
 
 Writes PNG (embedded in the HTML report) + PDF + SVG to docs/figures/phase1.5/.
 Run: ./.venv/bin/python tools/plotting/phase1_5_cim.py

@@ -98,14 +98,14 @@ device 配置 envelope ~14 MB = PCIe-IOMMU window（Alpha 無真正的 on-card D
 
 ### 3.3　prefill M-amortization 擬合（Phase 1.2）
 
-Phase 1.5 把擬合基底從 3 點（M∈{64,128,256}）擴成 **{2..320} 共 23 個 dense 點**（直接量 canonical tile）：仿射 `tile_lat = {{cim.prefill_affine_a}} + {{cim.prefill_affine_b}}·M` µs，fit max rel_err **{{cim.prefill_fit_max_pct}}%**，**留出驗證 median {{cim.prefill_holdout_pct}}%**（一半擬合、預測另一半）。代表點：
+Phase 1.5 把擬合基底從 3 點（M∈{64,128,256}）擴成 **{2..{{cim.prefill_m_max}}} 共 31 個 dense 點**（直接量 canonical tile）：仿射 `tile_lat = {{cim.prefill_affine_a}} + {{cim.prefill_affine_b}}·M` µs，fit max rel_err **{{cim.prefill_fit_max_pct}}%**，**留出驗證 median {{cim.prefill_holdout_pct}}%**（一半擬合、預測另一半）。代表點（值取自 `cim_prefill_fit.json` › `fit_points`）：
 
 | M | 量測 µs | 預測 µs | rel_err |
 |---|---|---|---|
-| 2 | 41.28 | 40.27 | 2.0% |
-| 64 | 45.6 | 46.45 | 1.9% |
-| 256 | 65.73 | 65.59 | 0.1% |
-| 320 | 72.12 | 72.00 | 0.2% |
+| 2 | 41.28 | 41.02 | 0.6% |
+| 64 | 45.64 | 46.86 | 2.7% |
+| 256 | 65.73 | 64.92 | 1.2% |
+| 508 | 87.77 | 88.62 | 1.0% |
 
 > **修正先前假設：M_MAX=256「SRAM tiling 牆」高估了約一半。** dense sweep 編到 **M={{cim.prefill_m_max}}** 全部成功、無 error，**M=511 起失敗**（`no_model_json`，至 4096 全失敗）——真正的牆釘在 **~M=510**（M={{cim.prefill_m_max}} 成功、M=511 失敗），約為舊假設 256 的 2×。所以牆是真的（SRAM 相關），只是位置被低估了一倍。prefill 校準範圍延伸到 M≤{{cim.prefill_m_max}}（M> 此外推）。[^cim14]
 
@@ -204,4 +204,4 @@ decode 的實測效吞吐約 227 GOP/s，約為峰值 209,600 GOP/s（4 core × 
 [^cim13]: 來源 `validation/reports/phase1.2/cim_card_revalidate.json` › `consistency.median_rel_diff` = 0.048，`p95_rel_diff` = 0.097，`n` = 13；`status` = "CARD_REVALIDATED"
 [^cim14]: 來源 `validation/reports/phase1.2/cim_prefill_fit.json` › `affine_fit_tile_lat_us` = {a:40.84,b:0.0941,fit_basis:"M in {2..508} (31 dense pts)"}，`fit_quality.max_rel_err` = 0.031，`holdout.median_rel_err` = 0.009；`simulator/models/params/m1_cim.json` › `prefill_M_max` = 508（M=511/512 編譯失敗）
 [^cim16]: 來源 `validation/reports/phase1.5/cim_multitile.json` › `old_vs_new` = {old_tilesum_median:0.313,old_tilesum_max:1.00,new_cliff_median:0.028,new_cliff_max:0.125}，`resident_holdout.median_relerr` = 0.033（unique-K*N split，含 k_staircase + n_staircase；gate ≤0.10）
-[^cim17]: 來源 `validation/reports/phase1.5/cim_multitile.json` › `model` = {knee_M_params:8.16,spill_floor_gops:69.7,native_envelope_kn:16777216}，`phase2_note` = "real decode FFN/lm_head GEMVs (K*N >= 16M) live in the SPILL regime; the old tile-sum under-predicted them ~3x"；K*N > native_envelope 由 spill floor 外推（`is_extrapolated=True`）
+[^cim17]: 來源 `validation/reports/phase1.5/cim_multitile.json` › `model` = {knee_M_params:8.16,spill_floor_gops:69.9,native_envelope_kn:16777216}，`phase2_note` = "real decode FFN/lm_head GEMVs (K*N >= 16M) live in the SPILL regime; the old tile-sum under-predicted them ~3x"；K*N > native_envelope 由 spill floor 外推（`is_extrapolated=True`）
