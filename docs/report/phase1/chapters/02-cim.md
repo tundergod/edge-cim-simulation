@@ -159,6 +159,14 @@ decode 的實測效吞吐約 227 GOP/s，約為峰值 209,600 GOP/s（4 core × 
 
 ## 圖
 
+**圖 P15 — Phase 1.5 on-Card 量測補量總覽（Metis Card，85 tasks）**
+
+![phase1_5_cim_campaign](../../../figures/phase1.5/phase1_5_cim_campaign.png)
+
+(a) M=1 native multi-tile 的 residency cliff：吞吐隨 K·N 平滑上升到 knee≈8.2M（權重 resident 於 SRAM），越過後崩落 ~3.5× 到 ~70 GOP/s 的 DRAM-spill floor；兩-regime 模型線貼合量測。(b) 對 Card-native 點的模型誤差：舊 tile-sum median 31% → 新 cliff 模型 2.4%（留出 2.9%）。(c) dense prefill M-sweep：仿射擬合（留出 0.9%），舊 M_MAX=256「牆」證實不存在（編到 M≥320），並橋接 M=1 decode anchor。(d) KV-cache isolation SPIKE：memory-bound proxy eff_BW 在最大傳輸點 ≈ M2 LPDDR4x 的 24.2 GB/s，kv-append BW 假設 board-consistent。
+
+---
+
 **圖 P1 — decode 延遲 vs N（K=2048）：原生量測 + 外推邊界**
 
 ![P1_cim_staircase](../../../figures/phase1.1/P1_cim_staircase.png)

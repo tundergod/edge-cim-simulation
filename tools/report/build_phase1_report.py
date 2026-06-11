@@ -41,8 +41,8 @@ GROUP = {
 
 
 def embed_figs(html):
-    """Replace ../../../figures/phase1.{1,2,3}/NAME.png src with base64 data URIs (any of the
-    three phase figure dirs)."""
+    """Replace ../../../figures/phase1.{1,2,3,5}/NAME.png src with base64 data URIs (any phase
+    figure dir)."""
     def repl(m):
         phase, name = m.group(1), m.group(2)
         p = FIG / phase / f"{name}.png"
@@ -50,7 +50,7 @@ def embed_figs(html):
             return m.group(0)
         b = base64.b64encode(p.read_bytes()).decode()
         return f'src="data:image/png;base64,{b}"'
-    return re.sub(r'src="(?:\.\./)+figures/(phase1\.[123])/([^"]+)\.png"', repl, html)
+    return re.sub(r'src="(?:\.\./)+figures/(phase1\.\d+)/([^"]+)\.png"', repl, html)
 
 
 def main():
