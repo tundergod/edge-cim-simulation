@@ -1,14 +1,14 @@
 {
  "module": "kv_append_spike",
  "status": "PROXY_INCONCLUSIVE",
- "honesty": "STRUCTURAL: the K=1 conv proxy's compile wall (max working set 2.1M output elements) sits BELOW the ~8.2M residency knee (= DRAM-spill threshold, on-chip SRAM capacity), so the proxy can NEVER be compiled large enough to spill to DRAM \u2014 it is confined to the SRAM-resident regime, where eff_BW reflects on-chip throughput and RISES with transfer size (9.6 -> 44.4 GB/s, +1% at the last step, NOT converging). It therefore cannot isolate the kv_append DRAM bandwidth, period. The earlier single-point 'M=256 ~ M2' was coincidental. THE CONVERGED on-card DRAM BW DOES exist \u2014 from the residency-cliff SPILL regime (M=1 GEMV, K*N>knee, weights streamed from DRAM): 35.5 GB/s, FLAT across K*N 8-17M. kv_append stays ANALYTIC on M2's measured 24.2 GB/s (conservative; the spill weight-read BW 35.5 is the upper, same-order bound).",
+ "honesty": "STRUCTURAL: the K=1 conv proxy's compile wall (max working set 2.1M output elements) sits BELOW the ~8.2M residency knee (= DRAM-spill threshold, on-chip SRAM capacity), so the proxy can NEVER be compiled large enough to spill to DRAM \u2014 it is confined to the SRAM-resident regime, where eff_BW reflects on-chip throughput and RISES with transfer size (9.6 -> 43.8 GB/s, +-1% at the last step, NOT converging). It therefore cannot isolate the kv_append DRAM bandwidth, period. The earlier single-point 'M=256 ~ M2' was coincidental. THE CONVERGED on-card DRAM BW DOES exist \u2014 from the residency-cliff SPILL regime (M=1 GEMV, K*N>knee, weights streamed from DRAM): 35.5 GB/s, FLAT across K*N 8-17M. kv_append stays ANALYTIC on M2's measured 24.2 GB/s (conservative; the spill weight-read BW 35.5 is the upper, same-order bound).",
  "verdict": {
   "converged": true,
   "structural_cannot_reach_dram": true,
-  "last_step_rise_pct": 1.4,
+  "last_step_rise_pct": -1.4,
   "bw_range_GBs": [
    9.6,
-   44.4
+   43.8
   ],
   "proxy_max_workset_M_elems": 2.1,
   "sram_knee_M_elems": 8.16,
@@ -20,37 +20,43 @@
  "proxy_points": [
   {
    "M": 64,
+   "N": 2048,
    "eff_BW_GBs": 9.6,
    "workset_elems": 131072,
    "sram_resident": true
   },
   {
    "M": 128,
+   "N": 2048,
    "eff_BW_GBs": 17.0,
    "workset_elems": 262144,
    "sram_resident": true
   },
   {
    "M": 256,
+   "N": 2048,
    "eff_BW_GBs": 26.7,
    "workset_elems": 524288,
    "sram_resident": true
   },
   {
    "M": 512,
+   "N": 2048,
    "eff_BW_GBs": 35.9,
    "workset_elems": 1048576,
    "sram_resident": true
   },
   {
-   "M": 512,
-   "eff_BW_GBs": 43.8,
-   "workset_elems": 1048576,
+   "M": 1024,
+   "N": 2048,
+   "eff_BW_GBs": 44.4,
+   "workset_elems": 2097152,
    "sram_resident": true
   },
   {
-   "M": 1024,
-   "eff_BW_GBs": 44.4,
+   "M": 512,
+   "N": 4096,
+   "eff_BW_GBs": 43.8,
    "workset_elems": 2097152,
    "sram_resident": true
   }

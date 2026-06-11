@@ -131,43 +131,68 @@ def panel_prefill(ax, pref, P):
             ha="right", color="#666")
 
 
+def panel_staircase(ax, raw):
+    """(e) K=2048 is NOT a K/N compile limit: sweep K (N=512) and N (K=512); both compile natively
+    past 2048, throughput rising, same K·N cliff at 16384. 2048 is just the output tile width W."""
+    kk = sorted((v["K"], v["dev_gflops"]) for v in raw.values() if v.get("group") == "k_staircase" and "dev_gflops" in v)
+    nn = sorted((v["N"], v["dev_gflops"]) for v in raw.values() if v.get("group") == "n_staircase" and "dev_gflops" in v)
+    ax.plot([k for k, _ in kk], [g for _, g in kk], "-o", color=RESID, ms=3.5, lw=1.2, label="sweep K (N=512, M=1)")
+    ax.plot([n for n, _ in nn], [g for _, g in nn], "-s", color=S.PALETTE["ffn"], ms=3.3, lw=1.2,
+            mfc="none", label="sweep N (K=512, M=1)")
+    ax.axvline(2048, ls=":", color="#999", lw=1.0)
+    ax.text(2200, 25, "W=2048\noutput tile width\n— NOT a K/N\ncompile limit", fontsize=5.0, color="#888", va="bottom")
+    ax.annotate("both native to ≥16384;\nsame K·N cliff (8.4M)", xy=(16384, 70), xytext=(3000, 120),
+                fontsize=5.2, color=SPILL, arrowprops=dict(arrowstyle="->", color=SPILL, lw=0.8))
+    ax.set_xscale("log")
+    ax.set_xlabel("swept dimension  K or N  (other = 512)")
+    ax.set_ylabel("INT8 throughput (GOP/s)")
+    ax.set_title("e · K & N compile natively past 2048", loc="left", fontweight="bold")
+    ax.legend(fontsize=5.2, loc="lower right")
+
+
 def panel_kv(ax, kv):
-    """(d) KV SPIKE: proxy can't reach DRAM (compile wall < knee, eff_BW rises non-converged); the
-    CONVERGED DRAM BW comes from the cliff spill regime (flat across K·N 8-17M)."""
+    """(d) KV SPIKE: proxy can't reach DRAM (compile wall < knee, eff_BW rises non-converged whether you
+    grow M or N); the CONVERGED DRAM BW comes from the cliff spill regime (flat across K·N 8-17M)."""
     pts = kv["proxy_points"]
-    ws = np.array([p["workset_elems"] / 1e6 for p in pts]); bw = np.array([p["eff_BW_GBs"] for p in pts])
+    msweep = [p for p in pts if p["N"] == 2048]          # clean M-sweep at N=2048 (the line)
+    grow_n = [p for p in pts if p["N"] != 2048]          # N-varied DRAM-push (same-transfer cross-check)
     sp = kv["spill_regime_dram_bw"]
-    sx = np.array([s["kn_M"] for s in sp]); sy = np.array([s["dram_BW_GBs"] for s in sp])
+    sx = [s["kn_M"] for s in sp]; sy = [s["dram_BW_GBs"] for s in sp]
     v = kv["verdict"]
     m2, knee, dram = v["m2_measured_eff_BW_GBs"], v["sram_knee_M_elems"], v["spill_dram_BW_GBs_converged"]
     ax.axvspan(0.05, knee, color="#eef2f6", zorder=0)
     ax.axvline(knee, ls=":", color="#999", lw=0.9)
     ax.text(knee * 0.9, 49, "SRAM | DRAM\nknee", fontsize=4.8, color="#888", ha="right", va="top")
-    ax.plot(ws, bw, "-o", color=KVC, ms=4, lw=1.3, zorder=4, label="K=1 proxy (rises, SRAM-resident)")
+    ax.plot([p["workset_elems"] / 1e6 for p in msweep], [p["eff_BW_GBs"] for p in msweep], "-o",
+            color=KVC, ms=4, lw=1.3, zorder=4, label="K=1 proxy, grow M (N=2048)")
+    if grow_n:
+        ax.plot([p["workset_elems"] / 1e6 for p in grow_n], [p["eff_BW_GBs"] for p in grow_n], "D",
+                color=KVC, mfc="white", ms=5, zorder=5, label="proxy, grow N (lands on same trend)")
     ax.plot(sx, sy, "s", color=SPILL, ms=4.5, zorder=5, label=f"cliff spill = DRAM-bound ({dram:.0f} GB/s, flat)")
     ax.axhline(dram, ls="-", color=SPILL, lw=0.9, alpha=0.6, zorder=2)
     ax.axhline(m2, ls="--", color=RESID, lw=1.0, zorder=2)
-    ax.text(0.06, m2 - 3.3, f"M2 effective {m2:.1f}", fontsize=5.0, color=RESID)
-    ax.annotate("compile wall\n(proxy can't grow\npast here)", xy=(2.1, 44.4), xytext=(0.42, 30),
-                fontsize=4.8, color="#666", ha="center",
-                arrowprops=dict(arrowstyle="->", color="#aaa", lw=0.7))
+    ax.text(0.06, m2 - 3.4, f"M2 effective {m2:.1f}", fontsize=5.0, color=RESID)
+    ax.annotate("compile wall\n(proxy can't grow past)", xy=(2.1, 44.4), xytext=(0.45, 28),
+                fontsize=4.8, color="#666", ha="center", arrowprops=dict(arrowstyle="->", color="#aaa", lw=0.7))
     ax.set_xscale("log")
-    ax.set_xlabel("data size (M-elements):  proxy N·M  /  spill K·N")
+    ax.set_xlabel("transfer size (M-elements):  proxy N·M  /  spill K·N")
     ax.set_ylabel("bandwidth (GB/s)")
     ax.set_title("d · KV-append BW — proxy fails, spill converges", loc="left", fontweight="bold")
     ax.set_ylim(0, 52); ax.set_xlim(0.1, 22)
     ax.text(0.97, 0.05, "proxy never reaches DRAM\n→ CONVERGED DRAM BW from\n   cliff spill regime",
             transform=ax.transAxes, fontsize=5.0, ha="right", color=SPILL)
-    ax.legend(fontsize=5.0, loc="upper left")
+    ax.legend(fontsize=4.8, loc="upper left")
 
 
 def main():
     raw, mt, pref, kv, P = load(RAW), load(MT), load(PREF), load(KV), load(PARAMS)
-    fig, axes = plt.subplots(2, 2, figsize=(7.2, 5.6))
-    panel_cliff(axes[0, 0], raw, P)
-    panel_oldnew(axes[0, 1], mt)
-    panel_prefill(axes[1, 0], pref, P)
-    panel_kv(axes[1, 1], kv)
+    fig, axd = plt.subplot_mosaic([["a", "a", "b", "b", "e", "e"],
+                                   ["c", "c", "c", "d", "d", "d"]], figsize=(10.6, 5.9))
+    panel_cliff(axd["a"], raw, P)
+    panel_oldnew(axd["b"], mt)
+    panel_staircase(axd["e"], raw)
+    panel_prefill(axd["c"], pref, P)
+    panel_kv(axd["d"], kv)
     fig.suptitle(f"Phase 1.5 — CIM compute supplement: on-Card measurement campaign (Metis Card, {len(raw)} tasks)",
                  fontsize=8.5, fontweight="bold", y=1.0)
     fig.tight_layout(rect=(0, 0, 1, 0.98))

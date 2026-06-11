@@ -126,9 +126,9 @@
   "note": "measured decode (M=1) tile on its measured basis; NOT in the prefill fit (different regime: direct single-column compile, modeled by G_eff)"
  },
  "multitile_knee_kn": 8159232,
- "multitile_resident_a_us": 15.905,
- "multitile_resident_b_us": 5.6698e-06,
- "multitile_floor_gops": 70.1,
+ "multitile_resident_a_us": 15.149,
+ "multitile_resident_b_us": 5.7801e-06,
+ "multitile_floor_gops": 69.9,
  "native_envelope_kn": 16777216,
  "_multitile_doc": "native M=1 multi-tile RESIDENCY CLIFF (Card, Phase 1.5): resident (K*N<=knee) lat=a+b*K*N (SRAM-resident); spill (K*N>knee) lat=2*K*N/(floor_gops) (DRAM-bound). Replaced the tile-sum (over below knee / ~-65% under above; +31% abs median overall). K*N>native_envelope_kn = floor-extrapolated."
 }

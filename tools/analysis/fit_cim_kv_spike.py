@@ -37,11 +37,11 @@ def main():
     knee = P.get("multitile_knee_kn", 8.16e6)          # ~on-chip SRAM capacity (elements)
     floor_gops = P.get("multitile_floor_gops")          # DRAM-spill throughput (the real DRAM-bound pt)
 
-    pts = sorted(({"M": r["M"], "eff_BW_GBs": round(r["eff_BW_GBs"], 1),
-                   "workset_elems": N_PROXY * r["M"],
-                   "sram_resident": bool(N_PROXY * r["M"] < knee)}
+    pts = sorted(({"M": r["M"], "N": r["N"], "eff_BW_GBs": round(r["eff_BW_GBs"], 1),
+                   "workset_elems": r["N"] * r["M"],                    # actual transfer (output N*M)
+                   "sram_resident": bool(r["N"] * r["M"] < knee)}
                   for r in raw.values() if r.get("group") == "kv_proxy" and "eff_BW_GBs" in r),
-                 key=lambda x: x["M"])
+                 key=lambda x: x["N"] * x["M"])                         # order by transfer size
     if len(pts) < 3:
         OUT.parent.mkdir(parents=True, exist_ok=True)
         OUT.write_text(json.dumps({"module": "kv_append_spike", "status": "NO_DATA",

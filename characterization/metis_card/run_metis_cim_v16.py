@@ -271,6 +271,10 @@ def manifest(spike):
     # small N=512 (single N-tile) so K*N stays small; sweep K natively (measure() direct) to high K.
     for K in [512, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384]:
         add("k_staircase", "native", 1, K, 512)
+    # N-staircase: symmetric — does the OUTPUT width N>2048 compile natively too (vs our model tiling N)?
+    # Fixed small K=512; sweep N natively to high N.
+    for N in [512, 1024, 1536, 2048, 3072, 4096, 6144, 8192, 12288, 16384]:
+        add("n_staircase", "native", 1, 512, N)
     # D.1b — CLIFF map: native M=1 throughput collapses ~3.5x (≈220-250 -> ~70 GOP/s) past a knee at
     #        ~2 tiles' work (K*N ≈ 6.5-8.4M, envelope_probe finding). Densify to pin the knee.
     for (K, N) in [(2048, 3328), (2048, 3584), (2048, 3840), (2304, 3072),
@@ -313,11 +317,11 @@ def main():
     spike_absent = False
     for i, (tid, group, p) in enumerate(todo):
         # Dispatch by group: native attempt (probes the compile wall) / M-chunk / mem-proxy / tiled.
-        if group in ("prefill_msweep", "envelope_probe", "cliff_map", "multitile", "k_staircase"):
+        if group in ("prefill_msweep", "envelope_probe", "cliff_map", "multitile", "k_staircase", "n_staircase"):
             r = measure(p["M"], p["K"], p["N"], seconds=args.seconds, dataset_len=args.dataset_len)
             if "error" not in r:
                 r["tiles"] = 1
-            if group in ("envelope_probe", "cliff_map", "multitile", "k_staircase"):
+            if group in ("envelope_probe", "cliff_map", "multitile", "k_staircase", "n_staircase"):
                 r["compiles_native"] = "error" not in r
         elif group == "mtile":
             r = measure_m_chunks(p["M"], p["K"], p["N"], seconds=args.seconds, dataset_len=args.dataset_len)

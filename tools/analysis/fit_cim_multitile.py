@@ -37,7 +37,7 @@ RAW = ROOT / "measurements/metis_card/cim_card_revalidate_raw.json"
 PARAMS = ROOT / "simulator/models/params/m1_cim.json"
 REPORT = ROOT / "validation/reports/phase1.5/cim_multitile.json"
 W = 2048  # combined tile width (n_cores*512); "multi-tile" = some dim > W
-GROUPS = ("alpha13", "envelope_probe", "cliff_map", "multitile", "k_staircase")
+GROUPS = ("alpha13", "envelope_probe", "cliff_map", "multitile", "k_staircase", "n_staircase")
 
 
 def native_multitile_points():
