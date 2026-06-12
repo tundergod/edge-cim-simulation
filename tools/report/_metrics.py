@@ -217,6 +217,8 @@ def load():
         "thermal.n_bursts":  _i(th["load"]["n_bursts"]),                                # 40
         "thermal.cores":     _i(th["load"]["cores"]),                                   # 4
         "thermal.sustained_min": _f(th["load"]["sustained_s"] / 60, 0),                # 11
+        "thermal.ceiling":   _f(th["load_sweep"]["ceiling_C"], 0),                     # 44
+        "thermal.max_busy":  _i(th["load_sweep"]["max_device_busy_pct"]),              # 48
     }
 
 

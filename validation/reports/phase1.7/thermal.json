@@ -34,6 +34,35 @@
   "throttle_observed": false,
   "verdict": "flat: |slope| within constant-temp noise -> no throttle in the achievable range"
  },
+ "load_sweep": {
+  "note": "M=64/256/448 single-stream + a 2-context concurrency attempt. Heavier load does NOT get hotter: the workload is host-feed bound (device max ~48% utilized) and the device allows only ONE context (concurrency -> DeviceInUse), so power is capped -> 44C ceiling.",
+  "per_M": [
+   {
+    "M": 64,
+    "dev_fps": 21927,
+    "system_fps": 10623,
+    "device_busy_pct": 48,
+    "plateau_C": 44
+   },
+   {
+    "M": 256,
+    "dev_fps": 15297,
+    "system_fps": null,
+    "device_busy_pct": null,
+    "plateau_C": 44
+   },
+   {
+    "M": 448,
+    "dev_fps": 12018,
+    "system_fps": 2769,
+    "device_busy_pct": 23,
+    "plateau_C": 42
+   }
+  ],
+  "ceiling_C": 44,
+  "max_device_busy_pct": 48,
+  "concurrency": "single-context only (2nd axrunmodel -> ZE connection error / DeviceInUse)"
+ },
  "throttle_thresholds_C": {
   "pvt_warning": 95,
   "hw_throttle": 105,

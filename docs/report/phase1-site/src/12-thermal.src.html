@@ -28,6 +28,15 @@
         <span class="ft">圖 M8·1 · 來源 measurements/metis_card/thermal_heat_20260612.json + phase1.7/thermal.json · 腳本 tools/plotting/site_m8.py</span>
       </figcaption>
     </figure>
+
+    <h3>能不能更熱？— 不能，{{thermal.ceiling}}°C 是天花板</h3>
+    <p>跑更久沒用（{{thermal.tau}}s 就到穩態）；更大 loading 也沒用。掃 M=64/256/448 + 試了並發：</p>
+    <figure>
+      <img src="../../figures/phase1-site/m8_load_sweep.png" alt="負載掃描：平台溫度 vs M">
+      <figcaption><strong>怎麼讀：</strong>三種負載大小的平台溫度都 ≤{{thermal.ceiling}}°C。<strong>更大的 M 反而更涼</strong>（M=448 只到 42°C）——因為輸入更大、更 host-bound。根本原因：device <strong>從不超過 ~{{thermal.max_busy}}% 利用率</strong>（host/PCIe 餵不夠快），而且<strong>只允許單一 context</strong>（並發第二個 axrunmodel 直接 DeviceInUse）。所以功耗被鎖住、溫度上不去。要破這個天花板得用 vendor 的 batched-multicore 模式（範圍外）或超頻（共用板不做）。
+        <span class="ft">圖 M8·3 · 來源 phase1.7/thermal.json › load_sweep（thermal_sweep_m64/m448.json）· 腳本 tools/plotting/site_m8.py</span>
+      </figcaption>
+    </figure>
   </div>
 
   <div class="sec">

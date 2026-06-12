@@ -78,6 +78,7 @@ def run_burst(model_json, secs, cores):
         return {"secs": secs, "cores": cores, "dev_fps": None, "temp_C": None,
                 "host_load": host_load(), "err": (r.stdout + r.stderr)[-200:]}
     return {"secs": secs, "cores": cores, "dev_fps": float(m.group(1)),
+            "host_fps": float(m.group(2)), "system_fps": float(m.group(3)),
             "latency_ms": float(m.group(4)), "frames": int(m.group(5)),
             "temp_C": int(m.group(6)), "host_load": host_load()}
 
@@ -90,13 +91,22 @@ def main():
     ap.add_argument("--max-bursts", type=int, default=40)
     ap.add_argument("--cores", type=int, default=4)
     ap.add_argument("--workdir", default="/tmp/thermal_axc")
+    ap.add_argument("--bigm", action="store_true", help="try larger M first (more device-bound)")
+    ap.add_argument("--m-first", type=int, default=0, help="force a specific M")
     args = ap.parse_args()
 
     out = {"meta": {"abort_cap_C": ABORT_CAP, "phase": args.phase, "cores": args.cores,
                     "secs": args.secs, "host": os.uname().nodename, "t_unix_start": int(time.time())},
            "bursts": []}
-    mj, m_used = compile_gemm(2048, 2048, args.workdir)
+    cand = ((args.m_first,) if args.m_first else
+            (448, 384, 320, 256) if args.bigm else (256, 192, 128, 64))
+    mj, m_used = compile_gemm(2048, 2048, args.workdir, m_candidates=cand)
     out["meta"]["model"], out["meta"]["M"], out["meta"]["KN"] = mj, m_used, "2048x2048"
+
+    def flush_out():   # write after every burst so an SSH/host drop loses nothing
+        out["meta"]["last_write_unix"] = int(time.time())
+        Path(args.out).write_text(json.dumps(out, indent=1))
+    flush_out()
 
     t0 = time.monotonic()
     n = 8 if args.phase == "noise" else args.max_bursts
@@ -104,9 +114,10 @@ def main():
         b = run_burst(mj, args.secs, args.cores)
         b["i"], b["t_elapsed"] = i, round(time.monotonic() - t0, 1)
         out["bursts"].append(b)
+        flush_out()
         tC = b.get("temp_C")
-        print(f"  burst {i:2d} t={b['t_elapsed']:6.1f}s fps={b['dev_fps']} temp={tC}C "
-              f"host={b['host_load']}", flush=True)
+        print(f"  burst {i:2d} t={b['t_elapsed']:6.1f}s dev={b['dev_fps']} "
+              f"sys={b.get('system_fps')} temp={tC}C host={b['host_load']}", flush=True)
         if tC is not None and tC >= ABORT_CAP:
             out["meta"]["aborted_at"] = {"i": i, "temp_C": tC}
             print(f"ABORT: temp {tC}C >= cap {ABORT_CAP}C", flush=True)
@@ -115,8 +126,8 @@ def main():
             out["meta"]["stopped_no_output"] = i
             print("stop: no axrunmodel output", flush=True)
             break
-
-    Path(args.out).write_text(json.dumps(out, indent=1))
+    out["meta"]["done"] = True
+    flush_out()
     temps = [b["temp_C"] for b in out["bursts"] if b.get("temp_C") is not None]
     print(f"wrote {args.out}: {len(out['bursts'])} bursts, temp {min(temps)}->{max(temps)}C"
           if temps else f"wrote {args.out}: no temps")

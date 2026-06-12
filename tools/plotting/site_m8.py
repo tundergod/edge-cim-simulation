@@ -95,11 +95,36 @@ def fig_perf_temp(heat, fit):
     S.save(fig, OUT / "m8_perf_temp")
 
 
+def fig_load_sweep(fit):
+    sw = fit["load_sweep"]["per_M"]
+    M = [str(s["M"]) for s in sw]; Tp = [s["plateau_C"] for s in sw]
+    busy = [s["device_busy_pct"] for s in sw]
+    fig, ax = plt.subplots(figsize=(5.4, 3.5))
+    _grid(ax)
+    x = np.arange(len(M))
+    bars = ax.bar(x, Tp, width=0.5, color=HERO, zorder=3)
+    for xi, tp, bz in zip(x, Tp, busy):
+        ax.text(xi, tp - 2.5, f"{tp}C", ha="center", fontsize=11, fontweight="bold", color="white")
+        ax.text(xi, 2, ("device busy\n" + (f"{bz}%" if bz else "n/a")), ha="center", fontsize=8.5,
+                color="white", va="bottom")
+    ax.axhline(fit["load_sweep"]["ceiling_C"], ls="--", color=WARM, lw=1.1, zorder=4)
+    ax.text(0.02, fit["load_sweep"]["ceiling_C"] + 0.6,
+            f"ceiling ~{fit['load_sweep']['ceiling_C']}C", color=WARM, ha="left", fontsize=9.5)
+    ax.set_xticks(x); ax.set_xticklabels([f"M={m}" for m in M])
+    ax.set_ylabel("plateau temperature  (C)")
+    ax.set_ylim(0, 56)
+    ax.text(0.5, 0.97, "heavier load is NOT hotter: host-feed bound (device <=48% busy),\n"
+            "single-context only -> power capped -> 44C ceiling",
+            transform=ax.transAxes, ha="center", va="top", fontsize=8.5, color=SOFT)
+    S.save(fig, OUT / "m8_load_sweep")
+
+
 def main():
     heat, fit = load(HEAT), load(FIT)
     fig_heating(heat, fit)
     fig_perf_temp(heat, fit)
-    print("wrote m8_heating, m8_perf_temp")
+    fig_load_sweep(fit)
+    print("wrote m8_heating, m8_perf_temp, m8_load_sweep")
 
 
 if __name__ == "__main__":

@@ -18,6 +18,9 @@ import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "measurements/metis_card/thermal_heat_20260612.json"
+SWEEP = {64: "measurements/metis_card/thermal_sweep_m64.json",
+         256: "measurements/metis_card/thermal_heat_20260612.json",
+         448: "measurements/metis_card/thermal_sweep_m448.json"}
 REP = ROOT / "validation/reports/phase1.7/thermal.json"
 PARAM = ROOT / "simulator/models/params/m8_thermal.json"
 THRESH = {"pvt_warning": 95, "hw_throttle": 105, "freq_downscale": 110, "sw_throttle": 200}
@@ -50,6 +53,21 @@ def main():
     fps_cov_pct = float(100 * np.std(F, ddof=1) / np.mean(F))
     flat = abs(slope) < 2 * noise_std            # |slope per 1C| within 2-sigma of constant-temp noise
 
+    # --- load sweep: does heavier loading get hotter? (answer: no -> host-feed bound ceiling) ---
+    sweep = []
+    for Mv, rel in sorted(SWEEP.items()):
+        sd = json.loads((ROOT / rel).read_text())
+        sb = [x for x in sd["bursts"] if x.get("temp_C") and x.get("dev_fps")]
+        dev = float(np.mean([x["dev_fps"] for x in sb]))
+        sf = [x["system_fps"] for x in sb if x.get("system_fps")]   # missing in the older M=256 capture
+        sysf = float(np.mean(sf)) if sf else None
+        sweep.append({"M": Mv, "dev_fps": round(dev),
+                      "system_fps": round(sysf) if sysf else None,
+                      "device_busy_pct": round(100 * sysf / dev) if sysf else None,
+                      "plateau_C": max(x["temp_C"] for x in sb)})
+    ceiling_C = max(s["plateau_C"] for s in sweep)
+    max_busy = max(s["device_busy_pct"] for s in sweep if s["device_busy_pct"])
+
     rep = {
         "module": "m8_thermal", "phase": "1.7", "platform": "metis_card",
         "load": {"kind": "synthetic 1x1-conv==2048x2048 matmul (non-LLM)",
@@ -68,6 +86,12 @@ def main():
                          "throttle_observed": (not flat),
                          "verdict": ("flat: |slope| within constant-temp noise -> no throttle in "
                                      "the achievable range" if flat else "resolvable slope")},
+        "load_sweep": {
+            "note": "M=64/256/448 single-stream + a 2-context concurrency attempt. Heavier load does NOT "
+                    "get hotter: the workload is host-feed bound (device max ~48% utilized) and the device "
+                    "allows only ONE context (concurrency -> DeviceInUse), so power is capped -> 44C ceiling.",
+            "per_M": sweep, "ceiling_C": ceiling_C, "max_device_busy_pct": max_busy,
+            "concurrency": "single-context only (2nd axrunmodel -> ZE connection error / DeviceInUse)"},
         "throttle_thresholds_C": THRESH,
         "throttle_reached": False,
         "headroom_to_downscale_C": round(THRESH["freq_downscale"] - float(Tinf_obs), 1),
