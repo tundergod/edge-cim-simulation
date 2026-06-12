@@ -1,0 +1,87 @@
+{
+  "_doc": "Per-page honesty-chip mapping (B2). Each chip's `on` state and `src` path are committed here so the audit subagent verifies chips against THIS table, not against prose. `on=false` renders greyed/struck. Fixed chip vocabulary (matches repo term `calibrated`, not `measured`): calibrated | fitted | simulated | assumption | borrowed. `warn=true` tints a chip orange (an on-but-caveated source, e.g. an assumption).",
+  "02-cim": [
+    {"label": "calibrated", "on": true,
+     "src": "validation/reports/phase1.1/m1.json › throughput_fit_gate_native (decode G_eff, 13 native pts) + validation/reports/phase1.2/cim_card_revalidate.json › status=CARD_REVALIDATED + cim_prefill_fit.json (Card M-sweep)"},
+    {"label": "fitted", "on": true,
+     "src": "simulator/models/params/m1_cim.json › G_eff_Gmax_gops/Na/Kb, prefill_tile_a_us/b_us + validation/reports/phase1.5/cim_multitile.json › model (residency cliff)"},
+    {"label": "simulated", "on": false,
+     "src": "N/A — M1 is silicon-calibrated; no heavy-sim engine used. Compute ceiling unmodeled (decode is memory-bound, issue #16)."},
+    {"label": "assumption", "on": true, "warn": true,
+     "src": "simulator/specs/cim_topo_alpha.json › alloc_envelope_MB=14 (~14 MB IOMMU window, forum+inferred) ; cim_topo_edge.json › noc_efficiency=0.9 (待 edge silicon)"},
+    {"label": "borrowed", "on": false,
+     "src": "none — all fit params self-measured. ISSCC 2024 supplies architecture description (quad-core 512×512), not numeric parameters."}
+  ],
+  "03-memory": [
+    {"label": "calibrated", "on": true,
+     "src": "LPDDR4x eff_BW 24.2 GB/s = production Metis Card decode wall (voyager-sdk.md:278, decode_time ∝ weight_bytes r²=0.997) + PCIe floor 911 µs (measurements/aetina/metis_alpha_matmul.json › pcie_floor_A1d5)"},
+    {"label": "fitted", "on": true,
+     "src": "efficiency 0.71 = 24.2/34.1 (eff_BW/peak) ; floor+BW transfer model (m2_pcie.json fixed_overhead_us_median/pcie_BW_GBs)"},
+    {"label": "simulated", "on": true,
+     "src": "LPDDR5 eff_BW 33.3 GB/s (mem_lpddr5.json, 0.65 discount, simulated) + Ramulator2 LPDDR5 device-level heavy-sim (validation/reports/phase1.3/m2_ramulator2.json)"},
+    {"label": "assumption", "on": true, "warn": true,
+     "src": "DRAM peaks = MT/s × 64-bit, no in-repo data-rate source (mem_lpddr4x.json provenance) ; LPDDR5 eff 0.65 discount ; SRAM BW/latency = CACTI tier (sram_metis_aipu.json)"},
+    {"label": "borrowed", "on": false,
+     "src": "none — eff values self-measured/assumed. HeteroInfer SOSP'25 + web survey (60-80%) only corroborate the 0.71/0.65 band, no number taken verbatim."}
+  ],
+  "04-cpu": [
+    {"label": "calibrated", "on": true,
+     "src": "simulator/models/params/m4_cpu_instrcount.json › eta_c=0.1521 + overhead_op_us (per-op), CALIBRATED to fp32 measurements/aetina/cpu_ops.json (single A76 core) ; validation/reports/phase1.2/m4_cpu.json › overall_residual_pct (median 1.18%)"},
+    {"label": "fitted", "on": true,
+     "src": "simulator/models/m4_cpu.py › instruction-count roofline latency=max(compute,memory)+overhead_op ; m4_cpu_instrcount.json › ops_per_elem/byte_passes (exp()-driven structural cost)"},
+    {"label": "simulated", "on": true,
+     "src": "simulator/specs/cpu_rk3588.json › notes.multicore/fp16 — A55 (IPC=1) + multicore + native-fp16 = analytic extrapolation ; validation/reports/phase1.2/m4_cpu.json › notes.prefill (prefill unvalidated)"},
+    {"label": "assumption", "on": true, "warn": true,
+     "src": "m4_cpu_instrcount.json › eta_bw=0.6 (no CPU mem-BW micro-benchmark) ; cpu_rk3588.json › cache_bw_GBs (ARM A76 TRM estimate)"},
+    {"label": "borrowed", "on": false,
+     "src": "none — eta_c + overhead_op all self-measured on Aetina RK3588; ops_per_elem is structural instruction-count physics."}
+  ],
+  "05-gpu": [
+    {"label": "calibrated", "on": true,
+     "src": "validation/reports/phase1.1/m4_gpu.json › attn_offload_gate (single-head QK^T+S·V, median 0.6%) ; measurements/aetina/mali_matmul.json › results[group=attn] (Mali-G610, FP16)"},
+    {"label": "fitted", "on": true,
+     "src": "simulator/models/params/m4_gpu.json › attn_bmm_a_us=27.742 / attn_bmm_b_us_per_kv=0.44208 (a+b·kv) ; validation/reports/phase1.2/m4_gpu_roofline.json › calibrated_fit"},
+    {"label": "simulated", "on": false,
+     "src": "N/A — GPU has silicon; attention offload measured directly, no heavy-sim. INT8 gap is a MISSING measurement, not a simulation."},
+    {"label": "assumption", "on": true, "warn": true,
+     "src": "validation/reports/phase1.2/m4_gpu_roofline.json › honesty (FP16 roofline = unoptimised-kernel LOWER BOUND) ; INT8 = ZERO GPU data"},
+    {"label": "borrowed", "on": false,
+     "src": "none — all attn/roofline params self-measured on Mali-G610."}
+  ],
+  "06-npu": [
+    {"label": "calibrated", "on": false,
+     "src": "NO RKNPU2 silicon — Aetina offline (issue #13); micro-benchmark never collected. The greyed-off chip is a deliberate honest visual. #13 silicon gate = superseded-not-satisfied."},
+    {"label": "fitted", "on": true,
+     "src": "simulator/models/m4_npu.py › NpuModel analytic systolic-roofline ; simulator/specs/npu_rknpu2.json. NOT fit to RKNPU2 silicon — analytic-baseline params only."},
+    {"label": "simulated", "on": true,
+     "src": "validation/reports/phase1.3/m4_npu_onnxim.json (ONNXim generic-systolic, sim-vs-sim spread) + ScaleSim (pending, to be built — no committed artifact yet)."},
+    {"label": "assumption", "on": true, "warn": true,
+     "src": "simulator/specs/npu_rknpu2.json › tops_int8=6 (datasheet), systolic_dim=32x32, dispatch floor ~2.0 us nominal."},
+    {"label": "borrowed", "on": true,
+     "src": "simulator/specs/npu_rknpu2.json › provenance: systolic_dim 32x32 + order/shape factor + bw band borrowed from HeteroInfer SOSP'25 (Fig3-5)."}
+  ],
+  "07-workload": [
+    {"label": "calibrated", "on": true,
+     "src": "validation/reports/phase1.1/m5.json › per_model (orphan_ops=[], n_distinct_ops) + pass_all=true ; op traces from PyTorch runtime tracer ; measurements/op_inventory/sweep_matrix.json › 580 sigs / 9 categories"},
+    {"label": "fitted", "on": false,
+     "src": "N/A — M5 is generative/deterministic; it extracts op×shape DAGs, does not fit any latency parameter."},
+    {"label": "simulated", "on": false,
+     "src": "N/A — no heavy-sim; M5's 'simulation' is the deterministic trace generation itself (oracle self-validation)."},
+    {"label": "assumption", "on": false,
+     "src": "none — counts taken from inventory; off-grid length templates self-validate against held-out inventory points."},
+    {"label": "borrowed", "on": false,
+     "src": "none — all op signatures/counts self-traced from the in-scope HF models."}
+  ],
+  "08-energy-e2e": [
+    {"label": "calibrated", "on": false,
+     "src": "N/A for energy — NO power telemetry on either board (ADR-0005); energy never measured. (Distinct: the e2e recompose 8B tok/s IS silicon-validated — that is throughput, not power.)"},
+    {"label": "fitted", "on": true,
+     "src": "validation/reports/phase1.1/recompose.json › fit_BW_GBs (two-pillar 1B+3B BW fit) -> pred_8b_tok_s, rel_error_8b=0.095"},
+    {"label": "simulated", "on": false,
+     "src": "none — no heavy-sim for M7 or e2e; recompose is an analytic cross-model hold-out."},
+    {"label": "assumption", "on": true, "warn": true,
+     "src": "simulator/models/params/m7_energy.json › cim_tops_w=15.0, lpddr5_pj_per_bit=4.0, pcie_pj_per_bit=5.0, a76_core_w=0.75 — spec/datasheet constants + coarse activity factor (ADR-0005)"},
+    {"label": "borrowed", "on": true,
+     "src": "vendor/datasheet power numbers (Metis 15 TOPS/W, LPDDR5 4 pJ/bit, PCIe 5 pJ/bit, A76 0.75 W/core) taken verbatim as energy coefficients."}
+  ]
+}

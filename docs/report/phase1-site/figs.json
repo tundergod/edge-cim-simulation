@@ -1,0 +1,94 @@
+{
+  "_doc": "Figure-staleness manifest (S2). Maps each figure PNG (referenced in a page) to the plotting script that builds it and the committed data files it reads. build.py mtime-checks: if any source is newer than the PNG, the build warns (or fails with --strict) — a JSON edit not followed by a figure regen cannot ship silently. NOTE: _style.save() suppresses timestamps only on PDF/SVG; PNG byte-stability relies on matplotlib determinism, so CI must pin matplotlib/freetype/libpng for `git diff --exit-code` to be meaningful.",
+  "m1_geff": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m1.py",
+    "sources": ["simulator/models/params/m1_cim.json"]
+  },
+  "m1_parity": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m1.py",
+    "sources": ["simulator/models/params/m1_cim.json"]
+  },
+  "m1_prefill": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m1.py",
+    "sources": ["validation/reports/phase1.2/cim_prefill_fit.json",
+                "simulator/models/params/m1_cim.json"]
+  },
+  "m1_cliff": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m1.py",
+    "sources": ["measurements/metis_card/cim_card_revalidate_raw.json",
+                "simulator/models/params/m1_cim.json"]
+  },
+  "m2_decode_wall": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m2.py",
+    "sources": ["validation/reports/phase1.1/recompose.json"]
+  },
+  "m2_pcie_floor": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m2.py",
+    "sources": ["measurements/aetina/metis_alpha_matmul_raw.json"]
+  },
+  "m2_bw_specs": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m2.py",
+    "sources": ["simulator/specs/mem_lpddr4.json", "simulator/specs/mem_lpddr4x.json",
+                "simulator/specs/mem_lpddr5.json"]
+  },
+  "m2_ramulator2": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m2.py",
+    "sources": ["validation/reports/phase1.3/m2_ramulator2.json"]
+  },
+  "m2_kv_spike": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m2.py",
+    "sources": ["validation/reports/phase1.5/kv_append_spike.json"]
+  },
+  "cpu_roofline": {
+    "dir": "phase1-site", "script": "tools/plotting/site_cpu.py",
+    "sources": ["measurements/aetina/cpu_ops.json", "simulator/specs/cpu_rk3588.json",
+                "simulator/models/params/m4_cpu_instrcount.json", "validation/reports/phase1.2/m4_cpu.json"]
+  },
+  "cpu_ops_cost": {
+    "dir": "phase1-site", "script": "tools/plotting/site_cpu.py",
+    "sources": ["simulator/models/params/m4_cpu_instrcount.json"]
+  },
+  "gpu_attn_fit": {
+    "dir": "phase1-site", "script": "tools/plotting/site_gpu.py",
+    "sources": ["validation/reports/phase1.1/m4_gpu.json", "simulator/models/params/m4_gpu.json"]
+  },
+  "gpu_roofline": {
+    "dir": "phase1-site", "script": "tools/plotting/site_gpu.py",
+    "sources": ["measurements/aetina/mali_matmul.json", "validation/reports/phase1.2/m4_gpu_roofline.json"]
+  },
+  "npu_systolic": {
+    "dir": "phase1-site", "script": "tools/plotting/site_npu.py",
+    "sources": ["validation/reports/phase1.2/m4_npu.json", "simulator/specs/npu_rknpu2.json",
+                "simulator/models/m4_npu.py"]
+  },
+  "npu_spread": {
+    "dir": "phase1-site", "script": "tools/plotting/site_npu.py",
+    "sources": ["validation/reports/phase1.3/m4_npu_onnxim.json"]
+  },
+  "m5_op_breakdown": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m5.py",
+    "sources": ["measurements/op_profile/llama-3.2-1b_sharegpt.json",
+                "measurements/op_profile/llama-3.2-3b_sharegpt.json",
+                "measurements/op_profile/qwen2.5-7b_sharegpt.json",
+                "measurements/op_profile/llama-3.1-8b_sharegpt.json"]
+  },
+  "m5_roofline": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m5.py",
+    "sources": ["measurements/op_profile/llama-3.1-8b_gsm8k.json",
+                "measurements/op_profile/llama-3.1-8b_humaneval.json",
+                "measurements/op_profile/llama-3.1-8b_longbench-triviaqa.json",
+                "measurements/op_profile/llama-3.1-8b_sharegpt.json"]
+  },
+  "m5_coverage": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m5.py",
+    "sources": ["validation/reports/phase1.1/m5.json", "measurements/op_inventory/sweep_matrix.json"]
+  },
+  "m7_energy": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m7.py",
+    "sources": ["validation/reports/phase1.1/m7.json"]
+  },
+  "m7_recompose": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m7.py",
+    "sources": ["validation/reports/phase1.1/recompose.json"]
+  }
+}

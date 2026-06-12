@@ -8,11 +8,11 @@ acceptance_criteria:                               # ADR-0006 Phase-1
   - {type: sanity, rules: [no_nan_or_inf, dev_lat_positive, monotonic_rising_in_N]}
 reported_not_gated:
   - high_K_corner_residual             # 8B kv K4096xN1024: latency over-pred +21.5% (= throughput under-pred 17.6%); native fit pt, GOP/s
-  - multitile_tiling_residual          # the 1 native multi-tile pt (N4096,K1024) over-predicted +36%, UNVALIDATED
+  - multitile_residency_cliff          # Phase 1.5 Card-native: residency-cliff model calibrated (new median 2.8%, holdout 3.3%); superseded the old "1 pt UNVALIDATED" state
 nonequation_regions:
   - lm_head_N_128k_152k                # analytic tile-sum, no measurement
-  - prefill_M_gt_256                   # compile wall is SRAM L1/L2 tiling (NOT device-DRAM; 16GiB does not lift it); M<=256 Card-measured, M>256 extrapolated
-  - "K*N > 4.19M (multi-tile)"         # only 1 native multi-tile pt; rest extrapolation (board offline)
+  - prefill_M_gt_508                   # compile wall is SRAM L1/L2 tiling (NOT device-DRAM; 16GiB does not lift it); Phase 1.5 dense sweep: M<=508 Card-measured, M>508 extrapolated (real wall ~M=510, M=511 fails)
+  - "K*N > 16.78M (multi-tile spill)"  # Phase 1.5 Card-native cliff calibrated to K*N<=16.78M (native envelope); beyond = spill-floor linear extrapolation
   - qwen_non2048                        # predicted on padded tiles; ~1.24x is a GOP/s reporting bias only
 device_envelope: "~6M params = PCIe-IOMMU window (default ~14MB, Alpha no on-card DRAM), NOT 32MB L2/SRAM"
 sample_strategy: "TBD - variance_profile not collected (Phase 0.3 gap)"

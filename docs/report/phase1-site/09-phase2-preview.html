@@ -1,0 +1,97 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M3/M6 Phase 2 預覽 · Edge-CIM Phase 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head><body>
+<nav class="sidebar"><div class="brand">Edge-CIM · Phase 1<small>元件建模與驗證 · 進 Phase 2 前</small></div><nav><ul><li class="grp">導論</li><li><a class="" href="00-overview.html"><span class="mc"></span><span>概覽</span></a></li><li><a class="" href="01-readiness.html"><span class="mc"></span><span>就緒矩陣</span></a></li><li class="grp">各單元</li><li><a class="" href="02-cim.html"><span class="mc">M1</span><span>CIM 計算核</span></a></li><li><a class="" href="03-memory.html"><span class="mc">M2</span><span>記憶體</span></a></li><li><a class="" href="04-cpu.html"><span class="mc">M4·CPU</span><span>A76 CPU</span></a></li><li><a class="" href="05-gpu.html"><span class="mc">M4·GPU</span><span>Mali GPU</span></a></li><li><a class="" href="06-npu.html"><span class="mc">M4·NPU</span><span>RKNPU2</span></a></li><li class="grp">跨單元</li><li><a class="" href="07-workload.html"><span class="mc">M5</span><span>Workload</span></a></li><li><a class="" href="08-energy-e2e.html"><span class="mc">M7</span><span>能量 + E2E</span></a></li><li><a class="active" href="09-phase2-preview.html"><span class="mc">M3/M6</span><span>Phase 2 預覽</span></a></li><li class="grp">結論</li><li><a class="" href="10-gaps.html"><span class="mc"></span><span>缺口 / GO-NOGO</span></a></li><li><a class="" href="11-sources.html"><span class="mc"></span><span>來源</span></a></li><li><a class="todo" href="#"><span class="mc">M8</span><span>溫度 (熱)</span></a></li></ul></nav></nav>
+<div class="main"><div class="page">
+<header class="masthead">
+  <div class="mcode">Phase 2</div>
+  <div>
+    <div class="eyebrow">整合層 · 預覽 · M3 + M6</div>
+    <h1>Phase 2 預覽：整合層</h1>
+    <p class="lede">前面各章是<strong>元件</strong>。把它們串成端到端模擬器，需要兩個<strong>整合層</strong>模組：M3（事件引擎，處理共享頻寬競爭與重疊）與 M6（排程器，決定 op→單元映射與精度邊界）。這兩個在 Phase 1 <strong>只有 contract、沒有實作</strong>——本頁誠實預覽 Phase 2 將組裝什麼，不含任何效能數字（未實作即無可量之數）。</p>
+  </div>
+</header>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
+    <div class="role">
+      <p style="margin-top:0">這裡要把兩件性質完全不同的事分清楚：</p>
+      <p><strong>① 「未實作」不是 Phase 1 的缺失。</strong>M3/M6 的行為驗證需要「先實作才能測」（toy op-stream 時序、競爭 knee、端到端 latency）。依專案規劃，<strong>實作 M3+M6 並整合正是 Phase 2 的定義內容</strong>。Phase 1 的職責只到「定義 contract + 可調參數」。</p>
+      <p style="margin-bottom:0"><strong>② M6 連帶一個 Phase-2 解析建模項。</strong>conversion-op（精度邊界的 dequant/requant）成本。各單元原生精度固定（CIM INT8、GPU FP16），所以邊界 cast 是 memory-bound op，由既有 M2/M4 per-op 模型 × M6 插入的邊界穿越次數計價（ADR-0004 已於 2026-06-11 修訂）。<strong>這不是測量缺口</strong>，是 Phase 2 的建模工作。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>M3 — 事件引擎</span><span class="tag">contract-only · ADR-0001</span></div>
+    <p><strong>規劃要它做什麼。</strong>一個輕量 discrete-event 引擎：把 op stream 串過各單元 + 記憶體，建模 op 級並行、共享頻寬競爭的飽和 knee（~60 GB/s）、CIM ∥ GPU ∥ NPU ∥ CPU 的重疊。</p>
+    <p><strong>Phase 1 交付了什麼。</strong>只有 contract 與可調參數；驗收門檻是 ADR-0006 的 Phase-2 系統級門檻，<strong>在 Phase 1 不 gate</strong>。per-op 延遲來源（M1、M2）已備妥餵給引擎。</p>
+    <p><strong>狀態：</strong><span class="pending">未實作</span>——行為驗證（toy op-stream 時序、~60 GB/s 競爭 knee 重現）在 Phase 2 實作後進行。</p>
+    <table>
+      <caption>M3 contract（validation/contracts/m3.yaml › phase1_scope=contract_only）</caption>
+      <thead><tr><th>項目</th><th>內容</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>可調參數</td><td><code>bandwidth_contention_knee</code>（重現 ~60 GB/s 飽和 knee，ADR-0001）、<code>interconnect_efficiency</code>（共享 BW 仲裁，ADR-0002）、<code>concurrency_overlap_factor</code>（CIM ∥ GPU ∥ NPU 重疊）</td><td><span class="pending">未實作</span></td></tr>
+        <tr><td>驗收門檻（Phase 2）</td><td>端到端 latency / toks ≤ 15%；競爭 knee ≤ 15%（load-bearing 的記憶體牆檢查）</td><td>Phase 1 不 gate</td></tr>
+        <tr><td>per-op 延遲來源</td><td><code>simulator/models/m1_cim_tile.py</code>、<code>simulator/models/m2_memory.py</code>（已備妥）</td><td class="pass">✅ 就緒</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>M6 — 排程器 / 映射器</span><span class="tag">contract-only · 貢獻層</span></div>
+    <p><strong>規劃要它做什麼。</strong>這是<strong>貢獻層</strong>：每個 op 決定單元（CIM/NPU/GPU/CPU）、精度、記憶體放置、dataflow，並在精度邊界插入 conversion op。</p>
+    <p><strong>Phase 1 交付了什麼。</strong>Phase 1 的 op→單元映射是<strong>naive</strong>（固定分工：CIM 做 INT8 GEMM、GPU 做 FP16 attention）；<strong>貢獻層級的排程</strong>（依成本動態選單元、精度邊界放置）是 Phase 2 內容。Phase 1 只交付 contract 與可調參數。</p>
+    <p><strong>狀態：</strong><span class="pending">未實作</span>——conversion-op 成本是被追蹤的可調參數 + Phase-2 解析建模項（非測量缺口）。</p>
+    <table>
+      <caption>M6 contract（validation/contracts/m6.yaml › phase1_scope=contract_only）</caption>
+      <thead><tr><th>項目</th><th>內容</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>可調參數</td><td><code>op_to_unit_mapping_policy</code>、<code>precision_boundary_placement</code>（哪個單元付 cast，ADR-0003/0004）、<code>memory_placement</code>、<code>precision_boundary_conversion_op_cost</code></td><td><span class="pending">未實作</span></td></tr>
+        <tr><td>驗收門檻（Phase 2）</td><td>端到端 latency / toks ≤ 15%；SOTA 重現（ADR-0003）</td><td>Phase 1 不 gate</td></tr>
+        <tr><td>op DAG 來源</td><td><code>measurements/op_inventory/</code>（M5 已備）、<code>simulator/models/m1_cim_tile.py</code> / <code>m4_gpu.py</code></td><td class="pass">✅ 就緒</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>conversion-op 成本</span><span class="tag">Phase-2 解析建模 · ADR-0004</span></div>
+    <p>conversion-op 成本（precision-boundary INT8↔FP16 casts）是一個<strong>真正的 Phase-2 解析建模項</strong>，但<strong>不是</strong>量測缺口——這個區分是 Phase 1 結論的關鍵之一。</p>
+    <p>各單元原生精度固定（CIM INT8、GPU FP16，ADR-0004(c)），精度邊界由 M6 的 op→單元映射決定。邊界上的 dequant/requant 是一個 memory-bound cast（讀 int8、寫 fp16、乘 scale），其成本由既有的 M2/M4 per-op 模型 × M6 插入的<strong>邊界穿越次數</strong>解析求得——<strong>不需要專門的量測 campaign</strong>。因此「CIM-INT8 × GPU-FP16」混合精度貢獻的成本基礎 = 既有 per-op 模型 + M6 排程；Phase 2 把 cast op 插進 op stream 計價即可。</p>
+    <div class="note"><b>非量測缺口。</b>精度固定於單元，故 conversion-op 不是「沒量到」的東西，而是一個 deterministic 的 memory-bound cast——由既有模型 × 邊界穿越次數解析計價。它是 Phase 2 內的建模工作，不擋 Phase 2 開工。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>小結 · Phase 2 將組裝什麼</span></div>
+    <table>
+      <caption>整合層 Phase-1 狀態 → Phase-2 工作（docs/report/phase1/chapters/08）</caption>
+      <thead><tr><th>模組</th><th>Phase 1 狀態</th><th>性質</th><th>Phase 2 需要做</th></tr></thead>
+      <tbody>
+        <tr><td><strong>M3 事件引擎</strong></td><td>contract + 3 可調參數</td><td><span class="pending">未實作</span>（設計使然＝Phase 2 工作）</td><td>實作輕量 event loop；驗證 ~60 GB/s 競爭 knee、端到端時序</td></tr>
+        <tr><td><strong>M6 排程器</strong></td><td>contract + 4 可調參數（Phase 1 naive 映射）</td><td><span class="pending">未實作</span>（設計使然）</td><td>實作 op→單元映射、精度邊界插入</td></tr>
+        <tr><td>└ conversion-op 成本</td><td>Phase-2 解析建模項</td><td>非量測（memory-bound cast，既有 M2/M4 × 邊界穿越）</td><td>把 cast op 插進 op stream，用既有 per-op 模型計價</td></tr>
+      </tbody>
+    </table>
+    <p>M3/M6 的「未實作」本身不擋路（那是 Phase 2 的內容）；conversion-op 成本是 Phase 2 內的解析建模項，非擋路的測量缺口（缺口分類見下一章）。本頁不含任何效能數字——未實作的層沒有可量之數，刻意不杜撰。</p>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個宣稱皆回查 committed artifact</div>
+    <ol>
+      <li>M3 contract：<code>validation/contracts/m3.yaml › phase1_scope, tunable_params, acceptance_criteria, note</code></li>
+      <li>M3 per-op 來源：<code>validation/contracts/m3.yaml › measurement_sources</code>（m1_cim_tile.py / m2_memory.py）</li>
+      <li>M6 contract：<code>validation/contracts/m6.yaml › phase1_scope, tunable_params, acceptance_criteria</code></li>
+      <li>conversion-op 解析建模：<code>validation/contracts/m6.yaml › phase2_modeling_item</code>（id=conversion_op_cost, ADR-0004）</li>
+      <li>精度固定於單元 / cast 解析計價：<code>docs/adr/0004-mixed-precision.md</code>（2026-06-11 修訂，Decision a/c + Consequences）</li>
+      <li>章節敘述：<code>docs/report/phase1/chapters/08-integration-layer-m3-m6.md</code></li>
+    </ol>
+  </div>
+
+</section>
+
+</div></div></body></html>

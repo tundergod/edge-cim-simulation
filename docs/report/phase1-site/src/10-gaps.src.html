@@ -1,0 +1,95 @@
+<header class="masthead">
+  <div class="mcode">缺口</div>
+  <div>
+    <div class="eyebrow">結論 · 缺口三分類 · GO / NO-GO</div>
+    <h1>缺口分類與 GO / NO-GO</h1>
+    <p class="lede">這份 review 的結論：先把各單元的所有缺口攤開分三類——(a) Phase-2 blocker、(b) Phase-2 scope（已規劃）、(c) 可接受的 limitation——再給一個帶條件的 GO/NO-GO。分類是工程判斷，最終由專案負責人拍板；每一格都附「為何這樣歸類」。</p>
+  </div>
+</header>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>結論摘要</span></div>
+    <div class="role">
+      <p style="margin-top:0"><strong>(1) Phase 1 是否按其誠實標準交付＋驗證？ → 是。</strong>decode 主路徑（CIM <code>G_eff</code> + 記憶體 + GPU attention + CPU 支援 + 端到端 recompose 8B hold-out <strong>{{recompose.err_8b_pct}}%</strong>）達<strong>量測級</strong>可信，且 CIM 已 Card 重驗（median <strong>{{cim.card_median_pct}}%</strong> / p95 {{cim.card_p95_pct}}%，<code>CARD_REVALIDATED</code>）。完整、可換型號的 analytic 元件層齊備（M3/M6 整合層除外，屬 Phase 2）；重型 sim（Ramulator2 / ONNXim）以凍結介面 drop-in 就緒。所有非量測項都誠實標 simulated / assumption / borrowed。</p>
+      <p style="margin-bottom:0"><strong>(2) 進入 Phase 2 是否安全？ → 帶條件的 GO。</strong>沒有任何缺口會擋住「開始 Phase 2（實作 M3+M6 並整合）」；prefill / 大形狀的定量宣稱有一個量測前置條件附在其上（見 §2）。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>缺口三分類</span><span class="tag">(a) blocker · (b) scope · (c) limitation</span></div>
+
+    <h3>(a) Phase-2 blocker — 進 Phase 2 前必須先解</h3>
+    <table>
+      <caption>A 類 — blocking</caption>
+      <thead><tr><th>缺口</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>（無。）沒有任何缺口會阻止 Phase 2 開工。M3/M6 未實作不是缺口，是 Phase 2 的工作內容本身；所有元件介面（凍結 <code>predict()</code> 合約）皆已就緒可接。</td><td class="pass">✅ 空</td></tr>
+      </tbody>
+    </table>
+
+    <h3>(b) Phase-2 scope — 可在 Phase 2 內處理（已規劃，非 blocking）</h3>
+    <table>
+      <caption>B 類 — Phase-2 scope（非 blocking，但需在特定里程碑前解）</caption>
+      <thead><tr><th>缺口</th><th>為何歸 B</th><th>解法方向</th></tr></thead>
+      <tbody>
+        <tr><td><strong>prefill 整條路徑未端到端驗證</strong></td><td>元件層 prefill 已於 Phase 1.5 dense 校準（M∈{2..{{cim.prefill_m_max}}}、留出 {{cim.prefill_holdout_pct}}%），但整條 TTFT 路徑（含 attention S×S softmax + host overhead）尚未端到端對 vendor 驗。</td><td>Phase 2 整合後對 vendor TTFT 做端到端 prefill 驗證——元件已備，缺的是組裝。</td></tr>
+        <tr><td><strong>多單元記憶體競爭</strong></td><td>Ramulator2 招牌功能；但 Aetina 送修，並發 silicon 不可得，無法在 Phase 1 驗證。</td><td>Phase 2 工作（板恢復後 / Ramulator2 競爭 sim 校準）。</td></tr>
+        <tr><td><strong>KV-append 精確係數</strong></td><td>isolation SPIKE 為 <strong>INCONCLUSIVE</strong>：K=1 proxy 的 eff_BW 不收斂（{{kv.spike_bw_lo}}→{{kv.spike_bw_hi}} GB/s），working set 在編譯牆前都 &lt; SRAM knee，proxy 進不了 DRAM regime。kv-append 暫維持 analytic（靠 M2 量測 {{kv.spike_m2_bw}} GB/s）。</td><td>Phase 2 板恢復後隔離校準 DRAM BW（長文本 decode 的 KV bytes 佔比顯著，不能略過）。</td></tr>
+        <tr><td><strong>thermal / DVFS（Phase 0.4）</strong></td><td>熱模型（Metis Card）deferred 到最後；Aetina 送修期間並發/熱量測不可得。</td><td>Phase 0.4 / Phase 2 工作，板恢復後做。</td></tr>
+        <tr><td><strong>L1/L2 residency 動態模型</strong></td><td>目前 architecture-only；反轉先前 decision，Phase 2 必建。</td><td>Phase 2 必建 residency 動態模型。</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>Phase 1.5 已解（原 B 類）：CIM multi-tile。</b>不再是缺口：Card-native 直接量到 K·N≤{{cim.native_envelope_m}}M，建立 residency-cliff 模型（median {{cim.multitile_new_median_pct}}%、留出 {{cim.multitile_holdout_pct}}%；取代舊 tile-sum 的 {{cim.multitile_old_median_pct}}%）。原「若板長期離線降為 C」的退路已不需要。</div>
+
+    <h3>(c) 可接受的 limitation — 誠實標註後不擋路</h3>
+    <table>
+      <caption>C 類 — acceptable limitation</caption>
+      <thead><tr><th>limitation</th><th>為何可接受</th></tr></thead>
+      <tbody>
+        <tr><td><strong>M4-NPU 全 simulated / borrowed（#13 無 silicon）</strong></td><td>NPU 是支援單元；模型誠實標 simulated，trend-shape 與 ONNXim 交叉驗證一致（sim-vs-sim spread median {{npu.onnxim_median_delta_pct}}%）；#13 已依 ADR-0006 superseded-not-satisfied。Phase 2 整機若含 NPU 路徑，provenance 必須傳播 <code>simulated (RKNPU2, no silicon)</code> 標籤。</td></tr>
+        <tr><td><strong>M4-GPU INT8 零資料</strong></td><td>當前分工 CIM 做 INT8 GEMM、GPU 做 FP16 attention；GPU INT8 GEMM 不在主路徑。若 Phase 2 需要才補。</td></tr>
+        <tr><td><strong>eta_bw = {{cpu.eta_bw}}（CPU 有效記憶體頻寬假設）</strong></td><td>僅對 qwen vocab（L3）binds，他處 compute / overhead 主導；無 CPU mem-BW micro-benchmark，明標 assumption。</td></tr>
+        <tr><td><strong>CPU A55 / 多核 / fp16 為 simulated</strong></td><td>eta_c + overhead_op 在單 A76 核校準；A55（IPC=1）/ 多核 / native-fp16 為解析外推，明標 simulated。</td></tr>
+        <tr><td><strong>LPDDR5 eff {{mem.lpddr5_eff}} GB/s 為 simulated（非本 silicon）</strong></td><td>保守折扣（eff {{mem.lpddr5_eff_pct}}% &lt; 量測 71%），且 Ramulator2 device 交叉驗證一致；標籤誠實。</td></tr>
+        <tr><td><strong>M7 能耗全 estimated（無功耗遙測，ADR-0005）</strong></td><td>結論（記憶體主導）對 ±20% 穩健（16 corner、0 翻轉）；絕對 mJ 標 estimated。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>GO / NO-GO 判定</span><span class="tag">conditional GO</span></div>
+    <div class="role">
+      <p style="margin-top:0"><strong>判定：元件層條件式 GO 進入 Phase 2。</strong>可以進入 Phase 2（實作 M3 事件引擎 + M6 排程器，整合成端到端模擬器）。理由：A 類為空——所有元件介面就緒、decode 主路徑量測級可信（recompose 8B hold-out {{recompose.err_8b_pct}}%、CIM Card 重驗 {{cim.card_median_pct}}%）、缺口皆已誠實標註且不阻止整合開工。</p>
+      <p style="margin-bottom:0"><strong>附帶條件（綁在特定宣稱上，非綁在開工上）：</strong></p>
+    </div>
+    <table>
+      <caption>conditional GO — 具名條件</caption>
+      <thead><tr><th>條件</th><th>綁在哪個宣稱</th></tr></thead>
+      <tbody>
+        <tr><td><strong>NPU 由 L4 端到端裁決</strong></td><td>無 silicon（#13）；Phase 2 整機若含 NPU 路徑，結果以 L4 端到端對照裁決，provenance 傳播 simulated 標籤。</td></tr>
+        <tr><td><strong>thermal / 多單元競爭 = Phase-2 工作</strong></td><td>Aetina 送修期間並發 silicon 不可得；熱（Phase 0.4）與競爭驗證為 Phase 2 工作，板恢復後做。</td></tr>
+        <tr><td><strong>prefill 端到端 TTFT 驗證</strong></td><td>元件層 prefill 已 Card-native 校準（M∈{2..{{cim.prefill_m_max}}}、cliff median {{cim.multitile_new_median_pct}}%）；剩整條 TTFT（attention + host overhead 組裝）屬 Phase 2 整合。</td></tr>
+        <tr><td><strong>KV-append DRAM BW 隔離校準</strong></td><td>SPIKE INCONCLUSIVE；係數暫用 M2 {{kv.spike_m2_bw}} GB/s，Phase 2 板恢復後隔離校準。</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>混合精度成本基礎 = 非量測前置條件。</b>conversion-op（CIM-INT8 × GPU-FP16 邊界的 dequant/requant）於 Phase 2 <strong>解析建模</strong>——memory-bound cast，由既有 M2/M4 per-op 模型 × M6 邊界穿越次數計價（ADR-0004 已於 2026-06-11 修訂）。精度固定於單元，故非量測缺口；Phase 2 把 cast op 插進 op stream 計價即可。</div>
+    <p>這份報告不保證模擬器完美；它保證我們精確知道自己站在哪、缺什麼、那些缺口會不會擋住 Phase 2。答案是：decode 地基穩固，整合可以開始；Phase 1.5 把 prefill / multi-tile / KV-BW 的元件級量測補齊（並修正了兩個過保守的編譯假設），剩 prefill TTFT 端到端組裝屬 Phase 2；混合精度成本則於 Phase 2 解析建模。</p>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個數字皆回查 committed artifact</div>
+    <ol>
+      <li>recompose 8B hold-out：<code>validation/reports/phase1.1/recompose.json › rel_error_8b</code></li>
+      <li>CIM Card 重驗：<code>validation/reports/phase1.2/cim_card_revalidate.json › status, consistency</code></li>
+      <li>prefill / multi-tile cliff：<code>validation/reports/phase1.5/cim_multitile.json › model, old_vs_new, resident_holdout</code>；<code>cim_prefill_fit.json › holdout</code></li>
+      <li>KV-append SPIKE：<code>validation/reports/phase1.5/kv_append_spike.json › verdict</code></li>
+      <li>NPU ONNXim 交叉驗證：<code>validation/reports/phase1.3/m4_npu_onnxim.json › median_abs_delta_pct</code>；#13 superseded-not-satisfied（ADR-0006）</li>
+      <li>LPDDR5 / eta_bw 誠實標籤：<code>validation/reports/phase1.1/m2.json › params</code>；<code>simulator/models/params/m4_cpu_instrcount.json › eta_bw</code></li>
+      <li>M7 能耗穩健性：<code>validation/reports/phase1.1/m7.json › sensitivity_pm20pct</code>（ADR-0005 無遙測）</li>
+      <li>章節敘述：<code>docs/report/phase1/chapters/09-gaps-gonogo.md</code></li>
+    </ol>
+  </div>
+
+</section>

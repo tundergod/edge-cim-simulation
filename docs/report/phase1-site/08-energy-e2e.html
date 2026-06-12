@@ -1,0 +1,151 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M7 能量 + E2E · Edge-CIM Phase 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head><body>
+<nav class="sidebar"><div class="brand">Edge-CIM · Phase 1<small>元件建模與驗證 · 進 Phase 2 前</small></div><nav><ul><li class="grp">導論</li><li><a class="" href="00-overview.html"><span class="mc"></span><span>概覽</span></a></li><li><a class="" href="01-readiness.html"><span class="mc"></span><span>就緒矩陣</span></a></li><li class="grp">各單元</li><li><a class="" href="02-cim.html"><span class="mc">M1</span><span>CIM 計算核</span></a></li><li><a class="" href="03-memory.html"><span class="mc">M2</span><span>記憶體</span></a></li><li><a class="" href="04-cpu.html"><span class="mc">M4·CPU</span><span>A76 CPU</span></a></li><li><a class="" href="05-gpu.html"><span class="mc">M4·GPU</span><span>Mali GPU</span></a></li><li><a class="" href="06-npu.html"><span class="mc">M4·NPU</span><span>RKNPU2</span></a></li><li class="grp">跨單元</li><li><a class="" href="07-workload.html"><span class="mc">M5</span><span>Workload</span></a></li><li><a class="active" href="08-energy-e2e.html"><span class="mc">M7</span><span>能量 + E2E</span></a></li><li><a class="" href="09-phase2-preview.html"><span class="mc">M3/M6</span><span>Phase 2 預覽</span></a></li><li class="grp">結論</li><li><a class="" href="10-gaps.html"><span class="mc"></span><span>缺口 / GO-NOGO</span></a></li><li><a class="" href="11-sources.html"><span class="mc"></span><span>來源</span></a></li><li><a class="todo" href="#"><span class="mc">M8</span><span>溫度 (熱)</span></a></li></ul></nav></nav>
+<div class="main"><div class="page">
+<header class="masthead">
+  <div class="mcode">M7</div>
+  <div>
+    <div class="eyebrow">跨單元 · 能量估計 · 端到端</div>
+    <h1>能量估計 + 端到端驗證</h1>
+    <p class="lede">兩件不同性質的事放在一頁：M7 的 per-token <strong>能量估計</strong>（spec-based、無功耗遙測，只能說「哪一項主導」），與 Phase 1 唯一的<strong>端到端</strong>矽晶驗證點——recompose hold-out（以 1B+3B 擬合一個有效頻寬、外插預測 8B decode tok/s，誤差 9.5%）。</p>
+  </div>
+</header>
+
+<div class="chips"><span class="chip off" title="N/A for energy — NO power telemetry on either board (ADR-0005); energy never measured. (Distinct: the e2e recompose 8B tok/s IS silicon-validated — that is throughput, not power.)">calibrated</span><span class="chip on" title="validation/reports/phase1.1/recompose.json › fit_BW_GBs (two-pillar 1B+3B BW fit) -> pred_8b_tok_s, rel_error_8b=0.095">fitted</span><span class="chip off" title="none — no heavy-sim for M7 or e2e; recompose is an analytic cross-model hold-out.">simulated</span><span class="chip on warn" title="simulator/models/params/m7_energy.json › cim_tops_w=15.0, lpddr5_pj_per_bit=4.0, pcie_pj_per_bit=5.0, a76_core_w=0.75 — spec/datasheet constants + coarse activity factor (ADR-0005)">assumption</span><span class="chip on" title="vendor/datasheet power numbers (Metis 15 TOPS/W, LPDDR5 4 pJ/bit, PCIe 5 pJ/bit, A76 0.75 W/core) taken verbatim as energy coefficients.">borrowed</span></div>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
+    <div class="role">
+      <p style="margin-top:0">本頁的兩半，誠實標籤剛好相反，必須先講清楚：</p>
+      <p><strong>① 能量（M7）的基本功能</strong>——估算 decode 每 token 的能耗：<code>能量 = 活動因子 × 硬體規格功率</code>。CIM 投影用 15 TOPS/W、DRAM streaming 用 LPDDR5 pJ/bit、CPU 支援用 A76 W/core×核數。<strong>關鍵誠實項：兩塊板子都沒有功耗遙測（ADR-0005），所以能量永遠是估計、不是量測</strong>。它的價值不在絕對 mJ 數，而在「哪一項主導」這個定性結論——並且這個結論對每個係數 ±20% 都穩健。</p>
+      <p style="margin-bottom:0"><strong>② 端到端（e2e）的基本功能</strong>——把各單元的 decode 模型串起來，做一個<strong>跨模型 hold-out</strong>：decode backbone 是 weight-streaming 受限，<code>tok/s ≈ BW_eff / per_token_weight_bytes</code>；用 1B+3B 擬合 BW_eff，<strong>外插預測 8B</strong>（8B 不參與擬合），再對量測 tok/s。<strong>這一半是矽晶驗證的 tok/s</strong>（calibrated chip 為何在能量上 OFF、但 e2e tok/s 其實成立，§4 會說明這個區分）。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>Measurement · 量測</span><span class="tag">能量：無遙測 · e2e：silicon tok/s</span></div>
+
+    <h3>1a · 能量：沒有功耗量測，只有 spec-based 估計</h3>
+    <p>必須開門見山：<strong>Aetina Alpha 與 Metis Card 都沒有 on-board 功耗儀表</strong>，RKNPU2 也無功耗遙測，所以 M7 沒有任何一點對到真實量到的功率（ADR-0005）。我們<strong>不</strong>對能量做數值 gate（無量測可對），只做 sanity + 敏感度。下圖把 8B decode 每 token 的三項能量攤開——注意 bar 高不是量到的功率，是規格推算值，重點是<strong>哪一項主導</strong>：</p>
+    <figure>
+      <img src="../../figures/phase1-site/m7_energy.png" alt="per-token 8B decode 能量分解（log-y）">
+      <figcaption><strong>怎麼讀：</strong>三根柱是 8B decode 每 token 的能量估計（縱軸 log）：DRAM streaming 240.149 mJ <strong>壓倒性主導</strong>、CPU 支援 15.0 mJ、CIM 投影只有 1.001 mJ。<strong>為什麼 DRAM 這麼大？</strong>decode 每步要把整個權重從 DRAM 串一遍（memory-bound，見 M2），搬位元組的能量遠大於算 MAC 的能量。橘字「spec-based ESTIMATE / no power telemetry」是誠實標籤——這些是規格推算、非量測。右上「0 conclusion flips ±20%」= 對每個係數做 ±20%（16 組 corner），「記憶體主導」這個結論翻轉 0 次。
+        <span class="ft">圖 M7·1 · 來源 m7.json › per_token_8b_decode_mJ / sensitivity_pm20pct · 腳本 tools/plotting/site_m7.py</span>
+      </figcaption>
+    </figure>
+
+    <h3>1b · e2e：量產 Card 的 batch-1 decode tok/s（真矽）</h3>
+    <p>能量無量測，但端到端用的<strong>量是真的</strong>：1B/3B/8B 三個模型在量產 Metis Card 上各自量到的 batch-1、單核 decode tok/s（8B 量值 2.7 tok/s）。這是 §3 hold-out 的 ground truth——recompose 拿這些真矽 tok/s 來驗證「擬合 BW + 外插」的端到端模型，而非驗證能量。</p>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>Fit · 擬合</span><span class="tag">equation · 逐參數講解</span></div>
+
+    <h3>能量模型：活動因子 × 規格功率</h3>
+    <div class="eq">cim_proj_mJ    = (op_count / cim_tops_w) · 1e-9            <span class="c"># 投影算力 × 能效</span>
+dram_stream_mJ = weight_bits · lpddr5_pj_per_bit · 1e-9   <span class="c"># 串權重的搬移能量</span>
+cpu_support_mJ = a76_core_w · cpu_cores · t_support_s · 1e3   <span class="c"># 功率 × 時間</span>
+total_mJ       = cim_proj + dram_stream + cpu_support</div>
+    <p><strong>模型很簡單，關鍵在每個常數都是規格推算（assumption）、不是量測</strong>。能量 = 活動因子（搬幾個 bit、算幾個 op、CPU 幫忙多久）× 硬體規格功率。每個參數的物理意義與來源：</p>
+    <table>
+      <caption>能量模型規格常數（m7_energy.json / m7.json，JSON 注入）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>物理意義 / 誠實標籤</th></tr></thead>
+      <tbody>
+        <tr><td>CIM 能效</td><td class="num">15 TOPS/W</td><td><strong>每瓦多少兆 INT8 op</strong>：廠商 Metis INT8 規格。CIM 投影能量 = op 數 / 此值。<strong>assumption（廠商數據）</strong></td></tr>
+        <tr><td>LPDDR5 pJ/bit</td><td class="num">4.0 pJ/bit</td><td><strong>搬一個 bit 的能量</strong>：DRAM streaming 能量 = 權重 bit 數 × 此值。主導項的係數。<strong>assumption（datasheet）</strong></td></tr>
+        <tr><td>PCIe pJ/bit</td><td class="num">5.0 pJ/bit</td><td>離散 host↔device 搬移的<strong>每 bit 能量</strong>。<strong>assumption（datasheet）</strong></td></tr>
+        <tr><td>A76 core 功率</td><td class="num">0.75 W/core × 4</td><td><strong>CPU 支援功率</strong>：能量 = 功率 × 支援時間。支援時間本身是<strong>粗略</strong>的 per-token 估計。<strong>assumption</strong></td></tr>
+        <tr class="gen"><td>8B decode total</td><td class="num">256.15 mJ/token</td><td>三項加總；隱含平均功率量級合理（order-of-magnitude sanity，非精確值）</td></tr>
+      </tbody>
+    </table>
+
+    <h3>e2e：recompose 兩支柱 BW 擬合</h3>
+    <div class="eq">tok_s(model) = BW_eff / per_token_weight_bytes(model)   <span class="c"># weight-streaming 受限</span>
+BW_eff  = fit on {1B, 3B}                              <span class="c"># 只用兩支柱擬合</span>
+pred_8B = BW_eff / weight_bytes(8B)                    <span class="c"># 8B 外插（hold-out）</span></div>
+    <p>decode backbone 模型化為「把整個權重從 DRAM 串一遍」——所以 tok/s 與每 token 權重位元組成反比，比例常數就是有效頻寬 BW_eff。<strong>兩支柱法</strong>：只用 1B+3B 兩點擬合 BW_eff，8B 完全不參與，留作 hold-out。每個參數：</p>
+    <table>
+      <caption>recompose 兩支柱擬合（recompose.json，JSON 注入）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>物理意義</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>fit BW_eff</td><td class="num">18.33 GB/s</td><td><strong>有效頻寬</strong>：用 1B+3B 兩點擬合的比例常數。略低於 M2 的 24.2 校準錨點，因端到端 tok/s 還含 attention 等非權重成本</td></tr>
+        <tr class="gen"><td>8B 預測</td><td class="num">2.44 tok/s</td><td><strong>外插值</strong>：BW_eff / 8B 權重位元組，8B 不在擬合內</td></tr>
+        <tr class="gen"><td>8B 量測</td><td class="num">2.70 tok/s</td><td><strong>ground truth</strong>：量產 Card 真矽 decode tok/s</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>Simulation · 端到端 hold-out</span><span class="tag">no heavy-sim · 跨模型外插</span></div>
+    <p>M7 與 e2e <strong>不掛任何 heavy-sim 引擎</strong>。本節的「模擬」= <strong>把 decode 模型串成端到端、外插到未參與擬合的 8B</strong>，由真矽 tok/s 驗證。這是 Phase 1 唯一的端到端量測級驗證點：</p>
+    <figure>
+      <img src="../../figures/phase1-site/m7_recompose.png" alt="recompose hold-out：預測 vs 量測 decode tok/s">
+      <figcaption><strong>怎麼讀：</strong>橫軸是每 token 權重位元組、縱軸 decode tok/s。黑線是<strong>只用 1B+3B 兩點</strong>擬合的反比曲線 <code>tok/s = BW/bytes</code>（藍帶 ±25%）。兩顆藍點（1B/3B）是擬合錨點。<strong>8B 是 hold-out</strong>：橘空心圈是量測 2.70 tok/s、橘星是純外插預測 2.44 tok/s，兩者誤差只有 9.5%、落在 ±25% 內。模型放大、tok/s 沿同一條 memory-bound 曲線掉——證明 decode 端到端的 weight-streaming 圖像是對的。
+        <span class="ft">圖 M7·2 · 來源 recompose.json › per_token_weight_bytes / measured_tok_s_1c / pred_8b_tok_s · 腳本 tools/plotting/site_m7.py</span>
+      </figcaption>
+    </figure>
+    <div class="note"><b>model-independent，引擎換新仍 9.5%。</b>這個 hold-out 只用了 op-profile 推出的權重位元組 + 真矽 tok/s + 一個 BW 擬合，與底層引擎細節無關。所以 Phase 1.2 把 CPU/記憶體換成 spec-based 引擎後重跑，8B 誤差<strong>仍是 9.5%</strong>。<b>Phase 2 watch-item：</b>非-streaming 項（CPU 支援、GPU offload attention、KV-cache append）在擬合點<strong>已被吸收進 BW_eff</strong>；Phase 2 若再外加會<strong>重複計算</strong>。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>Validation gate · 驗證門檻</span><span class="tag">ADR-0005 / 能量 sanity · e2e ±25%</span></div>
+    <table>
+      <caption>能量 sanity + 敏感度（m7.json；無數值 gate，只查穩健性）</caption>
+      <thead><tr><th>檢查</th><th class="num">值</th><th class="num">門檻</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>能量為正且隨活動單調</td><td class="num">—</td><td class="num">必過</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>記憶體主導（DRAM ≫ CPU ≫ CIM）</td><td class="num">240.149 ≫ 15.0 ≫ 1.001 mJ</td><td class="num">order-of-mag</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>±20% 敏感度結論翻轉</td><td class="num">0 / 16 corners</td><td class="num">0 翻轉</td><td class="pass">✅ 穩健</td></tr>
+        <tr><td>絕對 mJ 數值對功耗量測</td><td class="num">—</td><td class="num">—</td><td class="fail">⚠ 無遙測，永遠 estimated</td></tr>
+      </tbody>
+    </table>
+    <table>
+      <caption>端到端 recompose hold-out（recompose.json › GATE_within_25pct）</caption>
+      <thead><tr><th>指標</th><th class="num">值</th><th class="num">門檻</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>8B decode 預測 vs 量測</td><td class="num">2.44 vs 2.70 tok/s</td><td class="num">—</td><td>hold-out</td></tr>
+        <tr class="gen"><td>8B 相對誤差</td><td class="num">9.5%</td><td class="num">≤ 25%</td><td class="pass">✅ PASS</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>calibrated chip OFF，但 e2e tok/s 其實是 silicon-validated。</b>本頁的 calibrated chip 對<strong>能量</strong>而言誠實地 OFF——能量從未被量測。但這不代表 e2e 沒有矽晶根基：recompose 的 8B tok/s 預測是<strong>對真矽量測驗過的</strong>（9.5% hold-out）。差別在「驗的是 tok/s、不是 mJ」：時間/吞吐有真矽錨點（M1/M2），功率沒有。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§5</span><span>Phase-2 就緒度</span></div>
+    <table>
+      <thead><tr><th>項目</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>能量介面（per-token mJ 分解）</td><td class="pass">✅ 就緒，但標籤永遠 estimated</td></tr>
+        <tr><td>「記憶體主導」定性結論</td><td class="pass">✅ 對 ±20% 穩健（0 翻轉）</td></tr>
+        <tr><td>decode 端到端 recompose hold-out</td><td class="pass">✅ silicon-validated（8B 9.5%）</td></tr>
+        <tr><td>能量對到真實功耗量測</td><td class="fail">⚠ 無功耗遙測（Phase 2 缺口；M.2 Max 才有 INA236）</td></tr>
+        <tr><td>prefill 能量 / prefill 端到端</td><td class="fail">⚠ 未驗證（Phase 1 校準幾乎全在 decode 路徑）</td></tr>
+        <tr><td>非-streaming 項加回（避免重複計算）</td><td class="fail">⚠ Phase 2 watch-item（已吸收進 BW_eff）</td></tr>
+      </tbody>
+    </table>
+    <p><strong>最大缺口：沒有任何功耗遙測。</strong>整個能量模型是 spec-based 估計，結論的價值在「哪一項主導」（記憶體），不在絕對 mJ。若 Phase 2 取得功耗遙測（M.2 Max 的 INA236），能量可升級為 measured。<strong>e2e 端</strong>：decode 路徑已 silicon-validated，但 prefill 整條路徑沒有正面端到端驗證（BOUNDED-EXTRAPOLATED，見缺口章）。</p>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個數字皆回查 committed artifact</div>
+    <ol>
+      <li>能量分解：<code>validation/reports/phase1.1/m7.json › per_token_8b_decode_mJ / per_token_total_mJ / dominant_term</code></li>
+      <li>能量敏感度：<code>validation/reports/phase1.1/m7.json › sensitivity_pm20pct (corners_tested / conclusion_flips) / sanity</code></li>
+      <li>能量規格常數：<code>simulator/models/params/m7_energy.json</code>（cim_tops_w / lpddr5_pj_per_bit / pcie_pj_per_bit / a76_core_w / cpu_cores）</li>
+      <li>能量 contract / 限制：<code>validation/contracts/m7.yaml</code>（measurement_sources = none，ADR-0005）</li>
+      <li>recompose hold-out：<code>validation/reports/phase1.1/recompose.json › fit_BW_GBs / pred_8b_tok_s / measured_8b_tok_s / rel_error_8b / GATE_within_25pct</code></li>
+      <li>per-token 權重位元組 / 量測 tok/s：<code>validation/reports/phase1.1/recompose.json › per_token_weight_bytes / measured_tok_s_1c</code></li>
+      <li>非-streaming 重複計算 watch-item：<code>validation/reports/phase1.1/recompose.json › standalone_nonstreaming_8b_us._caveat</code></li>
+    </ol>
+  </div>
+
+</section>
+
+</div></div></body></html>

@@ -1,0 +1,139 @@
+<header class="masthead">
+  <div class="mcode">M2</div>
+  <div>
+    <div class="eyebrow">各單元 · 記憶體階層 · Memory</div>
+    <h1>記憶體單元</h1>
+    <p class="lede">decode 是 memory-bound——速度由「把權重從 DRAM 搬出來」決定，不是算力。M2 把「搬資料」的成本算準：DRAM 串流頻寬（decode 牆）與 PCIe 每次呼叫的傳輸 floor，外加 KV-append 純頻寬 op。</p>
+  </div>
+</header>
+
+<!--CHIPS-->
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
+    <div class="role">
+      <p style="margin-top:0">M2 模擬「搬位元組」的成本，兩個最基本功能：</p>
+      <p><strong>① DRAM 串流</strong>——把權重 / KV 從 host DRAM 串出來，成本 = <code>bytes / 有效頻寬</code>。decode 每步要讀一遍整個權重，所以這是 decode 的<strong>記憶體牆</strong>。<strong>② PCIe / DMA 傳輸 floor</strong>——離散的 host↔device 搬移有一個<strong>固定的每次呼叫成本</strong>（floor），與搬多少位元組關係不大。</p>
+      <p style="margin-bottom:0">SRAM tier（L1/L2/D-IMC）歸在 M1-SPM，不在 M2 主路徑——8B 權重（~8 GB）遠大於 32 MiB L2，永遠塞不下、一定 spill 到 DRAM，所以 decode 的牆是 host LPDDR、不是 SRAM。M2 是<strong>有真矽錨點、也用了模擬</strong>的單元（LPDDR4x 量測 + Ramulator2 模擬），所以 simulated chip 亮著（和 M1 不同）。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>Measurement · 量測</span><span class="tag">silicon · 兩個錨點</span></div>
+
+    <h3>1a · DRAM 串流牆（decode 受頻寬限制）</h3>
+    <p>量產 Metis Card 的 batch-1 decode：<strong>decode 時間正比於權重位元組數</strong>（r²=0.997），反推 LPDDR4x 有效頻寬 = <strong>{{mem.lpddr4x_eff}} GB/s</strong>，這是 Phase 1 對 DRAM 的<strong>唯一矽晶校準錨點、也是 M2 採用值</strong>（數字見 §2 spec 圖）。下圖另用 1B/3B/8B 三個模型獨立佐證「decode 受頻寬限制」這個<strong>簽名</strong>——注意它是<strong>不同分析</strong>（recompose 跨模型擬合），斜率約 18 GB/s，比 24.2 錨點略低（因端到端 tok/s 還含 attention 等非權重成本），兩者同數量級、互不取代。</p>
+    <figure>
+      <img src="../../figures/phase1-site/m2_decode_wall.png" alt="decode tok/s vs 權重位元組">
+      <figcaption><strong>怎麼讀：</strong>橫軸是每個 token 要讀的權重位元組（模型越大越多）、縱軸是 decode 吞吐。三點落在 <code>tok/s = BW / bytes</code> 的反比曲線上——<strong>吞吐由權重串流決定，不是算力</strong>。模型放大 6 倍（1B→8B），吞吐就掉約 5 倍，正是 memory-bound 的特徵。曲線斜率是這組<strong>跨模型擬合</strong>的等效頻寬（~18 GB/s，比 §2 的 24.2 校準錨點略低，因 tok/s 含非權重成本）——是同一個簽名的不同估計，非錨點本身。
+        <span class="ft">圖 M2·1 · 來源 recompose.json › measured_tok_s_1c / per_token_weight_bytes · 腳本 tools/plotting/site_m2.py</span>
+      </figcaption>
+    </figure>
+
+    <h3>1b · PCIe / DMA 傳輸 floor</h3>
+    <p>離散 host↔device 搬移在 Aetina Alpha 上量到一個<strong>固定的每次呼叫 floor</strong>。下圖把 30 個單-tile 形狀各自的 floor（= system latency − device latency）攤開：</p>
+    <figure>
+      <img src="../../figures/phase1-site/m2_pcie_floor.png" alt="PCIe per-call floor 跨 30 形狀">
+      <figcaption><strong>怎麼讀：</strong>橫軸是該形狀的 device 計算延遲、縱軸是它的 per-call floor。點幾乎是一條水平帶——<strong>floor 與計算規模無關</strong>，是固定的往返成本。橘線是模型採用的中位數，虛線是 p95。注意這是 <strong>Alpha 拓樸特例</strong>（無 on-card DRAM、每次 decode 都走 PCIe）；量產 Card 的 on-card 串流不付這個 floor。
+        <span class="ft">圖 M2·2 · 來源 metis_alpha_matmul_raw.json › system_lat_us − dev_lat_us · 腳本 tools/plotting/site_m2.py</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>Fit · 擬合</span><span class="tag">equation · 逐參數講解</span></div>
+    <div class="eq">stream_us    = nbytes / eff_BW_GBs              <span class="c"># DRAM 串流（含 KV-append）</span>
+transfer_us  = floor_us + nbytes / pcie_BW_GBs   <span class="c"># 離散 PCIe/DMA 搬移</span>
+kv_append_us = kv_bytes / eff_BW_GBs             <span class="c"># 純頻寬 op</span></div>
+    <p><strong>模型很簡單，關鍵在「有效頻寬」這個數字怎麼來</strong>。有效頻寬 = 理論峰值 × 效率；效率把 controller / NoC / 排隊等系統開銷都摺進去。三種 DRAM spec 各有自己的誠實標籤：</p>
+    <table>
+      <caption>頻寬模型參數（m2.json / specs，JSON 注入）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>物理意義 / 誠實標籤</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>LPDDR4x eff_BW</td><td class="num">{{mem.lpddr4x_eff}} GB/s</td><td><strong>calibrated 錨點</strong>：量產卡 decode 牆反推（r²=0.997），唯一矽晶校準點</td></tr>
+        <tr class="gen"><td>LPDDR4x 效率</td><td class="num">{{mem.lpddr4x_eff_pct}}%</td><td>{{mem.lpddr4x_eff}} / {{mem.lpddr4x_peak_full}} GB/s peak；落在文獻 memory-bound 60–80% 帶內</td></tr>
+        <tr class="gen"><td>LPDDR5 eff_BW</td><td class="num">{{mem.lpddr5_eff}} GB/s</td><td><strong>simulated</strong>：前瞻 SoC 的記憶體，未在本矽量測；效率保守折到 {{mem.lpddr5_eff_pct}}%（不假設與 LPDDR4x 一樣好）</td></tr>
+        <tr class="gen"><td>PCIe floor（median）</td><td class="num">{{mem.pcie_floor_full}} µs</td><td><strong>截距</strong>：每次離散搬移的固定往返成本（p95 {{mem.pcie_p95}} µs）</td></tr>
+        <tr class="gen"><td>PCIe BW</td><td class="num">{{mem.pcie_bw}} GB/s</td><td><strong>斜率</strong>：Gen3 ×4 documented 頻寬，搬越多越久的部分</td></tr>
+      </tbody>
+    </table>
+    <figure>
+      <img src="../../figures/phase1-site/m2_bw_specs.png" alt="三種 DRAM spec 峰值 vs 有效頻寬">
+      <figcaption><strong>怎麼讀：</strong>每組柱：淺色 = 理論峰值（assumption），實心 = 有效頻寬、依誠實標籤上色（LPDDR4x 藍 = calibrated、LPDDR5 橘 = simulated、LPDDR4 灰 = assumption）。藍虛線是 {{mem.lpddr4x_eff}} GB/s 校準錨點。<strong>重點：只有 LPDDR4x 那根（藍）是量到的</strong>；LPDDR5 雖然數字更高，但標 simulated，不能當已驗證。
+        <span class="ft">圖 M2·3 · 來源 simulator/specs/mem_lpddr4{,x},lpddr5.json · 腳本 tools/plotting/site_m2.py</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>Simulation · 重型引擎與待解</span><span class="tag">Ramulator2 · kv-append</span></div>
+
+    <h3>3a · Ramulator2 LPDDR5 交叉驗證（heavy-sim）</h3>
+    <p>M2 的 <code>engine=</code> slot 可換成 Ramulator2 重型 DRAM 模擬（Phase 1.3 已 LIVE）。它量到的<strong>元件級</strong>效率遠高於我們的<strong>系統級</strong>效率——這不是矛盾：</p>
+    <figure class="half">
+      <img src="../../figures/phase1-site/m2_ramulator2.png" alt="Ramulator2 device eff vs analytic system eff">
+      <figcaption><strong>怎麼讀：</strong>左柱（橘）= Ramulator2 只模 DRAM <strong>元件</strong>時序（refresh + bank conflict），單串流幾乎打滿、效率 {{mem.ram2_device_eff}}。右柱（藍）= 我們的<strong>系統級</strong>效率 {{mem.ram2_system_eff}}，校準到真實量到的 {{mem.lpddr4x_eff}} GB/s decode 牆，把 controller/NoC/排隊都摺進去。<strong>兩者的差就是元件以外的系統開銷</strong>——證實 DRAM 元件不是單串流瓶頸（ADR-0002）。系統效率應從矽晶校準、不從 Ramulator2 import。
+        <span class="ft">圖 M2·4 · 來源 m2_ramulator2.json › ramulator2_device / analytic_system · 腳本 tools/plotting/site_m2.py</span>
+      </figcaption>
+    </figure>
+
+    <h3>3b · KV-append SPIKE（待解：proxy 進不了 DRAM）</h3>
+    <p>KV-append 形式正確（純頻寬 op），但 Phase 1.5 想在 Card 上<strong>隔離量它的 DRAM 頻寬，結構上做不到</strong>：</p>
+    <figure>
+      <img src="../../figures/phase1-site/m2_kv_spike.png" alt="KV-append SPIKE：proxy 無法到達 DRAM">
+      <figcaption><strong>怎麼讀：</strong>橘線是 K=1 memory-bound proxy 的有效頻寬，隨傳輸量<strong>持續上升、不收斂</strong>（{{kv.spike_bw_lo}}→{{kv.spike_bw_hi}} GB/s；改掃 N 落在同一條線上）。原因：proxy 的編譯牆（working set ~{{kv.spike_proxy_max}}M elems）<strong>落在 DRAM knee（~{{kv.spike_knee}}M）之下</strong>——它永遠編不出大到會溢出 SRAM 的 case，量到的是 on-chip 吞吐、不是 DRAM 頻寬。<strong>真正收斂的 DRAM 頻寬</strong>來自 residency-cliff 的 spill regime（橘方塊，{{kv.spike_dram_bw}} GB/s，在 K·N 8–17M 之間平坦）。所以 kv-append 暫用保守的 M2 有效值 {{kv.spike_m2_bw}} GB/s，<strong>精確係數 = Phase 2 待解</strong>。
+        <span class="ft">圖 M2·5 · 來源 kv_append_spike.json › proxy_points / spill_regime_dram_bw / verdict · 腳本 tools/plotting/site_m2.py</span>
+      </figcaption>
+    </figure>
+    <div class="note"><b>狀態 = INCONCLUSIVE。</b>KV bytes 在長文本 decode 佔比顯著（見 Phase 0.2 / 1.1 op-profile findings），所以這個係數 Phase 2 必須在板子恢復後隔離校準，不能略過。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>Validation gate · 驗證門檻</span><span class="tag">ADR-0006 / ADR-0002</span></div>
+    <table>
+      <caption>M2 驗證（m2.json / m2_memory.json / m2_ramulator2.json）</caption>
+      <thead><tr><th>檢查</th><th class="num">值</th><th class="num">門檻</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>串流 / 傳輸 sanity（正且單調 in bytes）</td><td class="num">—</td><td class="num">必過</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>LPDDR4x eff 佔 peak 比例</td><td class="num">{{mem.lpddr4x_eff_pct}}%</td><td class="num">55–85%</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>Ramulator2 device eff（單串流）</td><td class="num">{{mem.ram2_device_eff}}</td><td class="num">≫ system 0.65</td><td class="pass">✅ ADR-0002 確認</td></tr>
+        <tr><td>KV-append DRAM BW 隔離量測</td><td class="num">{{kv.spike_bw_lo}}–{{kv.spike_bw_hi}}</td><td class="num">收斂</td><td class="fail">⚠ INCONCLUSIVE</td></tr>
+      </tbody>
+    </table>
+    <p>三種 DRAM spec 的 stream latency 對 bytes 都正且單調；LPDDR4x 有效頻寬落在量測峰值的 {{mem.lpddr4x_eff_pct}}%（60–80% 文獻帶內）。Ramulator2 元件效率 {{mem.ram2_device_eff}} ≫ 系統 {{mem.ram2_system_eff}}，確認 DRAM 元件非單串流瓶頸。唯一未過的是 KV-append 的 DRAM BW 隔離量測（proxy 結構限制）。</p>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§5</span><span>Phase-2 就緒度</span></div>
+    <table>
+      <thead><tr><th>項目</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>LPDDR4x decode 牆 {{mem.lpddr4x_eff}} GB/s（calibrated 錨點）</td><td class="pass">✅ 凍結，silicon</td></tr>
+        <tr><td>PCIe floor {{mem.pcie_floor_full}} µs（Alpha 拓樸）</td><td class="pass">✅ calibrated（不外推 Card）</td></tr>
+        <tr><td><code>MemoryModel(spec, engine=)</code> 介面</td><td class="pass">✅ 凍結；engine='ramulator2' LIVE</td></tr>
+        <tr><td>LPDDR5 eff {{mem.lpddr5_eff}} GB/s（0.65 折扣）</td><td class="fail">⚠ simulated，未在本矽量測</td></tr>
+        <tr><td>KV-append 精確係數</td><td class="fail">⚠ INCONCLUSIVE，板子恢復後隔離校準</td></tr>
+        <tr><td>多單元記憶體競爭（Ramulator2 招牌功能）</td><td class="fail">⚠ Phase 2（Aetina 送修，並發 silicon 不可得）</td></tr>
+        <tr><td>L1/L2 residency 動態模型</td><td class="fail">⚠ Phase 2 必建（反轉決定；目前 architecture-only）</td></tr>
+      </tbody>
+    </table>
+    <p><strong>最大外推風險：</strong>LPDDR5 效率 {{mem.lpddr5_eff_pct}}% 是工程折扣、不是量測值。若目標 SoC 的 LPDDR5 實際效率高於此，模擬器會系統性低估 memory-bound decode；信度依賴文獻帶與 Ramulator2 device cross-check，兩者都指向偏保守，但未被本矽確認。</p>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個數字皆回查 committed artifact</div>
+    <ol>
+      <li>LPDDR4x decode 牆：<code>validation/reports/phase1.1/m2.json › params.measured_eff_BW_GBs</code>（voyager-sdk.md:278, r²=0.997）</li>
+      <li>PCIe floor：<code>simulator/models/params/m2_pcie.json › fixed_overhead_us_median / p95</code>；原始 <code>measurements/aetina/metis_alpha_matmul_raw.json</code></li>
+      <li>三種 DRAM spec：<code>simulator/specs/mem_lpddr4{,x},lpddr5.json › peak_GBs / eff_BW_GBs / honesty</code></li>
+      <li>記憶體模型驗證：<code>validation/reports/phase1.2/m2_memory.json</code>（sanity, sram_what_if, topology）</li>
+      <li>Ramulator2 交叉驗證：<code>validation/reports/phase1.3/m2_ramulator2.json › ramulator2_device / analytic_system / finding</code></li>
+      <li>KV-append SPIKE：<code>validation/reports/phase1.5/kv_append_spike.json › verdict / proxy_points / spill_regime_dram_bw</code></li>
+      <li>decode tok/s 證據：<code>validation/reports/phase1.1/recompose.json › measured_tok_s_1c / per_token_weight_bytes</code></li>
+      <li>contract / 反轉決定：<code>validation/contracts/m2.yaml</code></li>
+    </ol>
+  </div>
+
+</section>

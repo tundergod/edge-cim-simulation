@@ -1,0 +1,184 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M1 CIM 計算核 · Edge-CIM Phase 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head><body>
+<nav class="sidebar"><div class="brand">Edge-CIM · Phase 1<small>元件建模與驗證 · 進 Phase 2 前</small></div><nav><ul><li class="grp">導論</li><li><a class="" href="00-overview.html"><span class="mc"></span><span>概覽</span></a></li><li><a class="" href="01-readiness.html"><span class="mc"></span><span>就緒矩陣</span></a></li><li class="grp">各單元</li><li><a class="active" href="02-cim.html"><span class="mc">M1</span><span>CIM 計算核</span></a></li><li><a class="" href="03-memory.html"><span class="mc">M2</span><span>記憶體</span></a></li><li><a class="" href="04-cpu.html"><span class="mc">M4·CPU</span><span>A76 CPU</span></a></li><li><a class="" href="05-gpu.html"><span class="mc">M4·GPU</span><span>Mali GPU</span></a></li><li><a class="" href="06-npu.html"><span class="mc">M4·NPU</span><span>RKNPU2</span></a></li><li class="grp">跨單元</li><li><a class="" href="07-workload.html"><span class="mc">M5</span><span>Workload</span></a></li><li><a class="" href="08-energy-e2e.html"><span class="mc">M7</span><span>能量 + E2E</span></a></li><li><a class="" href="09-phase2-preview.html"><span class="mc">M3/M6</span><span>Phase 2 預覽</span></a></li><li class="grp">結論</li><li><a class="" href="10-gaps.html"><span class="mc"></span><span>缺口 / GO-NOGO</span></a></li><li><a class="" href="11-sources.html"><span class="mc"></span><span>來源</span></a></li><li><a class="todo" href="#"><span class="mc">M8</span><span>溫度 (熱)</span></a></li></ul></nav></nav>
+<div class="main"><div class="page">
+<header class="masthead">
+  <div class="mcode">M1</div>
+  <div>
+    <div class="eyebrow">各單元 · 計算核 · CIM Tile</div>
+    <h1>CIM 計算核</h1>
+    <p class="lede">異構 SoC 的主角計算引擎——所有 weight-stationary GEMM（Q/K/V/O 投影、FFN gate/up/down、lm_head）都落在這裡。本頁整合 decode 校準、Card 重驗、prefill 攤銷與多-tile residency cliff 四層結果。</p>
+  </div>
+</header>
+
+<div class="chips"><span class="chip on" title="validation/reports/phase1.1/m1.json › throughput_fit_gate_native (decode G_eff, 13 native pts) + validation/reports/phase1.2/cim_card_revalidate.json › status=CARD_REVALIDATED + cim_prefill_fit.json (Card M-sweep)">calibrated</span><span class="chip on" title="simulator/models/params/m1_cim.json › G_eff_Gmax_gops/Na/Kb, prefill_tile_a_us/b_us + validation/reports/phase1.5/cim_multitile.json › model (residency cliff)">fitted</span><span class="chip off" title="N/A — M1 is silicon-calibrated; no heavy-sim engine used. Compute ceiling unmodeled (decode is memory-bound, issue #16).">simulated</span><span class="chip on warn" title="simulator/specs/cim_topo_alpha.json › alloc_envelope_MB=14 (~14 MB IOMMU window, forum+inferred) ; cim_topo_edge.json › noc_efficiency=0.9 (待 edge silicon)">assumption</span><span class="chip off" title="none — all fit params self-measured. ISSCC 2024 supplies architecture description (quad-core 512×512), not numeric parameters.">borrowed</span></div>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
+    <div class="role">
+      <p style="margin-top:0">M1 模擬 CIM 計算核的<strong>兩個最基本算子</strong>，Phase 1 只把這兩件事的延遲算準，不碰排程或多單元競爭：</p>
+      <p><strong>① GEMV（decode，M=1）</strong>——decode 每步只生一個 token，是 weight-stationary 的<strong>矩陣 × 向量</strong>。<strong>② GEMM（prefill，M&gt;1）</strong>——prefill 一次吃一批 M 個 token，是<strong>矩陣 × 矩陣</strong>，weight 載入一次被 M 個 token 重用。模型裡所有 Q/K/V/O 投影、FFN gate/up/down、lm_head 都歸到這兩種。</p>
+      <p style="margin-bottom:0">硬體上 Metis AIPU 是 <strong>quad-core</strong>，每核一塊 <strong>512×512 INT8 數位 in-memory（D-IMC）crossbar</strong>（ISSCC 2024）。「weight-stationary」= 權重先寫進 crossbar 不動，activation 流過去做 MAC。吞吐以 INT8 <strong>GOP/s</strong> 計（不是 GFLOP/s）。M1 是<strong>少數量到真矽、且經 Card 重驗</strong>的單元，數字幾乎全部來自自己的板上量測。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>Measurement · 量測</span><span class="tag">silicon · GEMV + GEMM</span></div>
+    <p>量測協定：同一顆 800 MHz AIPU，先在 Aetina Metis Alpha（pre-production）以 <code>run_metis_cim.py</code> + <code>axrunmodel dev_fps</code> 量，再在量產 Metis Card（16 GiB on-card LPDDR4x）用 <code>axcompile</code> 編同一 1×1-conv matmul proxy 重驗。兩板同頻，GOP/s 可直接比、無需 clock 正規化。我們只量 M1 的兩個基本算子：</p>
+
+    <h3>1a · GEMV（decode, M=1）：量「有效吞吐 G_eff」</h3>
+    <p>decode 每步是一個 token 的矩陣×向量。量的標的是<strong>有效吞吐 G_eff</strong>——一個 <code>(N, K)</code> 形狀的 tile 實際達到的 INT8 GOP/s（N = 輸出通道數，K = contraction 維 / 輸入維）。在 Alpha 量 13 個原生單-tile 形狀（K∈{2048,3072,3584,4096}、N∈{64…2048}），Card 重驗同 13 形狀。下圖把這 13 點攤開：</p>
+    <figure>
+      <img src="../../figures/phase1-site/m1_geff.png" alt="G_eff(N,K) 量測 vs 2D 擬合">
+      <figcaption><strong>怎麼讀：</strong>橫軸是輸出通道 N、縱軸是有效吞吐 G_eff，每條線一個 K（顏色越深 K 越大）。<strong>為什麼吞吐隨 N 上升再飽和？</strong>小 N 時固定 overhead（weight load、DMA）攤不開、利用率低；N 變大利用率上升、趨近飽和上限。<strong>為什麼 K 越大越高？</strong>K 是 contraction 深度，更深的 K 讓同一次 weight 駐留攤到更多 MAC。點 = 量測，線 = §2 的 2D 擬合（這裡先疊上看貼合度）。右上那顆離群點（K=4096, N=1024）是誠實呈現的高-K 殘差，未隱藏。
+        <span class="ft">圖 M1·1 · 來源 m1_cim.json › native_throughput_points · 腳本 tools/plotting/site_m1.py</span>
+      </figcaption>
+    </figure>
+
+    <h3>1b · GEMM（prefill, M&gt;1）：量「tile 延遲 vs M」</h3>
+    <p>prefill 一次處理 M 個 token：weight 載入一次，被 M 個 activation column 重用。量的標的是一個 canonical 2048×2048 tile 在 <strong>M∈{2…508}（31 個 dense 點）</strong>的延遲——看「載入成本如何被 M 攤薄」。</p>
+    <figure>
+      <img src="../../figures/phase1-site/m1_prefill.png" alt="prefill M-amortization 仿射擬合">
+      <figcaption><strong>怎麼讀：</strong>橫軸 M（一批幾個 token）、縱軸 tile 延遲。藍點是 dense Card 量測，黑線是仿射擬合——<strong>截距 = 參數 a（固定載入成本），斜率 = 參數 b（每多一個 token 的邊際成本）</strong>，這兩個就是 §2 的 GEMM 參數。橘星是 M=1 decode anchor，落在直線左端外推上、證明 prefill 與 decode 兩 regime 橋接得上。橘虛線是真正的 SRAM-tiling 編譯牆 ~M=510（M=508 成功、511 失敗）；灰虛線是舊假設 M_MAX=256，低估約 2×。
+        <span class="ft">圖 M1·2 · 來源 cim_prefill_fit.json + m1_cim.json · 腳本 tools/plotting/site_m1.py</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>Fit · 擬合</span><span class="tag">equation · 逐參數講解</span></div>
+
+    <h3>GEMV（M=1）：G_eff 2D 閉合式</h3>
+    <div class="eq">W = n_cores × 512                              <span class="c"># 有效輸出寬度</span>
+dev_lat(M=1, K, N) = Σ_tiles 2·K·n_tile / G_eff(n_tile, K)   <span class="c">[µs]</span>
+G_eff(N, K) = Gmax · N/(N + Na) · K/(K + Kb)   <span class="c">[GOP/s]</span></div>
+    <p><strong>延遲式怎麼來：</strong>沿輸出維 N 切成 tile，每塊的工作量是 <code>2·K·n_tile</code> 個 INT8 op（係數 2 = 一次 MAC 算乘加兩個 op），<strong>除以該塊自己的有效吞吐</strong> G_eff 得到時間，再加總。重點是「每塊按自己的寬度計費」——partial 的最後一塊不會被充整塊延遲。</p>
+    <p><strong>每個參數的物理意義：</strong></p>
+    <table>
+      <caption>G_eff 2D 擬合參數（m1_cim.json，JSON 注入）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>物理意義</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>Gmax</td><td class="num">333.67</td><td>crossbar <strong>飽和吞吐上限</strong>（GOP/s）：N、K 都大、利用率趨近 1 時的速率，≈ 4 核總 MAC 速率</td></tr>
+        <tr class="gen"><td>Na</td><td class="num">577.2</td><td><strong>N 半飽和常數</strong>：N=Na 時吞吐達 Gmax 的一半。Na 越小 = 小輸出寬度就能餵飽 crossbar</td></tr>
+        <tr class="gen"><td>Kb</td><td class="num">574.1</td><td><strong>K 半飽和常數</strong>：對 contraction 深度同理；K=Kb 時達一半。解釋了「K 越深越有效率」</td></tr>
+        <tr class="gen"><td>n_cores · W</td><td class="num">4 · 2048</td><td>核數與<strong>有效輸出寬度</strong> W=n_cores×512：一次能平行輸出的通道數上限</td></tr>
+      </tbody>
+    </table>
+    <figure class="half">
+      <img src="../../figures/phase1-site/m1_parity.png" alt="G_eff 量測 vs 預測 parity">
+      <figcaption><strong>怎麼讀：</strong>橫軸量測、縱軸模型預測，點越靠對角線越準。深淺藍帶是 ±10% / ±20% 容差。13 點全落在 ±20% 內、median 在 ±10% 內——這就是 §4 ADR-0006 門檻 PASS 的視覺版。右側那顆貼著 +20% 邊的就是高-K 殘差點。
+        <span class="ft">圖 M1·3 · 來源 m1_cim.json（g_eff vs native_throughput_points）· 腳本 tools/plotting/site_m1.py</span>
+      </figcaption>
+    </figure>
+
+    <h3>GEMM（M&gt;1）：M-amortization 仿射擬合</h3>
+    <div class="eq">tile_lat(M) = a + b·M                          <span class="c"># 一個 2048×2048 tile 的延遲</span>
+full_GEMM_lat(M, K, N) = (K·N / W²) · tile_lat(M)   <span class="c"># fractional area，非 ceil</span></div>
+    <p>weight 載入一次、被 M 個 activation column 重用，所以延遲對 M 是<strong>仿射（一條直線）</strong>，其量測點與擬合線見上方 §1b 圖 M1·2。M=1 decode 是<strong>不同 regime</strong>、不在此擬合內（誤用 G_eff 把 decode 線性外推到大 M 會嚴重高估、達一至兩個數量級，仿射式消除這偏差）。<strong>每個參數的物理意義：</strong></p>
+    <table>
+      <caption>prefill 仿射 + decode anchor（cim_prefill_fit.json，JSON 注入）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>物理意義</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>a（weight load）</td><td class="num">40.8 µs</td><td><strong>截距</strong>：把 weight 寫進 crossbar 的固定成本，與 M 無關</td></tr>
+        <tr class="gen"><td>b（per activation col）</td><td class="num">0.094 µs/col</td><td><strong>斜率</strong>：每多算一個 token 的邊際成本。b 很小 = load 攤開後每 token 幾乎免費（prefill 划算的原因）</td></tr>
+        <tr class="gen"><td>asymptote</td><td class="num">89.2 TOPS</td><td>M→∞ 的<strong>等效算力</strong>：weight load 完全攤掉後的純計算上限</td></tr>
+        <tr class="gen"><td>decode anchor（M=1）</td><td class="num">41.83 µs · 200.5 GOP/s</td><td>M=1 量測<strong>錨點</strong>：確認仿射律外推回 M=1 與 decode regime 橋接得上</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>Simulation · 多-tile / 外推</span><span class="tag">no heavy-sim · 解析外推</span></div>
+    <p>M1 <strong>不掛任何 heavy-sim 引擎</strong>（decode 完全 memory-bound，compute ceiling 不需建模，issue #16）。本節的「模擬」= <strong>解析外推到量測 envelope 之外</strong>，由 Card-native 多-tile 量測校準的 residency-cliff 模型支撐。</p>
+    <div class="note"><b>修正先前假設：</b><code>axcompile</code> 不只能編單一 2048×2048 tile。Phase 1.5 直接在 Card native 編到 K·N≈17M。M=1 吞吐隨 K·N 平滑上升直到 <strong>knee≈8.2M params</strong>（權重 resident 於 on-chip SRAM），越過後 <strong>崩落 ~3.5× 到 ~70 GOP/s 的 DRAM-spill floor</strong>。真實 decode FFN/lm_head GEMV（K·N≥16M）正落在 spill regime——舊 tile-sum 低估約 3×，新 cliff 模型修正後 per-op M1 延遲對 Phase 2 才正確。</div>
+    <table>
+      <caption>residency-cliff 兩-regime 模型（cim_multitile.json，JSON 注入）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>物理意義</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>knee（轉折點）</td><td class="num">8.2 M params</td><td>權重總量超過此值就<strong>塞不進 on-chip SRAM</strong>、開始溢出到 DRAM。≈ on-chip SRAM 的權重容量，物理清晰</td></tr>
+        <tr class="gen"><td>spill floor</td><td class="num">70 GOP/s</td><td>溢出後吞吐被 <strong>DRAM 頻寬鎖死</strong>的地板值（~M2 的有效 BW），不再隨 K·N 變化</td></tr>
+        <tr class="gen"><td>native envelope</td><td class="num">17 M</td><td>Card 上 <code>axcompile</code> 能<strong>原生編譯</strong>的 K·N 上限；超過此值的點是沿 spill floor <strong>線性外推</strong>（低風險）</td></tr>
+      </tbody>
+    </table>
+    <figure>
+      <img src="../../figures/phase1-site/m1_cliff.png" alt="多-tile residency cliff：吞吐 vs K·N">
+      <figcaption>M=1 native 多-tile 吞吐隨 K·N 上升：空心點為單-tile context，藍點為 SRAM-resident（隨 K·N 上升），越過 knee≈8.2M params 後<strong>崩落 ~3.5× 到 ~70 GOP/s 的 DRAM-spill floor</strong>（橘方塊）。灰底區（K·N &gt; native envelope 17M）為 floor 外推。真實 decode FFN/lm_head GEMV 正落在 spill regime。
+        <span class="ft">圖 M1·4 · 來源 cim_card_revalidate_raw.json + m1_cim.json › multitile_* · 腳本 tools/plotting/site_m1.py</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>Validation gate · 驗證門檻</span><span class="tag">ADR-0006</span></div>
+    <table>
+      <caption>decode G_eff 擬合門檻（ADR-0006 Phase 1.1，13 native pts）</caption>
+      <thead><tr><th>指標</th><th class="num">值</th><th class="num">門檻</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>median rel_err</td><td class="num">2.7%</td><td class="num">≤ 10%</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>p95 rel_err</td><td class="num">14.9%</td><td class="num">≤ 20%</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>max rel_err</td><td class="num">17.6%</td><td class="num">—</td><td>呈現不隱藏</td></tr>
+      </tbody>
+    </table>
+    <table>
+      <caption>Card 重驗（cim_card_revalidate.json › status=CARD_REVALIDATED，13 pts）</caption>
+      <thead><tr><th>指標</th><th class="num">值</th><th class="num">容差</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>median |rel_diff|</td><td class="num">4.8%</td><td class="num">≤ 10%</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>p95 |rel_diff|</td><td class="num">9.7%</td><td class="num">≤ 20%</td><td class="pass">✅ PASS</td></tr>
+      </tbody>
+    </table>
+    <p>Alpha 的 <code>G_eff(N,K)</code> 因此 Card-confirmed，凍結解除（決策：保留 Alpha 擬合）。Card 系統性略低於 Alpha（12/13 點），小-N 差較大、大-N 收斂——跨 SDK 版本小偏移，在容差內。</p>
+    <table>
+      <caption>prefill 仿射 + 多-tile cliff 擬合品質（cim_prefill_fit / cim_multitile.json）</caption>
+      <thead><tr><th>項目</th><th class="num">fit max</th><th class="num">hold-out median</th><th>範圍</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>prefill 仿射</td><td class="num">3.1%</td><td class="num">0.9%</td><td>M∈{2…508}</td></tr>
+        <tr class="gen"><td>多-tile cliff（新）</td><td class="num">12.5%</td><td class="num">3.3%</td><td>K·N ≤ 17M</td></tr>
+        <tr><td>多-tile（舊 tile-sum，對照）</td><td class="num">100%</td><td class="num">median 31%</td><td>已汰換</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>真牆位置被低估約 2×。</b>dense sweep 編到 M=508 全成功、M=511 起失敗——真正的 SRAM-tiling 牆釘在 ~M=510，約為舊假設 256 的 2×。牆是真的（SRAM 相關），只是位置低估了一倍。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§5</span><span>Phase-2 就緒度</span></div>
+    <table>
+      <thead><tr><th>項目</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>M=1 decode <code>dev_lat_us(K,N)</code> 介面</td><td class="pass">✅ 凍結，calibrated</td></tr>
+        <tr><td>M&gt;1 prefill <code>dev_lat_us(M,K,N)</code>（dense M∈{2…508}）</td><td class="pass">✅ 凍結，calibrated（hold-out 0.9%）</td></tr>
+        <tr><td>prefill M &gt; 508</td><td class="fail">⚠ 外推（真牆 ~M=510；M=511 fail）</td></tr>
+        <tr><td>多-tile residency cliff（K·N ≤ 17M）</td><td class="pass">✅ calibrated（Card-native）</td></tr>
+        <tr><td>多-tile K·N &gt; 17M（spill floor）</td><td class="fail">⚠ 外推（memory-bound 線性，低風險）</td></tr>
+        <tr><td>Card-revalidated，凍結解除</td><td class="pass">✅ CARD_REVALIDATED</td></tr>
+        <tr><td><code>CimTileModel</code> + <code>params/m1_cim.json</code></td><td class="pass">✅ 模組化，Phase 2 直接調用</td></tr>
+        <tr><td>edge topology <code>noc_efficiency=0.9</code></td><td class="fail">⚠ assumption，待 edge silicon 校準</td></tr>
+      </tbody>
+    </table>
+    <p>無 blocking gap：M1 介面穩定，Phase 1 端到端 recompose 已在 M1 calibrated decode 路徑上通過 8B hold-out（9.5%）。<strong>Phase 2 仍需：</strong>prefill 端到端 TTFT 驗證、edge <code>noc_efficiency</code> 校準、多-tile spill 的 M&gt;1 行為（cliff 主要在 M=1 量）。</p>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個數字皆回查 committed artifact</div>
+    <ol>
+      <li>decode G_eff 門檻：<code>validation/reports/phase1.1/m1.json › throughput_fit_gate_native</code></li>
+      <li>Card 重驗：<code>validation/reports/phase1.2/cim_card_revalidate.json › status, consistency</code></li>
+      <li>prefill 仿射：<code>validation/reports/phase1.2/cim_prefill_fit.json › affine_fit_tile_lat_us</code></li>
+      <li>多-tile cliff：<code>validation/reports/phase1.5/cim_multitile.json › model, old_vs_new, resident_holdout</code></li>
+      <li>KV-append SPIKE：<code>validation/reports/phase1.5/kv_append_spike.json › verdict</code></li>
+      <li>擬合參數 / 架構：<code>simulator/models/params/m1_cim.json</code>；contract <code>validation/contracts/m1.yaml</code></li>
+      <li>原始量測：<code>measurements/aetina/metis_alpha_matmul.json</code>、<code>measurements/metis_card/cim_card_revalidate_raw.json</code></li>
+      <li>recompose hold-out：<code>validation/reports/phase1.1/recompose.json › rel_error_8b</code></li>
+    </ol>
+  </div>
+
+</section>
+
+</div></div></body></html>

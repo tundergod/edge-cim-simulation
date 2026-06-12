@@ -1,0 +1,151 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>就緒矩陣 · Edge-CIM Phase 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head><body>
+<nav class="sidebar"><div class="brand">Edge-CIM · Phase 1<small>元件建模與驗證 · 進 Phase 2 前</small></div><nav><ul><li class="grp">導論</li><li><a class="" href="00-overview.html"><span class="mc"></span><span>概覽</span></a></li><li><a class="active" href="01-readiness.html"><span class="mc"></span><span>就緒矩陣</span></a></li><li class="grp">各單元</li><li><a class="" href="02-cim.html"><span class="mc">M1</span><span>CIM 計算核</span></a></li><li><a class="" href="03-memory.html"><span class="mc">M2</span><span>記憶體</span></a></li><li><a class="" href="04-cpu.html"><span class="mc">M4·CPU</span><span>A76 CPU</span></a></li><li><a class="" href="05-gpu.html"><span class="mc">M4·GPU</span><span>Mali GPU</span></a></li><li><a class="" href="06-npu.html"><span class="mc">M4·NPU</span><span>RKNPU2</span></a></li><li class="grp">跨單元</li><li><a class="" href="07-workload.html"><span class="mc">M5</span><span>Workload</span></a></li><li><a class="" href="08-energy-e2e.html"><span class="mc">M7</span><span>能量 + E2E</span></a></li><li><a class="" href="09-phase2-preview.html"><span class="mc">M3/M6</span><span>Phase 2 預覽</span></a></li><li class="grp">結論</li><li><a class="" href="10-gaps.html"><span class="mc"></span><span>缺口 / GO-NOGO</span></a></li><li><a class="" href="11-sources.html"><span class="mc"></span><span>來源</span></a></li><li><a class="todo" href="#"><span class="mc">M8</span><span>溫度 (熱)</span></a></li></ul></nav></nav>
+<div class="main"><div class="page">
+<header class="masthead">
+  <div class="mcode">就緒</div>
+  <div>
+    <div class="eyebrow">全局 · 就緒矩陣 · Phase 1 → Phase 2</div>
+    <h1>就緒矩陣</h1>
+    <p class="lede">一頁看完 Phase 1 所有單元的狀態：每個單元模擬什麼、資料源到哪一層（calibrated·fitted·simulated·assumption·borrowed）、驗證 gate 的頭條數字過不過、最大缺口在哪、能不能直接接 Phase 2。每個數字都從 committed JSON 以 <code>&#123;&#123;key&#125;&#125;</code> 佔位注入，沒有一個是手打的。</p>
+  </div>
+</header>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
+    <div class="role">
+      <p style="margin-top:0">這是全站的<strong>索引頁</strong>——後續每個單元頁（M1 CIM、M2 記憶體、M4-CPU、M4-GPU、M4-NPU、M5 工作負載、M7 能量／端到端）展開的細節，在此先濃縮成一列。<strong>誠實標籤</strong>（資料源層級）沿用各頁 honesty-chip 的決定：<strong>calibrated</strong> = 對我們的 Metis silicon 校準；<strong>fitted</strong> = 自家量測上的閉式擬合；<strong>simulated</strong> = 模型或外部 sim，未經本矽驗證；<strong>assumption</strong> = 規格／文獻推算；<strong>borrowed</strong> = 借自他人量測。一個單元常同時亮多個標籤，下表的「資料源層級」欄取該單元<strong>最具權威</strong>的那層當頭條，括號補次要層。</p>
+      <p style="margin-bottom:0"><strong>不在表內的兩塊</strong>：M3 事件引擎與 M6 排程器是 <strong>Phase 2 工作</strong>（Phase 1 只交 contract + 可調參數，未實作，設計使然非缺失）；M8 熱模型 <strong>pending</strong>（Metis Card 熱量測延到最後，Aetina 送修中）。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>就緒度矩陣</span><span class="tag">per-unit · JSON-sourced</span></div>
+    <table>
+      <caption>Phase 1 全單元就緒矩陣（每個頭條數字皆從 committed JSON 佔位注入；標籤對齊各頁 honesty-chip）</caption>
+      <thead>
+        <tr>
+          <th>單元</th>
+          <th>模擬方法</th>
+          <th>資料源層級</th>
+          <th>驗證 gate（頭條）</th>
+          <th>最大缺口</th>
+          <th class="num">Phase-2 就緒度</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr class="gen">
+          <td><strong>M1 CIM</strong></td>
+          <td>2D <code>G_eff(N,K)</code> 閉式吞吐 + prefill 仿射攤銷 + multi-tile residency-cliff</td>
+          <td><strong>calibrated</strong>（+ fitted；assumption⚠ noc）</td>
+          <td>decode median <strong>2.7%</strong>（≤10%）；Card 重驗 4.8% <span class="pass">✅ PASS</span></td>
+          <td>edge <code>noc_efficiency=0.9</code> 待 edge silicon；prefill M&gt;508 外推</td>
+          <td class="num"><span class="pass">✅</span></td>
+        </tr>
+        <tr class="gen">
+          <td><strong>M2 記憶體</strong></td>
+          <td>eff-BW DRAM 串流（decode 牆）+ PCIe floor + KV-append 純頻寬</td>
+          <td><strong>calibrated</strong>（LPDDR4x；+ fitted / simulated LPDDR5 / assumption⚠）</td>
+          <td>LPDDR4x <strong>24.2 GB/s</strong>（峰值 71%，r²=0.997）<span class="pass">✅ PASS</span></td>
+          <td>KV-append 係數 INCONCLUSIVE；LPDDR5 eff 65% 為折扣假設</td>
+          <td class="num"><span class="pass">✅</span></td>
+        </tr>
+        <tr class="gen">
+          <td><strong>M4-CPU</strong></td>
+          <td>指令數 roofline（六類非 GEMM 支援算子）</td>
+          <td><strong>calibrated</strong>（fp32 A76 單核；+ fitted / simulated A55·多核·fp16 / assumption⚠）</td>
+          <td>per-op 殘差 median <strong>1.18%</strong>（p95 7.31%）<span class="pass">✅ PASS</span></td>
+          <td><code>eta_bw=0.6</code> 無 mem-BW micro-bench；A55＋多核＋fp16 為解析外推；prefill 未驗證</td>
+          <td class="num"><span class="pass">✅</span></td>
+        </tr>
+        <tr class="gen">
+          <td><strong>M4-GPU</strong></td>
+          <td>注意力 offload <code>a+b·kv</code>（單 head QK^T+S·V）</td>
+          <td><strong>calibrated</strong>（Mali FP16 attn；+ fitted / assumption⚠ INT8）</td>
+          <td>attn median <strong>0.6%</strong>（p95 1.1%）<span class="pass">✅ PASS</span></td>
+          <td>INT8 <strong>零 GPU 資料</strong>；FP16 roofline 槽僅形狀趨勢可信（長尾 p95 36.1%）</td>
+          <td class="num"><span class="pass">✅</span></td>
+        </tr>
+        <tr class="gen">
+          <td><strong>M4-NPU</strong></td>
+          <td>解析 systolic-roofline + ONNXim 重型 sim 交叉驗證</td>
+          <td><strong>simulated</strong> / <strong>borrowed</strong>（calibrated <span class="fail">OFF</span>；+ fitted / assumption⚠）</td>
+          <td><strong>無數值 silicon gate</strong>；ONNXim sim-vs-sim 一致高約 4×（median |delta| 317.9%）<span class="fail">⚠</span></td>
+          <td><strong>無 RKNPU2 silicon</strong>（#13 superseded-not-satisfied）；無裁判</td>
+          <td class="num"><span class="fail">⚠</span></td>
+        </tr>
+        <tr class="gen">
+          <td><strong>M5 工作負載</strong></td>
+          <td>op×shape DAG 確定性 trace + inventory 覆蓋 oracle</td>
+          <td><strong>calibrated</strong>（對 inventory 自驗）</td>
+          <td>4 模型全過、孤兒 op <strong>0</strong>、580 簽名／9 類全覆蓋 <span class="pass">✅ PASS</span></td>
+          <td>無（生成式確定性；不擬合任何延遲參數）</td>
+          <td class="num"><span class="pass">✅</span></td>
+        </tr>
+        <tr class="gen">
+          <td><strong>M7 能量</strong></td>
+          <td>spec-based per-token 能量 + 端到端 recompose hold-out</td>
+          <td><strong>assumption</strong>（calibrated <span class="fail">OFF</span>，無功耗遙測；+ fitted recompose / borrowed 係數）</td>
+          <td>無數值 gate；±20%×16 corner、結論翻轉 <strong>0</strong>；recompose 8B 誤差 9.5% <span class="pass">✅ PASS</span></td>
+          <td>無功耗 telemetry（ADR-0005，能量永不可量測）；只能說「記憶體主導」</td>
+          <td class="num"><span class="pass">✅</span></td>
+        </tr>
+        <tr>
+          <td><strong>M3 事件引擎</strong></td>
+          <td>discrete-event + 多單元競爭</td>
+          <td>—</td>
+          <td><strong>未實作</strong>（contract + 3 可調參數）</td>
+          <td>整合層尚未建（多單元並發）</td>
+          <td class="num">⛔ Phase 2</td>
+        </tr>
+        <tr>
+          <td><strong>M6 排程器</strong></td>
+          <td>op→單元映射 + 精度邊界</td>
+          <td>—</td>
+          <td><strong>未實作</strong>（contract + 4 可調參數）</td>
+          <td>conversion-op 成本 = Phase-2 解析建模項（非量測）</td>
+          <td class="num">⛔ Phase 2</td>
+        </tr>
+        <tr>
+          <td><strong>M8 熱模型</strong></td>
+          <td>thermal / DVFS</td>
+          <td>—</td>
+          <td><strong>pending</strong>（Metis Card 熱量測延到最後）</td>
+          <td>Aetina 送修，熱量測未排</td>
+          <td class="num">⛔ pending</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>怎麼讀這張表</span></div>
+    <p><strong>「資料源層級」欄</strong>取每個單元最具權威的誠實標籤當頭條，與各單元頁的 honesty-chip 一字對齊：例如 <strong>M4-NPU 的 calibrated 是關閉的</strong>（無 RKNPU2 silicon），所以它落在 simulated / borrowed；<strong>M7 的 calibrated 也關閉</strong>（無功耗遙測），落在 assumption。<code>⚠</code> 標的是 on-but-caveated 的 assumption 層（橘色 chip）。</p>
+    <p><strong>「Phase-2 就緒度」欄</strong>：<span class="pass">✅</span> = 該單元按其誠實標準交付且通過該層驗證，介面可供 Phase 2 直接接上——注意「就緒」<strong>不等於「量測級精確」</strong>（如 LPDDR5、NPU ONNXim 是 simulated，但介面與標籤都誠實、可接，因此就緒）。<span class="fail">⚠</span> = 有缺口或限制（NPU 無 silicon）。<strong>⛔</strong> = M3／M6 是 Phase 2 才實作的整合層（設計使然，非 Phase 1 缺失）、M8 熱模型 pending。</p>
+    <div class="note"><b>一句話就緒判定：</b>decode 主路徑（M1 CIM 算 + M2 記憶體搬 + M4-GPU attention + M4-CPU 支援 + M7 端到端 recompose）達<strong>量測級可信</strong>，多數單元 calibrated／ready；剩下三塊是誠實標註的缺口——<strong>M4-NPU 無 silicon</strong>（#13，simulated/borrowed，無裁判）、<strong>M8 熱模型 pending</strong>、<strong>多單元競爭（M3/M6）為 Phase 2 整合工作</strong>。沒有 blocking gap：所有就緒單元的介面已凍結、可直接接 Phase 2。</div>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每列在對應單元頁展開、回查 committed artifact</div>
+    <ol>
+      <li>M1 CIM：<code>02-cim</code>（<code>validation/reports/phase1.1/m1.json</code>、<code>phase1.2/cim_card_revalidate.json</code>、<code>phase1.5/cim_multitile.json</code>）</li>
+      <li>M2 記憶體：<code>03-memory</code>（<code>phase1.1/m2.json</code>、<code>phase1.3/m2_ramulator2.json</code>、<code>phase1.5/kv_append_spike.json</code>）</li>
+      <li>M4-CPU：<code>04-cpu</code>（<code>phase1.2/m4_cpu.json</code>、<code>params/m4_cpu_instrcount.json</code>）</li>
+      <li>M4-GPU：<code>05-gpu</code>（<code>phase1.1/m4_gpu.json</code>、<code>phase1.2/m4_gpu_roofline.json</code>）</li>
+      <li>M4-NPU：<code>06-npu</code>（<code>phase1.3/m4_npu_onnxim.json</code>、<code>specs/npu_rknpu2.json</code>；無 silicon，#13）</li>
+      <li>M5 工作負載：<code>07-workload</code>（<code>phase1.1/m5.json</code>、<code>measurements/op_inventory/sweep_matrix.json</code>）</li>
+      <li>M7 能量／端到端：<code>08-energy-e2e</code>（<code>phase1.1/m7.json</code>、<code>phase1.1/recompose.json</code>）</li>
+      <li>M3／M6／M8：Phase 2 / pending（contracts <code>validation/contracts/*.yaml</code>；ADR-0005 無功耗遙測）</li>
+    </ol>
+  </div>
+
+</section>
+
+</div></div></body></html>

@@ -1,0 +1,95 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>概覽 · Edge-CIM Phase 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head><body>
+<nav class="sidebar"><div class="brand">Edge-CIM · Phase 1<small>元件建模與驗證 · 進 Phase 2 前</small></div><nav><ul><li class="grp">導論</li><li><a class="active" href="00-overview.html"><span class="mc"></span><span>概覽</span></a></li><li><a class="" href="01-readiness.html"><span class="mc"></span><span>就緒矩陣</span></a></li><li class="grp">各單元</li><li><a class="" href="02-cim.html"><span class="mc">M1</span><span>CIM 計算核</span></a></li><li><a class="" href="03-memory.html"><span class="mc">M2</span><span>記憶體</span></a></li><li><a class="" href="04-cpu.html"><span class="mc">M4·CPU</span><span>A76 CPU</span></a></li><li><a class="" href="05-gpu.html"><span class="mc">M4·GPU</span><span>Mali GPU</span></a></li><li><a class="" href="06-npu.html"><span class="mc">M4·NPU</span><span>RKNPU2</span></a></li><li class="grp">跨單元</li><li><a class="" href="07-workload.html"><span class="mc">M5</span><span>Workload</span></a></li><li><a class="" href="08-energy-e2e.html"><span class="mc">M7</span><span>能量 + E2E</span></a></li><li><a class="" href="09-phase2-preview.html"><span class="mc">M3/M6</span><span>Phase 2 預覽</span></a></li><li class="grp">結論</li><li><a class="" href="10-gaps.html"><span class="mc"></span><span>缺口 / GO-NOGO</span></a></li><li><a class="" href="11-sources.html"><span class="mc"></span><span>來源</span></a></li><li><a class="todo" href="#"><span class="mc">M8</span><span>溫度 (熱)</span></a></li></ul></nav></nav>
+<div class="main"><div class="page">
+<header class="masthead">
+  <div class="mcode">概覽</div>
+  <div>
+    <div class="eyebrow">導論 · Phase 1 元件層 · 進 Phase 2 前</div>
+    <h1>Phase 1 總覽</h1>
+    <p class="lede">這份站台把 Phase 1 的元件建模與驗證整理成自給自足的一份回顧——每個計算/記憶體單元現在多可信、缺什麼、能不能安全進入 Phase 2。核心紀律：不誇大、不軟化；沒量的就說沒量，每個數字都回查得到 committed artifact。</p>
+  </div>
+</header>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>這個模擬器在做什麼</span></div>
+    <div class="role">
+      <p style="margin-top:0">研究目標是一個<strong>以真實晶片校準的「CIM-enabled 異質行動 SoC 上 LLM 推論」模擬器</strong>。這種晶片並不存在，真實的 Axelera Metis 卡也無法直接當研究對象（Metis Alpha 跑不了完整 LLM、量產 Metis Card 只能透過封閉工具鏈跑）。</p>
+      <p style="margin-bottom:0">策略因此是：把<strong>研究對象</strong>設為一個<em>模擬的</em> CIM-mobile SoC，再用兩塊真實 Metis 板（Aetina Metis Alpha + 量產 Metis Card）當<strong>校準 ground truth</strong>。完整動機、平台假設與貢獻定位見 <code>OVERALL.md</code>，此處不重述。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>橋接假設 · 元件 → 端到端</span></div>
+    <p>整個專案的骨幹是 8 個模組 M1–M8 與 6 層驗證 L1–L6。整體論證的<strong>橋接假設</strong>是：把每個單元各自校準好的元件模型<strong>組合</strong>成端到端推論延遲，組合的結果仍貼合真實。</p>
+    <p><strong>Phase 1 是「元件層」</strong>：把 Phase 0.3 量到的資料，對每個計算/記憶體單元擬合成<strong>方程式</strong>（而非龐大 lookup table），逐一驗證其準確度並誠實標註可信邊界。<strong>Phase 1 不做整合</strong>——把校好的元件串成端到端 event-driven 模擬器（M3 事件引擎 + M6 排程器）是 <strong>Phase 2</strong> 的工作。</p>
+    <p>因此本報告的結論不是「模擬器完成了」，而是「<strong>每個元件現在多可信、缺什麼、能不能安全進入 Phase 2</strong>」。橋接假設本身在 Phase 1 已有一個下界證據：端到端 decode recompose 在 8B 上的 hold-out 誤差為 <strong>9.5%</strong>（用 1B+3B 校準、外推 8B），證實組合可行；完整的逐 token 整機驗證仍屬 Phase 2。</p>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>方法論 · 為何按「資料來源」拆成三層</span></div>
+    <p>Phase 1 刻意<strong>依資料來源、而非依模組</strong>切分，因為一個元件可信到什麼程度，取決於它背後是哪一種證據：</p>
+    <table>
+      <caption>Phase 1 三個資料來源層</caption>
+      <thead><tr><th>子階段</th><th>是什麼</th><th>可信度定位</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td><strong>1.1</strong> Metis silicon 校準</td><td>凡能用自家 Metis 量測直接校準、並通過 ADR-0006 gate 的核心 decode 路徑：CIM 2D G_eff、Mali GPU attention、CPU 支援算子、量產卡 LPDDR4x、M5 trace、M7 能耗，外加端到端 recompose hold-out。</td><td><strong>量測級可信</strong></td></tr>
+        <tr class="gen"><td><strong>1.2</strong> 模組化 analytic 層</td><td>把每個非-micro-benchmark 單元改寫成「一個模型引擎 + 一份可換 spec 檔」，換型號＝換 spec。補齊 CPU 指令數 roofline、NPU 解析 systolic-roofline、全-spec 記憶體、GPU roofline 槽、CIM 雙拓樸與 Card 重驗。</td><td><strong>完整、可換型號</strong></td></tr>
+        <tr class="gen"><td><strong>1.3</strong> 重型 sim drop-in</td><td>把 ONNXim（NPU）、Ramulator2（記憶體）這類 C++ 重型 sim 透過凍結介面 <code>engine=</code> 插進 1.2 的同一個槽，交叉比對 analytic 的單串流趨勢。<strong>兩者都是 simulated、不是 silicon。</strong></td><td><strong>交叉驗證</strong>（招牌價值留待 Phase 2）</td></tr>
+      </tbody>
+    </table>
+    <p>三期共用一條凍結介面 <code>Engine(spec).predict(workload) → {latency_us, bound, provenance}</code>，所以 Phase 1.1 的校準在 1.2 改成 spec-based 後仍可重現（recompose 8B hold-out 重跑仍是 9.5%）。</p>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>誠實標籤 · 怎麼讀每個單元的 chip 列</span></div>
+    <p>每個單元頁的標題下方有一列<strong>誠實 chip</strong>，把該單元每種證據的可信度一眼標出。亮起（實心點、藍框）= 該單元有這種來源；劃掉（淡色刪除線）= 沒有這種來源——<strong>沒有，本身就是誠實呈現</strong>。橘框 = 亮起但有 caveat（如 assumption）。五個 chip 的固定含義：</p>
+    <div class="chips">
+      <span class="chip on" title="對自家 Metis silicon 擬合／驗證">calibrated</span>
+      <span class="chip on" title="參數化方程式擬合，可外推、可解釋">fitted</span>
+      <span class="chip on" title="來自模型或外部模擬器，未經自家 silicon 驗證">simulated</span>
+      <span class="chip on warn" title="規格推算或文獻典型值，repo 內無一手資料">assumption</span>
+      <span class="chip off" title="直接借用他人量測（主要是 HeteroInfer 的 trend）">borrowed</span>
+    </div>
+    <table>
+      <caption>誠實標籤定義（每個來源恰標一種）</caption>
+      <thead><tr><th>標籤</th><th>意義</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td><strong>calibrated</strong></td><td>對自家手上的真實 Metis silicon 擬合／驗證。</td></tr>
+        <tr class="gen"><td><strong>fitted</strong></td><td>參數化方程式擬合（可外推、可解釋、體積小），擬合誤差以 median / p95 相對誤差記錄。</td></tr>
+        <tr class="gen"><td><strong>simulated</strong></td><td>來自模型或外部模擬器（ONNXim / Ramulator2），<strong>未</strong>經自家 silicon 驗證。</td></tr>
+        <tr class="gen"><td><strong>assumption</strong></td><td>規格推算或文獻典型值，repo 內無一手資料來源（chip 染橘提醒）。</td></tr>
+        <tr class="gen"><td><strong>borrowed</strong></td><td>直接借用他人量測（主要是 HeteroInfer 的 trend）。</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>標籤不混用、可並存。</b>一個元件可同時含多種來源（例如記憶體 = LPDDR4x calibrated + LPDDR5 simulated + 峰值 assumption），頁面會逐項分開標。chip 的 on 狀態與來源路徑都 committed 在 <code>chips.json</code>，audit 是對著這張表查、不是對著散文查。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>怎麼讀這份報告 · 五段式單元模板</span></div>
+    <p>站台<strong>按單元編排</strong>（CIM / 記憶體 / CPU / GPU / NPU / Workload / 能量+E2E），對應 Phase 2 要組起來的異質 SoC 各計算單元。每個單元一律用同一個五段式模板：</p>
+    <table>
+      <caption>每個單元頁的五段結構</caption>
+      <thead><tr><th>段</th><th>回答的問題</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td><strong>§0 本章角色</strong></td><td>這個單元模擬什麼最基本的算子、為什麼這幾件事就足夠。</td></tr>
+        <tr class="gen"><td><strong>§1 Measurement · 量測</strong></td><td>silicon 錨點從哪來、量了什麼標的。</td></tr>
+        <tr class="gen"><td><strong>§2 Fit · 擬合</strong></td><td>方程式形式 + 逐參數的物理意義（值由 JSON 注入）。</td></tr>
+        <tr class="gen"><td><strong>§3 Simulation · 模擬 / 外推</strong></td><td>重型 sim 交叉驗證，或量測 envelope 之外的解析外推。</td></tr>
+        <tr class="gen"><td><strong>§4 Validation gate · 驗證門檻</strong></td><td>誤差數字對 ADR-0006 gate 的 PASS / 待解判定。</td></tr>
+        <tr class="gen"><td><strong>§5 Phase-2 就緒度</strong></td><td>哪些介面凍結可直接調用、哪些是外推區或真缺口。</td></tr>
+      </tbody>
+    </table>
+    <p>跨單元結果（M5 trace、M7 能耗、decode 端到端 recompose）收在後段；尚未實作的整合層（M3 / M6）明確區分「未實作（設計使然，是 Phase 2 工作）」與「真缺口」。每個數字皆從 committed JSON 注入，建置時遇到無法解析的 placeholder 會直接失敗——數字不能在散文裡被手打錯。完整的來源對照見<strong>「來源與誠實帳本」</strong>頁。</p>
+  </div>
+
+</section>
+
+</div></div></body></html>
