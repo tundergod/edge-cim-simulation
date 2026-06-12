@@ -41,7 +41,7 @@ PAGES = [
     ("09-phase2-preview","M3/M6",   "Phase 2 預覽", "跨單元",  "done"),
     ("10-gaps",          "",        "缺口 / GO-NOGO","結論",   "done"),
     ("11-sources",       "",        "來源",         "結論",   "done"),
-    ("12-thermal",       "M8",      "溫度 (熱)",    "各單元",  "todo"),
+    ("12-thermal",       "M8",      "溫度 (熱)",    "各單元",  "done"),
 ]
 CHIP_ORDER = ["calibrated", "fitted", "simulated", "assumption", "borrowed"]
 

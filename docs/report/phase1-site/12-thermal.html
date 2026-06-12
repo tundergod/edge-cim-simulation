@@ -1,0 +1,118 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M8 溫度 (熱) · Edge-CIM Phase 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head><body>
+<nav class="sidebar"><div class="brand">Edge-CIM · Phase 1<small>元件建模與驗證 · 進 Phase 2 前</small></div><nav><ul><li class="grp">導論</li><li><a class="" href="00-overview.html"><span class="mc"></span><span>概覽</span></a></li><li><a class="" href="01-readiness.html"><span class="mc"></span><span>就緒矩陣</span></a></li><li class="grp">各單元</li><li><a class="" href="02-cim.html"><span class="mc">M1</span><span>CIM 計算核</span></a></li><li><a class="" href="03-memory.html"><span class="mc">M2</span><span>記憶體</span></a></li><li><a class="" href="04-cpu.html"><span class="mc">M4·CPU</span><span>A76 CPU</span></a></li><li><a class="" href="05-gpu.html"><span class="mc">M4·GPU</span><span>Mali GPU</span></a></li><li><a class="" href="06-npu.html"><span class="mc">M4·NPU</span><span>RKNPU2</span></a></li><li class="grp">跨單元</li><li><a class="" href="07-workload.html"><span class="mc">M5</span><span>Workload</span></a></li><li><a class="" href="08-energy-e2e.html"><span class="mc">M7</span><span>能量 + E2E</span></a></li><li><a class="" href="09-phase2-preview.html"><span class="mc">M3/M6</span><span>Phase 2 預覽</span></a></li><li class="grp">結論</li><li><a class="" href="10-gaps.html"><span class="mc"></span><span>缺口 / GO-NOGO</span></a></li><li><a class="" href="11-sources.html"><span class="mc"></span><span>來源</span></a></li><li><a class="active" href="12-thermal.html"><span class="mc">M8</span><span>溫度 (熱)</span></a></li></ul></nav></nav>
+<div class="main"><div class="page">
+<header class="masthead">
+  <div class="mcode">M8</div>
+  <div>
+    <div class="eyebrow">各單元 · 熱 · Thermal（Phase 1.7, Metis Card）</div>
+    <h1>溫度（熱）</h1>
+    <p class="lede">M8 是一個事後附加的<strong>開環熱層</strong>：讀 Phase 2 算出的 per-op 活動/功耗 timeline，用 lumped RC 模型估出溫度軌跡，不把 throttling 回饋進 timing（v1）。本頁是 Phase 1.7 在量產 Metis Card 上實量的熱響應——以及一個關鍵附帶問題：<strong>效能會不會隨溫度上升而改變</strong>。</p>
+  </div>
+</header>
+
+<div class="chips"><span class="chip on" title="validation/reports/phase1.7/thermal.json — max-core temp measured on the production Metis Card via axrunmodel temp:<C>C, 40 sustained 4-core 2048x2048-matmul bursts (measurements/metis_card/thermal_heat_20260612.json)">calibrated</span><span class="chip on" title="validation/reports/phase1.7/thermal.json › rc_fit (lumped RC T(t)=T_inf-(T_inf-T0)e^-t/tau, T_inf=44.1C tau=139s, rmse 0.24C) ; simulator/models/params/m8_thermal.json">fitted</span><span class="chip off" title="N/A — thermal is measured on silicon + an analytic RC fit; no heavy-sim engine.">simulated</span><span class="chip on warn" title="no on-board power telemetry -> NO absolute R_th(°C/W); single lumped max-core temp (5-sensor slog intermittent); T_amb baseline drifts on shared host. validation/contracts/m8.yaml › gaps">assumption</span><span class="chip off" title="none — all thermal numbers self-measured on the Card.">borrowed</span></div>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
+    <div class="role">
+      <p style="margin-top:0">M8 的基本功能 = <strong>把「算了多少、多久」換算成溫度</strong>。它與 M1–M7 完全解耦（讀它們的活動 timeline，不改它們的 timing），所以可以在 Phase 0.4 / 1.7 之後才以獨立模組加入。</p>
+      <p style="margin-bottom:0">溫度怎麼讀（已驗收）：量產 Card 的 <code>axllm --show-temp</code> tracer 在 SDK 1.6.0 不支援；改用 <code>axrunmodel</code> 每次 run 的摘要行 <code>temp:&lt;C&gt;C</code>（<strong>最高核溫</strong>，throttle 最相關的那顆；5-sensor slog 間歇、不可靠故取 max-core）。負載用<strong>非 LLM 的合成 matmul</strong>（2048×2048 的 1×1-conv proxy，axrunmodel <code>--seconds/--aipu-cores</code>），把「難度×時長 → 溫度」跟 LLM 推論解耦。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>Measurement · 量測</span><span class="tag">silicon · 合成負載</span></div>
+    <p>在量產 Card 上跑 <strong>40 個連續 4-core 2048×2048 matmul burst（~11 分鐘持續滿載）</strong>，每個 burst 記一個（時間, 吞吐, 最高核溫）點。kill-switch + abort-cap 全程守護（短 burst，板每分鐘只升 ~1°C，單 burst 不可能過衝）。</p>
+    <figure>
+      <img src="../../figures/phase1-site/m8_heating.png" alt="最高核溫 vs 持續負載時間">
+      <figcaption><strong>怎麼讀：</strong>橫軸是持續滿載時間、縱軸最高核溫。藍點是每個 burst 的量測，黑線是 RC 擬合。溫度從 41°C 上升、約 4 分鐘後<strong>平台在 ~44°C</strong>（滿 4-core 載的穩態）。注意升溫是<strong>指數趨近、非線性</strong>：前 100 秒快、接近平台慢——這就是 RC。距離 110°C 降頻門檻還有 <strong>+66°C</strong>，完全沒接近。
+        <span class="ft">圖 M8·1 · 來源 measurements/metis_card/thermal_heat_20260612.json + phase1.7/thermal.json · 腳本 tools/plotting/site_m8.py</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>Fit · 擬合</span><span class="tag">lumped RC · 逐參數</span></div>
+    <div class="eq">T(t) = T_inf − (T_inf − T0)·exp(−t/tau)        <span class="c"># 升溫步階響應</span>
+T_inf = T_amb + P·R_th    tau = R_th·C_th         <span class="c"># 穩態 / 時間常數</span></div>
+    <p><strong>為什麼升溫非線性（你問的 40→50 ≠ 50→60）：</strong>越接近穩態 T_inf，升溫速率 ∝ (T_inf−T) 越慢；同時散熱 ∝ ΔT，越熱散得越快。所以同樣 +1°C，越靠近平台越難、越花時間。<strong>每個參數：</strong></p>
+    <table>
+      <caption>RC 熱模型參數（phase1.7/thermal.json，JSON 注入）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>物理意義</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>T0（起始）</td><td class="num">41 °C</td><td>本次量測的起溫（板已被前面的 run 暖到 41°C；真 idle 更低、本次未量到）</td></tr>
+        <tr class="gen"><td>T∞（穩態）</td><td class="num">44.1 °C</td><td><strong>滿 4-core 載的平台溫</strong>：= T_amb + P·R_th。板散熱很好，只到 ~44°C</td></tr>
+        <tr class="gen"><td>τ（時間常數）</td><td class="num">139 s</td><td>升到 63% ΔT 所需時間 = R_th·C_th。τ ≫ 1s → 1Hz 取樣足夠解析</td></tr>
+        <tr class="gen"><td>fit RMSE</td><td class="num">0.24 °C</td><td>RC 擬合殘差（1°C 溫度解析度下的貼合度）</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>誠實：不出絕對 R_th。</b>量產 Card 無功耗 telemetry → 拿不到絕對 R_th(°C/W)；這裡是<strong>相對特性化</strong>（T∞、τ）。要絕對值得借 M7 的規格估功耗（compute-only、±20%），標 assumption+外推。span 只有 3°C（板太涼），τ 為近似。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>效能-溫度耦合</span><span class="tag">throttle 偵測</span></div>
+    <p>核心附帶問題：<strong>吞吐會不會隨溫度掉</strong>（thermal throttling）？把同一個固定負載的每-burst 吞吐對最高核溫畫出來：</p>
+    <figure>
+      <img src="../../figures/phase1-site/m8_perf_temp.png" alt="吞吐 vs 最高核溫">
+      <figcaption><strong>怎麼讀：</strong>橫軸最高核溫、縱軸 dev 吞吐（fps）。淺藍是 ±2σ 噪音帶、黑線是平均。點幾乎全落在噪音帶內、無趨勢——<strong>斜率 2.2 fps/°C 遠小於噪音 8 fps</strong>（CoV 0.05%）。所以在可達的 41–44°C 範圍內<strong>吞吐與溫度無關、沒有 throttle</strong>。
+        <span class="ft">圖 M8·2 · 來源 thermal_heat_20260612.json + phase1.7/thermal.json · 腳本 tools/plotting/site_m8.py</span>
+      </figcaption>
+    </figure>
+    <div class="note"><b>範圍限制（誠實）：</b>safe 上限 60°C ≪ 110°C 降頻門檻，而滿載平台才 ~44°C → <strong>結構上量不到 throttle</strong>。結論是「41–44°C 正常操作範圍內不 throttle、110°C 門檻未達」，<strong>不是</strong>「板子永不 throttle」。對 M1–M7 的意義：calibrated 延遲在正常熱狀態下成立（板不會熱到降頻）。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>Validation gate · 驗證門檻</span></div>
+    <table>
+      <caption>M8 驗證（phase1.7/thermal.json）</caption>
+      <thead><tr><th>檢查</th><th class="num">值</th><th class="num">門檻</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>溫度正、隨持續負載單調上升</td><td class="num">41→44°C</td><td class="num">必過</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>平台溫低於 PVT 警告</td><td class="num">44.1°C</td><td class="num">&lt; 95°C</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>RC 擬合殘差</td><td class="num">0.24°C</td><td class="num">—</td><td>呈現</td></tr>
+        <tr class="gen"><td>perf-vs-temp 斜率 vs 噪音</td><td class="num">2.2 / 8</td><td class="num">|slope|≪noise</td><td class="pass">✅ flat</td></tr>
+        <tr><td>throttle 門檻是否觸及</td><td class="num">44°C</td><td class="num">110°C</td><td class="fail">⚠ 未達（+66°C）</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§5</span><span>Phase-2 就緒度</span></div>
+    <table>
+      <thead><tr><th>項目</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>溫度可讀（量產 Card, max-core via axrunmodel）</td><td class="pass">✅ 驗收 YES</td></tr>
+        <tr><td>RC 熱模型（T∞ 44.1°C / τ 139s）給 Phase 2</td><td class="pass">✅ 相對特性化</td></tr>
+        <tr><td>perf 與溫度無關（正常範圍不 throttle）</td><td class="pass">✅ 量到</td></tr>
+        <tr><td>絕對 R_th(°C/W)</td><td class="fail">⚠ 無功耗 telemetry → 不出（或借 M7 估、標 assumption）</td></tr>
+        <tr><td>降溫 τ</td><td class="fail">⚠ collector idle 即停 → 未量（keepalive 偏置）</td></tr>
+        <tr><td>5-sensor per-core 溫度</td><td class="fail">⚠ slog 間歇 → 只有 lumped max-core</td></tr>
+        <tr><td>Aetina 端熱 / 更寬溫度範圍</td><td class="fail">⚠ Aetina 送修；Card 散熱太好 span 僅 3°C</td></tr>
+      </tbody>
+    </table>
+    <p><strong>結論：</strong>量產 Card 在滿 4-core 持續負載下<strong>跑得很涼（~44°C 平台、距降頻門檻 +66°C）、且不 throttle</strong>。M8 的 lumped RC 模型（開環）可直接給 Phase 2 估溫；絕對功耗校準與降溫 τ 留待有功耗 telemetry / keepalive 設計時補。</p>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個數字皆回查 committed artifact</div>
+    <ol>
+      <li>熱 + perf 擬合：<code>validation/reports/phase1.7/thermal.json</code>（rc_fit / perf_vs_temp / throttle_thresholds）</li>
+      <li>原始量測：<code>measurements/metis_card/thermal_heat_20260612.json</code>（40 bursts: t / dev_fps / temp_C）</li>
+      <li>RC 參數（Phase 2）：<code>simulator/models/params/m8_thermal.json</code></li>
+      <li>擷取 harness：<code>characterization/metis_card/thermal_capture.py</code>（kill-switch / abort-cap）</li>
+      <li>分析：<code>tools/analysis/fit_m8_thermal.py</code></li>
+      <li>contract / 誠實限制：<code>validation/contracts/m8.yaml</code></li>
+    </ol>
+  </div>
+
+</section>
+
+</div></div></body></html>

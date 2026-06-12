@@ -90,5 +90,15 @@
   "m7_recompose": {
     "dir": "phase1-site", "script": "tools/plotting/site_m7.py",
     "sources": ["validation/reports/phase1.1/recompose.json"]
+  },
+  "m8_heating": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m8.py",
+    "sources": ["measurements/metis_card/thermal_heat_20260612.json",
+                "validation/reports/phase1.7/thermal.json"]
+  },
+  "m8_perf_temp": {
+    "dir": "phase1-site", "script": "tools/plotting/site_m8.py",
+    "sources": ["measurements/metis_card/thermal_heat_20260612.json",
+                "validation/reports/phase1.7/thermal.json"]
   }
 }

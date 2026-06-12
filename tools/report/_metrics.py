@@ -76,6 +76,7 @@ def load():
     ram2 = _load("phase1.3/m2_ramulator2.json")
     onnxim = _load("phase1.3/m4_npu_onnxim.json")
     m2pcie = _load_param("m2_pcie")
+    th = _load("phase1.7/thermal.json")
     cpuic = _load_param("m4_cpu_instrcount")
     cpurk = _load_spec("cpu_rk3588")
     m5 = _load("phase1.1/m5.json")
@@ -199,6 +200,23 @@ def load():
         "energy.total_mj": _f(m7["per_token_total_mJ"], 2),                          # 256.15
         "energy.corners": _i(m7["sensitivity_pm20pct"]["corners_tested"]),           # 16
         "energy.flips":   _i(m7["sensitivity_pm20pct"]["conclusion_flips"]),         # 0
+        # Thermal (M8, Phase 1.7 — Metis Card, max-core temp)
+        "thermal.t0":        _f(th["rc_fit"]["T0_C"], 0),                              # 41
+        "thermal.tinf":      _f(th["rc_fit"]["Tinf_C"], 1),                            # 44.1
+        "thermal.tau":       _i(th["rc_fit"]["tau_s"]),                                # 139
+        "thermal.rc_rmse":   _f(th["rc_fit"]["rmse_C"], 2),                            # 0.24
+        "thermal.plateau":   _f(th["temperature"]["plateau_obs_C"], 0),               # 44
+        "thermal.span":      _f(th["temperature"]["span_C"], 0),                       # 3
+        "thermal.headroom":  _f(th["headroom_to_downscale_C"], 0),                     # 66
+        "thermal.downscale": _i(th["throttle_thresholds_C"]["freq_downscale"]),        # 110
+        "thermal.pvt":       _i(th["throttle_thresholds_C"]["pvt_warning"]),           # 95
+        "thermal.perf_slope": _f(th["perf_vs_temp"]["slope_fps_per_C"], 1),            # 2.2
+        "thermal.perf_noise": _f(th["perf_vs_temp"]["noise_std_fps"], 0),              # 8
+        "thermal.fps_cov":   _f(th["perf_vs_temp"]["fps_cov_pct"], 2),                 # 0.05
+        "thermal.fps_mean":  _i(th["perf_vs_temp"]["fps_mean"]),                        # 15297
+        "thermal.n_bursts":  _i(th["load"]["n_bursts"]),                                # 40
+        "thermal.cores":     _i(th["load"]["cores"]),                                   # 4
+        "thermal.sustained_min": _f(th["load"]["sustained_s"] / 60, 0),                # 11
     }
 
 

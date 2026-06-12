@@ -1,0 +1,40 @@
+module: m8_thermal
+phase: 1.7                     # Card-only sub-wave (Aetina out for repair -> dual-platform deferred)
+engine: "ThermalModel — lumped RC post-hoc layer: dT/dt = (P·R_th - (T - T_amb)) / tau ; reads a
+  per-op activity/power timeline (Phase 2) and integrates to a temperature trajectory. Open-loop:
+  does NOT feed throttling back into timing (v1)."
+honesty: relative-characterized   # NO on-board power telemetry -> no absolute R_th(°C/W); see gaps
+measurement_sources:
+  # synthetic non-LLM compute stress: 1x1-conv == 2048x2048 matmul proxy, axrunmodel --seconds/--aipu-cores.
+  # temperature = axrunmodel summary-line `temp:<C>C` (MAX core temp, the throttle-relevant sensor);
+  # the slog `core_temps=[5 sensors]` path exists but is INTERMITTENT on this card -> max-core is primary.
+  - characterization/metis_card/thermal_capture.py        # on-board harness (kill/abort-cap guarded)
+  - measurements/metis_card/thermal_heat_*.json           # heating curve: (t, dev_fps, temp_C) per burst
+  - measurements/metis_card/thermal_noise_*.json          # constant-load repeats -> dev-FPS noise floor
+read_path:
+  primary: "axrunmodel summary line: dev:<fps> ... temp:<C>C  (max core temp, per burst)"
+  note: "axllm --show-temp unsupported (core_temp tracer, SDK 1.6.0); slog core_temps=[b,c0..c3] is
+    5-sensor @1Hz but only while a context is active AND emits intermittently -> not relied on."
+throttle_thresholds_C: {pvt_warning: 95, hw_throttle: 105, freq_downscale: 110, sw_throttle: 200}
+acceptance_criteria:
+  - {type: sanity, rules: [temp_positive, monotonic_rise_under_sustained_load, below_pvt_warning_95C]}
+  - {type: rc_fit, rule: "first-order RC heating fit residual reported; tau labelled UNRESOLVED if not >> 1 burst"}
+  - {type: perf_vs_temp, rule: "throughput-vs-max-core-temp slope reported WITH the constant-load dev-FPS
+      noise floor; conclusion = |slope| vs noise (NOT 'board does/te not throttle'); 110C never reached"}
+tunable_params:
+  - R_th_equiv        # ASSUMPTION if absolute (no power telemetry); relative steady-state per load otherwise
+  - tau              # heating time constant (s)
+  - T_amb            # ambient baseline (drifts on shared host -> logged before/between/after)
+gaps:
+  - no_power_telemetry: "production Card has no power sensor (only M.2-Max INA236). Absolute R_th(°C/W)
+      not obtainable; characterize T-response vs activity-level, or feed M7 spec-power (compute-only, ±20%)
+      as an approximate P -> mark any °C/W as assumption+extrapolated."
+  - cooldown_observability: "collector/temp stops when device idle -> natural cooldown not directly
+      observable; keepalive trick decays toward T_inf(keepalive) not T_amb -> tau_cool is a BOUND."
+  - perf_vs_temp_in_safe_range_only: "safe cap 60°C << 110°C freq-downscale -> throttle structurally not
+      reachable here; result is drift-vs-noise in 36–60°C, '110°C not reached', NOT a throttle verdict."
+  - max_core_only: "axrunmodel gives a single max-core temp, not the 5 per-sensor values (slog unreliable)
+      -> single lumped-temperature model, not per-core."
+  - shared_die: "host is multi-login; verified effectively single-user at capture time, but thermal state
+      is non-reproducible in principle and T(t) could include co-tenant heat -> host load logged per burst."
+report: validation/reports/phase1.7/thermal.json

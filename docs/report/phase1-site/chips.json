@@ -83,5 +83,17 @@
      "src": "simulator/models/params/m7_energy.json › cim_tops_w=15.0, lpddr5_pj_per_bit=4.0, pcie_pj_per_bit=5.0, a76_core_w=0.75 — spec/datasheet constants + coarse activity factor (ADR-0005)"},
     {"label": "borrowed", "on": true,
      "src": "vendor/datasheet power numbers (Metis 15 TOPS/W, LPDDR5 4 pJ/bit, PCIe 5 pJ/bit, A76 0.75 W/core) taken verbatim as energy coefficients."}
+  ],
+  "12-thermal": [
+    {"label": "calibrated", "on": true,
+     "src": "validation/reports/phase1.7/thermal.json — max-core temp measured on the production Metis Card via axrunmodel temp:<C>C, 40 sustained 4-core 2048x2048-matmul bursts (measurements/metis_card/thermal_heat_20260612.json)"},
+    {"label": "fitted", "on": true,
+     "src": "validation/reports/phase1.7/thermal.json › rc_fit (lumped RC T(t)=T_inf-(T_inf-T0)e^-t/tau, T_inf=44.1C tau=139s, rmse 0.24C) ; simulator/models/params/m8_thermal.json"},
+    {"label": "simulated", "on": false,
+     "src": "N/A — thermal is measured on silicon + an analytic RC fit; no heavy-sim engine."},
+    {"label": "assumption", "on": true, "warn": true,
+     "src": "no on-board power telemetry -> NO absolute R_th(°C/W); single lumped max-core temp (5-sensor slog intermittent); T_amb baseline drifts on shared host. validation/contracts/m8.yaml › gaps"},
+    {"label": "borrowed", "on": false,
+     "src": "none — all thermal numbers self-measured on the Card."}
   ]
 }
