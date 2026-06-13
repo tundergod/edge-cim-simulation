@@ -79,6 +79,27 @@ def test_fluid_fairshare_equal_costart():
     assert abs(run_dag(dag, plat, bw) - 2.0e6) < 1e-3
 
 
+def test_cyclic_dag_raises():
+    # 0 <-> 1 (both ids exist so Dag builds, but it is cyclic) -> fail loud, no latency
+    dag = Dag([_node(0, "cim", deps=[1]), _node(1, "gpu", deps=[0])])
+    plat = _StubPlatform({0: 1.0, 1: 1.0})
+    try:
+        run_dag(dag, plat, SharedBandwidth(24.2))
+    except ValueError:
+        return
+    raise AssertionError("cyclic DAG not rejected")
+
+
+def test_zero_bandwidth_raises():
+    # a memory-streaming op with zero bandwidth would stall forever -> fail loud
+    dag = Dag([_node(0, "cim", bytes_streamed=int(1e9))])
+    try:
+        run_dag(dag, _StubPlatform({0: 0.0}), SharedBandwidth(eff_BW_GBs=0.0))
+    except ValueError:
+        return
+    raise AssertionError("zero-bandwidth memory stream not rejected")
+
+
 def test_empty_dag():
     dag = Dag([])
     assert run_dag(dag, _StubPlatform({}), SharedBandwidth(24.2)) == 0.0

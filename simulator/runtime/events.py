@@ -20,13 +20,22 @@ serial AllCim path). Event count ~10^2-10^3/token (ADR-0003).
 """
 from __future__ import annotations
 
-_EPS = 1e-9
+_EPS = 1e-9        # time epsilon (microseconds)
+_BYTE_EPS = 1.0    # bytes: a stream with < 1 byte remaining is done (guards FP residue ~1e-6
+                   # on byte counts ~1e10, which a tiny time-epsilon would never clear -> #56 stall)
 _INF = float("inf")
 
 
 def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compute=True):
     """Return the token latency (microseconds) to execute the whole DAG.
     `price_compute=False` zeroes every op's compute term (memory-only ablation)."""
+    # fail-loud preconditions (#56): never return a plausible latency for an invalid run
+    if not dag.is_acyclic():
+        raise ValueError("M3: cyclic DAG — a dependency cycle cannot be scheduled")
+    if any(n.bytes_streamed > 0 for n in dag.nodes) and bw.eff_BW <= 0:
+        raise ValueError("M3: memory traffic present but SharedBandwidth eff_BW <= 0 "
+                         "(degenerate bandwidth would stall the simulation)")
+    n_total = len(dag.nodes)
     indeg = {n.id: len(n.deps) for n in dag.nodes}
     unit_free = {}                       # unit clock -> next-free time (compute serialization)
     pending = {nid for nid, d in indeg.items() if d == 0}   # deps satisfied, not yet dispatched
@@ -94,7 +103,14 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
             if uf > clock + _EPS:
                 nxt = min(nxt, uf - clock)
         if nxt is _INF or nxt <= _EPS:
-            break                         # nothing left to advance (guards against a stall)
+            # work remains (the clean all-done break above did not fire) but no event can
+            # advance time -> a genuine stall; fail loud rather than return `last` (#56).
+            unresolved = len(pending) + len(active_mem) + len(started - done)
+            raise RuntimeError(
+                f"M3: event loop stalled — {unresolved} node-state(s) unresolved with no "
+                f"progressible event (pending={len(pending)}, active_mem={len(active_mem)}, "
+                f"running={len(started - done)}); likely degenerate bandwidth or an "
+                f"unsatisfiable dependency.")
 
         # 3) drain memory at the (constant-over-interval) fair-share rate, then finish
         clock += nxt
@@ -102,9 +118,13 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
             drained = nxt * rate_bytes_per_us()
             for nid in list(active_mem):
                 active_mem[nid] -= drained
-                if active_mem[nid] <= _EPS:
+                if active_mem[nid] <= _BYTE_EPS:
                     del active_mem[nid]
         for nid in list(started):
             finish(nid)
 
+    # completion invariant (#56): every node must have finished
+    if len(done) != n_total:
+        raise RuntimeError(f"M3: incomplete simulation — {n_total - len(done)} of {n_total} "
+                           f"nodes never completed")
     return last
