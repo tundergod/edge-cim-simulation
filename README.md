@@ -1,20 +1,97 @@
 # edge-cim-simulation
 
-以真實 Axelera Metis 晶片校準的模擬器，研究 **CIM 作為異質行動 SoC 上的對等計算單元**時的 LLM 推論（CIM + NPU + GPU + CPU、unified memory、INT8、batch=1、prefill + decode）。
+A **real-silicon-calibrated simulator** of LLM inference on a **CIM-enabled heterogeneous mobile
+SoC** — studying Compute-in-Memory (CIM) as a first-class compute unit alongside NPU, GPU, and CPU
+(INT8, batch=1, prefill + decode).
 
-## 文件
+The simulated target is a CIM accelerator on PCIe + MMIO unified host memory (capacity is a tunable
+parameter, not a hard-coded value), calibrated against **two real Axelera Metis boards**:
 
-- **[OVERALL.md](OVERALL.md)** — 專案綱要：目標、Phase 0.1/0.2/0.3/0.4/1/2、6-box 架構（M1–M8）、驗證層（L1–L6）。
-- **[docs/adr/](docs/adr/)** — 核心設計決策（ADR-0001…0007）。
-- **[docs/voyager-sdk.md](docs/voyager-sdk.md)** — Metis/SDK 量測參考（給 agent，英文）。
-- **[docs/papers/](docs/papers/)** — 文獻 + 真實晶片筆記（16 篇 + 原始 PDF）。
-- **[CLAUDE.md](CLAUDE.md)** — agent 工作守則（per-phase workflow + karpathy）。
+- **Metis Alpha** (Aetina RKC-A02) — CIM / PCIe / NPU / GPU / CPU micro-benchmarks.
+- **Production Metis Card** — end-to-end INT8 LLM behaviour under on-card DRAM (the L4 anchor).
 
-## 狀態
+## Design principle — CIM-centric
 
-Phase 0.1–0.3（trace / op-profile / 真實板量測）與 Phase 1.1–1.3（元件建模與驗證：CIM、記憶體、CPU、GPU、NPU，加 Ramulator2 / ONNXim 重型 sim drop-in）已完成；合併回顧報告見 [`docs/report/phase1-site/`](docs/report/phase1-site/)（整合 Phase 0+1 的手刻多頁網站）。已知量測缺口（NPU #13、prefill / multi-tile 補量測）誠實標註於各 findings。**下一步 Phase 2**（整合 M3 事件引擎 + M6 排程器，跑端到端 prefill+decode）。
+The system is designed around CIM's constraints *first* (strong at weight-stationary GEMV, weak at
+dynamic attention, tile alignment to channel×64, weight-residency limits, host↔device transfer
+cost); GPU / NPU / CPU are the support layer. The op→unit split is decided by **characterization
+measurements, not assumed**.
 
-## 外部參考
+## Scope
 
-- Voyager SDK：<https://github.com/axelera-ai-hub/voyager-sdk>
-- Axelera 論壇（Metis M.2）：<https://community.axelera.ai/metis-m-2-3>
+| Axis | Choice |
+| --- | --- |
+| Models | Llama-3 + Qwen-2.5, 1B–8B (Llama-3.2-1B / 3B, Llama-3.1-8B, Qwen-2.5-7B; 13B stretch) |
+| Phase / precision | Prefill + decode, end-to-end; INT8 on CIM |
+| Mixed precision | Per-unit native precision (CIM INT8, NPU INT8/16/FP16, Mali FP16). The CIM-MLP(INT8) × GPU-attention(FP16) boundary is a core research question |
+| Context / batch | 2K baseline (8K stretch); batch = 1 |
+
+Workloads span the prefill-heavy ↔ decode-heavy spectrum (ShareGPT, GSM8K, LongBench-TriviaQA,
+HumanEval) plus a synthetic length sweep. Out of scope: training, MoE/sparse, FP32, multi-batch —
+see [OVERALL.md](OVERALL.md).
+
+## Status
+
+- **Done:** Phase 0.1–0.3 (trace / op-profile / on-board measurement) and **Phase 1.1–1.3**
+  (per-component modelling + validation: CIM, memory, CPU, GPU, NPU, plus Ramulator2 / ONNXim
+  heavy-sim drop-ins behind a frozen `engine=` interface).
+- **Reinforcement** (補強 — *not* new phases): 1.4–1.6b are folded into 1.1 / 1.2 / 1.3 (CIM Card
+  re-measurement, re-reviews, the ScaleSim third NPU engine, and an honest NPU-characteristic
+  measurement).
+- **Phase 0.4 (thermal):** Metis Card measured; Aetina pending repair.
+- **Next — Phase 2:** integrate the M3 event engine + M6 scheduler into an end-to-end
+  prefill + decode simulator.
+
+**Consolidated report:** [`docs/report/phase1-site/`](docs/report/phase1-site/) — a hand-coded
+multi-page site where every number is injected from committed JSON (the build fails on any
+unresolved placeholder) and every figure is regenerated from data. Known measurement gaps (no
+RKNPU2 silicon for the NPU, issue #13; prefill / multi-tile) are labelled honestly.
+
+## Honesty discipline
+
+The simulator is calibrated against real silicon for *some* units and not others, so the repo is
+strict about provenance: each value is tagged `[MEASURED]` / `[GAP]` / calibrated / simulated /
+assumption / borrowed, and report numbers flow from committed JSON rather than prose. **Results must
+never confirm their own assumptions** — no circular reasoning, no manufactured cross-source
+agreement, no validation language without ground truth. See CLAUDE.md § *Honesty discipline*.
+
+## Repository layout
+
+```
+CLAUDE.md  CONTEXT.md  OVERALL.md  README.md  LOG.md  requirements.phase0.txt
+docs/              papers/ plans/ adr/ agents/ figures/ report/(phase1-site) + *-findings.md  voyager-sdk.md
+simulator/         specs/ (swappable hardware json) · models/ (M1/M2/M4/M7 + engine.py + params/)
+                   · engines/ (external heavy-sim caches: ONNXim / ScaleSim / Ramulator2)
+characterization/  on-board measurement scripts (aetina/  metis_card/)
+measurements/      silicon measurements + op inventory/profile (aetina/  metis_card/  op_inventory/  op_profile/)
+traces/            per-token op×shape streams (per model, workload)
+validation/        contracts/(m*.yaml acceptance criteria)  reports/(phase*)  validators
+tools/             analysis/ (fits)  plotting/ (one script per figure)  report/  trace_export/  onnxim/  ramulator2/
+tests/             pytest
+```
+
+## Build & test
+
+```sh
+pip install -r requirements.phase0.txt              # dependencies
+python -m pytest tests/                              # unit tests
+python docs/report/phase1-site/build.py --strict    # build the report — fails on any unresolved {{key}} or stale figure
+python tools/plotting/site_npu.py                    # (e.g.) regenerate a figure group from committed data
+```
+
+## Key docs
+
+- **[OVERALL.md](OVERALL.md)** — project brief: goal, phases (0.1→2), modules M1–M8, validation
+  layers L1–L6, workloads, open risks.
+- **[CONTEXT.md](CONTEXT.md)** — domain glossary + a directory-level **repo index** (where
+  everything lives; consult it before grepping).
+- **[CLAUDE.md](CLAUDE.md)** — working guidelines (per-phase workflow, simplicity, honesty discipline).
+- **[docs/adr/](docs/adr/)** — architecture decision records (ADR-0001…0007).
+- **[docs/voyager-sdk.md](docs/voyager-sdk.md)** — how to measure Metis (Voyager SDK reference,
+  tagged `[DOC]` / `[FORUM]` / `[MEASURED]` / `[GAP]`).
+- **[docs/papers/](docs/papers/)** — curated literature + real-silicon notes (16 papers).
+
+## External references
+
+- Voyager SDK — <https://github.com/axelera-ai-hub/voyager-sdk>
+- Axelera community (Metis M.2) — <https://community.axelera.ai/metis-m-2-3>
