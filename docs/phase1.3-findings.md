@@ -22,7 +22,7 @@ backends: **ONNXim** (NPU) and **Ramulator2** (memory, LPDDR5). Same constructor
 - **ADR-0002 reconcile** — the "Ramulator2 → Phase 2" wording is corrected everywhere to
   "single-stream LPDDR5 cross-check = Phase 1.3 (`engine='ramulator2'`); multi-unit contention =
   Phase 2": `docs/adr/0002-memory-model.md` (revision), `OVERALL.md` (risk #6),
-  `docs/phase1.1-findings.md`, `docs/report/phase1.1/chapters/A2-m2-memory.md`,
+  `docs/phase1.1-findings.md`,
   `tools/analysis/fit_m2.py` (+ regenerated `m2_lpddr5.json`).
 
 ## Heavy-sim builds (authorized 2026-06-06) — Ramulator2 LIVE, ONNXim LIVE via Docker

@@ -12,7 +12,7 @@
 
 ## 狀態
 
-Phase 0.1–0.3（trace / op-profile / 真實板量測）與 Phase 1.1–1.3（元件建模與驗證：CIM、記憶體、CPU、GPU、NPU，加 Ramulator2 / ONNXim 重型 sim drop-in）已完成；合併回顧報告見 [`docs/report/phase1/`](docs/report/phase1/)。已知量測缺口（NPU #13、prefill / multi-tile 補量測）誠實標註於各 findings。**下一步 Phase 2**（整合 M3 事件引擎 + M6 排程器，跑端到端 prefill+decode）。
+Phase 0.1–0.3（trace / op-profile / 真實板量測）與 Phase 1.1–1.3（元件建模與驗證：CIM、記憶體、CPU、GPU、NPU，加 Ramulator2 / ONNXim 重型 sim drop-in）已完成；合併回顧報告見 [`docs/report/phase1-site/`](docs/report/phase1-site/)（整合 Phase 0+1 的手刻多頁網站）。已知量測缺口（NPU #13、prefill / multi-tile 補量測）誠實標註於各 findings。**下一步 Phase 2**（整合 M3 事件引擎 + M6 排程器，跑端到端 prefill+decode）。
 
 ## 外部參考
 
