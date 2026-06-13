@@ -83,7 +83,8 @@
         <tr class="gen"><td>GPU attention offload 門檻（median 0.6%）</td><td><code>validation/reports/phase1.1/m4_gpu.json › attn_offload_gate</code></td></tr>
         <tr class="gen"><td>GPU roofline 槽（FP16 下界）</td><td><code>validation/reports/phase1.2/m4_gpu_roofline.json › calibrated_fit, honesty</code></td></tr>
         <tr class="gen"><td>GPU attn 擬合參數 / Mali spec / 量測</td><td><code>simulator/models/params/m4_gpu.json</code>、<code>simulator/specs/gpu_mali_g610.json</code>、<code>measurements/aetina/mali_matmul.json</code></td></tr>
-        <tr class="gen"><td>NPU ONNXim 交叉驗證（sim-vs-sim spread）</td><td><code>validation/reports/phase1.3/m4_npu_onnxim.json › median_abs_delta_pct, max_abs_delta_pct</code></td></tr>
+        <tr class="gen"><td>NPU 模擬器發散（sim-vs-sim spread，非驗證）</td><td><code>validation/reports/phase1.3/m4_npu_onnxim.json › median_abs_delta_pct, max_abs_delta_pct</code>、3 方 <code>validation/reports/phase1.6/npu_scalesim.json › spread_median_x, spread_max_x</code></td></tr>
+        <tr class="gen"><td>NPU systolic 階梯實測（1.6b，不預設 knee）</td><td><code>simulated/{onnxim,scalesim}/rknpu2_characteristic.json</code>、<code>validation/reports/phase1.6/npu_characteristic_compare.json › onnxim, scalesim_positive_control</code></td></tr>
         <tr class="gen"><td>NPU spec（RKNPU2，無 silicon；analytic-only）</td><td><code>simulator/specs/npu_rknpu2.json</code>、合約 <code>validation/contracts/m4_npu.yaml</code></td></tr>
       </tbody>
     </table>

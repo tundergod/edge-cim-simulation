@@ -40,7 +40,7 @@
       <caption>Phase 1 三個資料來源層</caption>
       <thead><tr><th>子階段</th><th>是什麼</th><th>可信度定位</th></tr></thead>
       <tbody>
-        <tr class="gen"><td><strong>1.1</strong> Metis silicon 校準</td><td>凡能用自家 Metis 量測直接校準、並通過 ADR-0006 gate 的核心 decode 路徑：CIM 2D G_eff、Mali GPU attention、CPU 支援算子、量產卡 LPDDR4x、M5 trace、M7 能耗，外加端到端 recompose hold-out。</td><td><strong>量測級可信</strong></td></tr>
+        <tr class="gen"><td><strong>1.1</strong> Metis silicon 校準</td><td>凡能用自家 Metis 量測直接校準、並通過 ADR-0006 gate 的核心 decode 路徑：CIM 2D G_eff、Mali GPU attention、CPU 支援算子、量產卡 LPDDR4x、M5 trace，外加端到端 recompose 吞吐 hold-out（驗的是 tok/s，非能耗——M7 能耗無功耗遙測、屬 assumption 級）。</td><td><strong>量測級可信</strong></td></tr>
         <tr class="gen"><td><strong>1.2</strong> 模組化 analytic 層</td><td>把每個非-micro-benchmark 單元改寫成「一個模型引擎 + 一份可換 spec 檔」，換型號＝換 spec。補齊 CPU 指令數 roofline、NPU 解析 systolic-roofline、全-spec 記憶體、GPU roofline 槽、CIM 雙拓樸與 Card 重驗。</td><td><strong>完整、可換型號</strong></td></tr>
         <tr class="gen"><td><strong>1.3</strong> 重型 sim drop-in</td><td>把 ONNXim（NPU）、Ramulator2（記憶體）這類 C++ 重型 sim 透過凍結介面 <code>engine=</code> 插進 1.2 的同一個槽，交叉比對 analytic 的單串流趨勢。<strong>兩者都是 simulated、不是 silicon。</strong></td><td><strong>交叉驗證</strong>（招牌價值留待 Phase 2）</td></tr>
       </tbody>

@@ -6,8 +6,9 @@ figures frame the NPU as an UNCERTAINTY SPREAD, not a validation: three sims (an
 ONNXim heavy-sim, ScaleSim-pending) with no silicon judge between them.
 Regenerable from committed JSON only. Writes PNG (+PDF/SVG) to docs/figures/phase1-site/.
 
-  npu_systolic — §1/§2: analytic systolic-roofline staircase (32x32 align quantum). ANALYTIC
-                 BASELINE (no silicon) -- shape borrowed from HeteroInfer Fig3, height from 6 TOPS.
+  npu_systolic — §1: MEASURED per-sim answer to "does our NPU model show a 32-systolic staircase?"
+                 (Phase 1.6b, no presupposed knee). ScaleSim steps at 32 BY CONSTRUCTION (positive
+                 control); ONNXim does NOT (smooth at decode, non-monotone at prefill). Separate axes.
   npu_spread   — §3: analytic vs ONNXim per-shape as an UNCERTAINTY BAND (~318% median /493% max
                  delta), plus an empty dashed "ScaleSim (pending)" slot. No silicon ground truth.
 
@@ -27,13 +28,15 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools/plotting"))
 import _style as S  # noqa: E402
-from simulator.models.engine import Workload  # noqa: E402
-from simulator.models.m4_npu import NpuModel  # noqa: E402
 
 TREND = ROOT / "validation/reports/phase1.2/m4_npu.json"
 ONNXIM = ROOT / "validation/reports/phase1.3/m4_npu_onnxim.json"
 SCALESIM = ROOT / "validation/reports/phase1.6/npu_scalesim.json"
 SPEC = ROOT / "simulator/specs/npu_rknpu2.json"
+# Phase 1.6b characteristic measurement (each sim swept independently; no presupposed knee):
+CHAR_ONX = ROOT / "simulated/onnxim/rknpu2_characteristic.json"
+CHAR_SCL = ROOT / "simulated/scalesim/rknpu2_characteristic.json"
+CHAR_CMP = ROOT / "validation/reports/phase1.6/npu_characteristic_compare.json"
 OUT = ROOT / "docs/figures/phase1-site"
 
 # editorial palette (same as site_m1/site_m2). NO "OK"/green here on purpose: nothing is validated.
@@ -64,34 +67,51 @@ def _grid(ax):
     ax.set_axisbelow(True)
 
 
-def fig_systolic(trend, spec):
-    """§1/§2 -- analytic systolic-roofline staircase: latency vs N (compute-bound, M=512, K=2048),
-    stepping every time N crosses a multiple of the BORROWED 32x32 quantum. ANALYTIC BASELINE,
-    no silicon: the SHAPE is borrowed from HeteroInfer Fig3, the step HEIGHT comes from 6 TOPS."""
-    npu = NpuModel(spec, engine="analytic")
-    cond = trend["trend_conditions"]["a_staircase_vs_fig3"]
-    sd = cond["borrowed_systolic_dim"]
-    knees = cond["knee_positions"]
-    M, K = 512, 2048
-    Ns = np.arange(1, 257)
-    lat = np.array([npu.predict(Workload(op="gemm", M=M, K=K, N=int(n), dtype="int8"))["latency_us"]
-                    for n in Ns])
-    fig, ax = plt.subplots(figsize=(5.6, 3.5))
-    _grid(ax)
-    ax.step(Ns, lat, where="post", color=HERO, lw=1.6, zorder=3)
-    for kn in knees:
-        ax.axvline(kn, ls=":", color=GREY, lw=0.8, zorder=1)
-    ax.scatter(knees, [npu.predict(Workload(op="gemm", M=M, K=K, N=int(n), dtype="int8"))["latency_us"]
-                       for n in knees], s=30, color=WARM, edgecolors="white", linewidths=0.5,
-               zorder=5, label=f"{len(knees)} knees @ multiples of {sd}")
-    ax.set_xlim(0, 260); ax.set_ylim(bottom=0)
-    ax.set_xlabel("output channels  N   (M=512, K=2048, INT8)")
-    ax.set_ylabel("analytic latency  (us)")
-    ax.text(0.015, 0.97, "ANALYTIC BASELINE -- no silicon (#13)", transform=ax.transAxes,
-            fontsize=8.5, va="top", color=WARM, fontweight="bold")
-    ax.annotate(f"staircase: pad N up to {sd}x{sd}\n(shape borrowed HeteroInfer Fig3;\nheight from 6 TOPS, not measured)",
-                xy=(0.04, 0.62), xycoords="axes fraction", fontsize=7.8, color=SOFT, va="top")
-    ax.legend(loc="lower right", fontsize=8)
+def fig_systolic(onx, scl, cmp):
+    """§1 -- DO our two NPU sims actually show a 32-systolic staircase? MEASURED independently
+    (Phase 1.6b), no presupposed knee. Each sim swept over the output dim (K=2048 fixed) and drawn
+    on ITS OWN y-axis -- cross-sim magnitudes are NOT comparable (#13). ScaleSim (a literal 32x32
+    array sim) steps cleanly at 32 BY CONSTRUCTION = positive control. ONNXim (adds NoC/DRAM
+    scheduling) is the informative one: smooth ∝N at decode, non-monotone at prefill -- it does NOT
+    reproduce a 32-staircase. model, NOT measured RKNPU2."""
+    K = 2048
+
+    def series(rows, M, key):
+        pts = sorted((r["shape"][2], r[key]) for r in rows
+                     if r["shape"][0] == M and r["shape"][1] == K)
+        return np.array([n for n, _ in pts]), np.array([c for _, c in pts], float)
+
+    # SEPARATE panels (NOT twin-axis overlay) so the two sims can never visually "track" -- the
+    # whole point is staircase(ScaleSim) vs smooth/non-monotone(ONNXim), not agreement.
+    fig, axs = plt.subplots(2, 2, figsize=(7.2, 5.2), sharex=True)
+    for row, (M, tag) in enumerate([(1, "decode  M=1"), (128, "prefill  M=128")]):
+        cs_v = cmp["scalesim_positive_control"][str(M)]; co_v = cmp["onnxim"][str(M)]
+        ns, cs = series(scl["rows"], M, "cycles_1core")
+        no, co = series(onx["rows"], M, "cycles")
+        aS, aO = axs[row, 0], axs[row, 1]
+        for ax in (aS, aO):
+            _grid(ax)
+            for k in range(160, 513, 32):
+                ax.axvline(k, ls=":", color=GREY, lw=0.6, zorder=1)
+        aS.step(ns, cs, where="post", color=SCALE, lw=1.7, zorder=3)
+        aO.plot(no, co, "-o", color=WARM, lw=1.2, ms=2.4, zorder=4)
+        aS.set_ylabel(f"{tag}\nScaleSim cycles", color=SCALE, fontsize=8.2)
+        aS.tick_params(axis="y", colors=SCALE); aO.tick_params(axis="y", colors=WARM)
+        aO.set_ylabel("ONNXim cycles", color=WARM, fontsize=8.2)
+        aS.text(0.04, 0.95, f"clean 32-staircase (cv={cs_v['bulk_delta_cv']})\nBY CONSTRUCTION",
+                transform=aS.transAxes, fontsize=7.2, va="top", color=SCALE)
+        msg = (f"smooth ~N  (R²={co_v['smooth_loglog_R2']})\nsteps only @192/256/384, NOT @160"
+               if co_v["monotone"] else
+               f"NON-monotone (cv={co_v['bulk_delta_cv']})\nR²={co_v['smooth_loglog_R2']} -- not a staircase")
+        aO.text(0.04, 0.95, msg, transform=aO.transAxes, fontsize=7.2, va="top", color=WARM)
+    axs[0, 0].set_title("ScaleSim  (positive control)", fontsize=8.6, color=SCALE, fontweight="bold")
+    axs[0, 1].set_title("ONNXim  (informative)", fontsize=8.6, color=WARM, fontweight="bold")
+    for c in (0, 1):
+        axs[1, c].set_xlabel("output dim  N  (K=2048, INT8)", fontsize=8.2)
+    fig.suptitle("Does our NPU model show a 32-systolic staircase? -- MEASURED per sim, SEPARATE axes "
+                 "(model, NOT silicon #13; magnitudes NOT comparable)",
+                 fontsize=8.2, fontweight="bold", color=WARM, y=0.998)
+    fig.tight_layout(rect=[0, 0, 1, 0.96])
     S.save(fig, OUT / "npu_systolic")
 
 
@@ -160,7 +180,7 @@ def fig_sensitivity(nps):
 
 
 def main():
-    fig_systolic(load(TREND), load(SPEC))
+    fig_systolic(load(CHAR_ONX), load(CHAR_SCL), load(CHAR_CMP))
     nps = load(SCALESIM)
     fig_spread(nps)
     fig_sensitivity(nps)

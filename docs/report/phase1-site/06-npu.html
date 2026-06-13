@@ -30,12 +30,12 @@
 
   <div class="sec">
     <div class="lab"><span class="n">§1</span><span>Analytic baseline · 解析基線（無矽）</span><span class="tag">no silicon · #13</span></div>
-    <p><strong>本節不是「量測」。</strong>正常單元在這裡放矽晶量測；M4-NPU 沒有矽可量——<code>measured</code> chip 因此熄滅。我們能交付的只有一個<strong>解析基線</strong>：把 INT8 GEMM（M×K×N）模成三個 ceiling 取最大——padded compute（6 TOPS）、weight stream（BW）、dispatch floor。其中<strong>形狀</strong>借自 HeteroInfer 的 systolic 特性，<strong>絕對值未經任何矽晶驗證</strong>。</p>
-    <p>最能代表這個基線的是 <strong>32×32 對齊階梯</strong>：systolic array 是固定的 32×32 方陣，任何不整除 32 的維度都要補滿一整排／列，那些補出來的 MAC 是浪費。掃 compute-bound 形狀（M=512, K=2048, N=1…256）：</p>
+    <p><strong>本節沒有矽晶量測。</strong>正常單元在這裡放矽晶量測；M4-NPU 沒有矽可量——<code>measured</code> chip 因此熄滅（下圖是<strong>模擬器</strong>量測、不是矽）。我們能交付的只有一個<strong>解析基線</strong>：把 INT8 GEMM（M×K×N）模成三個 ceiling 取最大——padded compute（6 TOPS）、weight stream（BW）、dispatch floor。其中<strong>形狀</strong>借自 HeteroInfer 的 systolic 特性，<strong>絕對值未經任何矽晶驗證</strong>。</p>
+    <p>解析模型<strong>假設</strong>有一個 <strong>32×32 對齊階梯</strong>（公式裡的 <code>ceil(N/32)·32</code>，§2），但「用一個假設 32-padding 的模型去畫 32 階梯」是<strong>循環論證</strong>。所以我們<strong>不</strong>用解析模型畫這張圖，而是<strong>直接量測兩個 cycle 級模擬器、各自獨立掃輸出維度，看它們到底有沒有這個階梯</strong>（Phase 1.6b，<strong>不預設 knee</strong>；虛無假設＝平滑無 32 階，要資料才能推翻）。</p>
     <figure>
-      <img src="../../figures/phase1-site/npu_systolic.png" alt="解析 systolic-roofline 32×32 對齊階梯（解析基線，無矽）">
-      <figcaption><strong>怎麼讀：</strong>橫軸是輸出通道 N、縱軸是<strong>解析</strong>延遲。藍色階梯在每個 32-block 內完全水平，在 N=33、65、97… 各跳一階——這是 systolic 把 N 補到 32 倍數的代價，找到 7 個 knee 全部對齊借來的 sd=32。<strong>重要：階梯的「形狀」借自 HeteroInfer Fig3，階梯「高度」由 datasheet 6 TOPS 推得，兩者都不是量出來的。</strong>橘字 ANALYTIC BASELINE -- no silicon (#13) 不是裝飾——這整條曲線沒有矽晶錨點，只能當趨勢方向。
-        <span class="ft">圖 NPU·1 · 來源 m4_npu.json › trend_conditions.a_staircase_vs_fig3（knee 位置）+ NpuModel 解析重算 · 腳本 tools/plotting/site_npu.py</span>
+      <img src="../../figures/phase1-site/npu_systolic.png" alt="實測:兩個 NPU 模擬器是否有 32 systolic 階梯（各自 y 軸，model 非矽）">
+      <figcaption><strong>怎麼讀：</strong>固定 K=2048、掃輸出維度 N，兩個模擬器<strong>各畫各的 y 軸（絕對值跨 sim 不可比）</strong>。<strong>紫色 ScaleSim</strong> 兩個 regime 都是乾淨的 32 階梯——但它<strong>本身就是 32×32 陣列模擬器，這個階梯是建構上必然的</strong>，所以它只是 positive control（確認我們的探針抓得到已知的階）。<strong>橘色 ONNXim</strong>（多疊了 NoC／DRAM scheduling）才是有資訊的那個，而它<strong>沒有複製這個階梯</strong>：decode(M=1) 幾乎是<strong>平滑 ∝N</strong>（R²=0.9996，只在 192/256/384 有零星粗跳階、N=160 沒有）；prefill(M=128) 甚至<strong>非單調</strong>（cycles 隨 N 變大反而往下掉）。<strong>結論：32 階梯是 ScaleSim／解析模型的人工產物，不是穩健的預測；無矽可裁判（#13）。</strong>
+        <span class="ft">圖 NPU·1 · 來源 simulated/{onnxim,scalesim}/rknpu2_characteristic.json + phase1.6/npu_characteristic_compare.json（pre-registered 判準）· 腳本 tools/plotting/site_npu.py</span>
       </figcaption>
     </figure>
     <p style="margin-bottom:0"><strong>Native attention（attn_bmm）</strong>另走純 compute-bound 路徑（activation×activation，無靜態權重可 stall、無 order/shape 懲罰）。GQA heads（=8）走 batch 維、<strong>不</strong>補進 systolic M 槽（否則把 heads 補到 32 會 4× 高估 MACs）；只有 hd、kv 被 pad 到 32 倍數。同樣是解析估計，無矽。</p>
@@ -79,14 +79,14 @@ latency_us  = max(compute_us, memory_us, dispatch_floor)         <span class="c"
 
   <div class="sec">
     <div class="lab"><span class="n">§3b</span><span>原生 systolic 特性 · 設計指引</span><span class="tag">model-emergent · 非 RKNPU2 量測</span></div>
-    <p><strong>模擬器的價值不只給一個延遲數字，而是忠實重現架構的「原生行為」。</strong>把 ScaleSim 配成通用 32×32 weight-stationary 陣列後，脈動陣列的三個原生特性<strong>自己長出來</strong>（我們<strong>沒有</strong>替使用者套用「轉置進好 regime」的優化——那是 HeteroInfer 做的事）。下圖攤開這些代價：</p>
+    <p>把 ScaleSim 配成通用 32×32 weight-stationary 陣列後，三個 sensitivity 會「長出來」。<strong>但要誠實:ScaleSim 本身就是 32×32 陣列模擬器，這些效應對它是<u>建構性</u>的（positive control），不是發現。</strong>把<strong>同樣的 probe 也量在 ONNXim 上（pre-registered grid，K=2048、N≥128），結果並不一致</strong>:<strong>對齊</strong>在 ScaleSim 固定 1.25×、在 ONNXim 隨 regime 變（decode 1.13× / prefill 2.84×）——這是兩 sim 真正分歧的地方；<strong>operand 順序</strong>在這個乾淨 grid 上<strong>兩個 sim 都接近 1、都沒有明顯效應</strong>（ScaleSim 0.79×、ONNXim 0.99×；右圖那根 1.81× 是 ScaleSim 早期 K=512／N=64 的 off-grid probe，反而說明這個「順序效應」grid-相依、不穩健）。所以這些<strong>不是普世的「脈動重力」，而是模型相依、無矽可裁判（#13）</strong>。下圖是 <strong>ScaleSim</strong> 早期 probe 的 sensitivity（pre-registered 兩 sim 對照值見 <code>npu_characteristic_compare.json</code>）：</p>
     <figure>
       <img src="../../figures/phase1-site/npu_sensitivity.png" alt="原生 systolic sensitivity（model-emergent，非矽量測）">
-      <figcaption><strong>怎麼讀：</strong>左圖——array 利用率隨 activation batch M 攀升：<strong>decode GEMV（M=1）只用到 ~1% 的 32×32 陣列</strong>（單一 token 餵不滿脈動陣列），batch 到 M=128 才到 ~58%。右圖——三個原生 sensitivity 的 worst/best：<strong>對齊 1.25×</strong>（N 整除 32 vs 不整除）、<strong>operand 順序 1.81×</strong>（同樣 MAC 數、M↔N 對調）、<strong>shape/batch 2.34×</strong>。<strong>雙重誠實標籤：(a) native（模型自己長的、非調出來）；(b) model, NOT silicon</strong>——這些數值是「一個 32×32-WS 脈動<strong>模型</strong>會產生的」，<strong>不是量到的 RKNPU2 事實</strong>。
+      <figcaption><strong>怎麼讀：</strong>左圖——array 利用率隨 activation batch M 攀升：<strong>decode GEMV（M=1）只用到 ~1% 的 32×32 陣列</strong>（單一 token 餵不滿脈動陣列），batch 到 M=128 才到 ~58%。右圖——<strong>ScaleSim（建構性）</strong>三個 sensitivity 的 worst/best：<strong>對齊 1.25×</strong>（N 整除 32 vs 不整除）、<strong>operand 順序 1.81×</strong>（同樣 MAC 數、M↔N 對調）、<strong>shape/batch 2.34×</strong>。<strong>誠實標籤：model, NOT silicon</strong>——這是「一個 32×32-WS 脈動<strong>模型</strong>會產生的」，<strong>不是量到的 RKNPU2 事實</strong>；且 pre-registered grid 上<strong>對齊是 ONNXim regime-相依、order 兩 sim 都很弱</strong>（見上文），只有 shape 方向一致。
         <span class="ft">圖 NPU·3 · 來源 phase1.6/npu_scalesim.json › native_sensitivity · 腳本 tools/plotting/site_npu.py</span>
       </figcaption>
     </figure>
-    <div class="note"><b>給未來使用者的設計指引：</b>這些代價是脈動陣列的「重力」，不是可選的——<strong>Phase 2 / 未來排程器若利用它</strong>（對齊 32、選好的 operand 順序、把 decode 多 token 一起 batch）<strong>→ 拿到好 performance；若忽略 → 付出代價</strong>（最差到 decode 的 ~1% 利用率）。HeteroInfer（同級 Hexagon NPU）量到<strong>同方向</strong>的三個效應（對齊/順序/shape）——僅<strong>方向性佐證</strong>，magnitude 不可直接比（不同陣列/config）。連結：我們在 Metis 板上的熱 load-sweep「大 M 更 host-bound」也獨立呼應 shape-sensitivity（但那是我方實測、非 RKNPU2 矽）。</div>
+    <div class="note"><b>給未來使用者的設計指引（當假說、非定律）：</b>shape/batch 是<strong>兩個 sim 唯一方向一致</strong>的效應——decode GEMV 餵不滿陣列（ScaleSim ~1% 利用率），batch 起來才划算；這條可當設計提示。<strong>但對齊是 regime-相依</strong>（ONNXim decode 1.13× / prefill 2.84×，非固定）、<strong>operand 順序在乾淨 grid 上兩個 sim 都很弱</strong>（0.79× / 0.99×），所以這兩個都<strong>不能</strong>當成穩健的「脈動重力」。無矽可裁判（#13）→ 這些是<strong>模型相依的假說</strong>，Phase 2 要嘛拿到 RKNPU2 矽驗證、要嘛在 provenance 標明是哪個 sim 的行為。HeteroInfer（Hexagon NPU）量到同方向 shape 效應，僅<strong>方向性佐證</strong>、magnitude 不可比。</div>
   </div>
 
   <div class="sec">

@@ -58,8 +58,9 @@
   },
   "npu_systolic": {
     "dir": "phase1-site", "script": "tools/plotting/site_npu.py",
-    "sources": ["validation/reports/phase1.2/m4_npu.json", "simulator/specs/npu_rknpu2.json",
-                "simulator/models/m4_npu.py"]
+    "sources": ["simulated/onnxim/rknpu2_characteristic.json",
+                "simulated/scalesim/rknpu2_characteristic.json",
+                "validation/reports/phase1.6/npu_characteristic_compare.json"]
   },
   "npu_spread": {
     "dir": "phase1-site", "script": "tools/plotting/site_npu.py",

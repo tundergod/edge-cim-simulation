@@ -48,11 +48,11 @@
       <caption>C 類 — acceptable limitation</caption>
       <thead><tr><th>limitation</th><th>為何可接受</th></tr></thead>
       <tbody>
-        <tr><td><strong>M4-NPU 全 simulated / borrowed（#13 無 silicon）</strong></td><td>NPU 是支援單元；模型誠實標 simulated，trend-shape 與 ONNXim 交叉驗證一致（sim-vs-sim spread median {{npu.onnxim_median_delta_pct}}%）；#13 已依 ADR-0006 superseded-not-satisfied。Phase 2 整機若含 NPU 路徑，provenance 必須傳播 <code>simulated (RKNPU2, no silicon)</code> 標籤。</td></tr>
+        <tr><td><strong>M4-NPU 全 simulated / borrowed（#13 無 silicon）</strong></td><td>NPU 是支援單元；模型誠實標 simulated。<strong>不同模擬器之間是發散、不是「一致」</strong>：analytic↔ONNXim 絕對值差 median {{npu.onnxim_median_delta_pct}}%（3 方 analytic/ONNXim/ScaleSim 全距 median {{npu.spread_median_x}}×／max {{npu.spread_max_x}}×），三方都無矽裁判——這是不確定性帶，不是驗證。#13 已依 ADR-0006 superseded-not-satisfied。Phase 2 整機若含 NPU 路徑，provenance 必須傳播 <code>simulated (RKNPU2, no silicon)</code> 標籤。</td></tr>
         <tr><td><strong>M4-GPU INT8 零資料</strong></td><td>當前分工 CIM 做 INT8 GEMM、GPU 做 FP16 attention；GPU INT8 GEMM 不在主路徑。若 Phase 2 需要才補。</td></tr>
         <tr><td><strong>eta_bw = {{cpu.eta_bw}}（CPU 有效記憶體頻寬假設）</strong></td><td>僅對 qwen vocab（L3）binds，他處 compute / overhead 主導；無 CPU mem-BW micro-benchmark，明標 assumption。</td></tr>
         <tr><td><strong>CPU A55 / 多核 / fp16 為 simulated</strong></td><td>eta_c + overhead_op 在單 A76 核校準；A55（IPC=1）/ 多核 / native-fp16 為解析外推，明標 simulated。</td></tr>
-        <tr><td><strong>LPDDR5 eff {{mem.lpddr5_eff}} GB/s 為 simulated（非本 silicon）</strong></td><td>保守折扣（eff {{mem.lpddr5_eff_pct}}% &lt; 量測 71%），且 Ramulator2 device 交叉驗證一致；標籤誠實。</td></tr>
+        <tr><td><strong>LPDDR5 eff {{mem.lpddr5_eff}} GB/s 為 simulated（非本 silicon）</strong></td><td>保守折扣（eff {{mem.lpddr5_eff_pct}}% &lt; 量測 71%）；與 Ramulator2 device 量測<strong>不矛盾</strong>（device-only 0.92 vs system 0.65 量的是不同 scope，非數值吻合）；標籤誠實。</td></tr>
         <tr><td><strong>M7 能耗全 estimated（無功耗遙測，ADR-0005）</strong></td><td>結論（記憶體主導）對 ±20% 穩健（16 corner、0 翻轉）；絕對 mJ 標 estimated。</td></tr>
       </tbody>
     </table>
@@ -85,7 +85,7 @@
       <li>CIM Card 重驗：<code>validation/reports/phase1.2/cim_card_revalidate.json › status, consistency</code></li>
       <li>prefill / multi-tile cliff：<code>validation/reports/phase1.5/cim_multitile.json › model, old_vs_new, resident_holdout</code>；<code>cim_prefill_fit.json › holdout</code></li>
       <li>KV-append SPIKE：<code>validation/reports/phase1.5/kv_append_spike.json › verdict</code></li>
-      <li>NPU ONNXim 交叉驗證：<code>validation/reports/phase1.3/m4_npu_onnxim.json › median_abs_delta_pct</code>；#13 superseded-not-satisfied（ADR-0006）</li>
+      <li>NPU 模擬器發散（非驗證）：<code>validation/reports/phase1.3/m4_npu_onnxim.json › median_abs_delta_pct</code>（analytic↔ONNXim）、<code>validation/reports/phase1.6/npu_scalesim.json › spread_median_x</code>（3 方 ~7×）；systolic 階梯實測 <code>validation/reports/phase1.6/npu_characteristic_compare.json</code>（ONNXim 不複製 32 階梯）；#13 superseded-not-satisfied（ADR-0006）</li>
       <li>LPDDR5 / eta_bw 誠實標籤：<code>validation/reports/phase1.1/m2.json › params</code>；<code>simulator/models/params/m4_cpu_instrcount.json › eta_bw</code></li>
       <li>M7 能耗穩健性：<code>validation/reports/phase1.1/m7.json › sensitivity_pm20pct</code>（ADR-0005 無遙測）</li>
       <li>章節敘述：<code>docs/report/phase1/chapters/09-gaps-gonogo.md</code></li>

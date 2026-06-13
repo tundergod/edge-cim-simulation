@@ -37,7 +37,7 @@
     <p>把每個 fp32 量測點（四個模型，softmax 含 kv-sweep，共 32 點）的<strong>實測中位數</strong>對上 §2 roofline 的<strong>預測</strong>，畫成 parity 圖看貼合度：</p>
     <figure>
       <img src="../../figures/phase1-site/cpu_roofline.png" alt="6 個算子實測 vs 指令數 roofline parity">
-      <figcaption><strong>怎麼讀：</strong>橫軸實測延遲、縱軸 roofline 預測，點越靠對角線越準；深淺藍帶是 ±10% / ±20% 容差。<strong>橘方塊 = <code>exp()</code> 驅動的 softmax/swiglu</strong>，落在高延遲區（100–400µs，因 <code>ops_per_elem</code> 大）；藍圓 = 其餘四個輕量算子，集中在低延遲區（&lt;65µs）。32 點全數落在 ±10% 內，整體中位誤差 1.18%、p95 7.31%——這就是 §4 門檻 PASS 的視覺版。指令數 roofline 把 softmax 與 swiglu 的高成本<strong>結構性地</strong>算出來，不靠查表。
+      <figcaption><strong>怎麼讀：</strong>橫軸實測延遲、縱軸 roofline 預測，點越靠對角線越準；深淺藍帶是 ±10% / ±20% 容差。<strong>橘方塊 = <code>exp()</code> 驅動的 softmax/swiglu</strong>，落在高延遲區（100–400µs，因 <code>ops_per_elem</code> 大）；藍圓 = 其餘四個輕量算子，集中在低延遲區（&lt;65µs）。多數點落在 ±10% 內、全數在 ±20% 容差內（最大殘差 13.12%），整體中位誤差 1.18%、p95 7.31%——這就是 §4 門檻 PASS 的視覺版。指令數 roofline 把 softmax 與 swiglu 的高成本<strong>結構性地</strong>算出來，不靠查表。
         <span class="ft">圖 M4·CPU·1 · 來源 cpu_ops.json（fp32 median）vs CpuModel roofline · 腳本 tools/plotting/site_cpu.py</span>
       </figcaption>
     </figure>
