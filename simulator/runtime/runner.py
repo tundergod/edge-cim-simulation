@@ -39,16 +39,19 @@ def run(cfg):
     model_obj = op_profile.Model(cfg.model)
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off
+    price_compute = not cfg.compute_off
 
     # decode: representative steady-state kv at mid-generation
     kv = max(1, cfg.context // 2)
     dec = assign(build_token_dag(cfg.model, "decode", kv, _model_obj=model_obj))
-    t_dec_us = run_dag(dec, plat, plat.bw, concurrency=concurrency, contention=contention)
+    t_dec_us = run_dag(dec, plat, plat.bw, concurrency=concurrency, contention=contention,
+                       price_compute=price_compute)
     tok_s = 1e6 / t_dec_us if t_dec_us > 0 else 0.0
 
     # prefill: one forward at P (TTFT reported only, not gated)
     pre = assign(build_token_dag(cfg.model, "prefill", cfg.prefill_len, _model_obj=model_obj))
-    t_pre_us = run_dag(pre, plat, plat.bw, concurrency=concurrency, contention=contention)
+    t_pre_us = run_dag(pre, plat, plat.bw, concurrency=concurrency, contention=contention,
+                       price_compute=price_compute)
 
     e_tok = _energy_per_token_J(dec, plat)
     return {
@@ -64,7 +67,8 @@ def run(cfg):
         "energy_per_token_J": e_tok,
         "energy_band_J": [e_tok * 0.8, e_tok * 1.2],
         "memory_eff_BW_GBs": plat.bw.eff_BW,
-        "ablations": {"concurrency_off": cfg.concurrency_off, "contention_off": cfg.contention_off},
+        "ablations": {"concurrency_off": cfg.concurrency_off, "contention_off": cfg.contention_off,
+                      "compute_off": cfg.compute_off},
         "provenance": cfg.provenance,
         "calibrated_anchor": cfg.is_calibrated_anchor(),
     }

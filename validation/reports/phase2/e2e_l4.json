@@ -39,6 +39,25 @@
   }
  },
  "mechanism_pass_3x1c": true,
+ "memory_only_ablation": {
+  "llama-3.2-1b": {
+   "pred_tok_s": 18.4563,
+   "rel_error": 0.4121,
+   "within_gate": false
+  },
+  "llama-3.2-3b": {
+   "pred_tok_s": 7.0479,
+   "rel_error": 0.1047,
+   "within_gate": true
+  },
+  "llama-3.1-8b": {
+   "pred_tok_s": 3.1035,
+   "rel_error": 0.1494,
+   "within_gate": true
+  }
+ },
+ "memory_only_fails_gate": true,
+ "non_circular_content": "memory-only (pure bytes/24.2) FAILS the gate; the independent CIM-compute roofline correction is what lifts the prediction to pass. The 24.2 anchor is regressed across all sizes (memory backbone partly in-sample); 8B is the hold-out for the SMOKE only.",
  "simulated_demo": {
   "4c_1c_trend": "see validation/reports/phase2/contention.json (SIMULATED knee; measured 4c/1c = 1.130/1.096/1.081, vendor_llm_int8.json)",
   "long_context": "LongBench is prefill-heavy (prefill 11753 / decode 4); no measured high-context DECODE point -> simulated extrapolation, not gated."

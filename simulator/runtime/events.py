@@ -22,8 +22,10 @@ from __future__ import annotations
 import heapq
 
 
-def run_dag(dag, platform, bw, *, concurrency=True, contention=True):
-    """Return the token latency (microseconds) to execute the whole DAG."""
+def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compute=True):
+    """Return the token latency (microseconds) to execute the whole DAG.
+    `price_compute=False` zeroes every op's compute term (memory-only ablation:
+    isolates what the independent unit-compute models add on top of the memory wall)."""
     indeg = {n.id: len(n.deps) for n in dag.nodes}
     free = {}                       # unit clock: busy_until per unit (or one shared clock)
     active_mem = {}                 # nid -> memory-stream finish time (for concurrency count)
@@ -45,7 +47,7 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True):
         node = dag[nid]
         u = node.unit or "cpu"
         start = max(now, free.get(ukey(u), 0.0))
-        compute_us = float(platform.compute_us(node))
+        compute_us = float(platform.compute_us(node)) if price_compute else 0.0
         if node.bytes_streamed > 0:
             k = n_active_mem(start) + 1
             mem_us = bw.stream_us(node.bytes_streamed, k, contention=contention)

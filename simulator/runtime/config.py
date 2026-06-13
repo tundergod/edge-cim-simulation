@@ -20,7 +20,7 @@ _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine"}
 _KNOWN_SCHED = {"policy", "op_unit_overrides", "precision_boundary_placement"}
 _KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor"}
-_KNOWN_ABL = {"concurrency_off", "contention_off"}
+_KNOWN_ABL = {"concurrency_off", "contention_off", "compute_off"}
 
 _CAL_MEMORY = "mem_lpddr4x"        # the measured 24.2 GB/s decode anchor
 _CAL_TOPOLOGY = "cim_topo_card"    # the L4-anchored on-card-DRAM topology
@@ -62,9 +62,10 @@ class SimConfig:
     scheduler: str = "all_cim"
     knee_GBs: float | None = None
     interconnect_efficiency: float = 1.0
-    concurrency_overlap_factor: float = 1.0
+    concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; no effect on the 2.1 serial path
     concurrency_off: bool = False
     contention_off: bool = False
+    compute_off: bool = False                 # ablation: memory-only (zero unit compute) — isolates the non-circular compute correction
     sweep: dict | None = None
     provenance: list = field(default_factory=list)
 
@@ -104,6 +105,7 @@ class SimConfig:
             concurrency_overlap_factor=tun.get("concurrency_overlap_factor", 1.0),
             concurrency_off=abl.get("concurrency_off", False),
             contention_off=abl.get("contention_off", False),
+            compute_off=abl.get("compute_off", False),
             sweep=d.get("sweep"))
         if cfg.batch != 1:
             raise ValueError("SimConfig: v1 scope is batch=1 (hook reserved)")

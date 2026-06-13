@@ -115,34 +115,37 @@ def category_counts(dag):
     return out
 
 
-def _profile_category_counts(m, P, D):
-    out = {}
+def _profile_counts_bytes(m, P, D):
+    counts, total_bytes = {}, 0
     for r in m.profile(P, D):
-        out[(r["phase"], r["category"])] = out.get((r["phase"], r["category"]), 0) + r["count"]
-    return out
+        counts[(r["phase"], r["category"])] = counts.get((r["phase"], r["category"]), 0) + r["count"]
+        total_bytes += r["bytes"] * r["count"]
+    return counts, total_bytes
 
 
-def _dag_category_counts(model, P, D, m):
-    """Per-(phase, category) node counts over one generation: one prefill forward
-    at P + one decode forward per past position P..P+D-1 (mirrors profile())."""
-    out = {}
-    for n in build_token_dag(model, "prefill", P, _model_obj=m).nodes:
-        out[("prefill", n.category)] = out.get(("prefill", n.category), 0) + 1
-    for past in range(P, P + D):
-        for n in build_token_dag(model, "decode", past, _model_obj=m).nodes:
-            out[("decode", n.category)] = out.get(("decode", n.category), 0) + 1
-    return out
+def _dag_counts_bytes(model, P, D, m):
+    """Per-(phase, category) node counts + total streamed bytes over one generation:
+    one prefill forward at P + one decode forward per past P..P+D-1 (mirrors profile())."""
+    counts, total_bytes = {}, 0
+    for phase, Ls in (("prefill", [P]), ("decode", list(range(P, P + D)))):
+        for L in Ls:
+            for n in build_token_dag(model, phase, L, _model_obj=m).nodes:
+                counts[(phase, n.category)] = counts.get((phase, n.category), 0) + 1
+                total_bytes += n.bytes_streamed
+    return counts, total_bytes
 
 
 def oracle_check(model, P, D):
-    """Fail-loud oracle: the DAG's per-(phase,category) node counts summed over a
-    (P,D) generation must equal Model.profile(P,D) counts (no dropped/double-counted
-    ops; category set identical = semantic coverage + zero orphans). Returns (ok, detail)."""
+    """Fail-loud oracle: the DAG's per-(phase,category) node counts AND total streamed
+    bytes summed over a (P,D) generation must equal Model.profile(P,D) (no dropped or
+    double-counted ops; identical category set = semantic coverage + zero orphans; bytes
+    match guards wl_from_row). Returns (ok, detail)."""
     m = op_profile.Model(model)                     # construction self-validates templates vs held-out inventory
-    exp = _profile_category_counts(m, P, D)
-    got = _dag_category_counts(model, P, D, m)
-    ok = exp == got
-    detail = {"model": model, "P": P, "D": D, "match": ok,
-              "expected": {f"{k[0]}/{k[1]}": v for k, v in sorted(exp.items())},
-              "got": {f"{k[0]}/{k[1]}": v for k, v in sorted(got.items())}}
+    exp_c, exp_b = _profile_counts_bytes(m, P, D)
+    got_c, got_b = _dag_counts_bytes(model, P, D, m)
+    ok = (exp_c == got_c) and (exp_b == got_b)
+    detail = {"model": model, "P": P, "D": D, "counts_match": exp_c == got_c,
+              "bytes_match": exp_b == got_b, "profile_bytes": exp_b, "dag_bytes": got_b,
+              "expected": {f"{k[0]}/{k[1]}": v for k, v in sorted(exp_c.items())},
+              "got": {f"{k[0]}/{k[1]}": v for k, v in sorted(got_c.items())}}
     return ok, detail
