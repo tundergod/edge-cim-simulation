@@ -56,8 +56,10 @@
    "within_gate": true
   }
  },
- "memory_only_fails_gate": true,
- "non_circular_content": "memory-only (pure bytes/24.2) FAILS the gate; the independent CIM-compute roofline correction is what lifts the prediction to pass. The 24.2 anchor is regressed across all sizes (memory backbone partly in-sample); 8B is the hold-out for the SMOKE only.",
+ "memory_only_fails_at": [
+  "llama-3.2-1b"
+ ],
+ "non_circular_content": "NARROW: memory-only (pure bytes/24.2) fails the gate ONLY at llama-3.2-1b \u2014 there the independent CIM-compute correction is what earns the pass. For 3B/8B, memory-only ALREADY passes (10.5%/14.9%), and the 24.2 anchor is regressed across all sizes (memory backbone partly IN-SAMPLE), so those passes are weaker evidence. The genuinely out-of-sample non-circular content is the 1B compute correction; 8B is the hold-out for the SMOKE closed-form only.",
  "simulated_demo": {
   "4c_1c_trend": "see validation/reports/phase2/contention.json (SIMULATED knee; measured 4c/1c = 1.130/1.096/1.081, vendor_llm_int8.json)",
   "long_context": "LongBench is prefill-heavy (prefill 11753 / decode 4); no measured high-context DECODE point -> simulated extrapolation, not gated."

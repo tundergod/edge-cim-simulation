@@ -61,6 +61,24 @@ def test_node_dur_is_max_compute_memory():
     assert abs(run_dag(dag, plat, bw) - 2e6) < 1e-3
 
 
+def test_fluid_fairshare_unequal_costart():
+    # two co-started memory streams (5 GB + 10 GB) sharing a 10 GB/s channel.
+    # fair-share: both at 5 GB/s; A (5 GB) finishes at 1s, then B re-shares to full
+    # 10 GB/s for its last 5 GB -> +0.5s -> 1.5s. (The old dispatch-time-k model gave 2.0s.)
+    dag = Dag([_node(0, "a", bytes_streamed=int(5e9)), _node(1, "b", bytes_streamed=int(10e9))])
+    plat = _StubPlatform({0: 0.0, 1: 0.0})
+    bw = SharedBandwidth(eff_BW_GBs=10.0, knee_GBs=10.0)
+    assert abs(run_dag(dag, plat, bw) - 1.5e6) < 1e-3
+
+
+def test_fluid_fairshare_equal_costart():
+    # three equal 10 GB streams sharing a 15 GB/s knee -> 5 GB/s each -> all finish at 2s
+    dag = Dag([_node(i, f"u{i}", bytes_streamed=int(10e9)) for i in range(3)])
+    plat = _StubPlatform({0: 0.0, 1: 0.0, 2: 0.0})
+    bw = SharedBandwidth(eff_BW_GBs=10.0, knee_GBs=15.0)
+    assert abs(run_dag(dag, plat, bw) - 2.0e6) < 1e-3
+
+
 def test_empty_dag():
     dag = Dag([])
     assert run_dag(dag, _StubPlatform({}), SharedBandwidth(24.2)) == 0.0

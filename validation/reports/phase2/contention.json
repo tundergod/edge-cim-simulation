@@ -2,9 +2,10 @@
  "module": "contention",
  "phase": "2.1",
  "tag": "simulated",
- "honesty": "SIMULATED knee \u2014 no concurrent-unit silicon (Aetina offline, issue #52). Shape check, not a reproduced silicon value; NOT a numeric gate.",
+ "honesty": "SIMULATED knee \u2014 no concurrent-unit silicon (Aetina offline, issue #52). Only the SHAPE (rising-then-saturating; linear when contention off) is genuine; the 4c/1c ratio 'match' is BY CONSTRUCTION (knee calibrated to the measured mean), NOT validation. NOT a numeric gate.",
  "eff_BW_GBs_single_stream": 24.2,
  "knee_GBs": 26.68,
+ "knee_calibrated_as": "knee = eff_BW * mean(card 4c/1c) \u2014 the knee is CALIBRATED to the measured ratio, NOT validated against it.",
  "aggregate_sweep_GBs": {
   "1": 24.2,
   "2": 26.68,
@@ -25,8 +26,8 @@
   "7": 169.4,
   "8": 193.6
  },
- "rising_then_saturating": true,
- "contention_off_is_linear": true,
+ "validated_shape_rising_then_saturating": true,
+ "validated_shape_contention_off_is_linear": true,
  "card_4c_1c_measured": {
   "llama-3.2-1b": 1.13,
   "llama-3.2-3b": 1.096,
@@ -34,7 +35,8 @@
  },
  "card_4c_1c_mean": 1.102,
  "model_4c_1c_ratio": 1.102,
- "size_dependence_note": "constant knee gives a constant 4c/1c ratio; the measured mild size-dependence (1.130->1.081) is NOT captured by one knee \u2014 noted, simulated.",
+ "ratio_match_is_by_construction": true,
+ "size_dependence_note": "a constant knee gives a CONSTANT 4c/1c ratio; the measured mild size-dependence (1.130->1.081) is NOT captured \u2014 disclaimed, simulated.",
  "ramulator2_multistream": "FUTURE cross-check (only single-stream LPDDR5 eff ships today); issue #52.",
- "trend_consistent": true
+ "shape_consistent": true
 }

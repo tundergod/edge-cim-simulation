@@ -53,26 +53,35 @@ def main():
     out = {
         "module": "contention", "phase": "2.1", "tag": "simulated",
         "honesty": "SIMULATED knee — no concurrent-unit silicon (Aetina offline, issue #52). "
-                   "Shape check, not a reproduced silicon value; NOT a numeric gate.",
+                   "Only the SHAPE (rising-then-saturating; linear when contention off) is genuine; "
+                   "the 4c/1c ratio 'match' is BY CONSTRUCTION (knee calibrated to the measured mean), "
+                   "NOT validation. NOT a numeric gate.",
         "eff_BW_GBs_single_stream": EFF_BW,
         "knee_GBs": round(knee, 2),
+        "knee_calibrated_as": "knee = eff_BW * mean(card 4c/1c) — the knee is CALIBRATED to the "
+                              "measured ratio, NOT validated against it.",
         "aggregate_sweep_GBs": sweep,
         "aggregate_sweep_contention_off_GBs": sweep_off,
-        "rising_then_saturating": bool(rising_then_flat),
-        "contention_off_is_linear": bool(off_linear),
+        # the only genuine (non-by-construction) content: the SHAPE
+        "validated_shape_rising_then_saturating": bool(rising_then_flat),
+        "validated_shape_contention_off_is_linear": bool(off_linear),
         "card_4c_1c_measured": meas_ratio,
         "card_4c_1c_mean": round(mean_ratio, 3),
         "model_4c_1c_ratio": model_ratio_4c,
-        "size_dependence_note": "constant knee gives a constant 4c/1c ratio; the measured mild "
-                                "size-dependence (1.130->1.081) is NOT captured by one knee — noted, simulated.",
+        "ratio_match_is_by_construction": True,   # model_ratio == card_mean because knee was fit to it
+        "size_dependence_note": "a constant knee gives a CONSTANT 4c/1c ratio; the measured mild "
+                                "size-dependence (1.130->1.081) is NOT captured — disclaimed, simulated.",
         "ramulator2_multistream": "FUTURE cross-check (only single-stream LPDDR5 eff ships today); issue #52.",
-        "trend_consistent": bool(rising_then_flat and off_linear),
+        # the claim is SHAPE-ONLY; the ratio is calibration, not agreement
+        "shape_consistent": bool(rising_then_flat and off_linear),
     }
     (OUT / "contention.json").write_text(json.dumps(out, indent=1))
     print(f"contention (SIMULATED, no gate): eff_BW={EFF_BW} knee={knee:.1f} GB/s")
     print(f"  aggregate sweep GB/s: {sweep}")
-    print(f"  model 4c/1c={model_ratio_4c} vs measured {meas_ratio} (mean {mean_ratio:.3f})")
-    print(f"  rising-then-saturating={rising_then_flat}  contention-off-linear={off_linear}")
+    print(f"  model 4c/1c={model_ratio_4c} == card mean {mean_ratio:.3f} BY CONSTRUCTION "
+          f"(knee calibrated to it; measured {meas_ratio}) — calibration, NOT validation")
+    print(f"  GENUINE content = SHAPE: rising-then-saturating={rising_then_flat}  "
+          f"contention-off-linear={off_linear}")
     return 0
 
 

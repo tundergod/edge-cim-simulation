@@ -1,76 +1,110 @@
 """M3 — lightweight non-cycle-accurate discrete-event engine (Phase 2.1, ADR-0001).
 
-Walks a per-token op DAG. Each compute unit serializes its ops (busy_until);
-different units run concurrently. Per-op COMPUTE latency comes from the Phase-1
-unit models via `platform.compute_us(node)` — the engine NEVER computes a
-latency itself. Each op also streams `node.bytes_streamed` through the one
-contended resource (`SharedBandwidth`); a node's duration is
-`max(compute, memory)` (double-buffering / overlap-within-node, LLMCompass).
+Walks a per-token op DAG. Compute units are exclusive serial servers (one op at a
+time per unit; busy_until); different units run concurrently. The shared memory is
+a FLUID processor-sharing resource: all in-flight memory streams get an equal
+fair-share of the bandwidth, and the share is RE-COMPUTED at every event (a stream
+finishing frees bandwidth for the rest). A node's compute and memory overlap
+(double-buffering); the node completes when BOTH finish, i.e. max(compute, memory).
 
-Hand-written heapq loop (~event count 10^2-10^3/token; ADR-0003). Two ablation
-flags: `concurrency=False` collapses all units onto one serial clock;
-`contention=False` removes the knee (memory sums linearly).
+Per-op COMPUTE latency comes from the Phase-1 unit models via
+`platform.compute_us(node)` — the engine never computes a latency itself. Memory is
+metered through `SharedBandwidth` (the saturating-knee model). Ablations:
+`concurrency=False` collapses units onto one serial clock; `contention=False`
+removes the knee (memory sums linearly); `price_compute=False` zeroes compute
+(memory-only ablation).
 
-Modeling note (non-cycle-accurate): the number of concurrent memory streams is
-evaluated at each op's dispatch and held for its duration (no mid-flight
-re-share). For a serial DAG only one stream is ever active (full eff_BW); for
-the synthetic concurrent workloads in validate_contention the streams co-start,
-so the dispatch-time count is exact.
+The fluid loop advances time event-to-event (dispatch / compute-finish / memory
+completion), so the fair-share is exact for any overlap pattern (not just the
+serial AllCim path). Event count ~10^2-10^3/token (ADR-0003).
 """
 from __future__ import annotations
 
-import heapq
+_EPS = 1e-9
+_INF = float("inf")
 
 
 def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compute=True):
     """Return the token latency (microseconds) to execute the whole DAG.
-    `price_compute=False` zeroes every op's compute term (memory-only ablation:
-    isolates what the independent unit-compute models add on top of the memory wall)."""
+    `price_compute=False` zeroes every op's compute term (memory-only ablation)."""
     indeg = {n.id: len(n.deps) for n in dag.nodes}
-    free = {}                       # unit clock: busy_until per unit (or one shared clock)
-    active_mem = {}                 # nid -> memory-stream finish time (for concurrency count)
-    heap = []                       # (node_done_time, seq, nid)
-    seq = 0
-    last_finish = 0.0
+    unit_free = {}                       # unit clock -> next-free time (compute serialization)
+    pending = {nid for nid, d in indeg.items() if d == 0}   # deps satisfied, not yet dispatched
+    started, done = set(), set()
+    active_mem = {}                      # nid -> remaining bytes (memory stream in flight)
+    compute_done_at = {}                # nid -> absolute time its compute finishes
+    clock = 0.0
+    last = 0.0
 
     def ukey(u):
-        return u if concurrency else "_serial"
+        return (u or "cpu") if concurrency else "_serial"
 
-    def n_active_mem(at):
-        # prune finished streams, then count those still in flight
-        for k in [k for k, f in active_mem.items() if f <= at]:
-            del active_mem[k]
-        return len(active_mem)
+    def compute_us(node):
+        return float(platform.compute_us(node)) if price_compute else 0.0
 
-    def dispatch(nid, now):
-        nonlocal seq, last_finish
-        node = dag[nid]
-        u = node.unit or "cpu"
-        start = max(now, free.get(ukey(u), 0.0))
-        compute_us = float(platform.compute_us(node)) if price_compute else 0.0
-        if node.bytes_streamed > 0:
-            k = n_active_mem(start) + 1
-            mem_us = bw.stream_us(node.bytes_streamed, k, contention=contention)
-        else:
-            mem_us = 0.0
-        dur = max(compute_us, mem_us)
-        finish = start + dur
-        free[ukey(u)] = start + compute_us          # unit frees after compute (memory overlaps)
-        if node.bytes_streamed > 0:
-            active_mem[nid] = start + mem_us
-        seq += 1
-        heapq.heappush(heap, (finish, seq, nid))
-        last_finish = max(last_finish, finish)
+    def finish(nid):
+        nonlocal last
+        if nid in done or nid not in started:
+            return
+        if compute_done_at[nid] <= clock + _EPS and nid not in active_mem:
+            done.add(nid)
+            last = max(last, clock)
+            for s in dag.successors(nid):
+                indeg[s] -= 1
+                if indeg[s] == 0:
+                    pending.add(s)
 
-    for nid in [n.id for n in dag.nodes if indeg[n.id] == 0]:
-        dispatch(nid, 0.0)
+    def rate_bytes_per_us():
+        # equal fair-share per active memory stream (GB/s -> bytes/us = x1e3)
+        return bw.per_stream_GBs(len(active_mem), contention=contention) * 1e3
 
-    while heap:
-        finish, _, nid = heapq.heappop(heap)
-        active_mem.pop(nid, None)
-        for s in dag.successors(nid):
-            indeg[s] -= 1
-            if indeg[s] == 0:
-                dispatch(s, finish)
+    while pending or active_mem or (started - done):
+        # 1) dispatch every pending node whose unit is free (compute serialization)
+        progressed = True
+        while progressed:
+            progressed = False
+            for nid in list(pending):
+                u = ukey(dag[nid].unit)
+                if unit_free.get(u, 0.0) <= clock + _EPS:
+                    node = dag[nid]
+                    pending.discard(nid)
+                    started.add(nid)
+                    ct = compute_us(node)
+                    unit_free[u] = clock + ct
+                    compute_done_at[nid] = clock + ct
+                    if node.bytes_streamed > 0:
+                        active_mem[nid] = float(node.bytes_streamed)
+                    progressed = True
+        for nid in list(started):
+            finish(nid)
+        if not (pending or active_mem or (started - done)):
+            break
 
-    return last_finish
+        # 2) advance to the next event: memory completion / compute finish / unit free
+        nxt = _INF
+        if active_mem:
+            r = rate_bytes_per_us()
+            if r > 0:
+                nxt = min(nxt, min(active_mem.values()) / r)
+        for nid in started - done:
+            if compute_done_at[nid] > clock + _EPS:
+                nxt = min(nxt, compute_done_at[nid] - clock)
+        for nid in pending:
+            uf = unit_free.get(ukey(dag[nid].unit), 0.0)
+            if uf > clock + _EPS:
+                nxt = min(nxt, uf - clock)
+        if nxt is _INF or nxt <= _EPS:
+            break                         # nothing left to advance (guards against a stall)
+
+        # 3) drain memory at the (constant-over-interval) fair-share rate, then finish
+        clock += nxt
+        if active_mem:
+            drained = nxt * rate_bytes_per_us()
+            for nid in list(active_mem):
+                active_mem[nid] -= drained
+                if active_mem[nid] <= _EPS:
+                    del active_mem[nid]
+        for nid in list(started):
+            finish(nid)
+
+    return last
