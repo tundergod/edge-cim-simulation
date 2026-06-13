@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Phase 1.7 — Metis Card thermal + perf-vs-temperature capture harness (runs ON the board).
+"""Phase 0.4 — Metis Card thermal + perf-vs-temperature capture harness (runs ON the board).
 
 Decoupled from LLM: drives a compiled 1x1-conv == matmul proxy via `axrunmodel <model.json>
 --seconds S --aipu-cores K` (synthetic compute stress). axrunmodel prints ONE summary line per run:
@@ -7,7 +7,7 @@ Decoupled from LLM: drives a compiled 1x1-conv == matmul proxy via `axrunmodel <
 so each burst yields a clean (dev throughput, end core temperature) point. Back-to-back bursts heat
 the die -> temperature(time) heating curve; throughput-vs-temperature -> throttle/perf coupling.
 
-SAFETY (Phase 1.7 plan; shared board, verified effectively single-user at run time):
+SAFETY (Phase 0.4 plan; shared board, verified effectively single-user at run time):
   - per-burst end temperature is parsed; the campaign ABORTS if temp >= ABORT_CAP. Bursts are short
     (<=20 s) and the die rises only ~1 C/min, so a single burst physically cannot overshoot the cap
     between checks. axrunmodel timeout is a hard backstop.

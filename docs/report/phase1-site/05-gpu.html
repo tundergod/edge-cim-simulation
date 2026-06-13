@@ -25,7 +25,7 @@
     <div class="role">
       <p style="margin-top:0">M4-GPU 在異構 SoC 裡是<strong>注意力的 offload 接收方</strong>，不是主算力。分工邏輯：CIM 做 weight-stationary 的投影 GEMM（Q/K/V/O、FFN gate/up/down），而 <strong>attention 的 QK^T 與 S·V 是 activation × activation 的 bmm</strong>——每個 decode step KV-cache 都長大，沒有可釘在 crossbar 上的固定權重。</p>
       <p><strong>① 注意力 offload（基本功能）</strong>——單一 attention head 的 QK^T + S·V（decode 步，FP16）。強行讓 CIM 做 attention 等同每步重載長大的 K/V，成本以數十毫秒計（CIM-attention penalty 31–46 ms/token，Phase 1.1 P7）；同樣 kv 長度 GPU 只要幾十到幾百 µs。<strong>② roofline 換型號槽</strong>——一個可換 GPU spec 的解析 roofline（FP16 校準），與 micro-benchmark 並存。</p>
-      <p style="margin-bottom:0">M4-GPU 是<strong>有真矽、attention 已驗證</strong>的單元（Mali-G610 r0p0 實測），所以 calibrated 與 fitted 亮著、simulated 熄滅（GPU 有矽、不掛 heavy-sim）。<strong>關鍵缺口：只量了 FP16，INT8 零資料</strong>——這是「缺一個量測」、不是「用模擬補」，§5 誠實呈現。</p>
+      <p style="margin-bottom:0">M4-GPU 是<strong>有真矽、attention 已驗證</strong>的單元（Mali-G610 r0p0 實測），所以 calibrated 與 fitted 亮著、simulated 熄滅（GPU 有矽、不掛 heavy-sim）。<strong>範圍決策：GPU 只做 FP16 attention，INT8 GEMM 歸 CIM</strong>——所以只量 FP16；GPU INT8 是<strong>刻意不在範圍</strong>（CIM-centric 分工決策），不是待補的缺口，§5 說明。</p>
     </div>
   </div>
 
@@ -64,7 +64,7 @@
     <p>Phase 1.2 補一個可換型號的解析 roofline（<code>GpuRooflineModel</code>），與 micro-benchmark <strong>並存而非取代</strong>，目標是「換一顆 GPU = 換 spec 檔、引擎不動」。<code>max(compute, memory)</code> 讓同一式自動涵蓋兩 regime：decode（M=1 GEMV）落 memory-bound，prefill / 大方陣落 compute-bound。兩個校準係數均對 <code>mali_matmul.json</code> 的 FP16 點擬合：<code>eff_compute_fp16 = 0.01965</code>（飽和 20.12 ÷ FP16 峰值 1024 GFLOP/s）、<code>mem_eff_BW_GBs = 1.256</code>（16 個 decode-GEMV 點過原點最小平方）。</p>
     <figure>
       <img src="../../figures/phase1-site/gpu_roofline.png" alt="FP16 方陣 ksweep 吞吐飽和於 20.12 GFLOP/s（下界）">
-      <figcaption><strong>怎麼讀：</strong>橫軸方陣維度 M（log2）、縱軸 GFLOP/s。藍線 FP16 在 M=128 飽和於約 20 GFLOP/s（橘虛線），FP32（灰）略低。<strong>標 LOWER BOUND</strong>：這是自寫未優化 OpenCL kernel，調教過的 kernel 可更快——roofline 的 <code>eff_compute_fp16</code> 即以此飽和值校準、故繼承下界性質。<strong>INT8 完全沒量</strong>（kernel 只有 FP32/FP16），圖上沒有 INT8 線是誠實的空缺、不是省略。
+      <figcaption><strong>怎麼讀：</strong>橫軸方陣維度 M（log2）、縱軸 GFLOP/s。藍線 FP16 在 M=128 飽和於約 20 GFLOP/s（橘虛線），FP32（灰）略低。<strong>標 LOWER BOUND</strong>：這是自寫未優化 OpenCL kernel，調教過的 kernel 可更快——roofline 的 <code>eff_compute_fp16</code> 即以此飽和值校準、故繼承下界性質。<strong>INT8 不在範圍</strong>（kernel 只有 FP32/FP16；GPU 在本設計只做 FP16 attention、INT8 GEMM 歸 CIM），圖上沒有 INT8 線是設計決策、不是省略。
         <span class="ft">圖 M4·GPU·2 · 來源 mali_matmul.json › ksweep（f16/f32_gflops）+ m4_gpu_roofline.json › saturated_f16_gflops · 腳本 tools/plotting/site_gpu.py</span>
       </figcaption>
     </figure>
@@ -104,7 +104,7 @@
         <tr class="gen"><td>roofline vs 1.1（30 pts）</td><td class="num">2.7%</td><td class="num">36.1%</td><td>趨勢擬合（FP16），非嚴格下界</td></tr>
       </tbody>
     </table>
-    <div class="note"><b>INT8 無驗收 gate。</b>Mali matmul kernel 僅 FP32/FP16，<code>predict()</code> 對 int8 workload 仍用 FP16 校準天花板，provenance 明標「dtype=int8 has ZERO GPU data」。這是<strong>缺一個量測</strong>，不是用模擬填補——詳見 §5。</div>
+    <div class="note"><b>INT8 不在 GPU 範圍。</b>Mali matmul kernel 僅 FP32/FP16；GPU 在本設計只做 FP16 attention（INT8 GEMM 歸 CIM）。<code>predict()</code> 對 int8 workload 仍用 FP16 校準天花板、provenance 標「dtype=int8 has ZERO GPU data」，是因為 <strong>GPU 本就不該收到 INT8 GEMM</strong>——這是範圍決策、不是待補缺口，詳見 §5。</div>
   </div>
 
   <div class="sec">
@@ -115,7 +115,7 @@
         <tr><td>attention offload <code>attn_bmm_us(kv)</code> 介面</td><td class="pass">✅ 凍結，calibrated（median 0.6%）</td></tr>
         <tr><td><code>MaliGpuModel</code> / <code>m4_gpu.py</code></td><td class="pass">✅ 模組化，Phase 2 直接沿用</td></tr>
         <tr><td>roofline 換型號槽 <code>GpuRooflineModel</code></td><td class="pass">✅ 凍結合約 {latency_us, bound, provenance}，換 spec 不改引擎</td></tr>
-        <tr><td><strong>INT8 GPU GEMM</strong>（dtype=int8 零資料）</td><td class="fail">⚠ 缺量測（非模擬）——Phase 2 需收集 Mali INT8 kernel 資料</td></tr>
+        <tr><td><strong>INT8 GPU GEMM</strong>（dtype=int8 零資料）</td><td>範圍外（設計決策）——GPU 只做 FP16 attention、INT8 GEMM 歸 CIM，不需收集</td></tr>
         <tr><td>FP16 GEMM 絕對吞吐 20.12 GFLOP/s</td><td class="fail">⚠ 下界（未優化 kernel）；recompose 不用絕對值</td></tr>
         <tr><td>roofline 可轉移性</td><td class="fail">⚠ 不可轉移（5 飽和點）；換 GPU 需重新量測重跑 fit</td></tr>
         <tr><td>kv 外推 &gt; 1024（LongBench ~12k kv）</td><td class="fail">⚠ 外推（12×；線性形式結構正確，待 kv∈{2k,4k,8k} 補點）</td></tr>
@@ -123,7 +123,7 @@
         <tr><td>FP32 峰值 512 GFLOP/s</td><td class="fail">⚠ assumption（可能低估 2–4×；FP16 校準不依賴此值）</td></tr>
       </tbody>
     </table>
-    <p><strong>最大缺口 = INT8 是缺一個量測、不是模擬。</strong>attention offload（FP16）已驗證、介面穩定，Phase 2 可直接沿用。但若 Phase 2 需要 GPU 做 INT8 GEMM，現況零資料不可用，必須先收集 Mali INT8 kernel 量測。其餘為 kv &gt;1024 外推補點、heads×layers 聚合驗證、FP32 峰值待量測——都不影響已驗證的 FP16 attention 路徑。</p>
+    <p><strong>GPU INT8 不在範圍（設計決策，非缺口）。</strong>attention offload（FP16）已驗證、介面穩定，Phase 2 直接沿用。GPU 只做 FP16 attention、INT8 GEMM 歸 CIM，故 GPU INT8 零資料是<strong>刻意分工</strong>、不是待補缺口。其餘為 kv &gt;1024 外推補點、heads×layers 聚合驗證、FP32 峰值待量測——都不影響已驗證的 FP16 attention 路徑。</p>
   </div>
 
   <div class="sources">

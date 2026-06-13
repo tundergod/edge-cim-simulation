@@ -1,7 +1,7 @@
 """M8 (Thermal) editorial figures for the Phase-1 site (build artifact, nature-figure style).
 
 Regenerable from committed JSON: the on-board heat campaign (measurements/metis_card/thermal_heat_*.json)
-+ the RC/perf fit (validation/reports/phase1.7/thermal.json). Two single-purpose figures:
++ the RC/perf fit (validation/reports/phase0.4/thermal.json). Two single-purpose figures:
   m8_heating    — §1/§2: max-core temp vs time (sustained 4-core matmul) + RC fit + plateau; headroom note.
   m8_perf_temp  — §3: dev throughput vs max-core temp + noise band -> flat, no throttle in range.
 
@@ -22,7 +22,7 @@ sys.path.insert(0, str(ROOT / "tools/plotting"))
 import _style as S  # noqa: E402
 
 HEAT = ROOT / "measurements/metis_card/thermal_heat_20260612.json"
-FIT = ROOT / "validation/reports/phase1.7/thermal.json"
+FIT = ROOT / "validation/reports/phase0.4/thermal.json"
 OUT = ROOT / "docs/figures/phase1-site"
 HERO = "#0072B2"; WARM = "#C45A12"; OK = "#1b7f5a"; INK = "#17150f"; SOFT = "#5b554a"
 PAPER = "#fbf6ec"; GRID = "#e8e1d2"

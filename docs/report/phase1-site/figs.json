@@ -112,16 +112,16 @@
   "m8_heating": {
     "dir": "phase1-site", "script": "tools/plotting/site_m8.py",
     "sources": ["measurements/metis_card/thermal_heat_20260612.json",
-                "validation/reports/phase1.7/thermal.json"]
+                "validation/reports/phase0.4/thermal.json"]
   },
   "m8_perf_temp": {
     "dir": "phase1-site", "script": "tools/plotting/site_m8.py",
     "sources": ["measurements/metis_card/thermal_heat_20260612.json",
-                "validation/reports/phase1.7/thermal.json"]
+                "validation/reports/phase0.4/thermal.json"]
   },
   "m8_load_sweep": {
     "dir": "phase1-site", "script": "tools/plotting/site_m8.py",
-    "sources": ["validation/reports/phase1.7/thermal.json",
+    "sources": ["validation/reports/phase0.4/thermal.json",
                 "measurements/metis_card/thermal_sweep_m64.json",
                 "measurements/metis_card/thermal_sweep_m448.json"]
   }

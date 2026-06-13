@@ -86,9 +86,9 @@
   ],
   "12-thermal": [
     {"label": "calibrated", "on": true,
-     "src": "validation/reports/phase1.7/thermal.json — max-core temp measured on the production Metis Card via axrunmodel temp:<C>C, 40 sustained 4-core 2048x2048-matmul bursts (measurements/metis_card/thermal_heat_20260612.json)"},
+     "src": "validation/reports/phase0.4/thermal.json — max-core temp measured on the production Metis Card via axrunmodel temp:<C>C, 40 sustained 4-core 2048x2048-matmul bursts (measurements/metis_card/thermal_heat_20260612.json)"},
     {"label": "fitted", "on": true,
-     "src": "validation/reports/phase1.7/thermal.json › rc_fit (lumped RC T(t)=T_inf-(T_inf-T0)e^-t/tau, T_inf=44.1C tau=139s, rmse 0.24C) ; simulator/models/params/m8_thermal.json"},
+     "src": "validation/reports/phase0.4/thermal.json › rc_fit (lumped RC T(t)=T_inf-(T_inf-T0)e^-t/tau, T_inf=44.1C tau=139s, rmse 0.24C) ; simulator/models/params/m8_thermal.json"},
     {"label": "simulated", "on": false,
      "src": "N/A — thermal is measured on silicon + an analytic RC fit; no heavy-sim engine."},
     {"label": "assumption", "on": true, "warn": true,

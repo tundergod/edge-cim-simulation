@@ -37,4 +37,4 @@ gaps:
       -> single lumped-temperature model, not per-core."
   - shared_die: "host is multi-login; verified effectively single-user at capture time, but thermal state
       is non-reproducible in principle and T(t) could include co-tenant heat -> host load logged per burst."
-report: validation/reports/phase1.7/thermal.json
+report: validation/reports/phase0.4/thermal.json

@@ -70,7 +70,7 @@
           <td>注意力 offload <code>a+b·kv</code>（單 head QK^T+S·V）</td>
           <td><strong>calibrated</strong>（Mali FP16 attn；+ fitted / assumption⚠ INT8）</td>
           <td>attn median <strong>0.6%</strong>（p95 1.1%）<span class="pass">✅ PASS</span></td>
-          <td>INT8 <strong>零 GPU 資料</strong>；FP16 roofline 槽僅形狀趨勢可信（長尾 p95 36.1%）</td>
+          <td>INT8 <strong>零 GPU 資料（設計決策：GPU 只做 FP16、INT8 GEMM 歸 CIM，非缺口）</strong>；FP16 roofline 槽僅形狀趨勢可信（長尾 p95 36.1%）</td>
           <td class="num"><span class="pass">✅</span></td>
         </tr>
         <tr class="gen">

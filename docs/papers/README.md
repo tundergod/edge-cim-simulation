@@ -10,7 +10,7 @@
 
 ---
 
-## 保留清單（17 篇）
+## 保留清單（16 篇）
 
 > 2026-06-05 新增 [configuration-wall-asplos2026](methodology-and-simulators/configuration-wall-asplos2026.md)（DMA-bottleneck triage，見文末）。
 

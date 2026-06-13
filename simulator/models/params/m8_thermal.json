@@ -1,5 +1,5 @@
 {
- "_doc": "M8 lumped-RC thermal (Phase 1.7, Metis Card, max-core temp). dT/dt = ((Tinf-T_amb)*duty - (T-T_amb))/tau ; open-loop post-hoc layer (v1, no throttle feedback). Relative: no power telemetry -> no absolute R_th(\u00b0C/W).",
+ "_doc": "M8 lumped-RC thermal (Phase 0.4, Metis Card, max-core temp). dT/dt = ((Tinf-T_amb)*duty - (T-T_amb))/tau ; open-loop post-hoc layer (v1, no throttle feedback). Relative: no power telemetry -> no absolute R_th(\u00b0C/W).",
  "T_amb_C": 41.0,
  "Tinf_full4core_C": 44.1,
  "tau_s": 139.0,
