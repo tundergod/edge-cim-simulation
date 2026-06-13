@@ -1,8 +1,8 @@
-"""Phase 1.7 — fit the M8 lumped-RC thermal model + the perf-vs-temperature result.
+"""Phase 0.4 — fit the M8 lumped-RC thermal model + the perf-vs-temperature result.
 
 Reads the on-board heat-campaign capture (sustained 4-core 2048x2048 matmul bursts, each a clean
 (t, dev_fps, max-core temp_C) point from axrunmodel) and emits:
-  - validation/reports/phase1.7/thermal.json   (gate numbers the report renders)
+  - validation/reports/phase0.4/thermal.json   (gate numbers the report renders)
   - simulator/models/params/m8_thermal.json    (RC params for the Phase-2 ThermalModel)
 
 RC heating model (single lumped max-core temperature): T(t) = T_inf - (T_inf - T0)*exp(-t/tau).
@@ -21,7 +21,7 @@ SRC = ROOT / "measurements/metis_card/thermal_heat_20260612.json"
 SWEEP = {64: "measurements/metis_card/thermal_sweep_m64.json",
          256: "measurements/metis_card/thermal_heat_20260612.json",
          448: "measurements/metis_card/thermal_sweep_m448.json"}
-REP = ROOT / "validation/reports/phase1.7/thermal.json"
+REP = ROOT / "validation/reports/phase0.4/thermal.json"
 PARAM = ROOT / "simulator/models/params/m8_thermal.json"
 THRESH = {"pvt_warning": 95, "hw_throttle": 105, "freq_downscale": 110, "sw_throttle": 200}
 
@@ -106,7 +106,7 @@ def main():
     REP.parent.mkdir(parents=True, exist_ok=True)
     REP.write_text(json.dumps(rep, indent=1))
 
-    param = {"_doc": "M8 lumped-RC thermal (Phase 1.7, Metis Card, max-core temp). "
+    param = {"_doc": "M8 lumped-RC thermal (Phase 0.4, Metis Card, max-core temp). "
                      "dT/dt = ((Tinf-T_amb)*duty - (T-T_amb))/tau ; open-loop post-hoc layer (v1, no "
                      "throttle feedback). Relative: no power telemetry -> no absolute R_th(°C/W).",
              "T_amb_C": float(T0), "Tinf_full4core_C": round(float(Tinf), 1),

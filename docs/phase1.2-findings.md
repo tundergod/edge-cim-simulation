@@ -9,7 +9,7 @@ regenerable** from committed JSON via `tools/analysis/{fit,build,check}_*.py` an
 
 > **Honesty discipline (rigorously applied):** every output is tagged `calibrated` (fit to OUR
 > silicon) / `simulated` / `assumption` / `borrowed`. **No fake gate** — where there is no silicon
-> (NPU #13, GPU INT8) there is NO per-op numeric acceptance gate, only trend-shape / lower-bound
+> (NPU #13) there is NO per-op numeric acceptance gate, only trend-shape / lower-bound
 > acceptance, and the issue-#13 silicon gate is marked *superseded-not-satisfied* (an ADR-0006 gate
 > revision), not achieved.
 
@@ -21,7 +21,7 @@ regenerable** from committed JSON via `tools/analysis/{fit,build,check}_*.py` an
 | **NPU** (N) | analytic systolic-roofline (6 TOPS ceiling + borrowed 32×32 pad + order/shape + attn bmm) | `npu_rknpu2` | **simulated/borrowed** (no silicon, #13) | trend-shape only: staircase knee@32, order/shape ≤6×, BW frac 59–66%/68 — all pass (SIMULATED) |
 | **Memory** (M) | analytic all-spec eff-BW + PCIe floor | `mem_lpddr4/4x/5`, `cim_topo_alpha/card` | **mix**: LPDDR4x 24.2=calibrated anchor; LPDDR5 33.3=simulated; peaks=assumption; Alpha 911µs floor=measured | LPDDR5→33.3, LPDDR4x→24.2, alpha floor / card 0; monotone |
 | **SRAM** (M) | CACTI tier + residency | `sram_metis_aipu` | **assumption** (CACTI BW/latency); **architecture-only** residency | 8B weights (≫32 MiB) → DRAM tier (never resident) |
-| **GPU** (G) | analytic roofline SLOT (coexists with the 1.1 micro-benchmark model) | `gpu_mali_g610` | **simulated** (roofline lower bound, FP16-calibrated; **INT8 zero data**) | error vs 1.1 pts median 3.1% (lower-bound tail); no INT8 gate |
+| **GPU** (G) | analytic roofline SLOT (coexists with the 1.1 micro-benchmark model) | `gpu_mali_g610` | **simulated** (roofline lower bound, FP16-calibrated; **INT8 out of scope — GPU is FP16-attention-only by design, INT8 GEMM is CIM's**) | error vs 1.1 pts median 3.1% (lower-bound tail); no INT8 gate (by scope decision, not missing silicon) |
 | **CIM-Card** | re-measure the same AIPU on the production card | `cim_topo_card` + `m1_cim.json` | **calibrated** (Alpha 13pts) + **Card-revalidated** | `CARD_REVALIDATED` — 13-pt cross-val median 4.8% / p95 9.7% (PR #25) — see below |
 
 ## Audit corrections baked in (the §audit list)

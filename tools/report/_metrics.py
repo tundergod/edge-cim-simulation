@@ -76,7 +76,7 @@ def load():
     ram2 = _load("phase1.3/m2_ramulator2.json")
     onnxim = _load("phase1.3/m4_npu_onnxim.json")
     m2pcie = _load_param("m2_pcie")
-    th = _load("phase1.7/thermal.json")
+    th = _load("phase0.4/thermal.json")
     nps = _load("phase1.6/npu_scalesim.json")
     cpuic = _load_param("m4_cpu_instrcount")
     cpurk = _load_spec("cpu_rk3588")
@@ -216,7 +216,7 @@ def load():
         "energy.total_mj": _f(m7["per_token_total_mJ"], 2),                          # 256.15
         "energy.corners": _i(m7["sensitivity_pm20pct"]["corners_tested"]),           # 16
         "energy.flips":   _i(m7["sensitivity_pm20pct"]["conclusion_flips"]),         # 0
-        # Thermal (M8, Phase 1.7 — Metis Card, max-core temp)
+        # Thermal (M8, Phase 0.4 — Metis Card, max-core temp)
         "thermal.t0":        _f(th["rc_fit"]["T0_C"], 0),                              # 41
         "thermal.tinf":      _f(th["rc_fit"]["Tinf_C"], 1),                            # 44.1
         "thermal.tau":       _i(th["rc_fit"]["tau_s"]),                                # 139
