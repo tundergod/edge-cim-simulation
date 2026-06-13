@@ -75,7 +75,7 @@
 
 **Phase 0.4（熱，待做）**：Metis 5 個溫度 sensor（board + 4 core），`axlogdevice --slog`/`core_temp` 可讀且**不像 power 受 M.2-Max 限制**，故 Card 可行（落地先跑 `axlogdevice --slog` 確認）。熱模組 **M8（選用）= 事後附加層**：讀 Phase 2 的 per-op 活動/功耗 timeline → 估溫度，**不**回饋 throttling 進 timing（閉環為 v1 後 stretch）。產出 `measurements/metis_card/thermal_*.json` + `docs/phase0.4-thermal-findings.md`。
 
-## Phase 1 — component 建模與驗證（已完成 1.1–1.5）
+## Phase 1 — component 建模與驗證（已完成 1.1–1.3；1.4–1.6b 為補強）
 
 - **1a Micro-benchmark → 方程式擬合**：CIM/NPU/GPU/PCIe 以 roofline 參數式起步（`latency ≈ max(compute, mem) + overhead`），記 median/p95/max 誤差；擬合不佳區段保留 lookup fallback（混合策略）。模擬器體積小、可外推、參數可解釋。
 - **1b 非 micro-benchmark component 驗證**：M3 事件引擎、M5 trace、M6 排程器、M7 energy 在已知輸入/預期輸出上驗行為正確。
