@@ -47,7 +47,7 @@ Phase 0.1–1.3 已交付：silicon 校準的「engine + 可換 spec」per-unit 
 | 軸 | 自由度 | 誠實邊界 |
 |---|---|---|
 | workload（model/task/P/D/context） | 永遠輸入；batch=1 hook | — |
-| 記憶體容量 1→32GB+ / BW 效率 / topology(card↔edge) / memory_spec | 自由設 + sweep | >16GB 或 edge → `extrapolated`/`simulated` |
+| 記憶體容量 1→32GB+ / BW 效率 / topology(card↔edge) / memory_spec | 自由設 + sweep | 容量是**可行性閘**（非吞吐旋鈕——decode 受頻寬非容量限制）：< 模型 footprint → fail-loud；>16GB → `extrapolated`；edge/lpddr5 → `simulated`。容量相依行為(residency/spill)順延後續波 |
 | units 開關、scheduler、NPU 精度、engine backend | 自由選 | NPU/非-silicon backend → `simulated` |
 | tunables（knee/interconnect/overlap） | 自由設 + ±20% sweep | 全 `simulated`（無並發 silicon） |
 | ablations（concurrency_off / contention_off） | flag | — |

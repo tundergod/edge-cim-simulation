@@ -8,6 +8,11 @@ forward-looking layer (capacity, BW efficiency, topology, units, scheduler,
 tunables, ablations) is freely settable; anything outside the calibrated
 envelope (capacity > 16 GB, non-card topology, non-silicon backend, NPU) is
 auto-tagged into `provenance` as extrapolated/simulated.
+
+memory_capacity_GB is a FEASIBILITY gate (checked at runner.run(), which knows the
+model footprint), NOT a throughput knob: decode tok/s is bandwidth-bound, so capacity
+does not change it. A capacity below the model's resident weight footprint is rejected
+fail-loud at run(); capacity-dependent behavior (residency/spill) is a later wave.
 """
 from __future__ import annotations
 

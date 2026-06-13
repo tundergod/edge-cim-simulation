@@ -37,6 +37,22 @@ def test_bigger_model_slower():
     assert t1 > t3 > t8 > 0          # decode tok/s falls with model size (more weight bytes)
 
 
+def test_capacity_feasibility_gate():
+    # 8B INT8 weights (~8 GB) cannot fit in 1 GB or 4 GB -> fail-loud (not "calibrated")
+    for cap in (1, 4):
+        cfg = SimConfig.from_dict({"workload": {"model": "llama-3.1-8b"},
+                                   "platform": {"memory_capacity_GB": cap}})
+        try:
+            run(cfg)
+        except ValueError:
+            continue
+        raise AssertionError(f"infeasible 8B @ {cap}GB not rejected")
+    # 16 GB fits -> runs, reports footprint
+    r = run(SimConfig.from_dict({"workload": {"model": "llama-3.1-8b"},
+                                 "platform": {"memory_capacity_GB": 16}}))
+    assert r["model_footprint_GB"] > 0 and r["tok_s"] > 0
+
+
 def test_unknown_scheduler_rejected():
     cfg = _cfg("llama-3.2-1b")
     cfg.scheduler = "nope"

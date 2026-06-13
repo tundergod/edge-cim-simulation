@@ -57,6 +57,20 @@ def run(cfg):
     contention = not cfg.contention_off
     price_compute = not cfg.compute_off
 
+    # capacity is a FEASIBILITY gate, NOT a throughput knob: decode tok/s is set by bandwidth,
+    # not capacity (so it is deliberately not a Platform timing input). Fail-loud if the model's
+    # resident INT8 weight footprint does not fit -> an impossible config can't be "calibrated".
+    # Capacity-dependent BEHAVIOR (residency cliffs, spill) is a later wave.
+    wrows = model_obj.profile(cfg.prefill_len, 1)   # one decode token; count already includes x layers
+    weight_bytes = sum(r["bytes"] * r["count"] for r in wrows
+                       if r["phase"] == "decode" and r["category"] == "matmul")
+    footprint_GB = weight_bytes / 1e9
+    if cfg.memory_capacity_GB < footprint_GB:
+        raise ValueError(
+            f"infeasible config: {cfg.model} needs ~{footprint_GB:.2f} GB resident (INT8 weights) "
+            f"but memory_capacity_GB={cfg.memory_capacity_GB}. Capacity is a feasibility gate in 2.1 "
+            f"(throughput is bandwidth-bound, not capacity-bound); capacity-dependent behavior is a later wave.")
+
     # decode tok/s = per-token latency AVERAGED over the decode kv range (LLMServingSim-style
     # per-iteration reuse): sample a few kv positions across [P, min(context, P+D)] and average,
     # so decode_len / context actually affect the result (kv-cache + attention traffic grow with kv).
@@ -92,6 +106,9 @@ def run(cfg):
         "energy_per_token_J": e_tok,
         "energy_band_J": [e_tok * 0.8, e_tok * 1.2],
         "memory_eff_BW_GBs": plat.bw.eff_BW,
+        "model_footprint_GB": round(footprint_GB, 3),
+        "memory_capacity_GB": cfg.memory_capacity_GB,
+        "capacity_note": "feasibility gate only; capacity does NOT affect decode tok/s in 2.1 (bandwidth-bound)",
         "ablations": {"concurrency_off": cfg.concurrency_off, "contention_off": cfg.contention_off,
                       "compute_off": cfg.compute_off},
         "provenance": cfg.provenance,
