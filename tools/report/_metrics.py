@@ -168,6 +168,11 @@ def load():
         "m5.cnt_attention": _i(sweep["counts"]["attention"]),                         # 95
         "m5.cnt_rope":      _i(sweep["counts"]["rope"]),                              # 190
         "m5.cnt_kv_cache":  _i(sweep["counts"]["kv_cache"]),                          # 9
+        "m5.cnt_norm":      _i(sweep["counts"]["norm"]),                              # 90
+        "m5.cnt_ffn":       _i(sweep["counts"]["ffn"]),                               # 30
+        "m5.cnt_softmax":   _i(sweep["counts"]["softmax"]),                           # 21
+        "m5.cnt_embedding": _i(sweep["counts"]["embedding"]),                         # 20
+        "m5.cnt_residual":  _i(sweep["counts"]["residual"]),                          # 20
         "m5.n_distinct_1b":   _i(pm5["llama-3.2-1b"]["n_distinct_ops"]),              # 38
         "m5.n_distinct_3b":   _i(pm5["llama-3.2-3b"]["n_distinct_ops"]),              # 38
         "m5.n_distinct_8b":   _i(pm5["llama-3.1-8b"]["n_distinct_ops"]),              # 38

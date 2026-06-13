@@ -89,23 +89,31 @@ def fig_decode_wall():
 
 
 def fig_pcie_floor():
-    """§1 — per-call host<->device floor (system − device latency) across single-tile shapes."""
+    """§1 — host<->device transfer dominates: plot TOTAL system latency vs DEVICE compute latency
+    DIRECTLY (not their difference, which hid that system itself is not flat). System ≈ 0.8–1.1 ms
+    while device compute is only 9–41 µs; the floor (system − device) is therefore ~system, has a
+    real ~300 µs spread, and is actually LARGER for the smallest shapes (tiny K=128 attention),
+    i.e. weakly anti-correlated with compute (r≈−0.86) — a per-call cost of order ~0.9 ms, NOT a
+    constant independent of shape."""
     raw = load(RAWM)
-    pts = [(r["dev_lat_us"], r["system_lat_us"] - r["dev_lat_us"]) for r in raw.values()
+    pts = [(r["dev_lat_us"], r["system_lat_us"]) for r in raw.values()
            if "system_lat_us" in r and not r.get("tiled_extrapolated") and r.get("tiles", 1) == 1]
-    devs = [d for d, _ in pts]; floors = [f for _, f in pts]
-    med = statistics.median(floors); p95 = sorted(floors)[int(0.95 * len(floors))]
+    dev = [d for d, _ in pts]; sysl = [s for _, s in pts]
+    floors = [s - d for d, s in pts]
+    med = statistics.median(floors)
     fig, ax = plt.subplots(figsize=(5.4, 3.5))
     _grid(ax)
-    ax.scatter(devs, floors, s=40, color=HERO, alpha=0.85, edgecolors="white", linewidths=0.5,
-               zorder=4, label=f"measured floor ({len(pts)} shapes)")
-    ax.axhline(med, color=WARM, lw=1.5, zorder=3, label=f"model floor = {med:.0f} µs (median)")
-    ax.axhline(p95, ls=":", color=SOFT, lw=1.1, zorder=3, label=f"p95 = {p95:.0f} µs")
-    ax.set_ylim(0, max(floors) * 1.15)
+    ax.scatter(dev, sysl, s=44, color=HERO, alpha=0.85, edgecolors="white", linewidths=0.5,
+               zorder=4, label=f"total system latency ({len(pts)} shapes)")
+    ax.scatter(dev, dev, s=26, color=WARM, alpha=0.85, edgecolors="white", linewidths=0.4,
+               zorder=4, label="device compute latency")
+    ax.axhline(med, color=SOFT, ls="--", lw=1.1, zorder=3, label=f"median floor ≈ {med:.0f} µs")
+    ax.set_ylim(0, max(sysl) * 1.12)
     ax.set_xlabel("device compute latency  (µs)")
-    ax.set_ylabel("per-call host-device floor  (µs)")
-    ax.text(0.04, 0.10, "floor dominates: a fixed per-call\ncost, ~independent of compute size",
-            transform=ax.transAxes, fontsize=8, color=SOFT, va="bottom")
+    ax.set_ylabel("latency  (µs)")
+    ax.text(0.97, 0.55, "host-device transfer dominates:\nsystem ~0.9 ms while compute is 9-41 us.\n"
+            "floor is ~0.9 ms but NOT constant\n(spread ~805-1120; larger for small shapes, r=-0.86)",
+            transform=ax.transAxes, fontsize=7.4, ha="right", va="top", color=SOFT)
     ax.legend(loc="upper right", fontsize=8)
     S.save(fig, OUT / "m2_pcie_floor")
 
@@ -145,16 +153,18 @@ def fig_ramulator2():
     fig, ax = plt.subplots(figsize=(4.6, 3.5))
     _grid(ax)
     bars = ax.bar([0, 1], [dev_e, sys_e], width=0.55, color=[WARM, HERO], zorder=3)
-    for xi, e, bw, lab in [(0, dev_e, dev_bw, "Ramulator2 device\n(DRAM timing only)"),
-                           (1, sys_e, sys_bw, "analytic system\n(silicon-calibrated)")]:
+    for xi, e, bw, lab in [(0, dev_e, dev_bw, "Ramulator2 LPDDR5\ndevice timing only"),
+                           (1, sys_e, sys_bw, "analytic system\nLPDDR4x-calibrated")]:
         ax.text(xi, e + 0.02, f"{e:.2f}\n{bw:.1f} GB/s", ha="center", fontsize=8.5, fontweight="bold")
-        ax.text(xi, -0.085, lab, ha="center", fontsize=8, color=SOFT)
+        ax.text(xi, -0.10, lab, ha="center", fontsize=8, color=SOFT)
     ax.annotate("", xy=(1, sys_e), xytext=(0, dev_e),
                 arrowprops=dict(arrowstyle="<->", color=SOFT, lw=0.9))
-    ax.text(0.5, (dev_e + sys_e) / 2 + 0.03, "gap = system overhead\n(controller/NoC/queue),\nnot a device limit",
-            ha="center", fontsize=7.8, color=SOFT)
+    ax.text(0.5, (dev_e + sys_e) / 2 + 0.02, "device vs system AND\ndifferent DRAM gen —\nNOT a like-for-like delta",
+            ha="center", fontsize=7.6, color=SOFT)
     ax.set_xticks([]); ax.set_ylim(0, 1.05)
     ax.set_ylabel("single-stream efficiency  (of peak)")
+    ax.text(0.5, 1.0, "cross-check only — DRAM device isn't the single-stream bottleneck (ADR-0002)",
+            transform=ax.transAxes, fontsize=7, ha="center", va="bottom", color=SOFT)
     S.save(fig, OUT / "m2_ramulator2")
 
 
@@ -172,7 +182,7 @@ def fig_kv_spike():
     _grid(ax)
     ax.axvspan(0.05, knee, color="#eef2f6", zorder=0)
     ax.axvline(knee, ls=":", color="#999", lw=1.0)
-    ax.text(knee * 0.92, 50, "SRAM | DRAM\nknee", fontsize=7.5, color=SOFT, ha="right", va="top")
+    ax.text(knee * 0.92, 50, "SRAM | on-card DRAM\nknee", fontsize=7.2, color=SOFT, ha="right", va="top")
     ax.plot([p["workset_elems"] / 1e6 for p in msweep], [p["eff_BW_GBs"] for p in msweep], "-o",
             color="#E69F00", ms=5, lw=1.4, zorder=4, label="K=1 proxy, grow M (N=2048)")
     if grow_n:

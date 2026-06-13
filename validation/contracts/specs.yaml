@@ -12,7 +12,7 @@ acceptance_criteria:
   - {type: cross_check, script: tools/analysis/check_phase1_2.py}      # must exit 0
 specs:                        # spec -> engine + honesty
   cpu_rk3588:      {engine: m4_cpu.CpuModel,          honesty: "calibrated (cpu_ops.json) + assumption (cache BW) + simulated (A55/multicore)"}
-  npu_rknpu2:      {engine: m4_npu.NpuModel,          honesty: "simulated/borrowed (NO silicon, issue #13)"}
+  npu_rknpu2:      {engine: m4_npu.NpuModel,          honesty: "simulator/engines/borrowed (NO silicon, issue #13)"}
   gpu_mali_g610:   {engine: m4_gpu_roofline.GpuRooflineModel, honesty: "simulated (roofline shape-trend, NOT a strict lower bound; FP16-calibrated; INT8 zero data)"}
   mem_lpddr4:      {engine: m2_memory.MemoryModel,    honesty: "assumption (peak) + derived eff_BW"}
   mem_lpddr4x:     {engine: m2_memory.MemoryModel,    honesty: "calibrated (24.2 production-card decode anchor)"}

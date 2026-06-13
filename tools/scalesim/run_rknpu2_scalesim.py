@@ -3,14 +3,14 @@
 Faithful-native systolic model: configure SCALE-Sim v2 as a generic 32x32 weight-stationary array
 (borrowed dim, NO RKNPU2 silicon, #13) and let the native systolic behaviours EMERGE — we do NOT
 apply HeteroInfer's order-transpose optimisation. Produces:
-  - simulated/scalesim/rknpu2_sim_matmul.json   (per-shape latency, mirrors the onnxim table)
+  - simulator/engines/scalesim/rknpu2_sim_matmul.json   (per-shape latency, mirrors the onnxim table)
   - the native_sensitivity sweep (alignment / order / large-M) for fit_npu_scalesim.py
 
 3-core aggregation: SCALE-Sim models ONE 32x32 array (~2 TOPS); analytic's 6 TOPS + onnxim both
 model 3 cores. We divide cycles by `cores` to put all three engines on the same 3-core (~6 TOPS)
 basis. The /cores factor ASSUMES ideal linear 3-core scaling (no inter-core overhead) — a
 load-bearing assumption, applied symmetrically. All of {32x32 dim, SRAM sizes, dataflow, /cores}
-are simulated/borrowed, NOT measured RKNPU2.
+are simulator/engines/borrowed, NOT measured RKNPU2.
 
 Run: ./.venv/bin/python tools/scalesim/run_rknpu2_scalesim.py
 """
@@ -32,8 +32,8 @@ from scalesim.scale_sim import scalesim
 
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = json.loads((ROOT / "simulator/specs/npu_rknpu2.json").read_text())
-ONNXIM = ROOT / "simulated/onnxim/rknpu2_sim_matmul.json"
-OUT = ROOT / "simulated/scalesim/rknpu2_sim_matmul.json"
+ONNXIM = ROOT / "simulator/engines/onnxim/rknpu2_sim_matmul.json"
+OUT = ROOT / "simulator/engines/scalesim/rknpu2_sim_matmul.json"
 
 ARRAY_H, ARRAY_W = SPEC["systolic_dim"]            # [32, 32] — borrowed (Hexagon/HeteroInfer), assumption
 FREQ_GHZ = SPEC["freq_ghz"]                         # 1.0 — assumption

@@ -120,7 +120,7 @@
     <div class="lab"><span class="n">§2</span><span>怎麼讀這張表</span></div>
     <p><strong>「資料源層級」欄</strong>取每個單元最具權威的誠實標籤當頭條，與各單元頁的 honesty-chip 一字對齊：例如 <strong>M4-NPU 的 calibrated 是關閉的</strong>（無 RKNPU2 silicon），所以它落在 simulated / borrowed；<strong>M7 的 calibrated 也關閉</strong>（無功耗遙測），落在 assumption。<code>⚠</code> 標的是 on-but-caveated 的 assumption 層（橘色 chip）。</p>
     <p><strong>「Phase-2 就緒度」欄</strong>：<span class="pass">✅</span> = 該單元按其誠實標準交付且通過該層驗證，介面可供 Phase 2 直接接上——注意「就緒」<strong>不等於「量測級精確」</strong>（如 LPDDR5、NPU ONNXim 是 simulated，但介面與標籤都誠實、可接，因此就緒）。<span class="fail">⚠</span> = 有缺口或限制（NPU 無 silicon）。<strong>⛔</strong> = M3／M6 是 Phase 2 才實作的整合層（設計使然，非 Phase 1 缺失）、M8 熱模型 pending。</p>
-    <div class="note"><b>一句話就緒判定：</b>decode 主路徑（M1 CIM 算 + M2 記憶體搬 + M4-GPU attention + M4-CPU 支援 + M7 端到端 recompose）達<strong>量測級可信</strong>，多數單元 calibrated／ready；剩下三塊是誠實標註的缺口——<strong>M4-NPU 無 silicon</strong>（#13，simulated/borrowed，無裁判）、<strong>M8 熱模型 pending</strong>、<strong>多單元競爭（M3/M6）為 Phase 2 整合工作</strong>。沒有 blocking gap：所有就緒單元的介面已凍結、可直接接 Phase 2。</div>
+    <div class="note"><b>一句話就緒判定：</b>decode 主路徑（M1 CIM 算 + M2 記憶體搬 + M4-GPU attention + M4-CPU 支援 + M7 端到端 recompose）達<strong>量測級可信</strong>，多數單元 calibrated／ready；剩下三塊是誠實標註的缺口——<strong>M4-NPU 無 silicon</strong>（#13，simulator/engines/borrowed，無裁判）、<strong>M8 熱模型 pending</strong>、<strong>多單元競爭（M3/M6）為 Phase 2 整合工作</strong>。沒有 blocking gap：所有就緒單元的介面已凍結、可直接接 Phase 2。</div>
   </div>
 
   <div class="sources">

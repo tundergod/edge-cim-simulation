@@ -58,8 +58,8 @@
   },
   "npu_systolic": {
     "dir": "phase1-site", "script": "tools/plotting/site_npu.py",
-    "sources": ["simulated/onnxim/rknpu2_characteristic.json",
-                "simulated/scalesim/rknpu2_characteristic.json",
+    "sources": ["simulator/engines/onnxim/rknpu2_characteristic.json",
+                "simulator/engines/scalesim/rknpu2_characteristic.json",
                 "validation/reports/phase1.6/npu_characteristic_compare.json"]
   },
   "npu_spread": {
@@ -73,12 +73,24 @@
   },
   "m5_op_breakdown": {
     "dir": "phase1-site", "script": "tools/plotting/site_m5.py",
-    "sources": ["measurements/op_profile/llama-3.2-1b_sharegpt.json",
+    "sources": ["measurements/op_profile/llama-3.2-1b_longbench-triviaqa.json",
+                "measurements/op_profile/llama-3.2-1b_humaneval.json",
+                "measurements/op_profile/llama-3.2-1b_gsm8k.json",
+                "measurements/op_profile/llama-3.2-1b_sharegpt.json",
+                "measurements/op_profile/llama-3.2-3b_longbench-triviaqa.json",
+                "measurements/op_profile/llama-3.2-3b_humaneval.json",
+                "measurements/op_profile/llama-3.2-3b_gsm8k.json",
                 "measurements/op_profile/llama-3.2-3b_sharegpt.json",
+                "measurements/op_profile/qwen2.5-7b_longbench-triviaqa.json",
+                "measurements/op_profile/qwen2.5-7b_humaneval.json",
+                "measurements/op_profile/qwen2.5-7b_gsm8k.json",
                 "measurements/op_profile/qwen2.5-7b_sharegpt.json",
+                "measurements/op_profile/llama-3.1-8b_longbench-triviaqa.json",
+                "measurements/op_profile/llama-3.1-8b_humaneval.json",
+                "measurements/op_profile/llama-3.1-8b_gsm8k.json",
                 "measurements/op_profile/llama-3.1-8b_sharegpt.json"]
   },
-  "m5_roofline": {
+  "m5_intensity": {
     "dir": "phase1-site", "script": "tools/plotting/site_m5.py",
     "sources": ["measurements/op_profile/llama-3.1-8b_gsm8k.json",
                 "measurements/op_profile/llama-3.1-8b_humaneval.json",

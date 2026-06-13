@@ -22,8 +22,8 @@ from pathlib import Path
 import numpy as np
 
 ROOT = Path(__file__).resolve().parents[2]
-ONX = ROOT / "simulated/onnxim/rknpu2_characteristic.json"
-SCL = ROOT / "simulated/scalesim/rknpu2_characteristic.json"
+ONX = ROOT / "simulator/engines/onnxim/rknpu2_characteristic.json"
+SCL = ROOT / "simulator/engines/scalesim/rknpu2_characteristic.json"
 OUT = ROOT / "validation/reports/phase1.6/npu_characteristic_compare.json"
 
 # ---- PRE-REGISTERED constants (frozen before seeing data) ----

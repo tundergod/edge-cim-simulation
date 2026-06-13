@@ -51,7 +51,7 @@ def main():
                        "Card revalidation DEFERRED.",
             "reason": "SSH to metiscard was not authorized this session (harness denied remote-shell "
                       "to the shared board; user asleep). No Card raw measurements available.",
-            "fallback_per_plan": "plans/phase-1.2.md step 18 note + handoff §5: low-level compile "
+            "fallback_per_plan": "docs/plans/phase-1.2.md step 18 note + handoff §5: low-level compile "
                                  "absent / MatMul unsupported / board unreachable -> 'Alpha 13pts "
                                  "calibrated (pending board) + Card e2e validates memory-wall', report user.",
             "alpha_13_points_NK_gops": {f"N{n}K{k}": g for (n, k), g in alpha_pts.items()},

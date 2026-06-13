@@ -1,7 +1,7 @@
 # Ramulator2 heavy backend (Phase 1.3, `engine='ramulator2'`)
 
 `MemoryModel(spec, engine='ramulator2')` (in `simulator/models/m2_memory.py`) reads the cached
-Ramulator2 LPDDR5 effective-bandwidth result (`simulated/ramulator2/lpddr5_eff.json`) and swaps it
+Ramulator2 LPDDR5 effective-bandwidth result (`simulator/engines/ramulator2/lpddr5_eff.json`) and swaps it
 in for the analytic eff_BW, behind the same constructor + frozen `predict()` contract. If the cache
 is absent it falls back to analytic with an honest note.
 
@@ -28,7 +28,7 @@ under `python/ramulator/` (upstream/ gitignored). Needs CMake≥3.14 + Python≥
 ## Produce / refresh the cache
 
 ```bash
-.venv/bin/python tools/analysis/mem_ramulator2.py        # -> simulated/ramulator2/lpddr5_eff.json
+.venv/bin/python tools/analysis/mem_ramulator2.py        # -> simulator/engines/ramulator2/lpddr5_eff.json
 .venv/bin/python tools/analysis/build_mem_ramulator2.py  # -> validation/reports/phase1.3/m2_ramulator2.json
 .venv/bin/python tools/plotting/mem_ramulator2_fig.py    # -> docs/figures/phase1.3/M2-ramulator2.*
 ```

@@ -4,7 +4,7 @@ Builds, per (model, prefill_len, decode_len), the full per-sig profile
 (op, in_shapes, out_shape, src, category, phase, count, flops, bytes,
 intensity, measured), split prefill/decode.
 
-Design (see plans/phase-0.2.md):
+Design (see docs/plans/phase-0.2.md):
 - COUNTS come from Phase 0.1 op_inventory `count` (length-independent; already
   aggregates collided q/o, k/v, gate/up sigs). Never hand-rolled "x layers".
 - SHAPES at arbitrary workload length are generated from a data-driven

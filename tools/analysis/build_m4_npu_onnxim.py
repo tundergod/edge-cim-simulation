@@ -1,6 +1,6 @@
 """Phase 1.3 — ONNXim-vs-analytic NPU delta report -> validation/reports/phase1.3/m4_npu_onnxim.json.
 
-Reads the ONNXim RKNPU2-approx per-shape latencies (simulated/onnxim/rknpu2_sim_matmul.json,
+Reads the ONNXim RKNPU2-approx per-shape latencies (simulator/engines/onnxim/rknpu2_sim_matmul.json,
 produced on metiscard by tools/analysis/npu_onnxim_trace.py) and, for the SAME (M,K,N) shapes,
 the Phase-1.2 analytic systolic-roofline (NpuModel engine='analytic'). Per-shape delta + re-checks
 the HeteroInfer staircase trend against ONNXim.
@@ -25,7 +25,7 @@ from simulator.specs.loader import load_spec                  # noqa: E402
 from simulator.models.engine import Workload                  # noqa: E402
 from simulator.models.m4_npu import NpuModel                  # noqa: E402
 
-SIM = ROOT / "simulated/onnxim/rknpu2_sim_matmul.json"
+SIM = ROOT / "simulator/engines/onnxim/rknpu2_sim_matmul.json"
 OUT = ROOT / "validation/reports/phase1.3/m4_npu_onnxim.json"
 
 

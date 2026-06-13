@@ -36,8 +36,8 @@ from simulator.models.engine import UnitEngine, Workload
 _ORDER_SHAPE_MAX = 6.0      # Fig4: up to 6x order/shape penalty
 _DISPATCH_FLOOR_US = 2.0    # simulated fixed per-op dispatch (no silicon -> nominal, assumption)
 _DTYPE_BYTES = {"int4": 0.5, "int8": 1.0, "int16": 2.0, "fp16": 2.0}
-_ONNXIM = Path(__file__).resolve().parents[2] / "simulated/onnxim/rknpu2_sim_matmul.json"
-_SCALESIM = Path(__file__).resolve().parents[2] / "simulated/scalesim/rknpu2_sim_matmul.json"
+_ONNXIM = Path(__file__).resolve().parents[2] / "simulator/engines/onnxim/rknpu2_sim_matmul.json"
+_SCALESIM = Path(__file__).resolve().parents[2] / "simulator/engines/scalesim/rknpu2_sim_matmul.json"
 
 
 def _onnxim_table():
@@ -123,7 +123,7 @@ class NpuModel(UnitEngine):
         return lat, bound
 
     def predict(self, wl: Workload) -> dict:
-        """Frozen dict {latency_us, bound, provenance}. ALL outputs simulated/borrowed (no silicon)."""
+        """Frozen dict {latency_us, bound, provenance}. ALL outputs simulator/engines/borrowed (no silicon)."""
         if wl.op in ("attn_bmm", "attention"):
             hd = wl.extra.get("hd", wl.K or 128)
             lat, bound = self._attn_us(wl.kv, wl.heads, wl.layers, hd, wl.dtype)

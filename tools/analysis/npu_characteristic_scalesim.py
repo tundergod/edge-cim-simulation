@@ -1,7 +1,7 @@
 """Phase 1.6b — ScaleSim POSITIVE CONTROL for the systolic-characteristic measurement (local).
 
 Runs the SAME E1-E4 grid as npu_characteristic_trace.py (ONNXim) through SCALE-Sim v2, writing
-simulated/scalesim/rknpu2_characteristic.json. ScaleSim is a literal 32x32 systolic-array cycle
+simulator/engines/scalesim/rknpu2_characteristic.json. ScaleSim is a literal 32x32 systolic-array cycle
 simulator: a 32-period staircase is EXPECTED BY CONSTRUCTION (ceil(N/32) tiling) -> this run is a
 positive control that confirms our probe/criterion can see a step we KNOW is there. The informative
 comparison is whether ONNXim (which adds NoC/DRAM scheduling) shows the SAME period or smears it.
@@ -20,7 +20,7 @@ sys.path.insert(0, str(ROOT))
 from tools.scalesim.run_rknpu2_scalesim import run_one, latency_us, folds, PASS_CAP  # noqa: E402
 from tools.analysis.npu_characteristic_trace import shapes, K  # same grid, same fixed K  # noqa: E402
 
-OUT = ROOT / "simulated/scalesim/rknpu2_characteristic.json"
+OUT = ROOT / "simulator/engines/scalesim/rknpu2_characteristic.json"
 
 
 def main():

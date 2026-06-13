@@ -2,7 +2,7 @@
 
 NO RKNPU2 silicon (issue #13, board offline) -> there is NO numeric gate to pass; the only
 acceptance is TREND-SHAPE agreement with the borrowed HeteroInfer characterization (SOSP'25,
-papers/methodology-and-simulators/). This script drives simulator.models.m4_npu.NpuModel and
+docs/papers/methodology-and-simulators/). This script drives simulator.models.m4_npu.NpuModel and
 quantifies the three borrowed trends into explicit conditions, ALL tagged `simulated`:
 
   (a) Fig3 staircase: compute-bound latency vs N is monotone non-decreasing and STEPS exactly on
@@ -88,7 +88,7 @@ def trend_bw_frac(spec):
         "pass_simulated": bool(abs(frac_low * denom - 40.0) <= 1.0 and abs(frac_high * denom - 45.0) <= 1.0),
         "note": "59-66% is of the 68 GB/s peak (Fig5 40-45/68), NOT of RK3588's ~34 host BW; the "
                 "RKNPU2 absolute band (34 x frac) is recorded separately.",
-        "tag": "simulated/borrowed (Fig5 band; NO silicon, #13)",
+        "tag": "simulator/engines/borrowed (Fig5 band; NO silicon, #13)",
     }
 
 
@@ -138,7 +138,7 @@ def main():
                            "calibrated to our RKNPU2 board.",
         },
         "honesty_notes": {
-            "everything_simulated": "ALL fields are simulated/borrowed: 6 TOPS + dtypes from "
+            "everything_simulated": "ALL fields are simulator/engines/borrowed: 6 TOPS + dtypes from "
                                     "datasheet, 32x32 borrowed from Hexagon (HeteroInfer), BW band "
                                     "borrowed from Fig5. NONE is fit to RKNPU2 silicon.",
             "dtypes": "INT4/8/16 + FP16 only (datasheet); no BF16/TF32.",

@@ -1,4 +1,4 @@
-"""Phase 1.3 — Ramulator2 (v2.1) LPDDR5 single-stream BW cross-check -> simulated/ramulator2/lpddr5_eff.json.
+"""Phase 1.3 — Ramulator2 (v2.1) LPDDR5 single-stream BW cross-check -> simulator/engines/ramulator2/lpddr5_eff.json.
 
 Drives Ramulator 2.1's own latency-throughput harness IN-PROCESS (no CLI/YAML — v2.1 is
 Python-bindings-only) and reads its computed `total_throughput_MBps`. Measures the saturated
@@ -30,7 +30,7 @@ from tests.latency_throughput.utils.spec import resolve_spec              # noqa
 from tests.latency_throughput.utils.checks import (                       # noqa: E402
     check_streaming_peak_bandwidth, check_streaming_bandwidth)
 
-OUT = ROOT / "simulated/ramulator2/lpddr5_eff.json"
+OUT = ROOT / "simulator/engines/ramulator2/lpddr5_eff.json"
 SPEC_PEAK_GBS = 51.2   # our 64-bit LPDDR5-6400 spec peak (mem_lpddr5.json); efficiency scales onto this
 ANALYTIC_EFF = 0.65    # the analytic assumption we cross-check (mem_lpddr5 sim_efficiency)
 

@@ -3,7 +3,7 @@
 Loads EVERY spec through the loader, feeds each into its engine, asserts the FROZEN predict()
 contract, and verifies the honesty discipline is consistent end-to-end:
   - each engine returns exactly {latency_us, bound, provenance};
-  - the honesty tag in predict() provenance matches the unit (CPU=calibrated, NPU/GPU/SRAM=simulated/
+  - the honesty tag in predict() provenance matches the unit (CPU=calibrated, NPU/GPU/SRAM=simulator/engines/
     assumption, MEM per-spec: LPDDR4x=calibrated anchor, LPDDR5=simulated, peaks=assumption);
   - NO FAKE GATE: the units with no silicon (NPU #13, GPU INT8, SRAM) carry NO per-op numeric
     silicon acceptance gate — only trend-shape / lower-bound / architecture acceptance;

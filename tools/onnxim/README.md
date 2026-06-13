@@ -1,7 +1,7 @@
 # ONNXim heavy backend (Phase 1.3, `engine='onnxim'`)
 
 `NpuModel(spec, engine='onnxim')` (in `simulator/models/m4_npu.py`) reads the cached ONNXim
-(generic-systolic, RKNPU2-approx) per-shape latency table (`simulated/onnxim/rknpu2_sim_matmul.json`)
+(generic-systolic, RKNPU2-approx) per-shape latency table (`simulator/engines/onnxim/rknpu2_sim_matmul.json`)
 and uses it in place of the analytic systolic-roofline, behind the same constructor + frozen
 `predict()` contract. If the cache is absent it falls back to analytic. ONNXim is a heavier
 **simulator**, NOT RKNPU2 silicon (≠ issue #13, which stays *superseded-not-satisfied*).
@@ -34,11 +34,11 @@ sweep uses N≥128. `ramulator2` DRAM works (no issue-#32 crash); `dram_type:sim
 ## Produce / refresh the cache
 
 ```bash
-.venv/bin/python tools/analysis/npu_onnxim_trace.py        # one docker run on metiscard -> simulated/onnxim/rknpu2_sim_matmul.json
+.venv/bin/python tools/analysis/npu_onnxim_trace.py        # one docker run on metiscard -> simulator/engines/onnxim/rknpu2_sim_matmul.json
 .venv/bin/python tools/analysis/build_m4_npu_onnxim.py     # -> validation/reports/phase1.3/m4_npu_onnxim.json (per-shape delta; asserts each is an ONNXim hit)
 .venv/bin/python tools/plotting/npu_n3_fig.py              # -> docs/figures/phase1.3/N3.*
 ```
 
 The canonical (M,K,N) list lives in `npu_onnxim_trace.py` and is the single source of truth (the
-delta report reads back exactly those shapes — N4). Output is under `simulated/` (NOT
+delta report reads back exactly those shapes — N4). Output is under `simulator/engines/` (NOT
 `measurements/`) so simulated data is never mixed with silicon.
