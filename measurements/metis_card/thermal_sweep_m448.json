@@ -1,0 +1,80 @@
+{
+ "meta": {
+  "abort_cap_C": 55.0,
+  "phase": "heat",
+  "cores": 4,
+  "secs": 25,
+  "host": "wei-tmp-ubuntu",
+  "t_unix_start": 1781273727,
+  "model": "/tmp/thermal_axc/build_2048x2048_m448/compiled_model/model.json",
+  "M": 448,
+  "KN": "2048x2048"
+ },
+ "bursts": [
+  {
+   "secs": 20,
+   "cores": 4,
+   "dev_fps": 12001.3,
+   "host_fps": 2827.9,
+   "system_fps": 2761.8,
+   "latency_ms": 5.8,
+   "frames": 55238,
+   "temp_C": 41,
+   "host_load": 2.8,
+   "i": 0,
+   "t_elapsed": 21.9
+  },
+  {
+   "secs": 20,
+   "cores": 4,
+   "dev_fps": 12029.5,
+   "host_fps": 2835.0,
+   "system_fps": 2772.4,
+   "latency_ms": 5.9,
+   "frames": 55448,
+   "temp_C": 41,
+   "host_load": 3.77,
+   "i": 1,
+   "t_elapsed": 43.8
+  },
+  {
+   "secs": 20,
+   "cores": 4,
+   "dev_fps": 12020.5,
+   "host_fps": 2831.9,
+   "system_fps": 2768.1,
+   "latency_ms": 6.0,
+   "frames": 55363,
+   "temp_C": 42,
+   "host_load": 4.92,
+   "i": 2,
+   "t_elapsed": 65.8
+  },
+  {
+   "secs": 20,
+   "cores": 4,
+   "dev_fps": 12021.9,
+   "host_fps": 2835.5,
+   "system_fps": 2773.2,
+   "latency_ms": 5.9,
+   "frames": 55466,
+   "temp_C": 42,
+   "host_load": 5.51,
+   "i": 3,
+   "t_elapsed": 87.8
+  },
+  {
+   "secs": 20,
+   "cores": 4,
+   "dev_fps": 12015.5,
+   "host_fps": 2833.2,
+   "system_fps": 2771.5,
+   "latency_ms": 6.0,
+   "frames": 55431,
+   "temp_C": 42,
+   "host_load": 5.93,
+   "i": 4,
+   "t_elapsed": 109.8
+  }
+ ]
+}

@@ -49,6 +49,14 @@ This repo has several process-skill sources: **this file's per-phase workflow** 
 - **This file's per-phase workflow is authoritative.** Use the skill packs as a *toolbox* where they fit: TDD when implementing M-modules, `systematic-debugging` when a validation fails, `verification-before-completion` before claiming a phase done, `subagent-driven-development` for parallel module work.
 - **On conflict, CLAUDE.md + karpathy simplicity win.** Don't pile on ceremony or invoke many overlapping skills for one small task. Plans always use the action-only format below, regardless of what a plan-writing skill suggests.
 
+## Honesty discipline (results must not confirm their own assumptions)
+
+**Be honest.** Making an assumption or hypothesis *before* an experiment or validation is fine. The sin is the opposite move — rigging the method, the data, or the figure so the result confirms the prior. Let the data — including a null or a disagreement — stand.
+
+1. **No circular reasoning.** A method that *bakes in* X cannot be evidence *for* X — test X with something that doesn't assume it. Pre-register the criterion + null before seeing data; a correction may only make a positive claim harder, never easier.
+2. **No manufactured agreement.** Measure each source independently; never pin one source's points onto another's curve, and label by-construction results as such (not discoveries). A spread is uncertainty, not agreement.
+3. **No validation language without ground truth.** Don't write validated/agree/parity/consistent/calibrated/measured (or their Chinese equivalents) unless a real measurement backs it — every such number traces to committed JSON (`{{key}}`, fail-loud), honesty tags ([MEASURED]/[GAP]/…) match true provenance.
+
 ## Per-phase workflow (required)
 
 Phases are defined in [OVERALL.md](OVERALL.md) § 階段總覽 (Phase 0.1, 0.2, 0.3, 0.4, 1, 2). **Every phase follows this loop. Do not skip the gates.**

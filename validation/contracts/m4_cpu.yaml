@@ -7,7 +7,7 @@ measurement_sources:
   - measurements/aetina/cpu_ops.json          # fp32, single A76 core, single-thread (calibration basis)
 acceptance_criteria:
   # CALIBRATED per-op residual vs fp32 cpu_ops.json (instruction-count roofline). Guidance, not a hard promise.
-  - {type: median_op_error, threshold: 10%, scope: all-ops, observed: 1.15%}
+  - {type: median_op_error, threshold: 10%, scope: all-ops, observed: 1.18%}
   - {type: p95_op_error,    threshold: 15%, scope: all-ops, observed: 7.31%}
   - {type: sanity, rules: [latency_positive, monotonic_in_op_size, multicore_lowers_compute]}
 tunable_params:

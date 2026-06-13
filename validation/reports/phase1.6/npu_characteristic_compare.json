@@ -1,0 +1,160 @@
+{
+ "_doc": "Phase 1.6b: does each NPU simulator exhibit a 32-period systolic staircase? Pre-registered, period-agnostic. H0=smooth/no-32-step; ScaleSim=positive control (32-step tautological for a 32x32 array sim), ONNXim=informative. simulated, NOT silicon (#13). Neither value is silicon; magnitudes across sims are NOT comparable.",
+ "preregistered_thresholds": {
+  "STAIR_STEP_RATIO": 3.0,
+  "SMOOTH_STEP_RATIO": 1.5,
+  "CV_STAIR": 0.6,
+  "CV_SMOOTH": 0.3,
+  "bulk_grid": "N=128..512 step 8",
+  "micro_centers": [
+   160,
+   192,
+   256,
+   384
+  ],
+  "fixed_K": 2048
+ },
+ "scalesim_positive_control": {
+  "1": {
+   "M": 1,
+   "smooth_loglog_R2": 0.9937,
+   "loglog_b": 0.958,
+   "bulk_delta_cv": 1.732,
+   "monotone": true,
+   "frac_neg_delta": 0.0,
+   "max_neg_excursion_x_median": 0.0,
+   "ac32_residual": 0.918,
+   "micro_step_ratio": {
+    "160": 999.0,
+    "192": 999.0,
+    "256": 999.0,
+    "384": 999.0
+   },
+   "n_boundaries_stepped": 4,
+   "n_boundaries_flat": 0,
+   "n_boundaries_probed": 4,
+   "verdict": "staircase_at_32_present"
+  },
+  "128": {
+   "M": 128,
+   "smooth_loglog_R2": 0.9937,
+   "loglog_b": 0.958,
+   "bulk_delta_cv": 1.732,
+   "monotone": true,
+   "frac_neg_delta": 0.0,
+   "max_neg_excursion_x_median": 0.0,
+   "ac32_residual": 0.918,
+   "micro_step_ratio": {
+    "160": 999.0,
+    "192": 999.0,
+    "256": 999.0,
+    "384": 999.0
+   },
+   "n_boundaries_stepped": 4,
+   "n_boundaries_flat": 0,
+   "n_boundaries_probed": 4,
+   "verdict": "staircase_at_32_present"
+  }
+ },
+ "onnxim": {
+  "1": {
+   "M": 1,
+   "smooth_loglog_R2": 0.9996,
+   "loglog_b": 0.977,
+   "bulk_delta_cv": 0.246,
+   "monotone": true,
+   "frac_neg_delta": 0.0,
+   "max_neg_excursion_x_median": 0.0,
+   "ac32_residual": 0.172,
+   "micro_step_ratio": {
+    "160": 1.51,
+    "192": 5.58,
+    "256": 10.04,
+    "384": 5.12
+   },
+   "n_boundaries_stepped": 3,
+   "n_boundaries_flat": 0,
+   "n_boundaries_probed": 4,
+   "verdict": "smooth_dominated_sparse_coarse_steps"
+  },
+  "128": {
+   "M": 128,
+   "smooth_loglog_R2": 0.6286,
+   "loglog_b": 0.693,
+   "bulk_delta_cv": 6.524,
+   "monotone": false,
+   "frac_neg_delta": 0.062,
+   "max_neg_excursion_x_median": 56.1,
+   "ac32_residual": -0.149,
+   "micro_step_ratio": {
+    "160": 44.02,
+    "192": 46.18,
+    "256": 691.76,
+    "384": 114.15
+   },
+   "n_boundaries_stepped": 4,
+   "n_boundaries_flat": 0,
+   "n_boundaries_probed": 4,
+   "verdict": "irregular_nonmonotone_not_staircase"
+  }
+ },
+ "scalesim_sensitivity": {
+  "E2_alignment_misalign_over_align": {
+   "M=1": 1.25,
+   "M=128": 1.25
+  },
+  "E3_order_Mheavy_over_Nheavy": 0.788,
+  "E4_shape_cycles_lat_us_by_M": {
+   "M=1": {
+    "cycles": 48639,
+    "latency_us": 16.213
+   },
+   "M=32": {
+    "cycles": 64511,
+    "latency_us": 21.504
+   },
+   "M=128": {
+    "cycles": 113663,
+    "latency_us": 37.888
+   }
+  }
+ },
+ "onnxim_sensitivity": {
+  "E2_alignment_misalign_over_align": {
+   "M=1": 1.132,
+   "M=128": 2.843
+  },
+  "E3_order_Mheavy_over_Nheavy": 0.986,
+  "E4_shape_cycles_lat_us_by_M": {
+   "M=1": {
+    "cycles": 109059,
+    "latency_us": 109.0
+   },
+   "M=32": {
+    "cycles": 162110,
+    "latency_us": 162.0
+   },
+   "M=128": {
+    "cycles": 329872,
+    "latency_us": 329.0
+   }
+  }
+ },
+ "onnxim_big_step_boundaries_M1": [
+  {
+   "after_N": 192,
+   "dPerN": 2360.0,
+   "x_baseline": 5.7
+  },
+  {
+   "after_N": 256,
+   "dPerN": 3865.0,
+   "x_baseline": 9.3
+  },
+  {
+   "after_N": 384,
+   "dPerN": 2353.0,
+   "x_baseline": 5.7
+  }
+ ]
+}

@@ -1,0 +1,131 @@
+<header class="masthead">
+  <div class="mcode">M4·CPU</div>
+  <div>
+    <div class="eyebrow">各單元 · 支援算子 · ARM A76</div>
+    <h1>ARM A76 支援算子單元</h1>
+    <p class="lede">GEMM 交給 CIM、attention BMM 交給 GPU，但每一層、每個 token 還有六類非 GEMM 的支援算子必須跑在 CPU。M4-CPU 用一條指令數 roofline 把這六個算子的延遲算準，成本主因是 softmax/swiglu 裡的 <code>exp()</code> 超越函數。</p>
+  </div>
+</header>
+
+<!--CHIPS-->
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
+    <div class="role">
+      <p style="margin-top:0">異質 SoC 裡，大型矩陣乘法（GEMM）交給 CIM/NPU、attention BMM 交給 GPU，但 LLM 推論每一層、每個 token 還有<strong>六類非 GEMM 的支援算子</strong>必須跑。Profile 把它們全部指派給 <strong>RK3588 的 CPU 叢集</strong>（big.LITTLE：4×A76@2.3GHz + 4×A55@1.8GHz）。M4-CPU 的<strong>基本功能</strong>就是把這六件事的延遲算準：</p>
+      <p><strong>① 三個輕量 elementwise/reduction 算子</strong>——<code>residual</code>（殘差相加）、<code>rmsnorm</code>（layer norm）、<code>rope_apply</code>（旋轉位置編碼套用），每個元素只有幾個浮點運算。<strong>② 兩個 <code>exp()</code> 驅動算子</strong>——<code>softmax</code>（attention 機率歸一）與 <code>swiglu</code>（FFN 閘控激活），<code>exp()</code> 是超越函數、一次展開成約 30 個融合浮點運算，是<strong>成本主因</strong>。<strong>③ 一個 vocab 掃描算子</strong>——<code>sampling_argmax</code>（詞彙表 argmax 取樣），元素數 = vocab 大小 V。</p>
+      <p style="margin-bottom:0">模型把這六個算子都丟進同一條<strong>指令數 roofline</strong>：<code>latency = max(compute, memory) + overhead_op</code>。M4-CPU 是<strong>有真矽校準</strong>的單元（<code>η_c</code> + per-op overhead 對 fp32 量測校準），但 A55、多核、fp16、prefill 都是<strong>解析外推</strong>（simulated chip 亮著）；<code>η_bw</code> 為 assumption（warn）。calibration basis 只覆蓋<strong>單 A76 核、單執行緒、numpy fp32、decode（1 token）</strong>。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>Measurement · 量測</span><span class="tag">silicon · fp32 · 1 A76 core</span></div>
+    <p>量測協定：在 Aetina 板（RK3588）上 pin 到<strong>單一 A76 核、單執行緒</strong>，用 numpy fp32 逐一量六個支援算子的 per-token 延遲（<code>cpu_ops.json</code>，4 個模型 × 各算子，softmax 另掃 kv∈{128,512,1024}）。這是<strong>唯一的矽晶校準基準</strong>——fp32、單核、decode。下圖用兩種視角呈現量測：六個算子實測 vs roofline 預測的對位，以及「為什麼 softmax/swiglu 這麼貴」的結構成本。</p>
+
+    <h3>1a · 六個算子：實測 vs 指令數 roofline</h3>
+    <p>把每個 fp32 量測點（四個模型，softmax 含 kv-sweep，共 32 點）的<strong>實測中位數</strong>對上 §2 roofline 的<strong>預測</strong>，畫成 parity 圖看貼合度：</p>
+    <figure>
+      <img src="../../figures/phase1-site/cpu_roofline.png" alt="6 個算子實測 vs 指令數 roofline parity">
+      <figcaption><strong>怎麼讀：</strong>橫軸實測延遲、縱軸 roofline 預測，點越靠對角線越準；深淺藍帶是 ±10% / ±20% 容差。<strong>橘方塊 = <code>exp()</code> 驅動的 softmax/swiglu</strong>，落在高延遲區（100–400µs，因 <code>ops_per_elem</code> 大）；藍圓 = 其餘四個輕量算子，集中在低延遲區（&lt;65µs）。多數點落在 ±10% 內、全數在 ±20% 容差內（最大殘差 {{cpu.resid_max_pct}}%），整體中位誤差 {{cpu.resid_median_pct}}%、p95 {{cpu.resid_p95_pct}}%——這就是 §4 門檻 PASS 的視覺版。指令數 roofline 把 softmax 與 swiglu 的高成本<strong>結構性地</strong>算出來，不靠查表。
+        <span class="ft">圖 M4·CPU·1 · 來源 cpu_ops.json（fp32 median）vs CpuModel roofline · 腳本 tools/plotting/site_cpu.py</span>
+      </figcaption>
+    </figure>
+
+    <h3>1b · 成本主因：<code>exp()</code> 超越函數</h3>
+    <p>為什麼 softmax/swiglu 比其他算子貴一個數量級？看 <code>ops_per_elem</code>（每元素的等效浮點運算數，結構性假設）：</p>
+    <figure class="half">
+      <img src="../../figures/phase1-site/cpu_ops_cost.png" alt="per-op ops_per_elem，exp 算子突出">
+      <figcaption><strong>怎麼讀：</strong>橫軸是每個元素的等效浮點運算數。<strong>橘條（softmax 33、swiglu 34）= <code>exp()</code> 驅動</strong>——一次 <code>exp()</code> 在 numpy fp32 上展開成約 30 個融合浮點運算，所以這兩個算子的 <code>ops_per_elem</code> 遠大於其餘。藍條是輕量算子：rope_apply 6（旋轉 pair 乘法）、rmsnorm 5（square/rsqrt/scale）、sampling_argmax 與 residual 各 1（一次 compare / 一次加法）。這不是 reduction/elementwise 二分法，而是<strong>「transcendental 是成本主因」</strong>的結構假設——§1a 的 parity 證明它預測得準。
+        <span class="ft">圖 M4·CPU·2 · 來源 m4_cpu_instrcount.json › ops_per_elem · 腳本 tools/plotting/site_cpu.py</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>Fit · 擬合</span><span class="tag">equation · 逐參數講解</span></div>
+
+    <h3>指令數 roofline 公式</h3>
+    <div class="eq">latency_us = max(compute_us, memory_us) + overhead_op    <span class="c"># per-op</span>
+compute_us = n_elem · ops_per_elem / (W·IPC·freq) / eta_c   <span class="c"># NEON lane roofline</span>
+memory_us  = working_set_bytes / (BW_tier(working_set) · eta_bw)  <span class="c"># cache tier</span></div>
+    <p><strong>公式怎麼讀：</strong>每個算子取 compute 與 memory 兩支的較大者（roofline），再加一個固定 dispatch 開銷 <code>overhead_op</code>。compute 支是「總運算量 / NEON 算力 / 達成率」；memory 支是「工作集位元組 / 快取層頻寬 / 達成率」。decode 支援算子的工作集全部落在 L1/L2/L3 快取，<strong>永遠不觸碰 host LPDDR</strong>——所以 memory 支用<strong>快取頻寬</strong>、不是 DRAM。<strong>每個參數的物理意義：</strong></p>
+    <table>
+      <caption>roofline 參數（m4_cpu_instrcount.json / cpu_rk3588.json，JSON 注入）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>物理意義</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>eta_c（η_c）</td><td class="num">{{cpu.eta_c}}</td><td><strong>numpy 達成的峰值算力比例</strong>，<strong>對 fp32 cpu_ops.json 校準</strong>（calibrated）。涵蓋 numpy 解譯、非 SIMD 化、scheduling 等實際損耗</td></tr>
+        <tr class="gen"><td>W·IPC·freq（單 A76 核）</td><td class="num">{{cpu.a76_lane_gops}} G lane-op/s</td><td><strong>NEON 算力</strong>：4 lanes（fp32 128-bit）× IPC 2 × 2.3GHz。多核即加總 <code>Σ_assigned</code>（外推）</td></tr>
+        <tr class="gen"><td>ops_per_elem</td><td class="num">1 / 5 / 6 / 33 / 34</td><td><strong>每元素等效浮點運算數</strong>（結構性假設）。<code>exp()</code> ≈ 30 fp ops 使 softmax/swiglu 成為成本主因（見 §1b）</td></tr>
+        <tr class="gen"><td>overhead_op（per-op 常數）</td><td class="num">{{cpu.overhead_rope}} µs（rope）<br>{{cpu.overhead_swiglu}} µs（swiglu）</td><td><strong>固定 dispatch 開銷</strong>（calibrated）：rmsnorm {{cpu.overhead_rmsnorm}}、rope {{cpu.overhead_rope}}、softmax {{cpu.overhead_softmax}}、sampling {{cpu.overhead_sampling}}、residual {{cpu.overhead_residual}}、swiglu {{cpu.overhead_swiglu}} µs</td></tr>
+        <tr class="gen"><td>eta_bw（η_bw）</td><td class="num">{{cpu.eta_bw}}</td><td><strong>快取頻寬達成率</strong>，<strong>assumption</strong>（fp32 decode 資料無純頻寬解析算子、repo 無 CPU mem-BW micro-benchmark；見 §4 缺口）。文獻常見快取效率佔位值</td></tr>
+        <tr class="gen"><td>BW_tier（依工作集選層）</td><td class="num">L1 {{cpu.l1_bw}} · L2 {{cpu.l2_bw}} · L3 {{cpu.l3_bw}} GB/s</td><td><strong>快取層頻寬</strong>（A76 TRM 推估，assumption）：依殘留大小選 L1d（64KiB/核）→ L2（512KiB/核）→ L3（3MiB 共享）。decode 工作集只在這三層</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>memory 支只在一個點真的 binding。</b><code>working_set_bytes = n_elem × bytes_per_elem × byte_passes</code>；快取殘留大小（選層用）= <code>n_elem × bytes_per_elem</code>（單份拷貝，不乘 byte_passes）。在 fp32 decode 資料中，<strong>只有 qwen 的 vocab op</strong>（V=152K，工作集 594KiB 超過 L2、落入 L3）真正走 memory 分支，其餘全是 compute-bound 或 overhead-dominant。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>Simulation · 外推</span><span class="tag">analytic · A55 / 多核 / fp16 / prefill</span></div>
+    <p>M4-CPU <strong>不掛任何 heavy-sim 引擎</strong>。本節的「模擬」= 從單 A76 fp32 decode 校準基準<strong>解析外推</strong>到未量測的組態，全部標 simulated。</p>
+    <table>
+      <caption>外推路徑（cpu_rk3588.json notes / m4_cpu.json honesty，JSON 注入）</caption>
+      <thead><tr><th>路徑</th><th>方法</th><th>誠實標籤</th></tr></thead>
+      <tbody>
+        <tr><td>多核（A76）</td><td>核數加入 <code>Σ_assigned[W·IPC·freq]</code> 計算，compute 支按比例下降</td><td class="fail">⚠ simulated（外推）</td></tr>
+        <tr><td>A55（little 核）</td><td>IPC=1（單 NEON pipeline）、1.8GHz，沿用 <code>η_c</code>、overhead</td><td class="fail">⚠ simulated（未量測）</td></tr>
+        <tr><td>fp16</td><td>解析原生 fp16：<code>fp16_lanes=8</code>（2× fp32 SIMD）+ 2-byte 元素，<code>η_c</code> 沿用 fp32</td><td class="fail">⚠ simulated（非校準）</td></tr>
+        <tr><td>prefill（S&gt;1）</td><td>fixed op × S、softmax ≈ S² 解析外推</td><td class="fail">⚠ 完全未驗證</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>fp16 為何不採量測值？</b><code>cpu_ops.json</code> 的 fp16 量測是 numpy <strong>模擬</strong>，比 fp32 慢約 4×（例如 8B sampling_argmax：fp16 985.52µs vs fp32 52.50µs，比值約 19×），<strong>不代表原生 fp16</strong>。故 recompose 端到端一律走 fp32 校準路徑；fp16 roofline 為解析估計，可用但需標 simulated。Phase 1.1 儲存的 fp16 常數可視為保守上界，已被 Phase 1.2 指令數 roofline 取代。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>Validation gate · 驗證門檻</span><span class="tag">contract m4_cpu.yaml</span></div>
+    <table>
+      <caption>fp32 A76 單核 instruction-count roofline（m4_cpu.json › overall_residual_pct）</caption>
+      <thead><tr><th>指標</th><th class="num">值</th><th class="num">門檻</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>整體中位誤差</td><td class="num">{{cpu.resid_median_pct}}%</td><td class="num">≤ 10%</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>整體 p95 誤差</td><td class="num">{{cpu.resid_p95_pct}}%</td><td class="num">≤ 15%</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>整體最大誤差</td><td class="num">{{cpu.resid_max_pct}}%</td><td class="num">—</td><td>呈現不隱藏</td></tr>
+      </tbody>
+    </table>
+    <p>逐算子殘差（fp32，4 個模型）：softmax 中位 0.81%、swiglu 1.87%、sampling_argmax 1.10%（qwen vocab 走 memory 分支）、rmsnorm 1.45%、rope_apply 1.86%、residual 5.84%。residual 是六者中最大，根源是<strong>量測噪音</strong>：<code>cpu_ops.json</code> 顯示 residual 的 CoV 高達 0.25、延遲本身僅 1.75–2.04µs（接近 <code>perf_counter</code> 解析度），模型誤差落於其自身量測噪音範圍內，此為 overhead-dominant 行為、非模型缺陷。</p>
+    <div class="note"><b>與 Phase 1.1 的關係。</b>Phase 1.1 的 <code>m4_cpu</code> 以 <code>a + b·kv</code> 擬合 softmax、其餘算子為查表常數（softmax fit gate：中位 {{cpu.softmax_median_pct}}%、p95 {{cpu.softmax_p95_pct}}%、max {{cpu.softmax_max_pct}}%，PASS）。Phase 1.2 指令數 roofline 是 Phase 1.1 查表的<strong>超集</strong>（多了尺寸外推能力），舊報告保留作歷史記錄。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§5</span><span>Phase-2 就緒度</span></div>
+    <table>
+      <thead><tr><th>項目</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>fp32 decode roofline（單 A76 核）<code>op_us(op, model)</code></td><td class="pass">✅ 凍結，calibrated（中位 {{cpu.resid_median_pct}}%）</td></tr>
+        <tr><td>模型可換性（換 <code>cpu_rk3588.json</code> 即換型號，引擎碼不動）</td><td class="pass">✅ 就緒</td></tr>
+        <tr><td>端到端 recompose 接線（直接供 M5 trace 消費）</td><td class="pass">✅ 就緒，走 fp32 校準路徑</td></tr>
+        <tr><td>fp16 decode 估計</td><td class="fail">⚠ simulated（解析原生 fp16，非校準）</td></tr>
+        <tr><td>A55 / 多核</td><td class="fail">⚠ simulated（外推，未量測）</td></tr>
+        <tr><td>prefill 支援算子（fixed op × S、softmax S²）</td><td class="fail">⚠ 缺口：解析外推，完全未驗證</td></tr>
+        <tr><td><code>eta_bw</code> 校準</td><td class="fail">⚠ assumption；修補路徑 = CPU mem-BW micro-benchmark（stream-like op）</td></tr>
+        <tr><td>residual 量測噪音（CoV 0.25）</td><td class="pass">✅ 已記錄：非模型缺陷，量測解析度限制</td></tr>
+      </tbody>
+    </table>
+    <p>M4-CPU 在 <strong>fp32 decode 路徑上完整就緒</strong>，可直接進 Phase 2 端到端模擬。剩餘缺口（<code>eta_bw</code>、fp16、A55、prefill）已全部表面化並記錄在 <code>validation/contracts/m4_cpu.yaml</code> 的 <code>gaps</code> 欄位中——沒有隱藏外推。</p>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個數字皆回查 committed artifact</div>
+    <ol>
+      <li>整體 / 逐算子殘差：<code>validation/reports/phase1.2/m4_cpu.json › overall_residual_pct, residuals_pct</code></li>
+      <li>校準參數：<code>simulator/models/params/m4_cpu_instrcount.json › eta_c, eta_bw, overhead_op_us, ops_per_elem, byte_passes</code></li>
+      <li>CPU spec：<code>simulator/specs/cpu_rk3588.json › clusters, neon, cache, cache_bw_GBs, notes, provenance</code></li>
+      <li>校準基準量測：<code>measurements/aetina/cpu_ops.json</code>（fp32, 單 A76 核, 單執行緒）</li>
+      <li>acceptance criteria / gaps：<code>validation/contracts/m4_cpu.yaml › acceptance_criteria, gaps, superseded</code></li>
+      <li>Phase 1.1 遺留（softmax 線性擬合）：<code>validation/reports/phase1.1/m4_cpu.json › softmax_fit_gate</code></li>
+      <li>引擎：<code>simulator/models/m4_cpu.py › CpuModel</code>（latency = max(compute, memory) + overhead_op）</li>
+    </ol>
+  </div>
+
+</section>

@@ -1,0 +1,145 @@
+<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>M4·GPU Mali GPU · Edge-CIM Phase 1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/style.css">
+</head><body>
+<nav class="sidebar"><div class="brand">Edge-CIM · Phase 1<small>元件建模與驗證 · 進 Phase 2 前</small></div><nav><ul><li class="grp">導論</li><li><a class="" href="00-overview.html"><span class="mc"></span><span>概覽</span></a></li><li><a class="" href="01-readiness.html"><span class="mc"></span><span>就緒矩陣</span></a></li><li class="grp">各單元</li><li><a class="" href="02-cim.html"><span class="mc">M1</span><span>CIM 計算核</span></a></li><li><a class="" href="03-memory.html"><span class="mc">M2</span><span>記憶體</span></a></li><li><a class="" href="04-cpu.html"><span class="mc">M4·CPU</span><span>A76 CPU</span></a></li><li><a class="active" href="05-gpu.html"><span class="mc">M4·GPU</span><span>Mali GPU</span></a></li><li><a class="" href="06-npu.html"><span class="mc">M4·NPU</span><span>RKNPU2</span></a></li><li class="grp">跨單元</li><li><a class="" href="07-workload.html"><span class="mc">M5</span><span>Workload</span></a></li><li><a class="" href="08-energy-e2e.html"><span class="mc">M7</span><span>能量 + E2E</span></a></li><li><a class="" href="09-phase2-preview.html"><span class="mc">M3/M6</span><span>Phase 2 預覽</span></a></li><li class="grp">結論</li><li><a class="" href="10-gaps.html"><span class="mc"></span><span>缺口 / GO-NOGO</span></a></li><li><a class="" href="11-sources.html"><span class="mc"></span><span>來源</span></a></li><li><a class="" href="12-thermal.html"><span class="mc">M8</span><span>溫度 (熱)</span></a></li></ul></nav></nav>
+<div class="main"><div class="page">
+<header class="masthead">
+  <div class="mcode">M4·GPU</div>
+  <div>
+    <div class="eyebrow">各單元 · 注意力 offload · Mali-G610</div>
+    <h1>Mali-G610 GPU 單元</h1>
+    <p class="lede">CIM 釘權重做投影 GEMM；attention 的兩個 bmm 是 runtime activation、沒有可駐留的權重，所以交給 GPU。M4-GPU 的基本功能就是這個<strong>注意力 offload baseline</strong>：單一 head 的 QK^T + S·V 延遲，量在 Mali-G610 FP16。</p>
+  </div>
+</header>
+
+<div class="chips"><span class="chip on" title="validation/reports/phase1.1/m4_gpu.json › attn_offload_gate (single-head QK^T+S·V, median 0.6%) ; measurements/aetina/mali_matmul.json › results[group=attn] (Mali-G610, FP16)">calibrated</span><span class="chip on" title="simulator/models/params/m4_gpu.json › attn_bmm_a_us=27.742 / attn_bmm_b_us_per_kv=0.44208 (a+b·kv) ; validation/reports/phase1.2/m4_gpu_roofline.json › calibrated_fit">fitted</span><span class="chip off" title="N/A — GPU has silicon; attention offload measured directly, no heavy-sim. INT8 gap is a MISSING measurement, not a simulation.">simulated</span><span class="chip on warn" title="validation/reports/phase1.2/m4_gpu_roofline.json › honesty (FP16 roofline = unoptimised-kernel LOWER BOUND) ; INT8 = ZERO GPU data">assumption</span><span class="chip off" title="none — all attn/roofline params self-measured on Mali-G610.">borrowed</span></div>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
+    <div class="role">
+      <p style="margin-top:0">M4-GPU 在異構 SoC 裡是<strong>注意力的 offload 接收方</strong>，不是主算力。分工邏輯：CIM 做 weight-stationary 的投影 GEMM（Q/K/V/O、FFN gate/up/down），而 <strong>attention 的 QK^T 與 S·V 是 activation × activation 的 bmm</strong>——每個 decode step KV-cache 都長大，沒有可釘在 crossbar 上的固定權重。</p>
+      <p><strong>① 注意力 offload（基本功能）</strong>——單一 attention head 的 QK^T + S·V（decode 步，FP16）。強行讓 CIM 做 attention 等同每步重載長大的 K/V，成本以數十毫秒計（CIM-attention penalty 31–46 ms/token，Phase 1.1 P7）；同樣 kv 長度 GPU 只要幾十到幾百 µs。<strong>② roofline 換型號槽</strong>——一個可換 GPU spec 的解析 roofline（FP16 校準），與 micro-benchmark 並存。</p>
+      <p style="margin-bottom:0">M4-GPU 是<strong>有真矽、attention 已驗證</strong>的單元（Mali-G610 r0p0 實測），所以 calibrated 與 fitted 亮著、simulated 熄滅（GPU 有矽、不掛 heavy-sim）。<strong>關鍵缺口：只量了 FP16，INT8 零資料</strong>——這是「缺一個量測」、不是「用模擬補」，§5 誠實呈現。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>Measurement · 量測</span><span class="tag">silicon · 注意力 offload</span></div>
+    <p>量測平台：Aetina Metis Alpha 板上的 <strong>Mali-G610 r0p0</strong>（RK3588），以自寫 OpenCL kernel 實測，dtype = <strong>FP16</strong>。M4-GPU 的基本標的是 attention 的 offload 延遲——量單一 head 的 QK^T + S·V 在三個 KV 長度（kv ∈ {128, 512, 1024}）的延遲。下圖把這 3 點攤開：</p>
+    <figure>
+      <img src="../../figures/phase1-site/gpu_attn_fit.png" alt="單一 head attention 量測 vs a+b·kv 擬合">
+      <figcaption><strong>怎麼讀：</strong>橫軸是 KV 長度 kv、縱軸是單一 head 的 QK^T + S·V 延遲（µs，FP16）。藍點是量測，黑線是 §2 的線性擬合 <code>a + b·kv</code>。<strong>為什麼是直線？</strong>decode 的 QK^T（<code>[1,hd]×[hd,kv]</code>）與 S·V（<code>[1,kv]×[kv,hd]</code>）都對 kv 個元素各做一次，per-step 成本結構上線性於 kv——不是硬湊的形式。三點殘差 ≤ 1.1%（median 0.6%），是全報告擬合誤差最低的單元，反映 attention 對 GPU 是規律的線性工作。
+        <span class="ft">圖 M4·GPU·1 · 來源 m4_gpu.json › attn_offload_gate（meas_us）+ m4_gpu.json 參數 a/b · 腳本 tools/plotting/site_gpu.py</span>
+      </figcaption>
+    </figure>
+    <p>此外也量了 GPU 做方陣 matmul 的峰值吞吐（ksweep），FP16 在 M=128 後飽和於 <strong>20.12 GFLOP/s</strong>——這是自寫未優化 kernel 的值、僅代表<strong>下界</strong>（見 §2 roofline 圖）。Decode-GEMV（M=1）利用率更差，正好印證「matmul 該留給 CIM」的前提。</p>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>Fit · 擬合</span><span class="tag">equation · 逐參數講解</span></div>
+
+    <h3>注意力 offload：a + b·kv 線性擬合</h3>
+    <div class="eq">attn_bmm_us(kv) = a + b·kv            <span class="c"># 單一 head QK^T + S·V，FP16 [µs]</span></div>
+    <p><strong>怎麼來：</strong>QK^T 與 S·V 兩個 bmm 的 per-step 工作量都正比於 kv（KV-cache 長度），所以延遲對 kv 是<strong>仿射（一條直線）</strong>。<strong>每個參數的物理意義：</strong></p>
+    <table>
+      <caption>注意力 offload 擬合參數（m4_gpu.json，JSON 注入）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>物理意義</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>a（固定開銷）</td><td class="num">27.742 µs</td><td><strong>截距</strong>：啟動一次 attention 的固定成本（kernel launch、QK^T/S·V 設定），與 kv 無關</td></tr>
+        <tr class="gen"><td>b（per-kv 斜率）</td><td class="num">0.44208 µs/kv</td><td><strong>斜率</strong>：每多一個 KV token 的邊際成本。kv 從 128→1024，延遲幾乎全由這項決定</td></tr>
+      </tbody>
+    </table>
+    <p class="ft" style="margin:-4px 0 10px">a / b 為擬合常數（committed in m4_gpu.json params），非門檻指標，故直書原值；所有<strong>資料量</strong>（誤差統計等）一律由 committed JSON 注入，如 §4 的 median 0.6%。</p>
+
+    <h3>roofline 換型號槽：max(compute, memory)</h3>
+    <div class="eq">latency_us = max( compute_us , memory_us )
+  compute_us = 2·M·K·N / (eff_compute_fp16 · fp16_peak)   <span class="c"># compute-bound 側</span>
+  memory_us  = nbytes / mem_eff_BW_GBs                     <span class="c"># memory-bound 側</span></div>
+    <p>Phase 1.2 補一個可換型號的解析 roofline（<code>GpuRooflineModel</code>），與 micro-benchmark <strong>並存而非取代</strong>，目標是「換一顆 GPU = 換 spec 檔、引擎不動」。<code>max(compute, memory)</code> 讓同一式自動涵蓋兩 regime：decode（M=1 GEMV）落 memory-bound，prefill / 大方陣落 compute-bound。兩個校準係數均對 <code>mali_matmul.json</code> 的 FP16 點擬合：<code>eff_compute_fp16 = 0.01965</code>（飽和 20.12 ÷ FP16 峰值 1024 GFLOP/s）、<code>mem_eff_BW_GBs = 1.256</code>（16 個 decode-GEMV 點過原點最小平方）。</p>
+    <figure>
+      <img src="../../figures/phase1-site/gpu_roofline.png" alt="FP16 方陣 ksweep 吞吐飽和於 20.12 GFLOP/s（下界）">
+      <figcaption><strong>怎麼讀：</strong>橫軸方陣維度 M（log2）、縱軸 GFLOP/s。藍線 FP16 在 M=128 飽和於約 20 GFLOP/s（橘虛線），FP32（灰）略低。<strong>標 LOWER BOUND</strong>：這是自寫未優化 OpenCL kernel，調教過的 kernel 可更快——roofline 的 <code>eff_compute_fp16</code> 即以此飽和值校準、故繼承下界性質。<strong>INT8 完全沒量</strong>（kernel 只有 FP32/FP16），圖上沒有 INT8 線是誠實的空缺、不是省略。
+        <span class="ft">圖 M4·GPU·2 · 來源 mali_matmul.json › ksweep（f16/f32_gflops）+ m4_gpu_roofline.json › saturated_f16_gflops · 腳本 tools/plotting/site_gpu.py</span>
+      </figcaption>
+    </figure>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>Simulation · roofline 趨勢驗收</span><span class="tag">no heavy-sim · 解析 roofline</span></div>
+    <p>M4-GPU <strong>不掛任何 heavy-sim 引擎</strong>——GPU 有真矽，attention 直接量。本節的「模擬」= roofline 解析槽對 Phase 1.1 量測點的趨勢比對（30 點全集）。它<strong>不是精確校準</strong>，而是「抓到 decode/prefill 兩個 regime 的形狀趨勢」。</p>
+    <table>
+      <caption>roofline vs 1.1 實測誤差（m4_gpu_roofline.json › error_vs_1p1_measured，30 pts）</caption>
+      <thead><tr><th>統計量</th><th class="num">值</th><th>說明</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>median |相對誤差|</td><td class="num">2.7%</td><td>roofline 抓到兩 regime 形狀趨勢（非精確校準宣稱）</td></tr>
+        <tr class="gen"><td>p95 |相對誤差|</td><td class="num">36.1%</td><td>長尾來自離群點（1b decode GEMV 異常慢、最小 M=64 ksweep launch 開銷大）</td></tr>
+        <tr class="gen"><td>max |相對誤差|</td><td class="num">65.8%</td><td>最差點（1b K=N=2048 decode GEMV，實測異常慢、roofline 樂觀）</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>不是嚴格下界。</b>約 1/3 的點 roofline 高於實測（frac_pred_le_measured = 0.533），且只有 5 個飽和點——<strong>不可轉移校準</strong>（NOT transferable）：僅對「這顆 G610、這個 kernel 下」的 FP16 形狀趨勢有效。換 GPU 型號需重跑 fit 並更新 <code>roofline_fit</code> 欄位。<strong>沒有數值驗收 gate</strong>——不存在 INT8 矽晶片，不能製造假 gate。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>Validation gate · 驗證門檻</span><span class="tag">ADR-0006</span></div>
+    <table>
+      <caption>注意力 offload 擬合門檻（m4_gpu.json › attn_offload_gate，3 native pts）</caption>
+      <thead><tr><th>指標</th><th class="num">值</th><th class="num">門檻</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>median rel_err</td><td class="num">0.6%</td><td class="num">≤ 10%</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>p95 rel_err</td><td class="num">1.1%</td><td class="num">≤ 20%</td><td class="pass">✅ PASS</td></tr>
+        <tr class="gen"><td>max rel_err</td><td class="num">1.1%</td><td class="num">—</td><td>呈現不隱藏</td></tr>
+      </tbody>
+    </table>
+    <p>attention offload 是 M4-GPU 的<strong>已驗證交付物</strong>，median 0.6% 是全報告擬合誤差最低的單元。Phase 2 端到端 recompose 中 GPU 只參與 attention offload、不用 GEMM 絕對值，因此 GEMM 下界性質不影響系統層 gate。</p>
+    <table>
+      <caption>roofline 趨勢驗收（m4_gpu_roofline.json，趨勢非數值 gate）</caption>
+      <thead><tr><th>項目</th><th class="num">median |err|</th><th class="num">p95 |err|</th><th>性質</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>roofline vs 1.1（30 pts）</td><td class="num">2.7%</td><td class="num">36.1%</td><td>趨勢擬合（FP16），非嚴格下界</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>INT8 無驗收 gate。</b>Mali matmul kernel 僅 FP32/FP16，<code>predict()</code> 對 int8 workload 仍用 FP16 校準天花板，provenance 明標「dtype=int8 has ZERO GPU data」。這是<strong>缺一個量測</strong>，不是用模擬填補——詳見 §5。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§5</span><span>Phase-2 就緒度</span></div>
+    <table>
+      <thead><tr><th>項目</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>attention offload <code>attn_bmm_us(kv)</code> 介面</td><td class="pass">✅ 凍結，calibrated（median 0.6%）</td></tr>
+        <tr><td><code>MaliGpuModel</code> / <code>m4_gpu.py</code></td><td class="pass">✅ 模組化，Phase 2 直接沿用</td></tr>
+        <tr><td>roofline 換型號槽 <code>GpuRooflineModel</code></td><td class="pass">✅ 凍結合約 {latency_us, bound, provenance}，換 spec 不改引擎</td></tr>
+        <tr><td><strong>INT8 GPU GEMM</strong>（dtype=int8 零資料）</td><td class="fail">⚠ 缺量測（非模擬）——Phase 2 需收集 Mali INT8 kernel 資料</td></tr>
+        <tr><td>FP16 GEMM 絕對吞吐 20.12 GFLOP/s</td><td class="fail">⚠ 下界（未優化 kernel）；recompose 不用絕對值</td></tr>
+        <tr><td>roofline 可轉移性</td><td class="fail">⚠ 不可轉移（5 飽和點）；換 GPU 需重新量測重跑 fit</td></tr>
+        <tr><td>kv 外推 &gt; 1024（LongBench ~12k kv）</td><td class="fail">⚠ 外推（12×；線性形式結構正確，待 kv∈{2k,4k,8k} 補點）</td></tr>
+        <tr><td>heads × layers 聚合</td><td class="fail">⚠ Phase 2 watch-item（單 head 公式 × heads × layers，overlap/合批未驗證）</td></tr>
+        <tr><td>FP32 峰值 512 GFLOP/s</td><td class="fail">⚠ assumption（可能低估 2–4×；FP16 校準不依賴此值）</td></tr>
+      </tbody>
+    </table>
+    <p><strong>最大缺口 = INT8 是缺一個量測、不是模擬。</strong>attention offload（FP16）已驗證、介面穩定，Phase 2 可直接沿用。但若 Phase 2 需要 GPU 做 INT8 GEMM，現況零資料不可用，必須先收集 Mali INT8 kernel 量測。其餘為 kv &gt;1024 外推補點、heads×layers 聚合驗證、FP32 峰值待量測——都不影響已驗證的 FP16 attention 路徑。</p>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個數字皆回查 committed artifact</div>
+    <ol>
+      <li>注意力 offload 門檻：<code>validation/reports/phase1.1/m4_gpu.json › attn_offload_gate.median_relerr / p95_relerr / max_relerr</code></li>
+      <li>擬合參數 a / b：<code>simulator/models/params/m4_gpu.json › attn_bmm_a_us / attn_bmm_b_us_per_kv</code></li>
+      <li>FP16 ksweep 飽和：<code>validation/reports/phase1.1/m4_gpu.json › ksweep_saturation.g_sat_gflops_f16 = 20.12（LOWER BOUND）</code></li>
+      <li>roofline 趨勢驗收：<code>validation/reports/phase1.2/m4_gpu_roofline.json › error_vs_1p1_measured（median/p95/max_abs_relerr, frac_pred_le_measured）</code></li>
+      <li>roofline 校準係數：<code>validation/reports/phase1.2/m4_gpu_roofline.json › calibrated_fit（eff_compute_fp16, mem_eff_BW_GBs, saturated_f16_gflops）</code></li>
+      <li>原始量測：<code>measurements/aetina/mali_matmul.json › results（groups attn / ksweep / proj_decode, FP16）</code></li>
+      <li>INT8 / FP32 誠實標籤：<code>validation/reports/phase1.2/m4_gpu_roofline.json › honesty.int8 / fp32_peak_512</code></li>
+      <li>contract / 驗收條件：<code>validation/contracts/m4_gpu.yaml</code></li>
+    </ol>
+  </div>
+
+</section>
+
+</div></div></body></html>

@@ -1,0 +1,131 @@
+<header class="masthead">
+  <div class="mcode">來源</div>
+  <div>
+    <div class="eyebrow">結論 · 來源附錄 · 回查總表</div>
+    <h1>來源與誠實帳本</h1>
+    <p class="lede">站台裡每個量化數字都回查得到 committed artifact。本頁把各單元的主張對應到其來源檔案與欄位——驗證報告、擬合參數、可換 spec、原始量測。這些 artifact 是事實基準：散文若與之衝突，以 artifact 為準。</p>
+  </div>
+</header>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>誠實紀律 · 數字怎麼進到頁面</span></div>
+    <div class="role">
+      <p style="margin-top:0">站台的每個數字都<strong>從 committed JSON 注入</strong>，不在 HTML 裡手打。頁面原始碼帶 <code>&#123;&#123;key&#125;&#125;</code> placeholder；<code>tools/report/_metrics.py</code> 是這些 key 的<strong>唯一事實來源</strong>，逐一從 <code>validation/reports/*.json</code> / <code>simulator/.../*.json</code> 讀出並格式化。</p>
+      <p style="margin-bottom:0"><code>build.py</code> 在建置時替換所有 placeholder，並對<strong>任何未解析的 <code>&#123;&#123;…&#125;&#125;</code> 直接失敗</strong>（fail-loud）。所以一個數字不可能在散文裡被手打錯：它從 JSON 流出，JSON 一改頁面就跟著改；若來源欄位被移除，建置與 <code>tests/test_report_metrics.py</code> 會立刻報錯。每個單元頁的 chip 列（on 狀態 + 來源路徑）同樣 committed 在 <code>chips.json</code>，audit 對著表查、不對散文查。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>來源目錄 · artifact 所在</span></div>
+    <table>
+      <caption>主要來源目錄</caption>
+      <thead><tr><th>目錄</th><th>內容</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td><code>validation/reports/phase1.{1,2,3,5}/</code></td><td>各模組的驗證數字（誤差、gate 結果、交叉驗證）。</td></tr>
+        <tr class="gen"><td><code>validation/contracts/m{1,2,3,5,7}.yaml、m4_{cpu,gpu,npu}.yaml</code></td><td>各模組驗收標準、可調參數、量測缺口。</td></tr>
+        <tr class="gen"><td><code>simulator/models/params/*.json</code></td><td>方程式係數（calibrated／assumption 標註於檔內）。</td></tr>
+        <tr class="gen"><td><code>simulator/specs/*.json</code></td><td>各單元／記憶體型號 spec（provenance 標註於檔內）。</td></tr>
+        <tr class="gen"><td><code>measurements/aetina/、measurements/metis_card/、measurements/op_inventory/</code></td><td>Phase 0.3 真實板量測原始資料 + op inventory。</td></tr>
+        <tr class="gen"><td><code>docs/adr/0001–0007</code></td><td>鎖定的架構決策（fidelity、記憶體、排程、混合精度、能耗、驗證橋接、op inventory）。</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>M1 · CIM 計算核</span><span class="tag">silicon · 多板</span></div>
+    <table>
+      <caption>M1 主張 → committed artifact</caption>
+      <thead><tr><th>主張 / 數字</th><th>artifact › 欄位</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>decode G_eff 擬合門檻（13 native pts）</td><td><code>validation/reports/phase1.1/m1.json › throughput_fit_gate_native</code></td></tr>
+        <tr class="gen"><td>Card 重驗（CARD_REVALIDATED）</td><td><code>validation/reports/phase1.2/cim_card_revalidate.json › status, consistency</code></td></tr>
+        <tr class="gen"><td>prefill M-amortization 仿射擬合</td><td><code>validation/reports/phase1.2/cim_prefill_fit.json › affine_fit_tile_lat_us, fit_quality, holdout</code></td></tr>
+        <tr class="gen"><td>多-tile residency cliff（兩-regime）</td><td><code>validation/reports/phase1.5/cim_multitile.json › model, old_vs_new, resident_holdout</code></td></tr>
+        <tr class="gen"><td>G_eff 2D 參數 / 架構 / prefill_M_max</td><td><code>simulator/models/params/m1_cim.json</code></td></tr>
+        <tr class="gen"><td>雙拓樸 spec（Alpha / Card / edge）</td><td><code>simulator/specs/cim_topo_{alpha,card,edge}.json</code></td></tr>
+        <tr class="gen"><td>驗收合約</td><td><code>validation/contracts/m1.yaml</code></td></tr>
+        <tr class="gen"><td>原始量測（Alpha matmul / Card 重驗）</td><td><code>measurements/aetina/metis_alpha_matmul.json</code>、<code>measurements/metis_card/cim_card_revalidate_raw.json</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>M2 · 記憶體階層</span><span class="tag">silicon 錨點 + heavy-sim</span></div>
+    <table>
+      <caption>M2 主張 → committed artifact</caption>
+      <thead><tr><th>主張 / 數字</th><th>artifact › 欄位</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>LPDDR4x decode 牆（24.2 GB/s，唯一矽校準錨點）</td><td><code>validation/reports/phase1.1/m2.json › params.measured_eff_BW_GBs</code></td></tr>
+        <tr class="gen"><td>PCIe per-call floor（median / p95）</td><td><code>simulator/models/params/m2_pcie.json › fixed_overhead_us_median / p95</code></td></tr>
+        <tr class="gen"><td>三種 DRAM spec（peak / eff / honesty）</td><td><code>simulator/specs/mem_lpddr4.json、mem_lpddr4x.json、mem_lpddr5.json</code></td></tr>
+        <tr class="gen"><td>記憶體模型驗證（sanity / topology）</td><td><code>validation/reports/phase1.2/m2_memory.json</code></td></tr>
+        <tr class="gen"><td>Ramulator2 LPDDR5 交叉驗證（device vs system eff）</td><td><code>validation/reports/phase1.3/m2_ramulator2.json › ramulator2_device / analytic_system</code></td></tr>
+        <tr class="gen"><td>KV-append SPIKE（INCONCLUSIVE）</td><td><code>validation/reports/phase1.5/kv_append_spike.json › verdict, proxy_points, spill_regime_dram_bw</code></td></tr>
+        <tr class="gen"><td>SRAM tier spec（CACTI）</td><td><code>simulator/specs/sram_metis_aipu.json</code></td></tr>
+        <tr class="gen"><td>PCIe 原始量測 / 驗收合約</td><td><code>measurements/aetina/metis_alpha_matmul_raw.json</code>、<code>validation/contracts/m2.yaml</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>M4 · CPU / GPU / NPU</span><span class="tag">三個計算單元</span></div>
+    <table>
+      <caption>M4 主張 → committed artifact</caption>
+      <thead><tr><th>主張 / 數字</th><th>artifact › 欄位</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>CPU softmax 擬合門檻</td><td><code>validation/reports/phase1.1/m4_cpu.json › softmax_fit_gate</code></td></tr>
+        <tr class="gen"><td>CPU 指令數 roofline 殘差（median 1.18%）</td><td><code>validation/reports/phase1.2/m4_cpu.json › overall_residual_pct</code></td></tr>
+        <tr class="gen"><td>CPU roofline 參數（eta_c / overhead_op）</td><td><code>simulator/models/params/m4_cpu_instrcount.json</code></td></tr>
+        <tr class="gen"><td>RK3588 CPU spec（cache BW / clusters）</td><td><code>simulator/specs/cpu_rk3588.json</code></td></tr>
+        <tr class="gen"><td>CPU 原始量測 / 驗收合約</td><td><code>measurements/aetina/cpu_ops.json</code>、<code>validation/contracts/m4_cpu.yaml</code></td></tr>
+        <tr class="gen"><td>GPU attention offload 門檻（median 0.6%）</td><td><code>validation/reports/phase1.1/m4_gpu.json › attn_offload_gate</code></td></tr>
+        <tr class="gen"><td>GPU roofline 槽（FP16 下界）</td><td><code>validation/reports/phase1.2/m4_gpu_roofline.json › calibrated_fit, honesty</code></td></tr>
+        <tr class="gen"><td>GPU attn 擬合參數 / Mali spec / 量測</td><td><code>simulator/models/params/m4_gpu.json</code>、<code>simulator/specs/gpu_mali_g610.json</code>、<code>measurements/aetina/mali_matmul.json</code></td></tr>
+        <tr class="gen"><td>NPU 模擬器發散（sim-vs-sim spread，非驗證）</td><td><code>validation/reports/phase1.3/m4_npu_onnxim.json › median_abs_delta_pct, max_abs_delta_pct</code>、3 方 <code>validation/reports/phase1.6/npu_scalesim.json › spread_median_x, spread_max_x</code></td></tr>
+        <tr class="gen"><td>NPU systolic 階梯實測（1.6b，不預設 knee）</td><td><code>simulated/{onnxim,scalesim}/rknpu2_characteristic.json</code>、<code>validation/reports/phase1.6/npu_characteristic_compare.json › onnxim, scalesim_positive_control</code></td></tr>
+        <tr class="gen"><td>NPU spec（RKNPU2，無 silicon；analytic-only）</td><td><code>simulator/specs/npu_rknpu2.json</code>、合約 <code>validation/contracts/m4_npu.yaml</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§5</span><span>M5 · Workload trace</span><span class="tag">generative / deterministic</span></div>
+    <table>
+      <caption>M5 主張 → committed artifact</caption>
+      <thead><tr><th>主張 / 數字</th><th>artifact › 欄位</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>op inventory 覆蓋（per-model orphan_ops / n_distinct）</td><td><code>validation/reports/phase1.1/m5.json › per_model, pass_all</code></td></tr>
+        <tr class="gen"><td>sweep 矩陣（580 sigs / 9 categories）</td><td><code>measurements/op_inventory/sweep_matrix.json › total, counts</code></td></tr>
+        <tr class="gen"><td>驗收合約</td><td><code>validation/contracts/m5.yaml</code></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§6</span><span>M7 · 能量 + 端到端</span><span class="tag">analytic · 無功耗遙測</span></div>
+    <table>
+      <caption>M7 / E2E 主張 → committed artifact</caption>
+      <thead><tr><th>主張 / 數字</th><th>artifact › 欄位</th></tr></thead>
+      <tbody>
+        <tr class="gen"><td>per-token 8B decode 能量分解 + ±20% 敏感度</td><td><code>validation/reports/phase1.1/m7.json › per_token_8b_decode_mJ, sensitivity_pm20pct</code></td></tr>
+        <tr class="gen"><td>能量係數（datasheet 常數，borrowed）</td><td><code>simulator/models/params/m7_energy.json</code></td></tr>
+        <tr class="gen"><td>端到端 decode recompose 8B hold-out（{{recompose.err_8b_pct}}%）</td><td><code>validation/reports/phase1.1/recompose.json › rel_error_8b, fit_BW_GBs, measured_tok_s_1c</code></td></tr>
+        <tr class="gen"><td>驗收合約</td><td><code>validation/contracts/m7.yaml</code></td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>誠實提醒：</b>能量<strong>從未量測</strong>（兩塊板皆無功耗遙測，ADR-0005）——M7 全部是 datasheet 常數 + 粗活動因子的解析估計。與之區分的是 recompose 的 8B tok/s，那是<strong>吞吐</strong>、確由 silicon 驗證，不是功耗。</div>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源紀律 · 每個數字皆回查 committed artifact</div>
+    <ol>
+      <li>數字注入唯一來源：<code>tools/report/_metrics.py</code>（path + formatter，受 <code>tests/test_report_metrics.py</code> 守護）</li>
+      <li>chip on 狀態 + 來源路徑：<code>docs/report/phase1-site/chips.json</code></li>
+      <li>建置 fail-loud：<code>docs/report/phase1-site/build.py</code>（未解析 <code>&#123;&#123;key&#125;&#125;</code> 即 exit）</li>
+      <li>事實基準總覽：<code>validation/reports/</code>、<code>simulator/{models/params,specs}/</code>、<code>measurements/</code>、<code>validation/contracts/</code>、<code>docs/adr/</code></li>
+    </ol>
+  </div>
+
+</section>

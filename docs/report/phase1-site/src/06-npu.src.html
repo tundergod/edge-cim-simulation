@@ -1,0 +1,139 @@
+<header class="masthead">
+  <div class="mcode">M4·NPU</div>
+  <div>
+    <div class="eyebrow">各單元 · 計算核 · RKNPU2 NPU</div>
+    <h1>RKNPU2 NPU 單元（無矽，#13）</h1>
+    <p class="lede">這是全站<strong>誠實度最高、也最脆弱</strong>的一頁。RKNPU2 的基本功能是「systolic array 上的 matmul」，我們以解析 systolic-roofline 建模——但 <strong>Phase 1 完全沒有 RKNPU2 silicon</strong>（aetina 板離線，issue #13）。本頁所有數字都是<strong>解析基線</strong>或<strong>模擬</strong>，沒有一個校準到矽晶。三個引擎（解析 / ONNXim / ScaleSim）只是一個<strong>不確定性帶</strong>（median ~{{npu.spread_median_x}}×），<strong>沒有任何裁判</strong>。</p>
+  </div>
+</header>
+
+<!--CHIPS-->
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
+    <div class="role">
+      <p style="margin-top:0">M4-NPU 把 RKNPU2 當成一個 <strong>weight-stationary systolic-array 加速器</strong>來建模——它的基本功能就是「在固定大小方陣上做 matmul」，所以我們用<strong>解析 systolic-roofline</strong>（padded MACs + order/shape factor + BW ceiling）算延遲。硬體：RK3588 內建 NPU，3 核、~1 GHz、datasheet <strong>6 TOPS INT8</strong>，dtype 限 INT4/8/16 + FP16。</p>
+      <p style="margin-bottom:0"><strong>關鍵誠實邊界：沒有 RKNPU2 silicon。</strong>aetina 板在 Phase 0.3 量測期間離線（#13），RKNPU2 的 matmul/attention micro-benchmark <strong>從未採集</strong>（<code>measurements/aetina/rknpu2_matmul.json</code> 不存在）。因此 <code>calibrated</code> chip <strong>刻意是熄滅的</strong>——這是誠實的視覺，不是疏漏。systolic 32×32 與 BW 帶都<strong>借自 HeteroInfer</strong>（SOSP'25），6 TOPS 是 datasheet 名目值；無一 fit 到本矽。也<strong>無 power telemetry</strong>，本頁不報任何 energy 數字。</p>
+    </div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§1</span><span>Analytic baseline · 解析基線（無矽）</span><span class="tag">no silicon · #13</span></div>
+    <p><strong>本節沒有矽晶量測。</strong>正常單元在這裡放矽晶量測；M4-NPU 沒有矽可量——<code>measured</code> chip 因此熄滅（下圖是<strong>模擬器</strong>量測、不是矽）。我們能交付的只有一個<strong>解析基線</strong>：把 INT8 GEMM（M×K×N）模成三個 ceiling 取最大——padded compute（6 TOPS）、weight stream（BW）、dispatch floor。其中<strong>形狀</strong>借自 HeteroInfer 的 systolic 特性，<strong>絕對值未經任何矽晶驗證</strong>。</p>
+    <p>解析模型<strong>假設</strong>有一個 <strong>32×32 對齊階梯</strong>（公式裡的 <code>ceil(N/32)·32</code>，§2），但「用一個假設 32-padding 的模型去畫 32 階梯」是<strong>循環論證</strong>。所以我們<strong>不</strong>用解析模型畫這張圖，而是<strong>直接量測兩個 cycle 級模擬器、各自獨立掃輸出維度，看它們到底有沒有這個階梯</strong>（Phase 1.6b，<strong>不預設 knee</strong>；虛無假設＝平滑無 32 階，要資料才能推翻）。</p>
+    <figure>
+      <img src="../../figures/phase1-site/npu_systolic.png" alt="實測:兩個 NPU 模擬器是否有 32 systolic 階梯（各自 y 軸，model 非矽）">
+      <figcaption><strong>怎麼讀：</strong>固定 K=2048、掃輸出維度 N，兩個模擬器<strong>各畫各的 y 軸（絕對值跨 sim 不可比）</strong>。<strong>紫色 ScaleSim</strong> 兩個 regime 都是乾淨的 32 階梯——但它<strong>本身就是 32×32 陣列模擬器，這個階梯是建構上必然的</strong>，所以它只是 positive control（確認我們的探針抓得到已知的階）。<strong>橘色 ONNXim</strong>（多疊了 NoC／DRAM scheduling）才是有資訊的那個，而它<strong>沒有複製這個階梯</strong>：decode(M=1) 幾乎是<strong>平滑 ∝N</strong>（R²=0.9996，只在 192/256/384 有零星粗跳階、N=160 沒有）；prefill(M=128) 甚至<strong>非單調</strong>（cycles 隨 N 變大反而往下掉）。<strong>結論：32 階梯是 ScaleSim／解析模型的人工產物，不是穩健的預測；無矽可裁判（#13）。</strong>
+        <span class="ft">圖 NPU·1 · 來源 simulated/{onnxim,scalesim}/rknpu2_characteristic.json + phase1.6/npu_characteristic_compare.json（pre-registered 判準）· 腳本 tools/plotting/site_npu.py</span>
+      </figcaption>
+    </figure>
+    <p style="margin-bottom:0"><strong>Native attention（attn_bmm）</strong>另走純 compute-bound 路徑（activation×activation，無靜態權重可 stall、無 order/shape 懲罰）。GQA heads（=8）走 batch 維、<strong>不</strong>補進 systolic M 槽（否則把 heads 補到 32 會 4× 高估 MACs）；只有 hd、kv 被 pad 到 32 倍數。同樣是解析估計，無矽。</p>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§2</span><span>Fit · 解析式（逐參數）</span><span class="tag">equation · 全 borrowed/assumption</span></div>
+    <div class="eq">padded_MACs = ceil(M/sd)·sd × ceil(K/sd)·sd × ceil(N/sd)·sd   <span class="c"># sd=32 借自 Hexagon</span>
+compute_us  = 2·padded_MACs / (6 TOPS) × order_shape_factor(K,N)   <span class="c"># 6 TOPS = datasheet</span>
+memory_us   = weight_bytes / eff_BW_low                          <span class="c"># eff_BW_low ~20.1 GB/s（Fig5 下緣）</span>
+latency_us  = max(compute_us, memory_us, dispatch_floor)         <span class="c"># bound = argmax</span></div>
+    <p><strong>每個參數都不是校準值</strong>——這正是本頁要講清楚的事。下表把每個數字的來源標籤攤開：</p>
+    <table>
+      <caption>解析 systolic-roofline 參數（npu_rknpu2.json / m4_npu.py，全 simulated/borrowed）</caption>
+      <thead><tr><th>參數</th><th class="num">值</th><th>來源 / 誠實標籤</th></tr></thead>
+      <tbody>
+        <tr><td>6 TOPS INT8 ceiling</td><td class="num">6.0</td><td><strong>assumption</strong>：datasheet 峰值，非量測</td></tr>
+        <tr><td>systolic_dim</td><td class="num">32×32</td><td><strong>borrowed</strong>：Hexagon（HeteroInfer Fig3）——階梯的 quantum</td></tr>
+        <tr><td>order/shape max</td><td class="num">6×</td><td><strong>borrowed</strong>：寬 activation 破壞 weight-stall，HeteroInfer Fig4 量到的上限</td></tr>
+        <tr><td>eff_BW (low / high)</td><td class="num">20.1 / 22.4 GB/s</td><td><strong>borrowed</strong>：34 GB/s host × Fig5 的 59–66%（分母=68，非 34）</td></tr>
+        <tr><td>cores · freq</td><td class="num">3 · ~1 GHz</td><td>datasheet（cores=measured-spec、freq=assumption）</td></tr>
+        <tr><td>dispatch floor</td><td class="num">2.0 µs</td><td><strong>assumption</strong>：固定 per-op 名目值（無矽）</td></tr>
+        <tr><td>能耗</td><td class="num">不可判</td><td>無 RKNPU2 power telemetry</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>BW 分母的陷阱：</b>59–66% 的分母是 <strong>68 GB/s</strong>（HeteroInfer Fig5 single-proc decode 峰值），<strong>不是</strong> RK3588 的 host ~34 GB/s。RKNPU2 的絕對有效帶換算為 20.1–22.4 GB/s（34 × 59–66%）。這是借用文獻時最容易誤讀的一處，特別標出。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3</span><span>Uncertainty spread · 不確定性帶</span><span class="tag">三引擎 · 無裁判</span></div>
+    <p><strong>本節是這一頁的重心。</strong>因為沒有矽晶基準，我們無法「驗證」解析基線；能做的只有把<strong>不同模擬器擺在一起，看它們彼此差多少</strong>——這是<strong>不確定性帶（spread）</strong>，不是 parity、不是「對齊」。三個引擎：<strong>(1) 解析 systolic-roofline</strong>（§1/§2）、<strong>(2) ONNXim</strong>（POSTECH cycle-level，<code>engine='onnxim'</code>）、<strong>(3) ScaleSim</strong>（SCALE-Sim v2，32×32 weight-stationary，Phase 1.6 建，<code>engine='scalesim'</code>；單一陣列的 cycles <strong>÷3 核聚合到同 ~6 TOPS 基準——÷3 是「理想線性 3-core scaling」假設</strong>，三方對稱套用）。三個都是 sim、<strong>無一是裁判</strong>。</p>
+    <figure>
+      <img src="../../figures/phase1-site/npu_spread.png" alt="三方模擬器不確定性帶（無矽基準）">
+      <figcaption><strong>怎麼讀：</strong>每根灰豎線是<strong>同一個 shape</strong> 下三個模擬器的全距——藍點解析 roofline、橘方塊 ONNXim、紫菱 SCALE-Sim。這是<strong>一條 spread band，不是 parity 圖</strong>：三方發散 <strong>median {{npu.spread_median_x}}× / max {{npu.spread_max_x}}×</strong>（SCALE-Sim 最樂觀、ONNXim 最高）。框內字 three-sim SPREAD, no silicon ground truth 是重點：<strong>三條都沒有矽晶當裁判，不能用誰「對」來評判</strong>，這個帶寬就是 NPU 路徑的不確定度。{{npu.scalesim_n}} 個 shape 共同比較；另 {{npu.scalesim_skipped}} 個巨型 FFN/prefill 形狀對 cycle-accurate 的 ScaleSim 不可行、<strong>對稱略過並記錄</strong>。
+        <span class="ft">圖 NPU·2 · 來源 phase1.6/npu_scalesim.json › three_way_subset + phase1.3/m4_npu_onnxim.json · 腳本 tools/plotting/site_npu.py</span>
+      </figcaption>
+    </figure>
+    <p><strong>~{{npu.spread_median_x}}× 三方發散怎麼解讀（不是誰對誰錯）：</strong>解析 roofline 把 systolic 的 fill/drain、NoC、DRAM scheduling 抽象掉，偏樂觀；ONNXim 把這些 cycle-level 開銷算進去，偏高；ScaleSim 走自己的 systolic mapping，落在另一端。趨勢方向一致，但因<strong>三邊都無矽晶基準，這個發散的來源無法從外部定責</strong>。<strong>第三個 sim 不會讓任何值更可信</strong>——它只是 surface 更多不確定性，這正是 #13 無矽的代價，不是缺陷。</p>
+    <div class="note"><b>ONNXim / ScaleSim 都不是 issue #13、也不是矽晶校準。</b>兩者都是更重的<strong>模擬器</strong>，與解析 roofline 做 sim-vs-sim 趨勢交叉；#13 silicon gate 維持 superseded-not-satisfied，獨立不受影響。三個 sim、無裁判，所以「三方一致」不代表「正確」、「中間值」也不代表「較可信」。N≤64 的細小 shape 在 ONNXim 會 crash、巨型 shape ScaleSim 跑不動，兩邊各自的 drop 都已記錄。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§3b</span><span>原生 systolic 特性 · 設計指引</span><span class="tag">model-emergent · 非 RKNPU2 量測</span></div>
+    <p>把 ScaleSim 配成通用 32×32 weight-stationary 陣列後，三個 sensitivity 會「長出來」。<strong>但要誠實:ScaleSim 本身就是 32×32 陣列模擬器，這些效應對它是<u>建構性</u>的（positive control），不是發現。</strong>把<strong>同樣的 probe 也量在 ONNXim 上（pre-registered grid，K=2048、N≥128），結果並不一致</strong>:<strong>對齊</strong>在 ScaleSim 固定 {{npu.sens_align}}×、在 ONNXim 隨 regime 變（decode 1.13× / prefill 2.84×）——這是兩 sim 真正分歧的地方；<strong>operand 順序</strong>在這個乾淨 grid 上<strong>兩個 sim 都接近 1、都沒有明顯效應</strong>（ScaleSim 0.79×、ONNXim 0.99×；右圖那根 {{npu.sens_order}}× 是 ScaleSim 早期 K=512／N=64 的 off-grid probe，反而說明這個「順序效應」grid-相依、不穩健）。所以這些<strong>不是普世的「脈動重力」，而是模型相依、無矽可裁判（#13）</strong>。下圖是 <strong>ScaleSim</strong> 早期 probe 的 sensitivity（pre-registered 兩 sim 對照值見 <code>npu_characteristic_compare.json</code>）：</p>
+    <figure>
+      <img src="../../figures/phase1-site/npu_sensitivity.png" alt="原生 systolic sensitivity（model-emergent，非矽量測）">
+      <figcaption><strong>怎麼讀：</strong>左圖——array 利用率隨 activation batch M 攀升：<strong>decode GEMV（M=1）只用到 ~{{npu.decode_util}}% 的 32×32 陣列</strong>（單一 token 餵不滿脈動陣列），batch 到 M=128 才到 ~{{npu.batch_util}}%。右圖——<strong>ScaleSim（建構性）</strong>三個 sensitivity 的 worst/best：<strong>對齊 {{npu.sens_align}}×</strong>（N 整除 32 vs 不整除）、<strong>operand 順序 {{npu.sens_order}}×</strong>（同樣 MAC 數、M↔N 對調）、<strong>shape/batch {{npu.sens_shape}}×</strong>。<strong>誠實標籤：model, NOT silicon</strong>——這是「一個 32×32-WS 脈動<strong>模型</strong>會產生的」，<strong>不是量到的 RKNPU2 事實</strong>；且 pre-registered grid 上<strong>對齊是 ONNXim regime-相依、order 兩 sim 都很弱</strong>（見上文），只有 shape 方向一致。
+        <span class="ft">圖 NPU·3 · 來源 phase1.6/npu_scalesim.json › native_sensitivity · 腳本 tools/plotting/site_npu.py</span>
+      </figcaption>
+    </figure>
+    <div class="note"><b>給未來使用者的設計指引（當假說、非定律）：</b>shape/batch 是<strong>兩個 sim 唯一方向一致</strong>的效應——decode GEMV 餵不滿陣列（ScaleSim ~{{npu.decode_util}}% 利用率），batch 起來才划算；這條可當設計提示。<strong>但對齊是 regime-相依</strong>（ONNXim decode 1.13× / prefill 2.84×，非固定）、<strong>operand 順序在乾淨 grid 上兩個 sim 都很弱</strong>（0.79× / 0.99×），所以這兩個都<strong>不能</strong>當成穩健的「脈動重力」。無矽可裁判（#13）→ 這些是<strong>模型相依的假說</strong>，Phase 2 要嘛拿到 RKNPU2 矽驗證、要嘛在 provenance 標明是哪個 sim 的行為。HeteroInfer（Hexagon NPU）量到同方向 shape 效應，僅<strong>方向性佐證</strong>、magnitude 不可比。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>Validation gate · 驗證門檻</span><span class="tag">無數值 gate · trend-shape only</span></div>
+    <p><strong>本頁不存在任何數值校準結果。</strong>原 Phase 1.2 計劃要求 per-op median ≤10%、p95 ≤20%（對 RKNPU2 <strong>silicon</strong> 的誤差 gate）。這個 gate <strong>沒有達成、也永遠不會在 Phase 1 達成</strong>——因為沒有矽。狀態記為 <strong>superseded-not-satisfied</strong>：解析 trend-shape 模型<strong>取代（supersedes）</strong>它成為交付物，但<strong>沒有達成（not satisfied）</strong>那個 silicon gate。</p>
+    <table>
+      <caption>#13 silicon 數值 gate（ADR-0006 gate revision）— 全部 superseded-not-satisfied</caption>
+      <thead><tr><th>指標</th><th class="num">門檻</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td>per-op median 誤差</td><td class="num">≤ 10%</td><td class="fail">⚠ superseded-not-satisfied（無矽，未達成）</td></tr>
+        <tr><td>per-op p95 誤差</td><td class="num">≤ 20%</td><td class="fail">⚠ superseded-not-satisfied（無矽，未達成）</td></tr>
+      </tbody>
+    </table>
+    <p>唯一的「驗收」是 <strong>trend-shape 勾稽</strong>——三條形狀對得上借來的 HeteroInfer 趨勢，<strong>全部標 simulated，無一是數值 gate</strong>：</p>
+    <table>
+      <caption>Phase 1.2 trend-shape 勾稽（m4_npu.json › trend_conditions）— 全 simulated，非數值門檻</caption>
+      <thead><tr><th>檢查</th><th>結果</th><th>標籤</th></tr></thead>
+      <tbody>
+        <tr><td>(a) Fig3 階梯：knee 對齊借來的 32×32（7 knees，單調不減）</td><td>形狀吻合</td><td class="fail">simulated（非校準）</td></tr>
+        <tr><td>(b) Fig4 order/shape factor ≤ 6×（飽和於借來上限）</td><td>形狀吻合</td><td class="fail">simulated（非校準）</td></tr>
+        <tr><td>(c) Fig5 BW 分率 59–66%（分母=68 GB/s）</td><td>落在帶內</td><td class="fail">simulated/borrowed</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><b>誠實邊界一句話：</b>三條 trend 「pass」只代表<strong>形狀對得上借來的趨勢</strong>，<strong>不代表絕對延遲被驗證</strong>。本頁沒有任何 ✅ PASS 的數值門檻，因為沒有矽晶可以 PASS。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§5</span><span>Phase-2 就緒度</span></div>
+    <p><strong>interface-ready，但數值不可信。</strong><code>NpuModel(spec, engine='analytic'|'onnxim'|'scalesim')</code> 實作了凍結的 <code>predict(wl) → {latency_us, bound, provenance}</code> 介面，與 M1/M2/M4-CPU+GPU 同一合約，Phase 2 可直接在 <code>engine=</code> 槽切換三個 sim。但任何包含 NPU 路徑的整機輸出，provenance <strong>必須傳播 <code>simulated (RKNPU2, no silicon, #13)</code> 標籤</strong>。</p>
+    <table>
+      <thead><tr><th>項目</th><th>狀態</th></tr></thead>
+      <tbody>
+        <tr><td><code>NpuModel</code> 凍結介面（analytic / onnxim 同合約）</td><td class="pass">✅ interface-ready</td></tr>
+        <tr><td>RKNPU2 silicon 校準（#13）</td><td class="fail">⚠ superseded-not-satisfied（板離線，micro-benchmark 未採集）</td></tr>
+        <tr><td>NPU 絕對延遲</td><td class="fail">⚠ 未驗證——只能當趨勢方向，不可信為數值</td></tr>
+        <tr><td>三方模型 spread（median ~{{npu.spread_median_x}}×）</td><td class="fail">⚠ 已記錄、無法定責（三邊皆無矽基準）</td></tr>
+        <tr><td>NPU primary L4 裁決</td><td class="fail">⚠ 延到 Phase 2 L4（需 silicon 或外部基準才能定責 spread）</td></tr>
+        <tr><td>ScaleSim 第三引擎（Phase 1.6 已建）</td><td class="fail">⚠ 已建、仍 simulated：三方多一條線、仍無裁判（巨型 shape 略過）</td></tr>
+        <tr><td>能耗</td><td class="fail">⚠ 不可判（無 power telemetry）</td></tr>
+      </tbody>
+    </table>
+    <p><strong>silicon 升級路徑：</strong>若 aetina 板回線、<code>measurements/aetina/rknpu2_matmul.json</code> 補上，只需把 engine 換成 <code>'calibrated'</code>、從 JSON fit 參數（比照 M4-GPU 的 <code>gpu_mali_g610</code> 方式），合約即可從 SIMULATED 升格——Phase 2 不需動介面。在那之前，<strong>NPU 是 Phase 2 integration 裡傳播不確定性、且無矽錨點可修正的高風險路徑</strong>。</p>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個數字皆回查 committed artifact</div>
+    <ol>
+      <li>解析 trend-shape：<code>validation/reports/phase1.2/m4_npu.json › trend_conditions / upgrade.issue_13_silicon</code></li>
+      <li>ONNXim sim-vs-sim spread：<code>validation/reports/phase1.3/m4_npu_onnxim.json › per_shape / median_abs_delta_pct / max_abs_delta_pct</code></li>
+      <li>解析參數 / 來源標籤：<code>simulator/specs/npu_rknpu2.json › tops_int8, systolic_dim, bw_GBs, provenance</code></li>
+      <li>模型實作 / 凍結介面：<code>simulator/models/m4_npu.py › NpuModel.predict（engine='analytic'|'onnxim'）</code></li>
+      <li>ONNXim 配置：<code>tools/onnxim/rknpu2_approx.json</code>；快取輸出 <code>simulated/onnxim/rknpu2_sim_matmul.json</code></li>
+      <li>合約 / gate 狀態：<code>validation/contracts/m4_npu.yaml › status=SIMULATED, no_numeric_gate, superseded_gate</code></li>
+      <li>silicon 缺席：<code>measurements/aetina/rknpu2_matmul.json</code>（NOT collected，issue #13，板離線）</li>
+      <li>ScaleSim 三方 spread + 原生 sensitivity：<code>validation/reports/phase1.6/npu_scalesim.json › three_way_subset / native_sensitivity / skipped_shapes</code>；driver <code>tools/scalesim/run_rknpu2_scalesim.py</code>、分析 <code>tools/analysis/fit_npu_scalesim.py</code>；快取 <code>simulated/scalesim/rknpu2_sim_matmul.json</code></li>
+    </ol>
+  </div>
+
+</section>

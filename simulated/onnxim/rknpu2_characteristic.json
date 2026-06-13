@@ -1,0 +1,1199 @@
+{
+ "_doc": "ONNXim va1e86296 RKNPU2-approx characteristic sweep (Phase 1.6b): does ONNXim exhibit a 32-period staircase / alignment-order-shape sensitivity? simulated, NOT silicon (#13). H0 = smooth, no 32-step; burden on rejecting it. Independent of the committed spread (npu_onnxim_trace.py).",
+ "config": "rknpu2_approx (32x32 x3, INT8, dram=ramulator2)",
+ "onnxim_commit": "a1e86296",
+ "fixed_contraction_K": 2048,
+ "wall_seconds": 160.0,
+ "honesty": "simulated (ONNXim generic-systolic, RKNPU2-approx), NOT silicon",
+ "missing_shapes": [],
+ "rows": [
+  {
+   "shape": [
+    1,
+    2048,
+    128
+   ],
+   "cycles": 56117,
+   "latency_us": 56.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    136
+   ],
+   "cycles": 59532,
+   "latency_us": 59.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    144
+   ],
+   "cycles": 63549,
+   "latency_us": 63.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    152
+   ],
+   "cycles": 67559,
+   "latency_us": 67.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    158
+   ],
+   "cycles": 69959,
+   "latency_us": 69.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    159
+   ],
+   "cycles": 70319,
+   "latency_us": 70.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    160
+   ],
+   "cycles": 70319,
+   "latency_us": 70.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    161
+   ],
+   "cycles": 70584,
+   "latency_us": 70.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    162
+   ],
+   "cycles": 70984,
+   "latency_us": 70.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    168
+   ],
+   "cycles": 73257,
+   "latency_us": 73.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    176
+   ],
+   "cycles": 76544,
+   "latency_us": 76.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    184
+   ],
+   "cycles": 79992,
+   "latency_us": 79.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    190
+   ],
+   "cycles": 83599,
+   "latency_us": 83.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    191
+   ],
+   "cycles": 84022,
+   "latency_us": 84.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    192
+   ],
+   "cycles": 84444,
+   "latency_us": 84.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    193
+   ],
+   "cycles": 86804,
+   "latency_us": 86.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    194
+   ],
+   "cycles": 87302,
+   "latency_us": 87.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    200
+   ],
+   "cycles": 87394,
+   "latency_us": 87.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    208
+   ],
+   "cycles": 90284,
+   "latency_us": 90.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    216
+   ],
+   "cycles": 93319,
+   "latency_us": 93.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    224
+   ],
+   "cycles": 97419,
+   "latency_us": 97.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    232
+   ],
+   "cycles": 100264,
+   "latency_us": 100.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    240
+   ],
+   "cycles": 103149,
+   "latency_us": 103.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    248
+   ],
+   "cycles": 106179,
+   "latency_us": 106.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    254
+   ],
+   "cycles": 108259,
+   "latency_us": 108.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    255
+   ],
+   "cycles": 108684,
+   "latency_us": 108.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    256
+   ],
+   "cycles": 109059,
+   "latency_us": 109.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    257
+   ],
+   "cycles": 112924,
+   "latency_us": 112.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    258
+   ],
+   "cycles": 113309,
+   "latency_us": 113.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    264
+   ],
+   "cycles": 115249,
+   "latency_us": 115.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    272
+   ],
+   "cycles": 118344,
+   "latency_us": 118.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    280
+   ],
+   "cycles": 121994,
+   "latency_us": 121.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    288
+   ],
+   "cycles": 125949,
+   "latency_us": 125.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    296
+   ],
+   "cycles": 126484,
+   "latency_us": 126.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    304
+   ],
+   "cycles": 130814,
+   "latency_us": 130.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    312
+   ],
+   "cycles": 134159,
+   "latency_us": 134.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    320
+   ],
+   "cycles": 137399,
+   "latency_us": 137.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    328
+   ],
+   "cycles": 141549,
+   "latency_us": 141.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    336
+   ],
+   "cycles": 145449,
+   "latency_us": 145.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    344
+   ],
+   "cycles": 148914,
+   "latency_us": 148.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    352
+   ],
+   "cycles": 152179,
+   "latency_us": 152.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    360
+   ],
+   "cycles": 155119,
+   "latency_us": 155.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    368
+   ],
+   "cycles": 159559,
+   "latency_us": 159.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    376
+   ],
+   "cycles": 163059,
+   "latency_us": 163.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    382
+   ],
+   "cycles": 165539,
+   "latency_us": 165.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    383
+   ],
+   "cycles": 165999,
+   "latency_us": 165.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    384
+   ],
+   "cycles": 166389,
+   "latency_us": 166.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    385
+   ],
+   "cycles": 168742,
+   "latency_us": 168.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    386
+   ],
+   "cycles": 169239,
+   "latency_us": 169.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    392
+   ],
+   "cycles": 169239,
+   "latency_us": 169.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    400
+   ],
+   "cycles": 172749,
+   "latency_us": 172.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    408
+   ],
+   "cycles": 176599,
+   "latency_us": 176.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    416
+   ],
+   "cycles": 179469,
+   "latency_us": 179.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    424
+   ],
+   "cycles": 182134,
+   "latency_us": 182.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    432
+   ],
+   "cycles": 185024,
+   "latency_us": 185.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    440
+   ],
+   "cycles": 188349,
+   "latency_us": 188.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    448
+   ],
+   "cycles": 192144,
+   "latency_us": 192.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    456
+   ],
+   "cycles": 193059,
+   "latency_us": 193.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    464
+   ],
+   "cycles": 196252,
+   "latency_us": 196.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    472
+   ],
+   "cycles": 199694,
+   "latency_us": 199.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    480
+   ],
+   "cycles": 203949,
+   "latency_us": 203.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    488
+   ],
+   "cycles": 207399,
+   "latency_us": 207.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    496
+   ],
+   "cycles": 210609,
+   "latency_us": 210.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    504
+   ],
+   "cycles": 214139,
+   "latency_us": 214.0
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    512
+   ],
+   "cycles": 217219,
+   "latency_us": 217.0
+  },
+  {
+   "shape": [
+    32,
+    2048,
+    256
+   ],
+   "cycles": 162110,
+   "latency_us": 162.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    128
+   ],
+   "cycles": 111377,
+   "latency_us": 111.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    136
+   ],
+   "cycles": 313907,
+   "latency_us": 313.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    144
+   ],
+   "cycles": 316687,
+   "latency_us": 316.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    152
+   ],
+   "cycles": 319142,
+   "latency_us": 319.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    158
+   ],
+   "cycles": 331535,
+   "latency_us": 331.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    159
+   ],
+   "cycles": 333762,
+   "latency_us": 333.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    160
+   ],
+   "cycles": 336829,
+   "latency_us": 336.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    161
+   ],
+   "cycles": 238804,
+   "latency_us": 238.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    162
+   ],
+   "cycles": 238924,
+   "latency_us": 238.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    168
+   ],
+   "cycles": 241927,
+   "latency_us": 241.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    176
+   ],
+   "cycles": 246182,
+   "latency_us": 246.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    184
+   ],
+   "cycles": 248332,
+   "latency_us": 248.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    190
+   ],
+   "cycles": 251722,
+   "latency_us": 251.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    191
+   ],
+   "cycles": 252762,
+   "latency_us": 252.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    192
+   ],
+   "cycles": 253720,
+   "latency_us": 253.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    193
+   ],
+   "cycles": 297964,
+   "latency_us": 297.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    194
+   ],
+   "cycles": 298224,
+   "latency_us": 298.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    200
+   ],
+   "cycles": 301544,
+   "latency_us": 301.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    208
+   ],
+   "cycles": 304232,
+   "latency_us": 304.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    216
+   ],
+   "cycles": 307287,
+   "latency_us": 307.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    224
+   ],
+   "cycles": 309819,
+   "latency_us": 309.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    232
+   ],
+   "cycles": 319594,
+   "latency_us": 319.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    240
+   ],
+   "cycles": 322999,
+   "latency_us": 322.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    248
+   ],
+   "cycles": 326424,
+   "latency_us": 326.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    254
+   ],
+   "cycles": 329127,
+   "latency_us": 329.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    255
+   ],
+   "cycles": 329492,
+   "latency_us": 329.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    256
+   ],
+   "cycles": 329872,
+   "latency_us": 329.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    257
+   ],
+   "cycles": 592740,
+   "latency_us": 592.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    258
+   ],
+   "cycles": 591604,
+   "latency_us": 591.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    264
+   ],
+   "cycles": 582199,
+   "latency_us": 582.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    272
+   ],
+   "cycles": 583692,
+   "latency_us": 583.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    280
+   ],
+   "cycles": 585467,
+   "latency_us": 585.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    288
+   ],
+   "cycles": 606189,
+   "latency_us": 606.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    296
+   ],
+   "cycles": 403522,
+   "latency_us": 403.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    304
+   ],
+   "cycles": 407389,
+   "latency_us": 407.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    312
+   ],
+   "cycles": 408714,
+   "latency_us": 408.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    320
+   ],
+   "cycles": 412497,
+   "latency_us": 412.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    328
+   ],
+   "cycles": 456189,
+   "latency_us": 456.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    336
+   ],
+   "cycles": 458234,
+   "latency_us": 458.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    344
+   ],
+   "cycles": 461099,
+   "latency_us": 461.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    352
+   ],
+   "cycles": 483412,
+   "latency_us": 483.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    360
+   ],
+   "cycles": 487777,
+   "latency_us": 487.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    368
+   ],
+   "cycles": 490932,
+   "latency_us": 490.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    376
+   ],
+   "cycles": 495882,
+   "latency_us": 495.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    382
+   ],
+   "cycles": 496284,
+   "latency_us": 496.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    383
+   ],
+   "cycles": 496679,
+   "latency_us": 496.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    384
+   ],
+   "cycles": 498232,
+   "latency_us": 498.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    385
+   ],
+   "cycles": 543322,
+   "latency_us": 543.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    386
+   ],
+   "cycles": 543537,
+   "latency_us": 543.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    392
+   ],
+   "cycles": 547347,
+   "latency_us": 547.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    400
+   ],
+   "cycles": 550087,
+   "latency_us": 550.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    408
+   ],
+   "cycles": 553782,
+   "latency_us": 553.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    416
+   ],
+   "cycles": 555844,
+   "latency_us": 555.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    424
+   ],
+   "cycles": 565854,
+   "latency_us": 565.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    432
+   ],
+   "cycles": 567939,
+   "latency_us": 567.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    440
+   ],
+   "cycles": 572939,
+   "latency_us": 572.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    448
+   ],
+   "cycles": 574772,
+   "latency_us": 574.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    456
+   ],
+   "cycles": 472144,
+   "latency_us": 472.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    464
+   ],
+   "cycles": 474857,
+   "latency_us": 474.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    472
+   ],
+   "cycles": 479912,
+   "latency_us": 479.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    480
+   ],
+   "cycles": 482479,
+   "latency_us": 482.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    488
+   ],
+   "cycles": 524022,
+   "latency_us": 524.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    496
+   ],
+   "cycles": 527557,
+   "latency_us": 527.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    504
+   ],
+   "cycles": 530257,
+   "latency_us": 530.0
+  },
+  {
+   "shape": [
+    128,
+    2048,
+    512
+   ],
+   "cycles": 551604,
+   "latency_us": 551.0
+  },
+  {
+   "shape": [
+    256,
+    2048,
+    128
+   ],
+   "cycles": 325115,
+   "latency_us": 325.0
+  }
+ ]
+}

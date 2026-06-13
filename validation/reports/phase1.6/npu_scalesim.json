@@ -1,0 +1,291 @@
+{
+ "module": "m4_npu_scalesim",
+ "phase": "1.6",
+ "engine": "scalesim (SCALE-Sim v2)",
+ "no_silicon_ground_truth": true,
+ "honesty": "all three engines are SIMULATIONS, no silicon (#13). This is a SPREAD = model divergence, NOT validation. No value is more likely; ScaleSim is a third uncertainty point, not a judge. NPU primary deferred to Phase 2 L4.",
+ "config": {
+  "array": [
+   32,
+   32
+  ],
+  "dataflow": "ws",
+  "freq_ghz": 1.0,
+  "cores": 3,
+  "sram_kB_assumed": {
+   "ifmap": 256,
+   "filter": 256,
+   "ofmap": 128
+  },
+  "array_dim_provenance": "32x32 borrowed from Hexagon (HeteroInfer) [assumption]",
+  "cores_aggregation": "/cores assumes ideal linear 3-core scaling [assumption]"
+ },
+ "three_way_subset": [
+  {
+   "shape": [
+    1,
+    2048,
+    128
+   ],
+   "lat_us": {
+    "analytic": 13.0,
+    "onnxim": 56.0,
+    "scalesim": 8.1
+   },
+   "spread_max_over_min": 6.91
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    256
+   ],
+   "lat_us": {
+    "analytic": 26.1,
+    "onnxim": 109.0,
+    "scalesim": 16.2
+   },
+   "spread_max_over_min": 6.73
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    512
+   ],
+   "lat_us": {
+    "analytic": 52.2,
+    "onnxim": 217.0,
+    "scalesim": 32.4
+   },
+   "spread_max_over_min": 6.7
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    1024
+   ],
+   "lat_us": {
+    "analytic": 104.3,
+    "onnxim": 433.0,
+    "scalesim": 64.9
+   },
+   "spread_max_over_min": 6.67
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    1536
+   ],
+   "lat_us": {
+    "analytic": 156.5,
+    "onnxim": 705.0,
+    "scalesim": 97.3
+   },
+   "spread_max_over_min": 7.25
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    2048
+   ],
+   "lat_us": {
+    "analytic": 208.7,
+    "onnxim": 846.0,
+    "scalesim": 129.7
+   },
+   "spread_max_over_min": 6.52
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    3072
+   ],
+   "lat_us": {
+    "analytic": 313.0,
+    "onnxim": 1487.0,
+    "scalesim": 194.6
+   },
+   "spread_max_over_min": 7.64
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    1024
+   ],
+   "lat_us": {
+    "analytic": 208.7,
+    "onnxim": 921.0,
+    "scalesim": 129.7
+   },
+   "spread_max_over_min": 7.1
+  }
+ ],
+ "spread_median_x": 6.91,
+ "spread_max_x": 7.64,
+ "skipped_shapes": [
+  {
+   "shape": [
+    1,
+    4096,
+    4096
+   ],
+   "fold_passes": 16384,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    14336
+   ],
+   "fold_passes": 57344,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    1,
+    14336,
+    4096
+   ],
+   "fold_passes": 57344,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    1024
+   ],
+   "fold_passes": 32768,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    4096
+   ],
+   "fold_passes": 131072,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    14336
+   ],
+   "fold_passes": 458752,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    256,
+    14336,
+    4096
+   ],
+   "fold_passes": 458752,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  }
+ ],
+ "skipped_note": "ScaleSim is cycle-accurate -> the giant FFN/prefill shapes (7 of 15) are intractable and skipped SYMMETRICALLY; the 3-way compares the common subset.",
+ "decode_gemv_util_pct": 1.05,
+ "native_sensitivity": {
+  "tags": [
+   "native (emergent, not tuned)",
+   "model, NOT silicon \u2014 a 32x32-WS systolic MODEL, not measured RKNPU2"
+  ],
+  "framing": "faithful-to-architecture exposure: future schedulers that EXPLOIT alignment/order/batching get speedup; that IGNORE it pay the cost. Magnitudes are model-native (not RKNPU2 facts).",
+  "heteroinfer_corroboration": "directional only (same sign of effect: 32-alignment, order, shape) \u2014 NOT magnitude agreement; different array/config.",
+  "alignment_N": {
+   "cases": [
+    {
+     "label": "N=128 (mult of 32)",
+     "MKN": [
+      32,
+      512,
+      128
+     ],
+     "cycles": 8063,
+     "util_pct": 25.4
+    },
+    {
+     "label": "N=130 (misaligned)",
+     "MKN": [
+      32,
+      512,
+      130
+     ],
+     "cycles": 10079,
+     "util_pct": 20.64
+    }
+   ],
+   "worst_over_best": 1.25
+  },
+  "order_MN_swap": {
+   "cases": [
+    {
+     "label": "M=256,N=64 (M-heavy)",
+     "MKN": [
+      256,
+      512,
+      64
+     ],
+     "cycles": 11199,
+     "util_pct": 73.15
+    },
+    {
+     "label": "M=64,N=256 (N-heavy)",
+     "MKN": [
+      64,
+      512,
+      256
+     ],
+     "cycles": 20223,
+     "util_pct": 40.51
+    }
+   ],
+   "worst_over_best": 1.81
+  },
+  "shape_M": {
+   "cases": [
+    {
+     "label": "M=1 (decode GEMV)",
+     "MKN": [
+      1,
+      512,
+      256
+     ],
+     "cycles": 12159,
+     "util_pct": 1.05
+    },
+    {
+     "label": "M=32",
+     "MKN": [
+      32,
+      512,
+      256
+     ],
+     "cycles": 16127,
+     "util_pct": 25.4
+    },
+    {
+     "label": "M=128 (prefill batch)",
+     "MKN": [
+      128,
+      512,
+      256
+     ],
+     "cycles": 28415,
+     "util_pct": 57.66
+    }
+   ],
+   "worst_over_best": 2.34
+  }
+ }
+}

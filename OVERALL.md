@@ -207,11 +207,13 @@
 
 ---
 
-## Phase 0.4 — 溫度／熱特性量測（可與 Phase 1/2 並行）
+## Phase 0.4 — 溫度／熱特性量測（已以 Card-only sub-wave 1.7 部分完成）
+
+> **狀態（2026-06-12）**：Phase 0.4 的量產 Card 部分已以 **sub-wave 1.7（M8）** 執行完成——溫度可讀性驗證 + 熱響應 RC 特性化 + 效能-溫度耦合，見 `docs/report/phase1-site/12-thermal.html`、`validation/contracts/m8.yaml`、`validation/reports/phase1.7/thermal.json`。Aetina 端（per-sensor、更寬溫度範圍、降溫 τ）待送修回來再補。
 
 **可行性結論：你的「量測除溫度外全部 → 再量溫度」切分可行，但有兩個前提以維持模組化。**
 
-1. **溫度可量測**：Metis 有 5 個溫度 sensor（board + 4 core），可經 `axlogdevice --slog`（`core_temps=[…]`）、`inference.py` 自動顯示、或 app tracer `core_temp` 讀取；Aetina 的 RK3588 也有標準 thermal zone（sysfs）。⚠ **待確認**：量產 Metis Card（PCIe Rev1 測試板、無 power telemetry）是否一樣能讀 core temp——需先驗證；若不能，Metis 端熱資料只能來自 Aetina Alpha。
+1. **溫度可量測 — ✅ 已驗證（Phase 1.7）**：量產 Metis Card **能讀核溫**。`axllm --show-temp` 的 `core_temp` tracer 在 SDK 1.6.0 不支援；`axlogdevice --slog` 的 `core_temps=[5 sensor]` 存在但**間歇不可靠**；可靠來源是 `axrunmodel` 摘要行的 `temp:<C>C`（**最高核溫**）。實量：滿 4-core 合成 matmul 載 → 平台 ~44°C、τ~139s、效能與溫度無關（不 throttle，110°C 門檻未達）。Aetina 的 RK3588 thermal zone（sysfs，per-sensor）待板回再補。
 2. **熱模組設計成「事後附加層」**：v1 把熱模型做成讀取 Phase 2 已算出的 per-op 活動/功耗 timeline → 估算溫度（升溫/降溫曲線），**不**把 throttling 回饋進 timing。如此熱模組與 M1–M7 完全解耦，可在 Phase 0.4 結束後才以獨立模組（命名 **M8，選用**）加入，不動既有模組。閉環 throttling（溫度→降頻→影響 timing）會耦合進 M1/M3，列為 v1 之後的 stretch。
 
 **為什麼獨立成一個 phase**：(a) 熱特性需持續負載到穩態 + 擷取暫態，耗時遠長於單點 latency 量測；(b) 反過來，Phase 0.3 的非熱量測本來就**必須在散熱受控下**進行（否則 throttling 污染數據）。兩者天生該分開。

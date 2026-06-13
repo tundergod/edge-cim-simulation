@@ -21,6 +21,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 REP = ROOT / "validation/reports"
 PARAMS = ROOT / "simulator/models/params"
+SPECS = ROOT / "simulator/specs"
 
 
 def _load(rel):
@@ -29,6 +30,14 @@ def _load(rel):
 
 def _load_param(name):
     return json.loads((PARAMS / f"{name}.json").read_text())
+
+
+def _load_spec(name):
+    return json.loads((SPECS / f"{name}.json").read_text())
+
+
+def _load_meas(rel):
+    return json.loads((ROOT / "measurements" / rel).read_text())
 
 
 # ---- formatters ---------------------------------------------------------------
@@ -67,6 +76,16 @@ def load():
     ram2 = _load("phase1.3/m2_ramulator2.json")
     onnxim = _load("phase1.3/m4_npu_onnxim.json")
     m2pcie = _load_param("m2_pcie")
+    th = _load("phase1.7/thermal.json")
+    nps = _load("phase1.6/npu_scalesim.json")
+    cpuic = _load_param("m4_cpu_instrcount")
+    cpurk = _load_spec("cpu_rk3588")
+    m5 = _load("phase1.1/m5.json")
+    sweep = _load_meas("op_inventory/sweep_matrix.json")
+    oh = cpuic["overhead_op_us"]
+    a76 = cpurk["clusters"]["a76"]
+    cbw = cpurk["cache_bw_GBs"]
+    pm5 = m5["per_model"]
 
     g1 = m1["throughput_fit_gate_native"]
     return {
@@ -82,6 +101,15 @@ def load():
         "cim.prefill_m_max":     _i(m1p["prefill_M_max"]),                            # 508
         "cim.prefill_affine_a":  _f(pref["affine_fit_tile_lat_us"]["a_weight_load_us"], 1),  # 40.8
         "cim.prefill_affine_b":  _f(pref["affine_fit_tile_lat_us"]["b_per_col_us"], 3),      # 0.094
+        "cim.prefill_asymptote_tops": _f(pref["affine_fit_tile_lat_us"]["asymptote_TOPS"], 1),  # 89.2
+        # CIM G_eff 2D fit params + decode anchor (m1_cim.json) — exposed so the page table is JSON-sourced
+        "cim.geff_gmax":   _f(m1p["G_eff_Gmax_gops"], 2),                             # 333.67
+        "cim.geff_na":     _f(m1p["G_eff_Na"], 1),                                    # 577.2
+        "cim.geff_kb":     _f(m1p["G_eff_Kb"], 1),                                    # 574.1
+        "cim.geff_ncores": _i(m1p["n_cores"]),                                        # 4
+        "cim.geff_width":  _i(m1p["n_cores"] * m1p["core_width"]),                    # 2048
+        "cim.decode_anchor_lat":  _f(m1p["prefill_M_decode_anchor"]["tile_lat_us"], 2),   # 41.83
+        "cim.decode_anchor_gops": _f(m1p["prefill_M_decode_anchor"]["gops_measured"], 1), # 200.5
         # CIM multi-tile residency-cliff (Phase 1.5, Card-native): old tile-sum -> new cliff model
         "cim.multitile_old_median_pct": _p0(mt["old_vs_new"]["old_tilesum_median"]),  # 31
         "cim.multitile_old_max_pct":    _p0(mt["old_vs_new"]["old_tilesum_max"]),     # 100
@@ -105,6 +133,7 @@ def load():
         "mem.lpddr4x_eff_pct": _i(m2["params"]["efficiency_vs_measured_peak"] * 100), # 71
         "mem.lpddr5_eff":      _f(m2["params"]["sim_lpddr5_eff_GBs"], 1),             # 33.3
         "mem.lpddr5_peak":     _f(m2["params"]["sim_lpddr5_peak_GBs"], 1),            # 51.2
+        "mem.lpddr5_eff_pct":  _i(m2["params"]["sim_lpddr5_eff_GBs"] / m2["params"]["sim_lpddr5_peak_GBs"] * 100),  # 65
         "mem.pcie_floor_us":   _i(m2["params"]["pcie_floor_us"]),                     # 911
         "mem.pcie_floor_full": _f(m2pcie["fixed_overhead_us_median"], 1),            # 911.1
         "mem.pcie_p95":        _f(m2pcie["fixed_overhead_us_p95"], 1),               # 1111.7
@@ -119,6 +148,36 @@ def load():
         "cpu.resid_median_pct":   _f(m4cpu12["overall_residual_pct"]["median"], 2),   # 1.18
         "cpu.resid_p95_pct":      _f(m4cpu12["overall_residual_pct"]["p95"], 2),      # 7.31
         "cpu.resid_max_pct":      _f(m4cpu12["overall_residual_pct"]["max"], 2),      # 13.12
+        # CPU instruction-count roofline params (m4_cpu_instrcount.json + cpu_rk3588.json spec)
+        "cpu.eta_c":   _f(cpuic["eta_c"], 4),                                         # 0.1521
+        "cpu.eta_bw":  _f(cpuic["eta_bw"], 1),                                        # 0.6
+        "cpu.overhead_residual": _f(oh["residual"], 3),                              # 0.789
+        "cpu.overhead_rmsnorm":  _f(oh["rmsnorm"], 3),                               # 16.815
+        "cpu.overhead_rope":     _f(oh["rope_apply"], 3),                            # 22.525
+        "cpu.overhead_sampling": _f(oh["sampling_argmax"], 3),                       # 7.357
+        "cpu.overhead_softmax":  _f(oh["softmax"], 3),                               # 15.497
+        "cpu.overhead_swiglu":   _f(oh["swiglu"], 1),                                # 0.0
+        "cpu.a76_lane_gops": _f(cpurk["neon"]["fp32_lanes"] * a76["ipc"] * a76["freq_ghz"], 1),  # 18.4
+        "cpu.l1_bw":   _f(cbw["l1d_per_core"], 1),                                    # 73.6
+        "cpu.l2_bw":   _f(cbw["l2_per_core"], 1),                                     # 36.8
+        "cpu.l3_bw":   _f(cbw["l3_shared_per_core"], 1),                              # 18.4
+        # M5 workload — op inventory coverage (m5.json + sweep_matrix.json)
+        "m5.sweep_total":  _i(sweep["total"]),                                        # 580
+        "m5.n_categories": _i(len(sweep["counts"])),                                  # 9
+        "m5.cnt_matmul":    _i(sweep["counts"]["matmul"]),                            # 105
+        "m5.cnt_attention": _i(sweep["counts"]["attention"]),                         # 95
+        "m5.cnt_rope":      _i(sweep["counts"]["rope"]),                              # 190
+        "m5.cnt_kv_cache":  _i(sweep["counts"]["kv_cache"]),                          # 9
+        "m5.n_distinct_1b":   _i(pm5["llama-3.2-1b"]["n_distinct_ops"]),              # 38
+        "m5.n_distinct_3b":   _i(pm5["llama-3.2-3b"]["n_distinct_ops"]),              # 38
+        "m5.n_distinct_8b":   _i(pm5["llama-3.1-8b"]["n_distinct_ops"]),              # 38
+        "m5.n_distinct_qwen": _i(pm5["qwen2.5-7b"]["n_distinct_ops"]),                # 39
+        "m5.n_tasks":         _i(pm5["llama-3.1-8b"]["n_tasks"]),                     # 4
+        "m5.orphans_1b":   _i(len(pm5["llama-3.2-1b"]["orphan_ops"])),                # 0
+        "m5.orphans_3b":   _i(len(pm5["llama-3.2-3b"]["orphan_ops"])),                # 0
+        "m5.orphans_8b":   _i(len(pm5["llama-3.1-8b"]["orphan_ops"])),                # 0
+        "m5.orphans_qwen": _i(len(pm5["qwen2.5-7b"]["orphan_ops"])),                  # 0
+        "m5.orphans_total": _i(sum(len(p["orphan_ops"]) for p in pm5.values())),      # 0
         # GPU (M4)
         "gpu.attn_median_pct":    _p1(m4gpu11["attn_offload_gate"]["median_relerr"]), # 0.6
         "gpu.attn_p95_pct":       _p1(m4gpu11["attn_offload_gate"]["p95_relerr"]),    # 1.1
@@ -129,6 +188,16 @@ def load():
         # NPU heavy-sim cross-check (M4)
         "npu.onnxim_median_delta_pct": _f(onnxim["median_abs_delta_pct"], 1),         # 317.9
         "npu.onnxim_max_delta_pct":    _f(onnxim["max_abs_delta_pct"], 1),            # 493.4
+        # NPU 3-way model spread (Phase 1.6, +SCALE-Sim) — model divergence, NO silicon judge
+        "npu.spread_median_x": _f(nps["spread_median_x"], 1),                          # 6.9
+        "npu.spread_max_x":    _f(nps["spread_max_x"], 1),                             # 7.6
+        "npu.scalesim_n":      _i(len(nps["three_way_subset"])),                       # 8
+        "npu.scalesim_skipped": _i(len(nps["skipped_shapes"])),                        # 7
+        "npu.decode_util":     _f(nps["decode_gemv_util_pct"], 0),                     # 1 (~1% decode GEMV util)
+        "npu.batch_util":      _f(nps["native_sensitivity"]["shape_M"]["cases"][-1]["util_pct"], 0),  # 58 (M=128 util)
+        "npu.sens_align":      _f(nps["native_sensitivity"]["alignment_N"]["worst_over_best"], 2),   # 1.25
+        "npu.sens_order":      _f(nps["native_sensitivity"]["order_MN_swap"]["worst_over_best"], 2),  # 1.81
+        "npu.sens_shape":      _f(nps["native_sensitivity"]["shape_M"]["worst_over_best"], 2),        # 2.34
         # Recompose (e2e)
         "recompose.err_8b_pct": _p1(rc["rel_error_8b"]),                              # 9.5
         "recompose.pred_8b":    _f(rc["pred_8b_tok_s"], 2),                           # 2.44
@@ -142,6 +211,25 @@ def load():
         "energy.total_mj": _f(m7["per_token_total_mJ"], 2),                          # 256.15
         "energy.corners": _i(m7["sensitivity_pm20pct"]["corners_tested"]),           # 16
         "energy.flips":   _i(m7["sensitivity_pm20pct"]["conclusion_flips"]),         # 0
+        # Thermal (M8, Phase 1.7 — Metis Card, max-core temp)
+        "thermal.t0":        _f(th["rc_fit"]["T0_C"], 0),                              # 41
+        "thermal.tinf":      _f(th["rc_fit"]["Tinf_C"], 1),                            # 44.1
+        "thermal.tau":       _i(th["rc_fit"]["tau_s"]),                                # 139
+        "thermal.rc_rmse":   _f(th["rc_fit"]["rmse_C"], 2),                            # 0.24
+        "thermal.plateau":   _f(th["temperature"]["plateau_obs_C"], 0),               # 44
+        "thermal.span":      _f(th["temperature"]["span_C"], 0),                       # 3
+        "thermal.headroom":  _f(th["headroom_to_downscale_C"], 0),                     # 66
+        "thermal.downscale": _i(th["throttle_thresholds_C"]["freq_downscale"]),        # 110
+        "thermal.pvt":       _i(th["throttle_thresholds_C"]["pvt_warning"]),           # 95
+        "thermal.perf_slope": _f(th["perf_vs_temp"]["slope_fps_per_C"], 1),            # 2.2
+        "thermal.perf_noise": _f(th["perf_vs_temp"]["noise_std_fps"], 0),              # 8
+        "thermal.fps_cov":   _f(th["perf_vs_temp"]["fps_cov_pct"], 2),                 # 0.05
+        "thermal.fps_mean":  _i(th["perf_vs_temp"]["fps_mean"]),                        # 15297
+        "thermal.n_bursts":  _i(th["load"]["n_bursts"]),                                # 40
+        "thermal.cores":     _i(th["load"]["cores"]),                                   # 4
+        "thermal.sustained_min": _f(th["load"]["sustained_s"] / 60, 0),                # 11
+        "thermal.ceiling":   _f(th["load_sweep"]["ceiling_C"], 0),                     # 44
+        "thermal.max_busy":  _i(th["load_sweep"]["max_device_busy_pct"]),              # 48
     }
 
 

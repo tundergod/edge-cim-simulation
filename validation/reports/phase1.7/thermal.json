@@ -1,0 +1,80 @@
+{
+ "module": "m8_thermal",
+ "phase": "1.7",
+ "platform": "metis_card",
+ "load": {
+  "kind": "synthetic 1x1-conv==2048x2048 matmul (non-LLM)",
+  "cores": 4,
+  "M": 256,
+  "tool": "axrunmodel --seconds --aipu-cores",
+  "n_bursts": 40,
+  "sustained_s": 680.9
+ },
+ "temperature": {
+  "source": "axrunmodel temp:<C>C (max core)",
+  "resolution_C": 1,
+  "start_C": 41.0,
+  "plateau_obs_C": 44.0,
+  "span_C": 3.0,
+  "host_load_max": 7.77
+ },
+ "rc_fit": {
+  "model": "T(t)=Tinf-(Tinf-T0)*exp(-t/tau)",
+  "T0_C": 41.0,
+  "Tinf_C": 44.1,
+  "tau_s": 139.0,
+  "rmse_C": 0.24,
+  "note": "1C temp resolution + small span (board runs cool) -> tau is approximate"
+ },
+ "perf_vs_temp": {
+  "fps_mean": 15297.4,
+  "fps_cov_pct": 0.05,
+  "slope_fps_per_C": 2.19,
+  "noise_std_fps": 8.0,
+  "throttle_observed": false,
+  "verdict": "flat: |slope| within constant-temp noise -> no throttle in the achievable range"
+ },
+ "load_sweep": {
+  "note": "M=64/256/448 single-stream + a 2-context concurrency attempt. Heavier load does NOT get hotter: the workload is host-feed bound (device max ~48% utilized) and the device allows only ONE context (concurrency -> DeviceInUse), so power is capped -> 44C ceiling.",
+  "per_M": [
+   {
+    "M": 64,
+    "dev_fps": 21927,
+    "system_fps": 10623,
+    "device_busy_pct": 48,
+    "plateau_C": 44
+   },
+   {
+    "M": 256,
+    "dev_fps": 15297,
+    "system_fps": null,
+    "device_busy_pct": null,
+    "plateau_C": 44
+   },
+   {
+    "M": 448,
+    "dev_fps": 12018,
+    "system_fps": 2769,
+    "device_busy_pct": 23,
+    "plateau_C": 42
+   }
+  ],
+  "ceiling_C": 44,
+  "max_device_busy_pct": 48,
+  "concurrency": "single-context only (2nd axrunmodel -> ZE connection error / DeviceInUse)"
+ },
+ "throttle_thresholds_C": {
+  "pvt_warning": 95,
+  "hw_throttle": 105,
+  "freq_downscale": 110,
+  "sw_throttle": 200
+ },
+ "throttle_reached": false,
+ "headroom_to_downscale_C": 66.0,
+ "sanity": {
+  "temp_positive": true,
+  "monotonic_nondecreasing": true,
+  "below_pvt_warning_95C": true
+ },
+ "honesty": "no power telemetry -> no absolute R_th(\u00b0C/W); single lumped max-core temp (5-sensor slog intermittent); cooldown not captured (collector idle); perf-vs-temp only over the achievable 41-44\u00b0C envelope, 110\u00b0C downscale threshold never reached; shared die (verified effectively single-user at capture, host_load logged)."
+}
