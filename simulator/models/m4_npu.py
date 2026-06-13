@@ -2,7 +2,7 @@
 
 NO RKNPU2 silicon (board offline, issue #13) -> EVERY number here is `simulated`/`borrowed`,
 NOT calibrated. This is an analytic systolic-array roofline whose *shape* is borrowed from the
-HeteroInfer characterization (SOSP'25, papers/methodology-and-simulators/) and whose ceilings come
+HeteroInfer characterization (SOSP'25, docs/papers/methodology-and-simulators/) and whose ceilings come
 from the RKNPU2 datasheet (6 TOPS INT8). It exists so the heterogeneous simulator has a swappable
 NPU slot; it is replaced, not validated, by silicon (#13) or ONNXim (Phase 1.3).
 
