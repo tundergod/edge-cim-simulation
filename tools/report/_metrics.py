@@ -77,6 +77,7 @@ def load():
     onnxim = _load("phase1.3/m4_npu_onnxim.json")
     m2pcie = _load_param("m2_pcie")
     th = _load("phase1.7/thermal.json")
+    nps = _load("phase1.6/npu_scalesim.json")
     cpuic = _load_param("m4_cpu_instrcount")
     cpurk = _load_spec("cpu_rk3588")
     m5 = _load("phase1.1/m5.json")
@@ -187,6 +188,16 @@ def load():
         # NPU heavy-sim cross-check (M4)
         "npu.onnxim_median_delta_pct": _f(onnxim["median_abs_delta_pct"], 1),         # 317.9
         "npu.onnxim_max_delta_pct":    _f(onnxim["max_abs_delta_pct"], 1),            # 493.4
+        # NPU 3-way model spread (Phase 1.6, +SCALE-Sim) — model divergence, NO silicon judge
+        "npu.spread_median_x": _f(nps["spread_median_x"], 1),                          # 6.9
+        "npu.spread_max_x":    _f(nps["spread_max_x"], 1),                             # 7.6
+        "npu.scalesim_n":      _i(len(nps["three_way_subset"])),                       # 8
+        "npu.scalesim_skipped": _i(len(nps["skipped_shapes"])),                        # 7
+        "npu.decode_util":     _f(nps["decode_gemv_util_pct"], 0),                     # 1 (~1% decode GEMV util)
+        "npu.batch_util":      _f(nps["native_sensitivity"]["shape_M"]["cases"][-1]["util_pct"], 0),  # 58 (M=128 util)
+        "npu.sens_align":      _f(nps["native_sensitivity"]["alignment_N"]["worst_over_best"], 2),   # 1.25
+        "npu.sens_order":      _f(nps["native_sensitivity"]["order_MN_swap"]["worst_over_best"], 2),  # 1.81
+        "npu.sens_shape":      _f(nps["native_sensitivity"]["shape_M"]["worst_over_best"], 2),        # 2.34
         # Recompose (e2e)
         "recompose.err_8b_pct": _p1(rc["rel_error_8b"]),                              # 9.5
         "recompose.pred_8b":    _f(rc["pred_8b_tok_s"], 2),                           # 2.44

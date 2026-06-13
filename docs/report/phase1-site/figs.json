@@ -63,7 +63,12 @@
   },
   "npu_spread": {
     "dir": "phase1-site", "script": "tools/plotting/site_npu.py",
-    "sources": ["validation/reports/phase1.3/m4_npu_onnxim.json"]
+    "sources": ["validation/reports/phase1.6/npu_scalesim.json",
+                "validation/reports/phase1.3/m4_npu_onnxim.json", "simulator/models/m4_npu.py"]
+  },
+  "npu_sensitivity": {
+    "dir": "phase1-site", "script": "tools/plotting/site_npu.py",
+    "sources": ["validation/reports/phase1.6/npu_scalesim.json"]
   },
   "m5_op_breakdown": {
     "dir": "phase1-site", "script": "tools/plotting/site_m5.py",

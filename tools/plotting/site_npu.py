@@ -32,6 +32,7 @@ from simulator.models.m4_npu import NpuModel  # noqa: E402
 
 TREND = ROOT / "validation/reports/phase1.2/m4_npu.json"
 ONNXIM = ROOT / "validation/reports/phase1.3/m4_npu_onnxim.json"
+SCALESIM = ROOT / "validation/reports/phase1.6/npu_scalesim.json"
 SPEC = ROOT / "simulator/specs/npu_rknpu2.json"
 OUT = ROOT / "docs/figures/phase1-site"
 
@@ -94,50 +95,75 @@ def fig_systolic(trend, spec):
     S.save(fig, OUT / "npu_systolic")
 
 
-def fig_spread(onx):
-    """§3 -- analytic vs ONNXim per-shape as an UNCERTAINTY BAND (NOT an agreement plot): ONNXim
-    runs systematically ~4x above the analytic roofline (median ~318%, max ~493%). A third engine,
-    ScaleSim, is PENDING (empty dashed slot). No silicon judges any of the three."""
-    rows = sorted(onx["per_shape"], key=lambda r: r["analytic_us"])
-    an = np.array([r["analytic_us"] for r in rows])
-    on = np.array([r["onnxim_us"] for r in rows])
+def fig_spread(nps):
+    """§3 -- THREE sims per-shape as an UNCERTAINTY BAND (NOT an agreement plot): analytic / ONNXim /
+    SCALE-Sim diverge by a median ~7x with NO silicon judge between them. ScaleSim is a third
+    uncertainty point, not an adjudicator -- divergence is the cost of #13, not a defect."""
+    rows = sorted(nps["three_way_subset"], key=lambda r: r["lat_us"]["analytic"])
+    an = np.array([r["lat_us"]["analytic"] for r in rows])
+    on = np.array([r["lat_us"]["onnxim"] for r in rows])
+    sc = np.array([r["lat_us"]["scalesim"] for r in rows])
     x = np.arange(len(rows))
-    med = onx["median_abs_delta_pct"]; mx = onx["max_abs_delta_pct"]
-    i_max = int(np.argmax([r["delta_pct"] for r in rows]))
+    med, mx = nps["spread_median_x"], nps["spread_max_x"]
 
     fig, ax = plt.subplots(figsize=(5.8, 3.6))
     _grid(ax)
-    # the spread itself: a vertical band from analytic (lower) to ONNXim (upper) at each shape.
-    ax.vlines(x, an, on, color=GREY, lw=1.4, zorder=2)
-    ax.scatter(x, an, s=34, color=HERO, edgecolors="white", linewidths=0.5, zorder=4,
-               label="analytic roofline (lower)")
-    ax.scatter(x, on, s=34, color=WARM, marker="s", edgecolors="white", linewidths=0.5, zorder=4,
-               label="ONNXim heavy-sim (upper)")
-    # ScaleSim: a clearly-empty, dashed pending slot -- no data, deliberately blank.
-    ax.scatter([], [], marker="D", facecolors="none", edgecolors=SCALE, linewidths=1.1,
-               label="ScaleSim (pending -- to be built)")
-    ax.plot([x[0], x[-1]], [an.max() * 1.55] * 2, ls="--", color=SCALE, lw=1.1, zorder=1)
-    ax.text(x[-1], an.max() * 1.62, "ScaleSim slot (pending)", color=SCALE, fontsize=7.6,
-            ha="right", va="bottom", style="italic")
-    # call out the spread magnitude (uncertainty, not error).
-    ax.annotate(f"max spread +{mx:.0f}%", xy=(x[i_max], on[i_max]),
-                xytext=(x[i_max] - 3.4, on[i_max] * 1.9), fontsize=8, color=WARM, fontweight="bold",
-                ha="center", arrowprops=dict(arrowstyle="->", color=WARM, lw=0.9))
+    lo = np.minimum.reduce([an, on, sc]); hi = np.maximum.reduce([an, on, sc])
+    ax.vlines(x, lo, hi, color=GREY, lw=1.4, zorder=2)   # the spread = full divergence band
+    ax.scatter(x, an, s=34, color=HERO, edgecolors="white", linewidths=0.5, zorder=4, label="analytic roofline")
+    ax.scatter(x, on, s=34, color=WARM, marker="s", edgecolors="white", linewidths=0.5, zorder=4, label="ONNXim heavy-sim")
+    ax.scatter(x, sc, s=40, color=SCALE, marker="D", edgecolors="white", linewidths=0.5, zorder=4, label="SCALE-Sim (32x32-WS)")
     ax.set_yscale("log")
     ax.set_xlim(-0.7, len(rows) - 0.3)
-    ax.set_xticks([]); ax.set_xlabel("GEMM shapes  (sorted by analytic latency)")
+    ax.set_xticks([]); ax.set_xlabel(f"GEMM shapes ({len(rows)} common; {len(nps['skipped_shapes'])} giant shapes ScaleSim-intractable)")
     ax.set_ylabel("latency  (us, log)")
     ax.text(0.015, 0.97,
-            f"sim-vs-sim SPREAD, no silicon ground truth (#13)\nmedian spread {med:.0f}% -- neither is a judge",
+            f"three-sim SPREAD, no silicon ground truth (#13)\nmedian {med:.1f}x / max {mx:.1f}x -- none is a judge",
             transform=ax.transAxes, fontsize=8, va="top", color=INK,
             bbox=dict(boxstyle="round,pad=0.4", fc=PAPER, ec=GRID, lw=0.8))
     ax.legend(loc="lower right", fontsize=7.6)
     S.save(fig, OUT / "npu_spread")
 
 
+def fig_sensitivity(nps):
+    """§(new) -- native systolic sensitivities the MODEL produces (emergent, not tuned; NOT measured
+    RKNPU2). Hero: per-token decode GEMV runs at ~1% array utilisation, climbing as activations batch
+    (M). Side: alignment / operand-order / shape best<->worst ratios. Design guideline, not silicon."""
+    sens = nps["native_sensitivity"]
+    sm = sens["shape_M"]["cases"]
+    M = [c["MKN"][0] for c in sm]; util = [c["util_pct"] for c in sm]
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(6.4, 3.4), gridspec_kw={"width_ratios": [1.25, 1]})
+    _grid(a1); _grid(a2)
+    # left: utilisation climbs with batched activations M (decode GEMV ~1% -> prefill)
+    bars = a1.bar(range(len(M)), util, width=0.6, color=[WARM, HERO, HERO])
+    for i, (m, u) in enumerate(zip(M, util)):
+        a1.text(i, u + 1.5, f"{u:.0f}%", ha="center", fontsize=9.5, fontweight="bold")
+    a1.set_xticks(range(len(M))); a1.set_xticklabels([f"M={m}" for m in M])
+    a1.set_ylabel("array utilisation  (%)"); a1.set_ylim(0, max(util) * 1.2)
+    a1.text(0.03, 0.96, "decode GEMV (M=1)\n~1% of a 32x32 array", transform=a1.transAxes,
+            fontsize=8, va="top", color=WARM)
+    a1.set_xlabel("activation batch  M")
+    # right: the three best<->worst sensitivity ratios
+    labels = ["align\n(N % 32)", "order\n(M<->N)", "shape\n(M batch)"]
+    ratios = [sens["alignment_N"]["worst_over_best"], sens["order_MN_swap"]["worst_over_best"],
+              sens["shape_M"]["worst_over_best"]]
+    a2.barh(range(3), ratios, color=HERO, height=0.6)
+    for i, r in enumerate(ratios):
+        a2.text(r + 0.03, i, f"{r:.2f}x", va="center", fontsize=9.5, fontweight="bold")
+    a2.set_yticks(range(3)); a2.set_yticklabels(labels, fontsize=8.5)
+    a2.set_xlabel("worst / best  (cycles)"); a2.set_xlim(1, max(ratios) * 1.25)
+    a2.invert_yaxis()
+    fig.suptitle("native systolic sensitivity -- model-emergent (not tuned), NOT measured RKNPU2",
+                 fontsize=8.5, color=SOFT, y=1.0)
+    fig.tight_layout(rect=(0, 0, 1, 0.97))
+    S.save(fig, OUT / "npu_sensitivity")
+
+
 def main():
     fig_systolic(load(TREND), load(SPEC))
-    fig_spread(load(ONNXIM))
+    nps = load(SCALESIM)
+    fig_spread(nps)
+    fig_sensitivity(nps)
     figs = sorted(p.name for p in OUT.glob("npu_*.png"))
     print(f"wrote {len(figs)} NPU site figures: {figs}")
 

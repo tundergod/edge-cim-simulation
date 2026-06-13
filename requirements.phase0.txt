@@ -1,6 +1,7 @@
 accelerate==1.13.0
 datasets==4.8.5
 numpy==2.4.6
+scalesim==2.0.2  # Phase 1.6: NPU third engine (SCALE-Sim v2 systolic, engine='scalesim')
 tokenizers==0.22.2
 torch==2.12.0
 transformers==5.9.0

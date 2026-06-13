@@ -1,0 +1,258 @@
+{
+ "_doc": "SCALE-Sim v2 RKNPU2-approx (32x32 weight-stationary, 3-core /cores aggregation) per-shape GEMM latency. SIMULATED, NOT silicon (#13). Native systolic behaviour is EMERGENT (not tuned, no order-transpose optimisation). Dims/SRAM/dataflow/cores-scaling all assumed/borrowed, NOT measured RKNPU2.",
+ "config": {
+  "array": [
+   32,
+   32
+  ],
+  "dataflow": "ws",
+  "freq_ghz": 1.0,
+  "cores": 3,
+  "sram_kB_assumed": {
+   "ifmap": 256,
+   "filter": 256,
+   "ofmap": 128
+  },
+  "array_dim_provenance": "32x32 borrowed from Hexagon (HeteroInfer) [assumption]",
+  "cores_aggregation": "/cores assumes ideal linear 3-core scaling [assumption]"
+ },
+ "honesty": "simulated (SCALE-Sim v2 generic-systolic, RKNPU2-approx), NOT silicon",
+ "tags": [
+  "native (not tuned)",
+  "model, NOT silicon"
+ ],
+ "rows": [
+  {
+   "shape": [
+    1,
+    2048,
+    128
+   ],
+   "latency_us": 8.1,
+   "cycles_1core": 24319,
+   "overall_util_pct": 1.05
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    256
+   ],
+   "latency_us": 16.2,
+   "cycles_1core": 48639,
+   "overall_util_pct": 1.05
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    512
+   ],
+   "latency_us": 32.4,
+   "cycles_1core": 97279,
+   "overall_util_pct": 1.05
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    1024
+   ],
+   "latency_us": 64.9,
+   "cycles_1core": 194559,
+   "overall_util_pct": 1.05
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    1536
+   ],
+   "latency_us": 97.3,
+   "cycles_1core": 291839,
+   "overall_util_pct": 1.05
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    2048
+   ],
+   "latency_us": 129.7,
+   "cycles_1core": 389119,
+   "overall_util_pct": 1.05
+  },
+  {
+   "shape": [
+    1,
+    2048,
+    3072
+   ],
+   "latency_us": 194.6,
+   "cycles_1core": 583679,
+   "overall_util_pct": 1.05
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    1024
+   ],
+   "latency_us": 129.7,
+   "cycles_1core": 389119,
+   "overall_util_pct": 1.05
+  }
+ ],
+ "skipped_shapes": [
+  {
+   "shape": [
+    1,
+    4096,
+    4096
+   ],
+   "fold_passes": 16384,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    1,
+    4096,
+    14336
+   ],
+   "fold_passes": 57344,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    1,
+    14336,
+    4096
+   ],
+   "fold_passes": 57344,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    1024
+   ],
+   "fold_passes": 32768,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    4096
+   ],
+   "fold_passes": 131072,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    256,
+    4096,
+    14336
+   ],
+   "fold_passes": 458752,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  },
+  {
+   "shape": [
+    256,
+    14336,
+    4096
+   ],
+   "fold_passes": 458752,
+   "reason": "scalesim fold-passes > cap 8000 (cycle-sim too slow)"
+  }
+ ],
+ "native_sensitivity": {
+  "alignment_N": {
+   "cases": [
+    {
+     "label": "N=128 (mult of 32)",
+     "MKN": [
+      32,
+      512,
+      128
+     ],
+     "cycles": 8063,
+     "util_pct": 25.4
+    },
+    {
+     "label": "N=130 (misaligned)",
+     "MKN": [
+      32,
+      512,
+      130
+     ],
+     "cycles": 10079,
+     "util_pct": 20.64
+    }
+   ],
+   "worst_over_best": 1.25
+  },
+  "order_MN_swap": {
+   "cases": [
+    {
+     "label": "M=256,N=64 (M-heavy)",
+     "MKN": [
+      256,
+      512,
+      64
+     ],
+     "cycles": 11199,
+     "util_pct": 73.15
+    },
+    {
+     "label": "M=64,N=256 (N-heavy)",
+     "MKN": [
+      64,
+      512,
+      256
+     ],
+     "cycles": 20223,
+     "util_pct": 40.51
+    }
+   ],
+   "worst_over_best": 1.81
+  },
+  "shape_M": {
+   "cases": [
+    {
+     "label": "M=1 (decode GEMV)",
+     "MKN": [
+      1,
+      512,
+      256
+     ],
+     "cycles": 12159,
+     "util_pct": 1.05
+    },
+    {
+     "label": "M=32",
+     "MKN": [
+      32,
+      512,
+      256
+     ],
+     "cycles": 16127,
+     "util_pct": 25.4
+    },
+    {
+     "label": "M=128 (prefill batch)",
+     "MKN": [
+      128,
+      512,
+      256
+     ],
+     "cycles": 28415,
+     "util_pct": 57.66
+    }
+   ],
+   "worst_over_best": 2.34
+  }
+ }
+}

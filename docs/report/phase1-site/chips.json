@@ -54,7 +54,7 @@
     {"label": "fitted", "on": true,
      "src": "simulator/models/m4_npu.py › NpuModel analytic systolic-roofline ; simulator/specs/npu_rknpu2.json. NOT fit to RKNPU2 silicon — analytic-baseline params only."},
     {"label": "simulated", "on": true,
-     "src": "validation/reports/phase1.3/m4_npu_onnxim.json (ONNXim generic-systolic, sim-vs-sim spread) + ScaleSim (pending, to be built — no committed artifact yet)."},
+     "src": "TWO heavy-sims, both RKNPU2-approx, NOT silicon: validation/reports/phase1.3/m4_npu_onnxim.json (ONNXim generic-systolic) + validation/reports/phase1.6/npu_scalesim.json (SCALE-Sim v2 32x32-WS, Phase 1.6, 3-way spread ~7x + native_sensitivity, native-emergent NOT tuned)."},
     {"label": "assumption", "on": true, "warn": true,
      "src": "simulator/specs/npu_rknpu2.json › tops_int8=6 (datasheet), systolic_dim=32x32, dispatch floor ~2.0 us nominal."},
     {"label": "borrowed", "on": true,

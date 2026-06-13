@@ -37,6 +37,7 @@ _ORDER_SHAPE_MAX = 6.0      # Fig4: up to 6x order/shape penalty
 _DISPATCH_FLOOR_US = 2.0    # simulated fixed per-op dispatch (no silicon -> nominal, assumption)
 _DTYPE_BYTES = {"int4": 0.5, "int8": 1.0, "int16": 2.0, "fp16": 2.0}
 _ONNXIM = Path(__file__).resolve().parents[2] / "simulated/onnxim/rknpu2_sim_matmul.json"
+_SCALESIM = Path(__file__).resolve().parents[2] / "simulated/scalesim/rknpu2_sim_matmul.json"
 
 
 def _onnxim_table():
@@ -46,6 +47,16 @@ def _onnxim_table():
     if not _ONNXIM.exists():
         return {}
     return {tuple(r["shape"]): r["latency_us"] for r in json.loads(_ONNXIM.read_text())["rows"]}
+
+
+def _scalesim_table():
+    """Phase 1.6 third engine: cached SCALE-Sim v2 (generic 32x32-WS systolic, RKNPU2-approx,
+    3-core /cores aggregation) per-shape latency table (tools/scalesim/run_rknpu2_scalesim.py).
+    Native systolic behaviour emergent, NOT tuned; SIMULATED, NOT silicon (#13). {} when absent
+    -> documented analytic fallback (incl. the giant shapes skipped as cycle-sim-intractable)."""
+    if not _SCALESIM.exists():
+        return {}
+    return {tuple(r["shape"]): r["latency_us"] for r in json.loads(_SCALESIM.read_text())["rows"]}
 
 
 class NpuModel(UnitEngine):
@@ -64,6 +75,8 @@ class NpuModel(UnitEngine):
         # Phase 1.3 heavy backend: engine='onnxim' replaces the analytic latency with ONNXim's
         # per-shape sim (same constructor + frozen contract). Empty table -> analytic fallback.
         self.onnxim = _onnxim_table() if engine == "onnxim" else {}
+        # Phase 1.6 third engine: engine='scalesim' (SCALE-Sim v2, same drop-in contract).
+        self.scalesim = _scalesim_table() if engine == "scalesim" else {}
 
     def _pad(self, x):
         """Pad a dim UP to the borrowed systolic quantum (Fig3 staircase source)."""
@@ -130,4 +143,13 @@ class NpuModel(UnitEngine):
             else:
                 prov += ("; engine='onnxim' requested but the ONNXim C++ build is deferred -> "
                          "ANALYTIC fallback (risk-#7 documented, report user)")
+        elif self.engine == "scalesim":   # Phase 1.6 third engine (drop-in; SCALE-Sim != #13 silicon)
+            hit = self.scalesim.get((wl.M, wl.K, wl.N))
+            if hit is not None:
+                lat, bound = float(hit), "compute"
+                prov = ("simulated (SCALE-Sim v2 32x32-WS systolic, 3-core /cores aggregation; native "
+                        "behaviour emergent NOT tuned; RKNPU2-approx, NOT silicon; Phase 1.6)")
+            else:
+                prov += ("; engine='scalesim' requested but this shape was skipped as cycle-sim-"
+                         "intractable -> ANALYTIC fallback (documented)")
         return {"latency_us": float(lat), "bound": bound, "provenance": prov}
