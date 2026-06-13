@@ -12,8 +12,8 @@ import json
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-SCALESIM = ROOT / "simulated/scalesim/rknpu2_sim_matmul.json"
-ONNXIM = ROOT / "simulated/onnxim/rknpu2_sim_matmul.json"
+SCALESIM = ROOT / "simulator/engines/scalesim/rknpu2_sim_matmul.json"
+ONNXIM = ROOT / "simulator/engines/onnxim/rknpu2_sim_matmul.json"
 SPEC = ROOT / "simulator/specs/npu_rknpu2.json"
 OUT = ROOT / "validation/reports/phase1.6/npu_scalesim.json"
 

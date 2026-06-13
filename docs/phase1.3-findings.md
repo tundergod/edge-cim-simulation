@@ -18,7 +18,7 @@ backends: **ONNXim** (NPU) and **Ramulator2** (memory, LPDDR5). Same constructor
   `tools/analysis/check_phase1_3.py` (drop-in interchange + faithful fallback + honesty tags).
 - **Build runbooks + cache contract** — `tools/ramulator2/README.md`, `tools/onnxim/README.md`:
   the exact clone/build steps + the JSON cache format each adapter reads
-  (`simulated/ramulator2/lpddr5_eff.json`, `simulated/onnxim/rknpu2_sim_matmul.json`).
+  (`simulator/engines/ramulator2/lpddr5_eff.json`, `simulator/engines/onnxim/rknpu2_sim_matmul.json`).
 - **ADR-0002 reconcile** — the "Ramulator2 → Phase 2" wording is corrected everywhere to
   "single-stream LPDDR5 cross-check = Phase 1.3 (`engine='ramulator2'`); multi-unit contention =
   Phase 2": `docs/adr/0002-memory-model.md` (revision), `OVERALL.md` (risk #6),
@@ -60,8 +60,8 @@ backends: **ONNXim** (NPU) and **Ramulator2** (memory, LPDDR5). Same constructor
   - **Two honest gotchas** (documented in the config): the 8×8-template `spad_size:64` is too small for
     32×32 (div-by-zero → scaled to 2048/512); ONNXim SIGFPE-crashes on N≤64 GEMMs (degenerate tiling)
     → the sweep uses N≥128.
-- **Produced (this branch):** the caches `simulated/ramulator2/lpddr5_eff.json` +
-  `simulated/onnxim/rknpu2_sim_matmul.json`, the delta reports
+- **Produced (this branch):** the caches `simulator/engines/ramulator2/lpddr5_eff.json` +
+  `simulator/engines/onnxim/rknpu2_sim_matmul.json`, the delta reports
   `validation/reports/phase1.3/{m2_ramulator2,m4_npu_onnxim}.json`, figures `M2-ramulator2` + `N3`,
   and chapters `M-memory-ramulator2.md` + `N-npu-onnxim.md` all exist. The `engine=` adapters auto-use
   these caches.

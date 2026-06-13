@@ -1,7 +1,7 @@
 """Phase 1.3 — run ONNXim RKNPU2-approx over the NPU matmul shapes (on metiscard via Docker).
 
 Drives ONE `docker run` on metiscard over a canonical (M,K,N) list, parses ONNXim's
-`Simulation Finished at {cycle} cycle {us} us`, writes simulated/onnxim/rknpu2_sim_matmul.json
+`Simulation Finished at {cycle} cycle {us} us`, writes simulator/engines/onnxim/rknpu2_sim_matmul.json
 LOCALLY. ONNXim v a1e86296 is built as image `onnxim`. The committed RKNPU2-approx config and a
 generated sweep script are sent to metiscard:~/edge-cim-simulation/onnxim_io (mounted at /io;
 copied into $ONNXIM_HOME/configs inside the container — NOT bind-mounted over /workspace, which
@@ -21,7 +21,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "tools/onnxim/rknpu2_approx.json"
-OUT = ROOT / "simulated/onnxim/rknpu2_sim_matmul.json"
+OUT = ROOT / "simulator/engines/onnxim/rknpu2_sim_matmul.json"
 HOST = "metiscard"
 IO = "~/edge-cim-simulation/onnxim_io"
 ONNXIM_COMMIT = "a1e86296"

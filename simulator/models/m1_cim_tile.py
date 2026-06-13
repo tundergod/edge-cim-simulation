@@ -1,6 +1,6 @@
 """M1 — CIM tile timing model (Phase 1 fit). Loads params from params/m1_cim.json.
 
-ARCHITECTURE (ISSCC 2024, papers/metis-silicon/metis-aipu-isscc2024.md):
+ARCHITECTURE (ISSCC 2024, docs/papers/metis-silicon/metis-aipu-isscc2024.md):
 Metis is QUAD-CORE; each AI-Core has a 512x512 INT8 D-IMC crossbar (16 banks of
 512-in x 32-out x 4 weight-sets). The simulator's minimum unit is ONE CORE (512 wide);
 `n_cores` is a free parameter (= 4 for Metis). The effective output width of the

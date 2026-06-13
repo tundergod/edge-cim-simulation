@@ -2,7 +2,7 @@
 
 NO RKNPU2 silicon (board offline, issue #13) -> EVERY number here is `simulated`/`borrowed`,
 NOT calibrated. This is an analytic systolic-array roofline whose *shape* is borrowed from the
-HeteroInfer characterization (SOSP'25, papers/methodology-and-simulators/) and whose ceilings come
+HeteroInfer characterization (SOSP'25, docs/papers/methodology-and-simulators/) and whose ceilings come
 from the RKNPU2 datasheet (6 TOPS INT8). It exists so the heterogeneous simulator has a swappable
 NPU slot; it is replaced, not validated, by silicon (#13) or ONNXim (Phase 1.3).
 
@@ -36,8 +36,8 @@ from simulator.models.engine import UnitEngine, Workload
 _ORDER_SHAPE_MAX = 6.0      # Fig4: up to 6x order/shape penalty
 _DISPATCH_FLOOR_US = 2.0    # simulated fixed per-op dispatch (no silicon -> nominal, assumption)
 _DTYPE_BYTES = {"int4": 0.5, "int8": 1.0, "int16": 2.0, "fp16": 2.0}
-_ONNXIM = Path(__file__).resolve().parents[2] / "simulated/onnxim/rknpu2_sim_matmul.json"
-_SCALESIM = Path(__file__).resolve().parents[2] / "simulated/scalesim/rknpu2_sim_matmul.json"
+_ONNXIM = Path(__file__).resolve().parents[2] / "simulator/engines/onnxim/rknpu2_sim_matmul.json"
+_SCALESIM = Path(__file__).resolve().parents[2] / "simulator/engines/scalesim/rknpu2_sim_matmul.json"
 
 
 def _onnxim_table():

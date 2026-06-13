@@ -35,7 +35,7 @@
     <figure>
       <img src="../../figures/phase1-site/npu_systolic.png" alt="實測:兩個 NPU 模擬器是否有 32 systolic 階梯（各自 y 軸，model 非矽）">
       <figcaption><strong>怎麼讀：</strong>固定 K=2048、掃輸出維度 N，兩個模擬器<strong>各畫各的 y 軸（絕對值跨 sim 不可比）</strong>。<strong>紫色 ScaleSim</strong> 兩個 regime 都是乾淨的 32 階梯——但它<strong>本身就是 32×32 陣列模擬器，這個階梯是建構上必然的</strong>，所以它只是 positive control（確認我們的探針抓得到已知的階）。<strong>橘色 ONNXim</strong>（多疊了 NoC／DRAM scheduling）才是有資訊的那個，而它<strong>沒有複製這個階梯</strong>：decode(M=1) 幾乎是<strong>平滑 ∝N</strong>（R²=0.9996，只在 192/256/384 有零星粗跳階、N=160 沒有）；prefill(M=128) 甚至<strong>非單調</strong>（cycles 隨 N 變大反而往下掉）。<strong>結論：32 階梯是 ScaleSim／解析模型的人工產物，不是穩健的預測；無矽可裁判（#13）。</strong>
-        <span class="ft">圖 NPU·1 · 來源 simulated/{onnxim,scalesim}/rknpu2_characteristic.json + phase1.6/npu_characteristic_compare.json（pre-registered 判準）· 腳本 tools/plotting/site_npu.py</span>
+        <span class="ft">圖 NPU·1 · 來源 simulator/engines/{onnxim,scalesim}/rknpu2_characteristic.json + phase1.6/npu_characteristic_compare.json（pre-registered 判準）· 腳本 tools/plotting/site_npu.py</span>
       </figcaption>
     </figure>
     <p style="margin-bottom:0"><strong>Native attention（attn_bmm）</strong>另走純 compute-bound 路徑（activation×activation，無靜態權重可 stall、無 order/shape 懲罰）。GQA heads（=8）走 batch 維、<strong>不</strong>補進 systolic M 槽（否則把 heads 補到 32 會 4× 高估 MACs）；只有 hd、kv 被 pad 到 32 倍數。同樣是解析估計，無矽。</p>
@@ -138,10 +138,10 @@ latency_us  = max(compute_us, memory_us, dispatch_floor)         <span class="c"
       <li>ONNXim sim-vs-sim spread：<code>validation/reports/phase1.3/m4_npu_onnxim.json › per_shape / median_abs_delta_pct / max_abs_delta_pct</code></li>
       <li>解析參數 / 來源標籤：<code>simulator/specs/npu_rknpu2.json › tops_int8, systolic_dim, bw_GBs, provenance</code></li>
       <li>模型實作 / 凍結介面：<code>simulator/models/m4_npu.py › NpuModel.predict（engine='analytic'|'onnxim'）</code></li>
-      <li>ONNXim 配置：<code>tools/onnxim/rknpu2_approx.json</code>；快取輸出 <code>simulated/onnxim/rknpu2_sim_matmul.json</code></li>
+      <li>ONNXim 配置：<code>tools/onnxim/rknpu2_approx.json</code>；快取輸出 <code>simulator/engines/onnxim/rknpu2_sim_matmul.json</code></li>
       <li>合約 / gate 狀態：<code>validation/contracts/m4_npu.yaml › status=SIMULATED, no_numeric_gate, superseded_gate</code></li>
       <li>silicon 缺席：<code>measurements/aetina/rknpu2_matmul.json</code>（NOT collected，issue #13，板離線）</li>
-      <li>ScaleSim 三方 spread + 原生 sensitivity：<code>validation/reports/phase1.6/npu_scalesim.json › three_way_subset / native_sensitivity / skipped_shapes</code>；driver <code>tools/scalesim/run_rknpu2_scalesim.py</code>、分析 <code>tools/analysis/fit_npu_scalesim.py</code>；快取 <code>simulated/scalesim/rknpu2_sim_matmul.json</code></li>
+      <li>ScaleSim 三方 spread + 原生 sensitivity：<code>validation/reports/phase1.6/npu_scalesim.json › three_way_subset / native_sensitivity / skipped_shapes</code>；driver <code>tools/scalesim/run_rknpu2_scalesim.py</code>、分析 <code>tools/analysis/fit_npu_scalesim.py</code>；快取 <code>simulator/engines/scalesim/rknpu2_sim_matmul.json</code></li>
     </ol>
   </div>
 

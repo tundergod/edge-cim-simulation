@@ -6,8 +6,9 @@ measurement is the op inventory (580 op x shape signatures, 9 categories) + per-
 profiles (FLOPs/bytes/intensity), validated with 0 orphans across 4 models.
 Regenerable from committed JSON only. Writes PNG (+PDF/SVG) to docs/figures/phase1-site/.
 
-  m5_op_breakdown — S1: per-model op-category composition (FLOPs + bytes share) — matmul dominates.
-  m5_roofline     — S1/S2: op intensity vs FLOPs, prefill (filled) vs decode (open) — decode ~2.
+  m5_op_breakdown — S1: op-category composition (FLOPs + bytes share), 4 models x 4 workloads.
+  m5_intensity    — S2: op intensity (FLOP/byte) by category, 4 workloads in separate panels.
+                   DATA ONLY — NO hardware ceiling is drawn (we have none measured); NOT a roofline.
   m5_coverage     — S4: 4 models x 9 categories coverage grid, 0 orphans (the gate, visual).
 
 Run: ./.venv/bin/python tools/plotting/site_m5.py
@@ -74,30 +75,35 @@ def _shares(doc, metric, phase):
 
 
 def fig_op_breakdown():
-    """S1 — per-model op-category composition: decode FLOPs share + decode bytes share,
-    4 models. Shows weight-stationary matmul dominates both compute and memory."""
-    docs = {m: load(OP / f"{m}_sharegpt.json") for m in MODEL_ORDER}
-    fig, axes = plt.subplots(1, 2, figsize=(6.4, 3.6))
+    """S1 — decode op-category composition (FLOPs share + bytes share) across ALL 4 models x ALL 4
+    workloads. rows = {FLOPs, bytes}, cols = workloads, bars = the 4 models. Shows weight-stationary
+    matmul dominates both compute and memory in decode, for every (model, workload)."""
+    docs = {(m, t): load(OP / f"{m}_{t}.json") for m in MODEL_ORDER for t in TASK_ORDER}
+    fig, axes = plt.subplots(2, len(TASK_ORDER), figsize=(7.8, 4.4), sharey="row")
     x = np.arange(len(MODEL_ORDER))
-    for ax, metric, ylab in zip(axes, ["flops", "bytes"],
-                                ["decode FLOPs share", "decode bytes share"]):
-        for i, m in enumerate(MODEL_ORDER):
-            sh = _shares(docs[m], metric, "decode")
-            bottom = 0.0
-            for c in CAT_ORDER:
-                ax.bar(i, sh[c], bottom=bottom, color=PALETTE[c], width=0.88,
-                       edgecolor="white", linewidth=0.4, zorder=3)
-                bottom += sh[c]
-        ax.set_xticks(x); ax.set_xticklabels([MLAB[m] for m in MODEL_ORDER])
-        ax.set_ylim(0, 1); ax.set_yticks([0, 0.5, 1.0])
-        ax.set_ylabel(ylab)
-    # direct-labelled legend, top-3 categories only (matmul/attention/kv_cache visible at this scale)
+    for r, (metric, ylab) in enumerate([("flops", "decode FLOPs share"),
+                                        ("bytes", "decode bytes share")]):
+        for c, t in enumerate(TASK_ORDER):
+            ax = axes[r, c]
+            for i, m in enumerate(MODEL_ORDER):
+                sh = _shares(docs[(m, t)], metric, "decode")
+                bottom = 0.0
+                for cat in CAT_ORDER:
+                    ax.bar(i, sh[cat], bottom=bottom, color=PALETTE[cat], width=0.86,
+                           edgecolor="white", linewidth=0.3, zorder=3)
+                    bottom += sh[cat]
+            ax.set_ylim(0, 1); ax.set_yticks([0, 0.5, 1.0])
+            ax.set_xticks(x); ax.set_xticklabels([MLAB[m] for m in MODEL_ORDER], fontsize=6.8)
+            if r == 0:
+                ax.set_title(TLAB[t].replace("\n", " "), fontsize=7.2)
+            if c == 0:
+                ax.set_ylabel(ylab, fontsize=8)
     labs = [("matmul", "matmul"), ("attention", "attention"), ("kv_cache", "kv_cache"),
             ("ffn", "ffn (SwiGLU)"), ("norm", "norm/rope/...")]
     handles = [plt.Rectangle((0, 0), 1, 1, color=PALETTE[c]) for c, _ in labs]
     fig.legend(handles, [t for _, t in labs], ncol=5, loc="lower center",
-               bbox_to_anchor=(0.5, -0.04), fontsize=8, handlelength=1.1, columnspacing=1.2)
-    fig.subplots_adjust(bottom=0.18, wspace=0.32)
+               bbox_to_anchor=(0.5, -0.02), fontsize=7.6, handlelength=1.1, columnspacing=1.2)
+    fig.subplots_adjust(bottom=0.13, wspace=0.18, hspace=0.32)
     S.save(fig, OUT / "m5_op_breakdown")
 
 
@@ -112,45 +118,44 @@ def _agg(doc, phase, cat):
     return None
 
 
-def fig_roofline():
-    """S1/S2 — predicted-side operational intensity vs FLOPs contributed (8B, all 4 tasks):
-    prefill (filled) is compute-bound and scales with length; decode (open) collapses to
-    the memory-bound GEMV ridge at intensity ~2 FLOP/byte for every task."""
+def fig_intensity():
+    """S1/S2 — predicted-side operational intensity (FLOP/byte) by op category, 8B, 4 workloads
+    in SEPARATE panels. NO hardware ceiling / ridge / bound-region is drawn: we have no measured
+    roofline ceiling for this multi-unit workload, so drawing one would be an assumption. This is
+    NOT a roofline — it is the raw intensity distribution. The only claim is the op-level fact that
+    decode GEMV reuses each weight once -> intensity ~2 (left), while prefill matmul is high-intensity
+    (right). prefill = filled, decode = open."""
     model = "llama-3.1-8b"
     docs = {t: load(OP / f"{model}_{t}.json") for t in TASK_ORDER}
-    RIDGE = 20.0  # illustrative compute/memory ridge; measured knee is Phase 0.3 / Phase 1
-    fig, ax = plt.subplots(figsize=(5.8, 3.7))
-    _grid(ax)
-    ax.axvspan(1e-2, RIDGE, color="#eef2f6", zorder=0)
-    ax.axvline(RIDGE, color="#999", ls="--", lw=0.9, zorder=1)
-    seen = set()
-    for t in TASK_ORDER:
+    fig, axes = plt.subplots(1, 4, figsize=(7.8, 2.9), sharex=True, sharey=True)
+    for ax, t in zip(axes, TASK_ORDER):
+        _grid(ax)
         for cat in CAT_ORDER:
             pre = _agg(docs[t], "prefill", cat)
             dec = _agg(docs[t], "decode", cat)
             if pre:
-                ax.scatter(pre[0], pre[1], s=34, marker="o", color=PALETTE[cat],
+                ax.scatter(pre[0], pre[1], s=26, marker="o", color=PALETTE[cat],
                            edgecolors="white", linewidths=0.4, zorder=3)
             if dec:
-                ax.scatter(dec[0], dec[1], s=40, marker="s", facecolors="none",
-                           edgecolors=PALETTE[cat], linewidths=1.1, zorder=4)
-            seen.add(cat)
-    ax.set_xscale("log"); ax.set_yscale("log")
-    ax.set_xlabel("operational intensity  (FLOP/byte)")
-    ax.set_ylabel("FLOPs contributed  (execution-weighted)")
-    ax.text(0.5, 0.04, "memory-bound", transform=ax.transAxes, fontsize=8, color=SOFT,
-            ha="center", va="bottom")
-    ax.text(0.985, 0.04, "compute-bound", transform=ax.transAxes, fontsize=8, color=SOFT,
-            ha="right", va="bottom")
-    ax.annotate("decode GEMV ridge\nintensity ~2 FLOP/byte\n(memory-bound, every task)",
-                xy=(2.0, ax.get_ylim()[1] * 0.02), xytext=(0.06, 0.62), textcoords="axes fraction",
-                fontsize=7.6, color=WARM, ha="left",
-                arrowprops=dict(arrowstyle="->", color=WARM, lw=0.9))
-    # marker legend (shape = phase), category colour explained in caption
-    ph = [plt.Line2D([], [], marker="o", ls="", color="#444", label="prefill (filled)"),
-          plt.Line2D([], [], marker="s", ls="", mfc="none", mec="#444", label="decode (open)")]
-    ax.legend(handles=ph, loc="upper left", fontsize=8)
-    S.save(fig, OUT / "m5_roofline")
+                ax.scatter(dec[0], dec[1], s=30, marker="s", facecolors="none",
+                           edgecolors=PALETTE[cat], linewidths=1.0, zorder=4)
+        ax.set_xscale("log"); ax.set_yscale("log")
+        ax.set_title(TLAB[t].replace("\n", " "), fontsize=7.2)
+        ax.set_xlabel("op intensity (FLOP/byte)", fontsize=7.6)
+        ax.tick_params(labelsize=7)
+    axes[0].set_ylabel("FLOPs contributed\n(exec-weighted)", fontsize=7.6)
+    cats_present = [c for c in CAT_ORDER
+                    if any(_agg(docs[t], p, c) for t in TASK_ORDER for p in ("prefill", "decode"))]
+    cat_h = [plt.Line2D([], [], marker="o", ls="", color=PALETTE[c], label=c) for c in cats_present]
+    ph_h = [plt.Line2D([], [], marker="o", ls="", color="#444", label="prefill (filled)"),
+            plt.Line2D([], [], marker="s", ls="", mfc="none", mec="#444", label="decode (open)")]
+    fig.legend(cat_h + ph_h, [h.get_label() for h in cat_h + ph_h], ncol=len(cat_h + ph_h),
+               loc="lower center", bbox_to_anchor=(0.5, -0.02), fontsize=6.6,
+               handlelength=1.0, columnspacing=0.9)
+    fig.suptitle("operational intensity by op category — 8B, 4 workloads  "
+                 "(data only; NO hardware ceiling assumed — not a roofline)", fontsize=7.8, y=1.02)
+    fig.subplots_adjust(bottom=0.26, wspace=0.12)
+    S.save(fig, OUT / "m5_intensity")
 
 
 def fig_coverage():
@@ -187,7 +192,7 @@ def fig_coverage():
 
 def main():
     fig_op_breakdown()
-    fig_roofline()
+    fig_intensity()
     fig_coverage()
     figs = sorted(p.name for p in OUT.glob("m5_*.png"))
     print(f"wrote {len(figs)} M5 site figures: {figs}")

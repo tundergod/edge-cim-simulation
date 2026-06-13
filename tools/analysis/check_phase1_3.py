@@ -6,7 +6,7 @@ C++ heavy sims are NOT built (this session: external builds were not authorized)
 engines fall back to the analytic result with an honest provenance note — and this check confirms
 (a) the contract holds, (b) the fallback is faithful (same number), (c) the honesty tag says so.
 
-When the heavy sims ARE built (simulated/ramulator2/lpddr5_eff.json, simulated/onnxim/
+When the heavy sims ARE built (simulator/engines/ramulator2/lpddr5_eff.json, simulator/engines/onnxim/
 rknpu2_sim_matmul.json present), the same check confirms the heavy path is used and still conforms.
 
 Run: ./.venv/bin/python tools/analysis/check_phase1_3.py   (exit 0 = pass)
@@ -21,8 +21,8 @@ from simulator.models.engine import Workload, check_return  # noqa: E402
 from simulator.models.m2_memory import MemoryModel           # noqa: E402
 from simulator.models.m4_npu import NpuModel                 # noqa: E402
 
-RAM2 = ROOT / "simulated/ramulator2/lpddr5_eff.json"
-ONNX = ROOT / "simulated/onnxim/rknpu2_sim_matmul.json"
+RAM2 = ROOT / "simulator/engines/ramulator2/lpddr5_eff.json"
+ONNX = ROOT / "simulator/engines/onnxim/rknpu2_sim_matmul.json"
 fails = []
 
 

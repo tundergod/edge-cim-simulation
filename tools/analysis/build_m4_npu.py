@@ -2,7 +2,7 @@
 
 NO RKNPU2 silicon (issue #13, board offline) -> there is NO numeric gate to pass; the only
 acceptance is TREND-SHAPE agreement with the borrowed HeteroInfer characterization (SOSP'25,
-papers/methodology-and-simulators/). This script drives simulator.models.m4_npu.NpuModel and
+docs/papers/methodology-and-simulators/). This script drives simulator.models.m4_npu.NpuModel and
 quantifies the three borrowed trends into explicit conditions, ALL tagged `simulated`:
 
   (a) Fig3 staircase: compute-bound latency vs N is monotone non-decreasing and STEPS exactly on

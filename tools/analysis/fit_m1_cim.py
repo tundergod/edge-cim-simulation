@@ -4,7 +4,7 @@ Reads  measurements/aetina/metis_alpha_matmul.json + _raw.json (native flags)
 Writes simulator/models/params/m1_cim.json   (2D G_eff params, n_cores=4)
        validation/reports/phase1.1/m1.json             (native fit errors + native/generated split)
 
-Architecture (papers/metis-silicon/metis-aipu-isscc2024.md): quad-core, 512x512 per core.
+Architecture (docs/papers/metis-silicon/metis-aipu-isscc2024.md): quad-core, 512x512 per core.
 G_eff(N,K) (GOP/s, INT8) rises with output width N AND input depth K -> fit a 2D closed form
 on NATIVE single-tile points (K*N <= 4.19M). Above that = unvalidated extrapolation.
 

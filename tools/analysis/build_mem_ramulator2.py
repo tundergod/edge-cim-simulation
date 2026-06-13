@@ -1,6 +1,6 @@
 """Phase 1.3 — Ramulator2-vs-analytic LPDDR5 single-stream delta report -> validation/reports/phase1.3/m2_ramulator2.json.
 
-Compares the Ramulator2 v2.1 LPDDR5_6400 streaming result (simulated/ramulator2/lpddr5_eff.json)
+Compares the Ramulator2 v2.1 LPDDR5_6400 streaming result (simulator/engines/ramulator2/lpddr5_eff.json)
 against the Phase-1.2 analytic LPDDR5 (mem_lpddr5 spec, eff 0.65). The key finding is a DEVICE-vs-
 SYSTEM distinction, not a contradiction: Ramulator2 models the DRAM DEVICE timing (refresh, bank
 conflicts) and a single stream reaches ~0.92 of peak; the analytic 0.65 is the SYSTEM-level
@@ -20,7 +20,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 from simulator.specs.loader import load_spec  # noqa: E402
 
-RAM2 = ROOT / "simulated/ramulator2/lpddr5_eff.json"
+RAM2 = ROOT / "simulator/engines/ramulator2/lpddr5_eff.json"
 OUT = ROOT / "validation/reports/phase1.3/m2_ramulator2.json"
 
 

@@ -9,6 +9,17 @@ Reverse-chronological (newest first).
 
 ---
 
+## 2026-06-13 — declutter: `plans/` and `papers/` moved under `docs/`
+
+`plans/` → `docs/plans/` and `papers/` → `docs/papers/`, completing the half-finished
+`218c1a6` intent (which created `docs/plans/` for new plans but never moved the existing
+ones, splitting plans across two dirs). Root-level + code references updated to `docs/…`
+(CLAUDE.md per-phase workflow, CONTEXT.md repo index, README, OVERALL, four `tools/**` docstrings);
+relative markdown links inside `docs/` already resolve correctly post-move and were left as-is;
+historical handoffs/old LOG entries left verbatim.
+
+---
+
 ## 2026-06-06 — Phase 1.2: shared engine interface + spec layer (touches 1.1 callers)
 
 Phase 1.2 introduces `simulator/models/engine.py` (`UnitEngine(spec, engine='analytic')` +

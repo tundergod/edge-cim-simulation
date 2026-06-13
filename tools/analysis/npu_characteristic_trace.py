@@ -1,7 +1,7 @@
 """Phase 1.6b — MEASURE whether ONNXim exhibits the systolic characteristics (no presupposed knee).
 
 Independent of the committed analytic-vs-ONNXim SPREAD: this writes its OWN output
-(simulated/onnxim/rknpu2_characteristic.json) and does NOT touch npu_onnxim_trace.py's canonical
+(simulator/engines/onnxim/rknpu2_characteristic.json) and does NOT touch npu_onnxim_trace.py's canonical
 SHAPES (which back the 317.9% spread / delta report). We sweep ONNXim on a grid fine enough to
 resolve a 32-period staircase and let the data REJECT or confirm H0 = "smooth, no 32-step".
 
@@ -23,7 +23,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 CONFIG = ROOT / "tools/onnxim/rknpu2_approx.json"
-OUT = ROOT / "simulated/onnxim/rknpu2_characteristic.json"
+OUT = ROOT / "simulator/engines/onnxim/rknpu2_characteristic.json"
 HOST = "metiscard"
 IO = "~/edge-cim-simulation/onnxim_io"
 ONNXIM_COMMIT = "a1e86296"

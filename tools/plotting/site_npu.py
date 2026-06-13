@@ -34,8 +34,8 @@ ONNXIM = ROOT / "validation/reports/phase1.3/m4_npu_onnxim.json"
 SCALESIM = ROOT / "validation/reports/phase1.6/npu_scalesim.json"
 SPEC = ROOT / "simulator/specs/npu_rknpu2.json"
 # Phase 1.6b characteristic measurement (each sim swept independently; no presupposed knee):
-CHAR_ONX = ROOT / "simulated/onnxim/rknpu2_characteristic.json"
-CHAR_SCL = ROOT / "simulated/scalesim/rknpu2_characteristic.json"
+CHAR_ONX = ROOT / "simulator/engines/onnxim/rknpu2_characteristic.json"
+CHAR_SCL = ROOT / "simulator/engines/scalesim/rknpu2_characteristic.json"
 CHAR_CMP = ROOT / "validation/reports/phase1.6/npu_characteristic_compare.json"
 OUT = ROOT / "docs/figures/phase1-site"
 

@@ -12,7 +12,7 @@
   <div>
     <div class="eyebrow">各單元 · 工作負載 · Workload / Trace</div>
     <h1>Workload — op 清單與 trace</h1>
-    <p class="lede">M5 是模擬器的「劇本產生器」——把 HuggingFace 模型 + workload 定義，<strong>確定性地</strong>導成每個 token 實際執行的 op×shape DAG（prefill / decode 分開）。這條 trace 就是其他單元要算的工作量。本頁也整合了原 Phase 0.2 的 op 清單與 roofline：580 個 op×shape 簽名、9 類，跨 4 個模型、孤兒 op 數為 0。</p>
+    <p class="lede">M5 是模擬器的「劇本產生器」——把 HuggingFace 模型 + workload 定義，<strong>確定性地</strong>導成每個 token 實際執行的 op×shape DAG（prefill / decode 分開）。這條 trace 就是其他單元要算的工作量。本頁也整合了原 Phase 0.2 的 op 清單與 operational intensity：580 個 op×shape 簽名、9 類，跨 4 個模型、孤兒 op 數為 0。</p>
   </div>
 </header>
 
@@ -24,7 +24,7 @@
     <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
     <div class="role">
       <p style="margin-top:0">M5 的<strong>基本功能只有一個</strong>：<strong>確定性地產生每 token 的 op-DAG trace</strong>——也就是整個模擬器要算的「工作量」本身。它不算延遲、不排程、不競爭資源；它定義「要算哪些 op、什麼形狀、各執行幾次」，再交給 M1/M2/M4 去算成本、M6 去排程。</p>
-      <p><strong>量測 = op 清單 + op profile。</strong>① <strong>op 清單（inventory）</strong>：用 PyTorch runtime tracer 從真模型抽出 <strong>580 個 distinct (op, in_shapes, out_shape) 簽名</strong>、歸成 <strong>9 類</strong>（matmul / attention / ffn / norm / softmax / rope / residual / kv_cache / embedding）。② <strong>op profile</strong>：對每個 (model × task)，算每個簽名執行幾次、FLOPs / bytes / operational intensity——這就是 roofline 的<strong>預測側</strong>輸入，也是把 per-op 板上延遲組成端到端成本的權重。</p>
+      <p><strong>量測 = op 清單 + op profile。</strong>① <strong>op 清單（inventory）</strong>：用 PyTorch runtime tracer 從真模型抽出 <strong>580 個 distinct (op, in_shapes, out_shape) 簽名</strong>、歸成 <strong>9 類</strong>（matmul / attention / ffn / norm / softmax / rope / residual / kv_cache / embedding）。② <strong>op profile</strong>：對每個 (model × task)，算每個簽名執行幾次、FLOPs / bytes / operational intensity——這是把 per-op 板上延遲組成端到端成本的權重，也是判斷 op 落在記憶體側或計算側的<strong>預測側</strong>座標（我們只給座標，不畫硬體天花板）。</p>
       <p style="margin-bottom:0">M5 是<strong>確定性的量測 / 覆蓋單元</strong>，不是擬合單元——所以誠實標籤上只有 <strong>calibrated 亮著</strong>（op trace 取自真實 PyTorch runtime tracer，覆蓋率經驗證、0 孤兒），其餘 fitted / simulated / assumption / borrowed 全部熄滅。這在本報告裡是<strong>少見的「幾乎全暗」</strong>，但對 M5 而言這才誠實：它是一個確定性的 op 抽取器，沒有任何擬合或外推的數字。</p>
     </div>
   </div>
@@ -34,29 +34,45 @@
     <p>量測協定：在 dev 機（Apple M3 Pro / CPU，無板、無 GPU、無真權重）用 <code>TorchDispatchMode</code> + meta/FakeTensor 抽 op 圖（強制 eager attention，ADR-0007），把語意 op 對到 aten primitive。四個模型 eager 展開後落在<strong>同一組約 38 個 aten primitive</strong>（Qwen2.5 的 QKV 有 bias、用 <code>addmm</code> 而非 <code>mm</code>，多 1 個 op，是唯一 op-set 差異）。</p>
 
     <h3>1a · op 清單（inventory）：580 個 op×shape 簽名、9 類</h3>
-    <p>去重後得到 <strong>580 個 distinct (op, in_shapes, out_shape) 簽名</strong>，依<strong>語意來源</strong>歸類：名稱不歧義的直接歸（mm/addmm→matmul、softmax→softmax…），歧義的 overloaded op（bmm/add/mul/cat）依 tracer 記下的 <code>src</code> 發出模組歸（issue #5；KV-cache 的 <code>cat</code> 獨立切成 <strong>kv_cache</strong> 記憶體搬移類、不計入 attention 計算，#6）。下圖 §4 的覆蓋格各格下方的數字就是該類的簽名數。</p>
+    <p>去重後得到 <strong>580 個 distinct (op, in_shapes, out_shape) 簽名</strong>，依<strong>語意來源</strong>歸類：名稱不歧義的直接歸（mm/addmm→matmul、softmax→softmax…），歧義的 overloaded op（bmm/add/mul/cat）依 tracer 記下的 <code>src</code> 發出模組歸（issue #5；KV-cache 的 <code>cat</code> 獨立切成 <strong>kv_cache</strong> 記憶體搬移類、不計入 attention 計算，#6）。九個類別與各自簽名數如下（合計 580）：</p>
+    <table>
+      <caption>op 類別 × distinct (op, in_shapes, out_shape) 簽名數（來源 sweep_matrix.json › counts；合計 580）</caption>
+      <thead><tr><th>類別</th><th class="num">簽名數</th><th>內容</th></tr></thead>
+      <tbody>
+        <tr><td>rope</td><td class="num">190</td><td>旋轉位置編碼——<strong>簽名數最多</strong>（每層 q/k 各一組、跨最多 shape）</td></tr>
+        <tr><td>matmul</td><td class="num">105</td><td>mm/addmm：q/k/v/o proj + gate/up/down（<strong>FLOPs 主導</strong>，但簽名數非最多）</td></tr>
+        <tr><td>attention</td><td class="num">95</td><td>bmm：QKᵀ、A·V</td></tr>
+        <tr><td>norm</td><td class="num">90</td><td>RMSNorm</td></tr>
+        <tr><td>ffn</td><td class="num">30</td><td>SwiGLU 的 element-wise（SiLU·mul）</td></tr>
+        <tr><td>softmax</td><td class="num">21</td><td>attention softmax</td></tr>
+        <tr><td>embedding</td><td class="num">20</td><td>token embedding gather</td></tr>
+        <tr><td>residual</td><td class="num">20</td><td>殘差 add</td></tr>
+        <tr><td>kv_cache</td><td class="num">9</td><td>KV append 的 cat（記憶體搬移，不計入 attention 計算，#6）</td></tr>
+      </tbody>
+    </table>
+    <p><strong>注意「最多簽名 ≠ 最多計算」：</strong>rope（190）簽名數最多，但 matmul（105）才主導 FLOPs（§1b）。完整 580 筆逐簽名清單在 <code>measurements/op_inventory/sweep_matrix.json › matrix</code>。</p>
 
     <h3>1b · op profile：每類的 FLOPs / bytes / intensity 組成</h3>
-    <p>對每個 (model × task)，每個簽名執行幾次直接<strong>取自 inventory 的 <code>count</code></strong>（已聚合 collided 簽名，例如 Llama 的 q≡o、k≡v、gate≡up 各 = 2×layers），<strong>不自行 ×layers 推算</strong>。FLOPs：matmul/bmm = <code>2·M·K·N</code>；bytes = (輸入+權重+輸出 元素數) × dtype（GEMM 運算元 INT8，非-GEMM FP16）。下圖把 4 個模型 decode 的 op 類組成攤開：</p>
+    <p>對每個 (model × task)，每個簽名執行幾次直接<strong>取自 inventory 的 <code>count</code></strong>（已聚合 collided 簽名，例如 Llama 的 q≡o、k≡v、gate≡up 各 = 2×layers），<strong>不自行 ×layers 推算</strong>。FLOPs：matmul/bmm = <code>2·M·K·N</code>；bytes = (輸入+權重+輸出 元素數) × dtype（GEMM 運算元 INT8，非-GEMM FP16）。下圖把 <strong>4 個模型 × 全部 4 個 workload</strong> 的 decode op 類組成攤開：</p>
     <figure>
-      <img src="../../figures/phase1-site/m5_op_breakdown.png" alt="per-model op 類組成（FLOPs / bytes share）">
-      <figcaption><strong>怎麼讀：</strong>左圖是 decode FLOPs 的類別占比、右圖是 decode bytes 占比，每根柱一個模型。<strong>幾乎整根都是藍色（matmul）</strong>——weight-stationary 的 GEMM/GEMV 同時主導<strong>計算</strong>與<strong>記憶體</strong>（matmul ≥ 0.98 of decode FLOPs，每個模型都如此）。這就是<strong>為什麼以 CIM 為核心</strong>（擅長 weight-stationary GEMM/GEMV）正好對到 LLM 推論，而把非 matmul 餘量（attention/kv_cache 那條薄橘/黃帶）offload 出去。
-        <span class="ft">圖 M5·1 · 來源 op_profile/&lt;model&gt;_sharegpt.json › totals.by_phase.decode · 腳本 tools/plotting/site_m5.py</span>
+      <img src="../../figures/phase1-site/m5_op_breakdown.png" alt="op 類組成 4 模型 × 4 workload（decode FLOPs / bytes share）">
+      <figcaption><strong>怎麼讀：</strong>上排是 decode <strong>FLOPs</strong> 占比、下排是 decode <strong>bytes</strong> 占比；<strong>四欄 = 四個 workload</strong>（LongBench prefill-heavy → ShareGPT decode-heavy），每欄四根柱 = 四個模型。多數 (模型,workload) 整根都是藍色（matmul）——weight-stationary GEMM/GEMV 同時主導計算與記憶體。<strong>唯一例外是 LongBench</strong>：長文本讓 decode 的 attention/kv_cache（橘/黃帶）明顯變厚（bytes 側尤甚，KV 隨上下文長度長），其餘三個 workload 仍 matmul ≥ 0.98。這對到<strong>以 CIM 為核心</strong>（擅長 weight-stationary GEMM/GEMV）、把非 matmul 餘量 offload 出去的分工。
+        <span class="ft">圖 M5·1 · 來源 op_profile/&lt;model&gt;_&lt;task&gt;.json（4×4）› totals.by_phase.decode · 腳本 tools/plotting/site_m5.py</span>
       </figcaption>
     </figure>
   </div>
 
   <div class="sec">
-    <div class="lab"><span class="n">§2</span><span>預測側 roofline · operational intensity</span><span class="tag">predicted-side · 非擬合</span></div>
-    <p>M5 不擬合任何延遲；它只從<strong>形狀</strong>算出每個 op 的 operational intensity = FLOPs / bytes，這是 roofline 的<strong>預測側</strong>輸入（真實的 roofline knee 由 Phase 0.3 / Phase 1 的板上量測決定，這裡只給座標）。一個結構性的事實：</p>
+    <div class="lab"><span class="n">§2</span><span>operational intensity（預測側座標，不畫天花板）</span><span class="tag">predicted-side · 非擬合 · 非 roofline</span></div>
+    <p>M5 不擬合任何延遲；它只從<strong>形狀</strong>算出每個 op 的 operational intensity = FLOPs / bytes。這是<strong>預測側座標</strong>，不是 roofline——<strong>我們沒有為這個多單元工作量量到硬體天花板（峰值算力／頻寬），所以刻意不畫任何屋頂或 ridge，免得用假設欺騙</strong>。能誠實講的只有 op 本身的性質：</p>
     <div class="eq">intensity = FLOPs / bytes                        <span class="c"># 預測側，從形狀算，非量測</span>
-matmul (prefill, M&gt;1)  intensity = O(M)         <span class="c"># 隨 batch 上升 → compute-bound</span>
+matmul (prefill, M&gt;1)  intensity = O(M)         <span class="c"># 隨 batch 上升 → 高 intensity</span>
 matmul (decode,  M=1)  intensity = ~2 FLOP/byte  <span class="c"># GEMV：每個權重 byte ≈ 1 MAC</span></div>
-    <p><strong>decode 一律 memory-bound、prefill 隨長度變 compute-bound。</strong>decode 每步是 M=1 的 GEMV，intensity 對<strong>每個模型、每個任務都恰是 ~2 FLOP/byte</strong>（每讀一個權重 byte 只做約一次 MAC）——正是 CIM weight-residency 最有用的 memory-bound regime。prefill 的 matmul intensity 則隨 prefill 長度單調上升（短任務數百、LongBench 長文本數千），越長越 compute-bound；下圖把這條 prefill→decode 的 intensity 塌縮畫成 roofline。</p>
+    <p>decode 每步是 M=1 的 GEMV，intensity 對<strong>每個模型、每個任務都恰是 ~2 FLOP/byte</strong>（每讀一個權重 byte 只做約一次 MAC，這是 GEMV 的 op 性質、與硬體無關）；prefill 的 matmul intensity 隨長度單調上升（短任務數百、LongBench 數千）。下圖只把這些 intensity <strong>數據點</strong>攤開，讓 prefill→decode 的塌縮自己浮現——<strong>不主張哪裡是 memory- 或 compute-bound</strong>（那需要一條我們沒量到的 ridge）。</p>
     <figure>
-      <img src="../../figures/phase1-site/m5_roofline.png" alt="預測側 operational intensity vs FLOPs，prefill 實心 / decode 空心">
-      <figcaption><strong>怎麼讀：</strong>橫軸是 operational intensity（log）、縱軸是該類 execution-weighted 貢獻的 FLOPs（log），<strong>實心點 = prefill、空心點 = decode</strong>，顏色照 §1 的 9 類。虛線左側灰底是 memory-bound 區。<strong>所有空心點（decode）擠在 intensity ~2 的脊線上</strong>——decode 不論模型/任務都塌進 memory-bound GEMV ridge；實心點（prefill）隨任務長度往右散到 compute-bound 區（最右是 LongBench 長文本）。脊線是 illustrative（ridge=20 為示意），真實 knee 在 Phase 0.3 量。
-        <span class="ft">圖 M5·2 · 來源 op_profile/llama-3.1-8b_&lt;task&gt;.json › rows (intensity) · 腳本 tools/plotting/site_m5.py</span>
+      <img src="../../figures/phase1-site/m5_intensity.png" alt="預測側 operational intensity 數據點，4 workload 分開，prefill 實心 / decode 空心">
+      <figcaption><strong>怎麼讀：</strong><strong>四個小圖 = 四個 workload</strong>；橫軸是 operational intensity（log）、縱軸是該類 execution-weighted 貢獻的 FLOPs（log），<strong>實心點 = prefill、空心點 = decode</strong>，顏色照 §1 的 9 類。<strong>所有空心點（decode）擠在 intensity ~2</strong>（GEMV，每權重用一次）；實心點（prefill）隨長度往右散（最右 = LongBench 長文本）。<strong>圖上沒有任何天花板／ridge／bound 區底色</strong>——我們沒有為這個工作量量到硬體屋頂,畫了就是假設。這是 intensity 數據分佈,不是 roofline。
+        <span class="ft">圖 M5·2 · 來源 op_profile/llama-3.1-8b_&lt;task&gt;.json（4 workload）› rows (intensity) · 腳本 tools/plotting/site_m5.py</span>
       </figcaption>
     </figure>
     <div class="note"><b>長文本 prefill 的記憶體是 attention、不是權重。</b>LongBench(P≈11.7k) 的 matmul 占 prefill FLOPs 約 71%，但只占 prefill bytes 約 2%——prefill 記憶體幾乎全是 O(S²) 的 score matrix（8B：65% attention + 26% softmax）。這是唯一一處「只看權重的記憶體模型會錯」、也是 attention / KV-cache offload 最重要的地方（接 M2 §3 的 KV watch-item）。</div>
@@ -107,7 +123,7 @@ matmul (decode,  M=1)  intensity = ~2 FLOP/byte  <span class="c"># GEMV：每個
       <thead><tr><th>項目</th><th>狀態</th></tr></thead>
       <tbody>
         <tr><td>op×shape 覆蓋（4 模型 × 9 類，0 孤兒）</td><td class="pass">✅ 凍結，calibrated</td></tr>
-        <tr><td>op profile（FLOPs/bytes/intensity）= roofline 預測側</td><td class="pass">✅ 凍結，餵 M1/M2/M4 成本</td></tr>
+        <tr><td>op profile（FLOPs/bytes/intensity）= 預測側座標</td><td class="pass">✅ 凍結，餵 M1/M2/M4 成本</td></tr>
         <tr><td>op DAG trace = M6 排程器輸入</td><td class="pass">✅ 就緒，Phase 2 按需展開</td></tr>
         <tr><td>decode 動態長度逐 token 展開正確性</td><td class="fail">⚠ Phase 2 才完整行使（M5 按需生成時）</td></tr>
         <tr><td>長文本 prefill 的 attention/KV bytes（O(S²)）</td><td class="fail">⚠ 接 M2 KV watch-item（板子恢復後校準）</td></tr>

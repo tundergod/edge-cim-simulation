@@ -29,7 +29,7 @@ from pathlib import Path
 from simulator.models.engine import UnitEngine, Workload, check_return
 from simulator.specs.loader import load_spec
 
-_RAM2 = Path(__file__).resolve().parents[2] / "simulated/ramulator2/lpddr5_eff.json"
+_RAM2 = Path(__file__).resolve().parents[2] / "simulator/engines/ramulator2/lpddr5_eff.json"
 
 
 def _ramulator2_eff_bw(spec):

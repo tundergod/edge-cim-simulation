@@ -14,18 +14,18 @@
 - **Metis Alpha（Aetina）：** 在 CNN/matmul workload 上提供 CIM 計算原語＋PCIe 行為。
 - **量產 Metis Card：** 提供 on-card-DRAM 拓樸下、INT8 的真實 LLM 行為。
 
-真實晶片細節見 [papers/metis-silicon/](papers/metis-silicon/)；SDK 量測面見 [docs/voyager-sdk.md](docs/voyager-sdk.md)。
+真實晶片細節見 [papers/metis-silicon/](docs/papers/metis-silicon/)；SDK 量測面見 [docs/voyager-sdk.md](docs/voyager-sdk.md)。
 
 ## 問題
 
 商用的離散 CIM 加速器（Axelera Metis、Hailo-8/10、Mythic、Untether）一律以 PCIe / M.2 介面卡形式出貨。行動 SoC 則各自把 NPU + GPU + CPU 整合在共享 LPDDR 周邊。這兩者的結合——**CIM 作為異質行動 SoC 上、可存取 unified memory 的對等計算單元**——正是**架構走向**（業界正朝「CIM/加速器 + LPDDR + unified 記憶體」整合前進），但**文獻上幾乎沒有**在這種組合上跑 LLM 的工作。
 
-相鄰的先前工作只存在於片段中（筆記見 [papers/pim-llm-accelerators/](papers/pim-llm-accelerators/)）：
+相鄰的先前工作只存在於片段中（筆記見 [papers/pim-llm-accelerators/](docs/papers/pim-llm-accelerators/)）：
 - HBM-PIM / GDDR-PIM 的 LLM 加速器（NeuPIMs、IANUS、AttAcc、CENT、HPIM、PAPI）— 伺服器級；非 mobile、非 SRAM-CIM
 - LPDDR-PIM mobile（LP-Spec）— 用 LPDDR 內部 PIM；非離散 CIM
 - Compute-enabled flash（Lincoln、Cambricon-LLM）— flash 基底；非 SRAM-CIM
 - HeteroInfer（SOSP'25）— 特性化 GPU+NPU mobile 異質 LLM；無 CIM
-- 我方 Metis 量測（[metis-llm-investigation](papers/metis-silicon/metis-llm-investigation-desktop-2026-05-19.md)、[metis-step1-cnn-characterization](papers/metis-silicon/metis-step1-cnn-characterization-2026-05-23.md)）— 真實晶片，但 LLM 計算延伸被廠商封閉
+- 我方 Metis 量測（[metis-llm-investigation](docs/papers/metis-silicon/metis-llm-investigation-desktop-2026-05-19.md)、[metis-step1-cnn-characterization](docs/papers/metis-silicon/metis-step1-cnn-characterization-2026-05-23.md)）— 真實晶片，但 LLM 計算延伸被廠商封閉
 
 **這個 gap 正好是 (離散-CIM × 異質-mobile-SoC × LLM × 真實晶片校準)** — 在 2024–2026 頂會文獻中近乎空白的一格。
 
@@ -36,7 +36,7 @@
 **具體的 op 層級分工交給特性量測決定** — 我們*不*預先假定「CIM 做 MLP、其它做 attention」（這是 HPIM 與多數既有工作的假設）；改由量測出的各單元特性曲線決定分工。這就是把 HeteroInfer 的方法論套用到一個新平台類別。
 
 **與並行工作的差異化：**
-- **HPIM（最接近競品 — [筆記](papers/pim-llm-accelerators/hpim-arxiv2025.md)）：** 異質 SRAM-PIM + HBM-PIM，純模擬、僅 FP16、無 energy/area、非 mobile。我們做 SRAM-CIM + GPU + NPU + CPU on mobile-SoC，有真實晶片校準，INT8（Metis），混合精度（CIM INT8 × GPU FP16）。
+- **HPIM（最接近競品 — [筆記](docs/papers/pim-llm-accelerators/hpim-arxiv2025.md)）：** 異質 SRAM-PIM + HBM-PIM，純模擬、僅 FP16、無 energy/area、非 mobile。我們做 SRAM-CIM + GPU + NPU + CPU on mobile-SoC，有真實晶片校準，INT8（Metis），混合精度（CIM INT8 × GPU FP16）。
 - **PAPI：** 動態 GPU+PIM 排程、伺服器級、FC-PIM/Attn-PIM 分工。我們是 mobile + CIM-centric（非 GPU-centric）+ 特性量測驅動、非預設分工。
 - **LP-Spec：** LPDDR-PIM mobile、NPU+PIM、speculative decode。我們是 CIM（非 LPDDR-PIM）+ 一般 decode（非僅 speculative）。
 - **Lincoln：** flash-PIM 50–100B 消費級。不同基底（flash vs SRAM-CIM）、不同規模（極大 vs 1–13B），但同樣是 on-device LLM 的願景。
@@ -67,7 +67,7 @@
 
 ### 工作負載（要跑什麼 — 不只是哪個模型）
 
-「模型」只是哪顆網路；「工作負載」是實際餵進去的輸入，決定 prefill/decode 長度與 op×shape 流。參考同類 paper 的做法（**NeuPIMs** 用 ShareGPT + Alpaca；**HPIM** 與我方 [Metis 研究](papers/metis-silicon/metis-llm-investigation-desktop-2026-05-19.md) 用合成 (prefill, decode) 長度掃描；**HeteroInfer** 聚焦 decode-bound 行動工作負載）。分兩層：
+「模型」只是哪顆網路；「工作負載」是實際餵進去的輸入，決定 prefill/decode 長度與 op×shape 流。參考同類 paper 的做法（**NeuPIMs** 用 ShareGPT + Alpaca；**HPIM** 與我方 [Metis 研究](docs/papers/metis-silicon/metis-llm-investigation-desktop-2026-05-19.md) 用合成 (prefill, decode) 長度掃描；**HeteroInfer** 聚焦 decode-bound 行動工作負載）。分兩層：
 
 **Layer A — 真實任務工作負載：以 HeteroInfer（Table 4）三類為骨幹，再加程式碼一類。** 刻意鋪滿 prefill-heavy ↔ decode-heavy 光譜（正對應 CIM 的 compute-bound vs memory-bound 分界），batch=1：
 
@@ -195,7 +195,7 @@
 | L3 | NPU / GPU 每 op | C + D matmul micro-benchmark |
 | L4 | 端到端 LLM（INT8） | B Metis Card 廠商 INT8 LLM tok/s。注意：on-card DRAM ≠ 模擬器的 host-MMIO 拓樸（橋接假設在 Method 明寫） |
 | L5 | 敏感度（任一參數 ±20%） | 於 sim 跑時對 L1–L4 計算 — 非獨立量測 |
-| **L6** | 端到端 CNN | [metis-step1-cnn-characterization](papers/metis-silicon/metis-step1-cnn-characterization-2026-05-23.md) — 225 cells 已擷取；**重用，免重量測** |
+| **L6** | 端到端 CNN | [metis-step1-cnn-characterization](docs/papers/metis-silicon/metis-step1-cnn-characterization-2026-05-23.md) — 225 cells 已擷取；**重用，免重量測** |
 
 **Roofline 作為驗證視覺化**（L1/L3/L6）：每單元疊出 measured-roofline 與 simulator-predicted-roofline；knee 位置 + 斜率 + 觀測點分佈是否吻合，即同時對 compute + memory 原語做 2D 一致性檢查。資料點於 Phase 0.3 從同一批 run 抽出。
 
@@ -317,7 +317,7 @@ edge-cim-simulation/
 ├── program.md                  # agent 主指令（範本見下）
 ├── HANDOFF.md                  # 跨 session 狀態
 ├── log.jsonl                   # 每迭代 log（append-only）
-├── papers/                     # 文獻 + 真實晶片筆記（本 commit）
+├── docs/papers/                     # 文獻 + 真實晶片筆記（本 commit）
 ├── simulator/
 │   ├── modules/                # M1–M7（m1_cim_tile.py … m7_energy.py）+ M8 thermal（選用，Phase 0.4 後加入）
 │   ├── models/                 # Phase 1 擬合的參數方程式 + 參數（取代龐大 lookup table）
@@ -410,7 +410,7 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 
 1. **NeuroSim 整合成本超出估計** — M1 退路：直接用 Metis Alpha 量測（Phase 1 擬合方程式，必要時退回 lookup）。NeuroSim 由必需降為選用；其方法論引用（對 40nm **RRAM**-CIM macro **校準後** <1% 晶片誤差）即使不用其程式碼仍成立——但注意 Metis 是 **digital SRAM-CIM**，與 analog RRAM 不同，故 NeuroSim 僅作「CIM 能耗/延遲**模型形式**的交叉檢查」，非我們係數的 silicon-grade 來源。
 2. **橋接假設：Metis Card on-card DRAM ≠ 模擬器的 host-MMIO 拓樸** — L4 錨定「CIM + on-card-DRAM」；模擬器以 host-LPDDR + PCIe 替代。需做兩種拓樸下的敏感度子實驗。
-3. **HPIM 搶先在頂會發表**（最接近競品，[筆記](papers/pim-llm-accelerators/hpim-arxiv2025.md)）。即使 HPIM 先落地，我們的差異化（mobile-SoC、真實晶片校準、混合精度、特性量測驅動分工）仍成立。
+3. **HPIM 搶先在頂會發表**（最接近競品，[筆記](docs/papers/pim-llm-accelerators/hpim-arxiv2025.md)）。即使 HPIM 先落地，我們的差異化（mobile-SoC、真實晶片校準、混合精度、特性量測驅動分工）仍成立。
 4. **agent 自主性在模擬器規模未經驗證** — 第一次 M1 迭代才是真正的考驗。緩解：若 agent 多個 session 仍不收斂，退回人工開發。
 5. **HuggingFace ONNX export 品質（已大幅降風險，見 ADR-0007）** — op inventory 改用 PyTorch runtime tracer（meta/FakeTensor），不靠 `torch.onnx.export`，故主路徑不受其 custom-op/dynamic-shape 亂象影響。ONNX export 只剩 ONNXim NPU 路徑會用到，且有 fallback（從 traced graph 組 ONNXim 輸入 / M4 lookup-override）。
 6. **Ramulator2 LPDDR5 + PIM-like 延伸覆蓋度** — 我們的 LPDDR5-PIM-like 用法非 Ramulator2 預設；可能需自寫 plug-in。M2 要預留。（**Phase 1.3** 以 `MemoryModel(spec, engine='ramulator2')` drop-in 做 LPDDR5 **單串流** cross-check；**多單元競爭在 Phase 2**。LPDDR4/4x 無 Ramulator2 preset = `assumption`、build 時看 `src/dram/impl/` 確認。）
@@ -444,12 +444,12 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 
 ## 參考文獻（本 repo 內）
 
-> 已依「對實作有幫助」嚴格篩選，從 46 篇縮為 16 篇。完整保留/移除清單與理由見 [papers/README.md](papers/README.md)。
+> 已依「對實作有幫助」嚴格篩選，從 46 篇縮為 16 篇。完整保留/移除清單與理由見 [papers/README.md](docs/papers/README.md)。
 
-- **最接近競品：** [HPIM](papers/pim-llm-accelerators/hpim-arxiv2025.md)
-- **直接先前工作（PIM-LLM 加速器）：** [papers/pim-llm-accelerators/](papers/pim-llm-accelerators/) — PAPI、NeuPIMs、IANUS、LP-Spec（其機制可借用到 M6/M2）
-- **方法論 / 模擬器：** [papers/methodology-and-simulators/](papers/methodology-and-simulators/) — HeteroInfer（SOSP'25，特性量測模板）、NeuroSim validation（D4 範式）、DNN-NeuroSim v1（CIM tile 物理交叉檢查）、gem5-SALAM（評估後未採用）
-- **真實晶片校準來源：** [papers/metis-silicon/](papers/metis-silicon/) — Step-1 CNN 特性量測（L6）、Metis Card LLM 調查（L4）、Aetina 板稽核
-- **平台：** [papers/platforms/](papers/platforms/) — Aetina RKC-A02、Axelera Metis Card
-- **校準來源構想：** [cnn-dnn-edge-memory-wall-metis-embedded](papers/ideas/cnn-dnn-edge-memory-wall-metis-embedded.md)、來源構想頁 [cim-centric-llm-mobile-soc](papers/ideas/cim-centric-llm-mobile-soc.md)
+- **最接近競品：** [HPIM](docs/papers/pim-llm-accelerators/hpim-arxiv2025.md)
+- **直接先前工作（PIM-LLM 加速器）：** [papers/pim-llm-accelerators/](docs/papers/pim-llm-accelerators/) — PAPI、NeuPIMs、IANUS、LP-Spec（其機制可借用到 M6/M2）
+- **方法論 / 模擬器：** [papers/methodology-and-simulators/](docs/papers/methodology-and-simulators/) — HeteroInfer（SOSP'25，特性量測模板）、NeuroSim validation（D4 範式）、DNN-NeuroSim v1（CIM tile 物理交叉檢查）、gem5-SALAM（評估後未採用）
+- **真實晶片校準來源：** [papers/metis-silicon/](docs/papers/metis-silicon/) — Step-1 CNN 特性量測（L6）、Metis Card LLM 調查（L4）、Aetina 板稽核
+- **平台：** [papers/platforms/](docs/papers/platforms/) — Aetina RKC-A02、Axelera Metis Card
+- **校準來源構想：** [cnn-dnn-edge-memory-wall-metis-embedded](docs/papers/ideas/cnn-dnn-edge-memory-wall-metis-embedded.md)、來源構想頁 [cim-centric-llm-mobile-soc](docs/papers/ideas/cim-centric-llm-mobile-soc.md)
 - **SDK 量測面：** [docs/voyager-sdk.md](docs/voyager-sdk.md)
