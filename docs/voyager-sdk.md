@@ -277,7 +277,7 @@ Frozen fields (e.g. `aipu_cores_max`) reject overrides at validation (~7–10 s 
   - Throughput: GPU RTX 3090 (fp16) **187 tok/s** · AIPU **15.0 tok/s** · CPU 0.67 tok/s.
   - **Batch-1 decode is a pure on-card-LPDDR weight-streaming memory wall**: decode time ∝ weight bytes, r²=0.997, **eff bandwidth ≈ 24.2 GB/s**; MAC array ~99% idle (≈0.02% of 214 TOPS peak).
   - Prefill is compute-region (~8.1 TFLOP/s effective); prefill device time flat vs real prompt length (static padded graph).
-  - More cores barely help decode: 4c/1c speedup 1.31× (1B) → 1.12× (8B) — bigger model = more bandwidth-bound. `network.py` asserts `batch==cores`; only 1c & 4c artifacts ship.
+  - More cores barely help decode: 4c/1c speedup 1.130× (1B) → 1.081× (8B) [median, `vendor_llm_int8.json`] — bigger model = more bandwidth-bound. `network.py` asserts `batch==cores`; only 1c & 4c artifacts ship.
   - Staff confirm: Llama-3.2-3B runs **6+ tok/s single core** fully offline `[FORUM]`.
 - **Alpha M.2 cannot run any LLM** `[MEASURED]`: `-1301` closed-firmware compute wall (not a timeout) + no on-card DDR (weights can't fit the 1 GB IOMMU window). Load is beatable from user space (`ze_shim2` LD_PRELOAD); compute is not. **The `-1301` code and the 1 GB-IOMMU-blocks-LLM mechanism are OUR findings — the forum is silent on both** `[GAP]`; treat as our own characterization, not vendor-stated.
 - **Forward anchor — Europa (2026):** 128 MB L2 SRAM, LPDDR5 ~200 GB/s, ~45 W, "unified architecture", targets up to Llama-3-70B `[FORUM]`/vendor. No shipping silicon / measured data exists.
