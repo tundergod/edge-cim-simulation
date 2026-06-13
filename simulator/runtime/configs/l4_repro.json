@@ -1,0 +1,11 @@
+{
+ "_doc": "L4 reproduction config (Phase 2.1): all-CIM baseline on the L4-anchored on-card-DRAM topology (mem_lpddr4x 24.2 GB/s). Set model per run; context=1024 matches the vendor anchor. Calibrated-anchor config (no provenance flags) -> the mechanism test target. The calibrated core (per-unit timing eqs + 24.2 anchor) is fixed in code, NOT here.",
+ "workload": {"model": "llama-3.1-8b", "context": 1024, "prefill_len": 256, "decode_len": 512, "batch": 1},
+ "platform": {"memory_spec": "mem_lpddr4x", "topology": "cim_topo_card",
+              "memory_capacity_GB": 16, "bw_efficiency": null,
+              "units": {"cim": true, "gpu": false, "npu": false, "cpu": true},
+              "engine": {"cim": "analytic", "memory": "analytic"}},
+ "scheduler": {"policy": "all_cim"},
+ "tunables": {"interconnect_efficiency": 1.0, "concurrency_overlap_factor": 1.0},
+ "ablations": {"concurrency_off": false, "contention_off": false}
+}

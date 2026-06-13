@@ -1,0 +1,75 @@
+{
+ "module": "e2e_l4",
+ "phase": "2.1",
+ "gate_threshold": 0.15,
+ "smoke_by_construction": {
+  "fit_BW_GBs": 18.33,
+  "pred_8b_tok_s": 2.44,
+  "measured_8b_tok_s": 2.7,
+  "rel_error_8b": 0.095,
+  "label": "BY-CONSTRUCTION (effective BW fit to the anchor); NOT evidence"
+ },
+ "mechanism_independent_pricing": {
+  "llama-3.2-1b": {
+   "pred_tok_s": 14.4727,
+   "measured_tok_s": 13.07,
+   "rel_error": 0.1073,
+   "decode_token_us": 69095.499,
+   "within_gate": true,
+   "calibrated_anchor": true,
+   "memory_eff_BW_GBs": 24.2
+  },
+  "llama-3.2-3b": {
+   "pred_tok_s": 5.9659,
+   "measured_tok_s": 6.38,
+   "rel_error": 0.0649,
+   "decode_token_us": 167618.898,
+   "within_gate": true,
+   "calibrated_anchor": true,
+   "memory_eff_BW_GBs": 24.2
+  },
+  "llama-3.1-8b": {
+   "pred_tok_s": 2.7841,
+   "measured_tok_s": 2.7,
+   "rel_error": 0.0311,
+   "decode_token_us": 359178.181,
+   "within_gate": true,
+   "calibrated_anchor": true,
+   "memory_eff_BW_GBs": 24.2
+  }
+ },
+ "mechanism_pass_3x1c": true,
+ "memory_only_ablation": {
+  "llama-3.2-1b": {
+   "pred_tok_s": 18.4563,
+   "rel_error": 0.4121,
+   "within_gate": false
+  },
+  "llama-3.2-3b": {
+   "pred_tok_s": 7.0479,
+   "rel_error": 0.1047,
+   "within_gate": true
+  },
+  "llama-3.1-8b": {
+   "pred_tok_s": 3.1035,
+   "rel_error": 0.1494,
+   "within_gate": true
+  }
+ },
+ "memory_only_fails_at": [
+  "llama-3.2-1b"
+ ],
+ "non_circular_content": "NARROW: memory-only (pure bytes/24.2) fails the gate ONLY at llama-3.2-1b \u2014 there the independent CIM-compute correction is what earns the pass. For 3B/8B, memory-only ALREADY passes (10.5%/14.9%), and the 24.2 anchor is regressed across all sizes (memory backbone partly IN-SAMPLE), so those passes are weaker evidence. The genuinely out-of-sample non-circular content is the 1B compute correction; 8B is the hold-out for the SMOKE closed-form only.",
+ "simulated_demo": {
+  "4c_1c_trend": "see validation/reports/phase2/contention.json (SIMULATED knee; measured 4c/1c = 1.130/1.096/1.081, vendor_llm_int8.json)",
+  "long_context": "LongBench is prefill-heavy (prefill 11753 / decode 4); no measured high-context DECODE point -> simulated extrapolation, not gated."
+ },
+ "ablations_8b": {
+  "base_tok_s": 2.7841,
+  "concurrency_off_tok_s": 2.7841,
+  "contention_off_tok_s": 2.7841,
+  "note": "AllCim decode = serial single-stream chain; concurrency/contention ablations are no-ops here by construction (no parallel branches, k=1). Overlap + knee are exercised in test_event_engine + validate_contention."
+ },
+ "honesty": "mechanism uses NO e2e-fitted BW (fit_BW_GBs=18.33); decode priced from CIM-GEMV(L1) + mem_lpddr4x 24.2 anchor + explicit support/attn/kv. Claims: decode mechanism, smoke-vs-mechanism, simulated contention trend ONLY. NOT a full prefill/TTFT validation (prefill path analytic/unvalidated, D9).",
+ "pass_all": true
+}
