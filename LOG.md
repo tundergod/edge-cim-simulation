@@ -9,6 +9,22 @@ Reverse-chronological (newest first).
 
 ---
 
+## 2026-06-13 — retire old reports + phase-framing reframe
+
+- **Retired** `docs/report/phase0/` + `docs/report/phase1/` (the old static-HTML / markdown-chapter
+  reports) and the orphaned `tools/report/build_phase1_report.py`. The hand-coded
+  `docs/report/phase1-site/` is now the single human-facing report. Referrers repointed:
+  `tests/test_report_metrics.py` (chapter glob → phase1-site src; the 5 `_metrics`/findings tests
+  unchanged), README, CONTEXT repo index, OVERALL, `_metrics.py` docstring, two phase1-site source
+  pages (dangling chapter pointers removed), and two pre-existing dangling `phase1.1/1.2` chapter refs.
+- **Phase framing** (OVERALL + CONTEXT): Phase 1 = **1.1 / 1.2 / 1.3** only. **1.4–1.6b are
+  reinforcement (補強), not new phases** — folded into their parent (1.5→1.1 CIM re-measure, 1.4→1.2
+  re-review, 1.6 ScaleSim + 1.6b NPU-characteristic → 1.3). **Thermal = Phase 0.4** (its own phase;
+  Metis Card part measured, Aetina pending repair). Internal artifact paths (`validation/reports/phase1.7/`
+  etc.) keep their labels for now.
+
+---
+
 ## 2026-06-13 — declutter: `plans/` and `papers/` moved under `docs/`
 
 `plans/` → `docs/plans/` and `papers/` → `docs/papers/`, completing the half-finished

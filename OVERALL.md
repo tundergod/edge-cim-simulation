@@ -5,7 +5,7 @@
 > **設計紀律 — CIM-centric：** 系統先繞著 CIM 的限制走（擅長 weight-stationary GEMV、不擅長 dynamic attention、tile 對齊 channel×64、weight residency 上限、host-device 來回成本）；GPU/NPU/CPU 為支援層；op→unit 分工由特性量測決定，不預設。
 >
 > **Workload：** Llama-3 + Qwen-2.5，1B–8B（stretch 13B），INT8，batch=1，prefill+decode。
-> **狀態：** Phase 0.1–0.3 + Phase 1.1–1.5 完成；Phase 0.4（熱，Metis Card）待做；**下一步 = Phase 2（整合）**。Aetina 送修中。
+> **狀態：** Phase 0.1–0.3 + Phase 1.1–1.3 完成（**1.4–1.6b 是補強，已折入對應子階段**）；Phase 0.4（熱，Metis Card）已量 Card 部分、Aetina 待修復後補；**下一步 = Phase 2（整合）**。Aetina 送修中。
 > **設計決策見 [docs/adr/](docs/adr/)**（0001 引擎 fidelity · 0002 記憶體 · 0003 scheduler · 0004 混合精度 · 0005 能耗 · 0006 驗證/橋接/外推 · 0007 op inventory）；**文獻見 [docs/papers/](docs/papers/)**（16 篇，README 列篩選理由）；**Metis 量測面見 [docs/voyager-sdk.md](docs/voyager-sdk.md)**。
 
 ## 平台假設（橋接）
@@ -43,14 +43,14 @@
 | **Phase 0.1** ✅ | 生成 trace 與 op inventory（純軟體，HF 模型 + workload → op×shape 流）。產出 `measurements/op_inventory/`、`traces/`。 | 定出 sweep matrix（去重 580 sig） |
 | **Phase 0.2** ✅ | op 統計 / workload-op profile（逐-sig count + FLOPs/bytes/intensity + prefill/decode）。產出 `measurements/op_profile/`。 | 加權合成端到端 + 排序 0.3 量測 |
 | **Phase 0.3** ✅ | 真實板量測（除溫度）：各單元 micro-benchmark + 端到端 LLM + variance。產出 `measurements/aetina/`、`measurements/metis_card/`。 | 可開始 Phase 1 / 2 |
-| **Phase 0.4** ⏳ | 溫度／熱特性（**Metis Card only**，溫度可讀；Aetina 送修後補）。**最後做**，可與 1/2 並行。 | 熱模組 M8（選用）才加入 |
+| **Phase 0.4** 🔶 | 溫度／熱特性（**Metis Card only**，溫度可讀；Aetina 送修後補）。**Metis Card 已量**（heating + perf-vs-temp + 集總 RC 模型）；Aetina 部分待修復。 | 熱模組 M8（選用）已建 |
 | **Phase 1**（傘狀） | 每個 component 建模 + 驗證：對量測擬合**方程式**（取代龐大 lookup table），逐一驗證。分子波（依資料來源切）。 | 校好、誠實標註的 component 模型 |
-| &nbsp;&nbsp;**Phase 1.1** ✅（CIM 經 1.5 再 review） | silicon 校準並過 ADR-0006 gate：M1-CIM（2.7%）、M4-GPU/CPU、M2-DRAM（Card LPDDR4x）、M5-trace、M7-energy + 端到端 recompose hold-out（8B 9.5%）。**1.5 上 Card 補量**：native multi-tile residency-cliff（31%→2.4%）、dense prefill M=2..320、prefill M-wall=**512**、KV-BW 驗證。報告 `docs/report/phase1/`。 | 量測級可信的核心 decode 路徑 |
-| &nbsp;&nbsp;**Phase 1.2** ✅ | 模組化「engine + 可換 spec」校準-analytic 元件層（換型號=換 spec）：CPU（殘差 1.15%）、NPU（解析 systolic-roofline，`simulated`、#13）、記憶體（analytic LPDDR4/4X/5 + SRAM CACTI）、GPU、CIM 雙拓樸。CIM 已 **`CARD_REVALIDATED`**（800MHz 13 點，median 4.8%）。**1.4 再 review**：conversion-op→analytic 重分類、報告數字重生。報告 `docs/report/phase1/`、findings `docs/phase1.2-findings.md`。 | 完整、可換型號的輕引擎模擬器 |
+| &nbsp;&nbsp;**Phase 1.1** ✅（CIM 經 1.5 再 review） | silicon 校準並過 ADR-0006 gate：M1-CIM（2.7%）、M4-GPU/CPU、M2-DRAM（Card LPDDR4x）、M5-trace、M7-energy + 端到端 recompose hold-out（8B 9.5%）。**1.5 上 Card 補量**：native multi-tile residency-cliff（31%→2.4%）、dense prefill M=2..320、prefill M-wall=**512**、KV-BW 驗證。報告 `docs/report/phase1-site/`。 | 量測級可信的核心 decode 路徑 |
+| &nbsp;&nbsp;**Phase 1.2** ✅ | 模組化「engine + 可換 spec」校準-analytic 元件層（換型號=換 spec）：CPU（殘差 1.15%）、NPU（解析 systolic-roofline，`simulated`、#13）、記憶體（analytic LPDDR4/4X/5 + SRAM CACTI）、GPU、CIM 雙拓樸。CIM 已 **`CARD_REVALIDATED`**（800MHz 13 點，median 4.8%）。**1.4 再 review**：conversion-op→analytic 重分類、報告數字重生。報告 `docs/report/phase1-site/`、findings `docs/phase1.2-findings.md`。 | 完整、可換型號的輕引擎模擬器 |
 | &nbsp;&nbsp;**Phase 1.3** ✅ | 重型保真引擎插同一 `engine=` 介面：**ONNXim**（NPU）、**Ramulator2**（LPDDR5）皆 LIVE，驗 1.2 單串流趨勢。多單元競爭 / 逐 token 整機在 Phase 2。NPU 第三引擎 **ScaleSim 已建**（Phase 1.6，純 Python；1.6b 進一步實測 ONNXim/ScaleSim 是否有 32-systolic 特性）。 | 高保真引擎就緒 |
 | **Phase 2** ⏳ | 整合成端到端 event-driven 模擬器（M3 事件引擎 + M6 排程器），跑完整 prefill+decode，做 L4/L6 端到端 + L5 敏感度 + 混合精度驗證。 | 完整模擬器 |
 
-> **Phase 1.4 / 1.5 是再 review，非新階段**：對 1.1/1.2 的 component 重審 + 重生報告數字，已折進上表。各 phase findings 在 `docs/phase1.{1,2,3}-findings.md`；整併報告為單一 `docs/report/phase1/`。
+> **Phase 1.4–1.6b 是補強波，非新階段**：1.4 重審 1.2、1.5 上 Card 補量 1.1、1.6 建 ScaleSim 第三引擎 + 1.6b 實測 NPU systolic 特性補強 1.3——全折進上表的 1.1/1.2/1.3。熱量測歸 **Phase 0.4**。各 phase findings 在 `docs/phase1.{1,2,3}-findings.md`；整併報告為單一 `docs/report/phase1-site/`。
 
 > **可重現原則**：每次量測存**原始數據**（所有 iteration 原值 + sweep 兩軸 + config + 單位，不只 median/p95）+ 板上 raw log 納版控。所有圖是 build artifact：`tools/plotting/` 每圖一支 script，只吃 committed 數據重產，**絕不手繪**。
 

@@ -11,7 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "tools/report"))
 import _metrics  # noqa: E402
 
-CH = ROOT / "docs/report/phase1/chapters"
+SITE = ROOT / "docs/report/phase1-site/src"
 FINDINGS = ROOT / "docs/phase1.1-findings.md"
 
 
@@ -30,10 +30,11 @@ def test_known_values():
     assert m["mem.pcie_floor_us"] == "911"
 
 
-def test_all_chapter_placeholders_resolve():
-    """No report chapter may carry an unresolved {{key}} (substitute raises if so)."""
+def test_all_site_placeholders_resolve():
+    """No phase1-site page may carry an unresolved {{key}} (substitute raises if so).
+    (Repointed from the retired old markdown report to the hand-coded site.)"""
     m = _metrics.load()
-    for p in sorted(CH.glob("*.md")):
+    for p in sorted(SITE.glob("*.src.html")):
         _metrics.substitute(p.read_text(), m)  # raises KeyError on any unknown {{key}}
 
 

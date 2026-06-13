@@ -2,8 +2,8 @@
 
 Every number that appears in a Phase-1 report table or the findings gate-summary is read
 HERE from its committed `validation/reports/*.json` and formatted to the display string the
-docs render. Chapters/findings carry `{{key}}` placeholders (see build_phase1_report.py /
-build_findings.py); the build substitutes them and FAILS on any unresolved `{{...}}`. So a
+docs render. The phase1-site pages + findings carry `{{key}}` placeholders (see
+docs/report/phase1-site/build.py / build_findings.py); the build substitutes them and FAILS on any unresolved `{{...}}`. So a
 number cannot be hand-mistyped in prose: it flows from the JSON, and if the JSON changes the
 docs change. The only hand-written things here are (a) the JSON path and (b) the formatter —
 both guarded by tests/test_report_metrics.py (every path must resolve).
