@@ -53,6 +53,19 @@ def test_capacity_feasibility_gate():
     assert r["model_footprint_GB"] > 0 and r["tok_s"] > 0
 
 
+def test_platform_rejects_unknown_unit():
+    from simulator.runtime.platform import Platform
+    from simulator.runtime.dag import OpNode
+    from simulator.models.engine import Workload
+    plat = Platform("llama-3.2-1b")
+    bad = OpNode(id=0, category="matmul", wl=Workload(op="matmul", M=1, K=64, N=64), unit="bogus")
+    try:
+        plat.compute_us(bad)
+    except ValueError:
+        return
+    raise AssertionError("unknown unit not rejected by platform")
+
+
 def test_unknown_scheduler_rejected():
     cfg = _cfg("llama-3.2-1b")
     cfg.scheduler = "nope"

@@ -32,6 +32,8 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
     # fail-loud preconditions (#56): never return a plausible latency for an invalid run
     if not dag.is_acyclic():
         raise ValueError("M3: cyclic DAG — a dependency cycle cannot be scheduled")
+    if any(n.unit is None for n in dag.nodes):
+        raise ValueError("M3: unscheduled node(s) with unit=None — run a scheduler before run_dag")
     if any(n.bytes_streamed > 0 for n in dag.nodes) and bw.eff_BW <= 0:
         raise ValueError("M3: memory traffic present but SharedBandwidth eff_BW <= 0 "
                          "(degenerate bandwidth would stall the simulation)")
@@ -46,7 +48,7 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
     last = 0.0
 
     def ukey(u):
-        return (u or "cpu") if concurrency else "_serial"
+        return u if concurrency else "_serial"   # u is validated non-None above
 
     def compute_us(node):
         return float(platform.compute_us(node)) if price_compute else 0.0

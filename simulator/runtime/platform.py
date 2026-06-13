@@ -48,6 +48,9 @@ class Platform:
         """Compute latency (us) of one op on its assigned unit. 0.0 = no compute
         model (pure-memory op; cost is its bytes_streamed via the engine)."""
         u, cat, wl = node.unit, node.category, node.wl
+        if u not in ("cim", "cpu", "gpu", "mem"):
+            raise ValueError(f"M3 platform: unknown/unpriced unit {u!r} "
+                             f"(valid: cim/cpu/gpu/mem; npu pricing is Wave 2.2)")
         if u == "cim":
             if cat == "matmul" and wl.K and wl.N:
                 return self.cim.dev_lat_us(wl.M, wl.K, wl.N)

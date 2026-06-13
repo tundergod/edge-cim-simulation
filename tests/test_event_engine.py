@@ -100,6 +100,16 @@ def test_zero_bandwidth_raises():
     raise AssertionError("zero-bandwidth memory stream not rejected")
 
 
+def test_unscheduled_node_raises():
+    # unit=None (no scheduler run) must fail loud, not fall back to "cpu"
+    dag = Dag([OpNode(id=0, category="matmul", wl=Workload(op="matmul"), deps=[], unit=None)])
+    try:
+        run_dag(dag, _StubPlatform({0: 1.0}), SharedBandwidth(24.2))
+    except ValueError:
+        return
+    raise AssertionError("unscheduled node (unit=None) not rejected")
+
+
 def test_empty_dag():
     dag = Dag([])
     assert run_dag(dag, _StubPlatform({}), SharedBandwidth(24.2)) == 0.0
