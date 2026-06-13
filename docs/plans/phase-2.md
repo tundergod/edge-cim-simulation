@@ -25,6 +25,33 @@ Phase 0.1–1.3 已交付：silicon 校準的「engine + 可換 spec」per-unit 
 | D9 | TTFT/prefill：v1 **報告但不 gate**（TTFT 餘量 = weight-load + prefill-attention + host overhead 仍是開放項）；gate 只看 decode tok/s | 工程 |
 | D10 | conversion-op 成本由既有 M2/M4 per-op 模型 × 邊界穿越次數解析計價，**不新增 param、不量測**（ADR-0004 rev） | ADR-0004 |
 | D11 | host-MMIO swap 的 per-call floor 用 **Alpha 實測 911µs**，不用 HeteroInfer 的 400µs；Card decode 路徑**不加** per-call sync 項（自家 silicon 說 on-card 無此 floor） | plan-review |
+| D12 | **使用者輸入面 = `SimConfig`**：宣告式 JSON experiment-config → 載入成 dataclass，`runner.run(SimConfig)` 唯一入口。**校準核心固定**（per-unit timing 方程式 + mem_lpddr4x 24.2 錨不在 config、不可覆寫）、**前瞻層可自由定義/掃描**（容量 1→32GB+、BW 效率、topology、units 開關、scheduler、NPU 精度、engine backend、tunables、ablations）；超出校準包絡自動標 `extrapolated`/`simulated` | 使用者 |
+
+## 使用者輸入面（SimConfig，D12）
+
+「使用者跑一次模擬能自由定義什麼」是模擬器的 API。宣告式 experiment-config（JSON，置於 `simulator/runtime/configs/<name>.json`）→ `SimConfig.from_json()` 載入成 dataclass → `runner.run(cfg) -> metrics`。一檔定義一次實驗、可重現、可 diff、納版控。free/fixed 由程式強制：校準核心**不在** config（覆寫即 fail-loud）；前瞻層可自由設、可 sweep。
+
+```json
+{
+  "workload":  {"model": "llama-3.1-8b", "task": "gsm8k", "prefill_len": 256, "decode_len": 512, "context": 1024, "batch": 1},
+  "platform":  {"memory_spec": "mem_lpddr4x", "topology": "cim_topo_card", "memory_capacity_GB": 16,
+                "bw_efficiency": null, "units": {"cim": true, "gpu": true, "npu": false, "cpu": true},
+                "engine": {"cim": "analytic", "memory": "analytic", "npu": "analytic"}},
+  "scheduler": {"policy": "all_cim", "op_unit_overrides": {}, "precision_boundary_placement": "default"},
+  "tunables":  {"knee_GBs": 60, "interconnect_efficiency": 0.9, "concurrency_overlap_factor": 1.0},
+  "ablations": {"concurrency_off": false, "contention_off": false},
+  "sweep":     {"param": "knee_GBs", "factors": [0.8, 1.0, 1.2]}
+}
+```
+
+| 軸 | 自由度 | 誠實邊界 |
+|---|---|---|
+| workload（model/task/P/D/context） | 永遠輸入；batch=1 hook | — |
+| 記憶體容量 1→32GB+ / BW 效率 / topology(card↔edge) / memory_spec | 自由設 + sweep | >16GB 或 edge → `extrapolated`/`simulated` |
+| units 開關、scheduler、NPU 精度、engine backend | 自由選 | NPU/非-silicon backend → `simulated` |
+| tunables（knee/interconnect/overlap） | 自由設 + ±20% sweep | 全 `simulated`（無並發 silicon） |
+| ablations（concurrency_off / contention_off） | flag | — |
+| **per-unit timing 方程式 + mem_lpddr4x 24.2 錨** | **固定，config 不可覆寫** | 覆寫 = fail-loud |
 
 ## 架構（6-box，模組化）
 
