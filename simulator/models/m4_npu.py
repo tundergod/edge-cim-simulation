@@ -123,7 +123,7 @@ class NpuModel(UnitEngine):
         return lat, bound
 
     def predict(self, wl: Workload) -> dict:
-        """Frozen dict {latency_us, bound, provenance}. ALL outputs simulator/engines/borrowed (no silicon)."""
+        """Frozen dict {latency_us, bound, provenance}. ALL outputs simulated/borrowed (no silicon)."""
         if wl.op in ("attn_bmm", "attention"):
             hd = wl.extra.get("hd", wl.K or 128)
             lat, bound = self._attn_us(wl.kv, wl.heads, wl.layers, hd, wl.dtype)

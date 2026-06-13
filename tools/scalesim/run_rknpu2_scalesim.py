@@ -10,7 +10,7 @@ apply HeteroInfer's order-transpose optimisation. Produces:
 model 3 cores. We divide cycles by `cores` to put all three engines on the same 3-core (~6 TOPS)
 basis. The /cores factor ASSUMES ideal linear 3-core scaling (no inter-core overhead) — a
 load-bearing assumption, applied symmetrically. All of {32x32 dim, SRAM sizes, dataflow, /cores}
-are simulator/engines/borrowed, NOT measured RKNPU2.
+are simulated/borrowed, NOT measured RKNPU2.
 
 Run: ./.venv/bin/python tools/scalesim/run_rknpu2_scalesim.py
 """

@@ -1,7 +1,7 @@
 module: m4_npu
 status: SIMULATED            # was BLOCKED on #13; Phase 1.2 (D2) ships an analytic systolic-roofline
 blocked_on: "GitHub issue #13 — RKNPU2 micro-benchmark NOT collected (board offline). Silicon absent."
-honesty: simulated          # ALL outputs simulator/engines/borrowed; NONE calibrated to RKNPU2 silicon
+honesty: simulated          # ALL outputs simulated/borrowed; NONE calibrated to RKNPU2 silicon
 engine: "analytic systolic-roofline (6 TOPS INT8 ceiling + borrowed 32x32 padding + order/shape factor + native attn bmm)"
 measurement_sources:
   - measurements/aetina/rknpu2_matmul.json   # NOT COLLECTED (#13); no silicon exists

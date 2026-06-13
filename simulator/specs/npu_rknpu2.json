@@ -1,5 +1,5 @@
 {
-  "_doc": "RKNPU2 (RK3588 NPU) spec (Phase 1.2 = ANALYTIC). NO RKNPU2 silicon (board offline, issue #13) -> ALL fields simulator/engines/borrowed. Datasheet 6 TOPS INT8; systolic dimension BORROWED from Hexagon 32x32 (HeteroInfer); BW = RK3588 host ~34 GB/s x 59-66% (denominator = 68 peak, HeteroInfer Fig5). No power telemetry -> energy NOT determinable. Upgrade path: issue #13 silicon (superseded-not-satisfied) + ONNXim (Phase 1.3, simulated not silicon).",
+  "_doc": "RKNPU2 (RK3588 NPU) spec (Phase 1.2 = ANALYTIC). NO RKNPU2 silicon (board offline, issue #13) -> ALL fields simulated/borrowed. Datasheet 6 TOPS INT8; systolic dimension BORROWED from Hexagon 32x32 (HeteroInfer); BW = RK3588 host ~34 GB/s x 59-66% (denominator = 68 peak, HeteroInfer Fig5). No power telemetry -> energy NOT determinable. Upgrade path: issue #13 silicon (superseded-not-satisfied) + ONNXim (Phase 1.3, simulated not silicon).",
   "unit": "npu",
   "cores": 3,
   "freq_ghz": 1.0,

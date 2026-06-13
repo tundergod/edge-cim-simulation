@@ -40,7 +40,7 @@ memory_us   = weight_bytes / eff_BW_low                          <span class="c"
 latency_us  = max(compute_us, memory_us, dispatch_floor)         <span class="c"># bound = argmax</span></div>
     <p><strong>每個參數都不是校準值</strong>——這正是本頁要講清楚的事。下表把每個數字的來源標籤攤開：</p>
     <table>
-      <caption>解析 systolic-roofline 參數（npu_rknpu2.json / m4_npu.py，全 simulator/engines/borrowed）</caption>
+      <caption>解析 systolic-roofline 參數（npu_rknpu2.json / m4_npu.py，全 simulated/borrowed）</caption>
       <thead><tr><th>參數</th><th class="num">值</th><th>來源 / 誠實標籤</th></tr></thead>
       <tbody>
         <tr><td>6 TOPS INT8 ceiling</td><td class="num">6.0</td><td><strong>assumption</strong>：datasheet 峰值，非量測</td></tr>
@@ -98,7 +98,7 @@ latency_us  = max(compute_us, memory_us, dispatch_floor)         <span class="c"
       <tbody>
         <tr><td>(a) Fig3 階梯：knee 對齊借來的 32×32（7 knees，單調不減）</td><td>形狀吻合</td><td class="fail">simulated（非校準）</td></tr>
         <tr><td>(b) Fig4 order/shape factor ≤ 6×（飽和於借來上限）</td><td>形狀吻合</td><td class="fail">simulated（非校準）</td></tr>
-        <tr><td>(c) Fig5 BW 分率 59–66%（分母=68 GB/s）</td><td>落在帶內</td><td class="fail">simulator/engines/borrowed</td></tr>
+        <tr><td>(c) Fig5 BW 分率 59–66%（分母=68 GB/s）</td><td>落在帶內</td><td class="fail">simulated/borrowed</td></tr>
       </tbody>
     </table>
     <div class="note"><b>誠實邊界一句話：</b>三條 trend 「pass」只代表<strong>形狀對得上借來的趨勢</strong>，<strong>不代表絕對延遲被驗證</strong>。本頁沒有任何 ✅ PASS 的數值門檻，因為沒有矽晶可以 PASS。</div>

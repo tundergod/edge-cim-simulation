@@ -18,7 +18,7 @@ regenerable** from committed JSON via `tools/analysis/{fit,build,check}_*.py` an
 | Unit (ch) | Engine | Spec | Honesty | Acceptance / result |
 |---|---|---|---|---|
 | **CPU** (C) | instruction-count roofline `max(compute,memory)+overhead_op` | `cpu_rk3588` | **calibrated** (η_c+overhead to fp32 `cpu_ops.json`, 1 A76 core) | per-op residual **median 1.15%, p95 7.31%** |
-| **NPU** (N) | analytic systolic-roofline (6 TOPS ceiling + borrowed 32×32 pad + order/shape + attn bmm) | `npu_rknpu2` | **simulator/engines/borrowed** (no silicon, #13) | trend-shape only: staircase knee@32, order/shape ≤6×, BW frac 59–66%/68 — all pass (SIMULATED) |
+| **NPU** (N) | analytic systolic-roofline (6 TOPS ceiling + borrowed 32×32 pad + order/shape + attn bmm) | `npu_rknpu2` | **simulated/borrowed** (no silicon, #13) | trend-shape only: staircase knee@32, order/shape ≤6×, BW frac 59–66%/68 — all pass (SIMULATED) |
 | **Memory** (M) | analytic all-spec eff-BW + PCIe floor | `mem_lpddr4/4x/5`, `cim_topo_alpha/card` | **mix**: LPDDR4x 24.2=calibrated anchor; LPDDR5 33.3=simulated; peaks=assumption; Alpha 911µs floor=measured | LPDDR5→33.3, LPDDR4x→24.2, alpha floor / card 0; monotone |
 | **SRAM** (M) | CACTI tier + residency | `sram_metis_aipu` | **assumption** (CACTI BW/latency); **architecture-only** residency | 8B weights (≫32 MiB) → DRAM tier (never resident) |
 | **GPU** (G) | analytic roofline SLOT (coexists with the 1.1 micro-benchmark model) | `gpu_mali_g610` | **simulated** (roofline lower bound, FP16-calibrated; **INT8 zero data**) | error vs 1.1 pts median 3.1% (lower-bound tail); no INT8 gate |
