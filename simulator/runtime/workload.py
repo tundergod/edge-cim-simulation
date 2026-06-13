@@ -73,7 +73,8 @@ def wl_from_row(row, model):
         return Workload(op="stream", nbytes=nbytes, dtype="fp16")
     # support / elementwise (norm/rope/ffn/softmax/residual, + attention scale & mask) ->
     # priced by category on CPU; memory term from nbytes. aten op kept for provenance.
-    return Workload(op=cat, nbytes=nbytes, dtype="fp16",
+    kv = int(row["out_shape"][-1]) if (cat == "softmax" and row.get("out_shape")) else 0
+    return Workload(op=cat, kv=kv, nbytes=nbytes, dtype="fp16",
                     extra={"model": model, "category": cat, "aten": op})
 
 

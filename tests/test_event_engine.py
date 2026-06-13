@@ -1,0 +1,73 @@
+"""Phase 2.1 — M3 event loop (simulator/runtime/events.py).
+
+Hand-computed toy DAGs: serial-chain finish time, cross-unit concurrency,
+concurrency-off == serial sum, and node duration = max(compute, memory).
+
+    .venv/bin/pytest tests/test_event_engine.py
+"""
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+from simulator.models.engine import Workload  # noqa: E402
+from simulator.runtime.dag import OpNode, Dag  # noqa: E402
+from simulator.runtime.resources import SharedBandwidth  # noqa: E402
+from simulator.runtime.events import run_dag  # noqa: E402
+
+
+class _StubPlatform:
+    """Prices each node's compute from a {node_id: us} map (no real unit models)."""
+    def __init__(self, compute_map):
+        self.compute_map = compute_map
+
+    def compute_us(self, node):
+        return self.compute_map.get(node.id, 0.0)
+
+
+def _node(i, unit, deps=(), bytes_streamed=0):
+    return OpNode(id=i, category="matmul", wl=Workload(op="matmul", M=1, K=64, N=64),
+                  deps=list(deps), unit=unit, bytes_streamed=bytes_streamed)
+
+
+def test_serial_chain_sums():
+    dag = Dag([_node(0, "cim"), _node(1, "gpu", [0]), _node(2, "cpu", [1])])
+    plat = _StubPlatform({0: 10.0, 1: 5.0, 2: 3.0})
+    bw = SharedBandwidth(eff_BW_GBs=24.2)
+    assert abs(run_dag(dag, plat, bw) - 18.0) < 1e-9     # 10 -> 5 -> 3 chained = 18
+
+
+def test_concurrency_overlap_vs_off():
+    # three independent compute nodes on three units
+    dag = Dag([_node(0, "cim"), _node(1, "gpu"), _node(2, "cpu")])
+    plat = _StubPlatform({0: 10.0, 1: 5.0, 2: 3.0})
+    bw = SharedBandwidth(eff_BW_GBs=24.2)
+    assert abs(run_dag(dag, plat, bw, concurrency=True) - 10.0) < 1e-9   # max, overlapped
+    assert abs(run_dag(dag, plat, bw, concurrency=False) - 18.0) < 1e-9  # serial sum
+
+
+def test_single_memory_stream():
+    dag = Dag([_node(0, "cim", bytes_streamed=int(10e9))])    # 10 GB
+    plat = _StubPlatform({0: 0.0})
+    bw = SharedBandwidth(eff_BW_GBs=10.0)                     # 10 GB/s -> 1 s = 1e6 us
+    assert abs(run_dag(dag, plat, bw) - 1e6) < 1e-3
+
+
+def test_node_dur_is_max_compute_memory():
+    # compute (2e6 us) dominates memory (1e6 us)
+    dag = Dag([_node(0, "cim", bytes_streamed=int(10e9))])
+    plat = _StubPlatform({0: 2e6})
+    bw = SharedBandwidth(eff_BW_GBs=10.0)
+    assert abs(run_dag(dag, plat, bw) - 2e6) < 1e-3
+
+
+def test_empty_dag():
+    dag = Dag([])
+    assert run_dag(dag, _StubPlatform({}), SharedBandwidth(24.2)) == 0.0
+
+
+if __name__ == "__main__":
+    fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
+    for fn in fns:
+        fn(); print(f"ok {fn.__name__}")
+    print(f"\n{len(fns)} event-engine tests passed.")
