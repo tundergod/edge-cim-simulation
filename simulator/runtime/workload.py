@@ -145,8 +145,9 @@ def build_token_dag(model, phase, L, *, _model_obj=None):
                "category": s["category"], "bytes": by}
         wl = wl_from_row(row, model)
         deps = list(s["deps"])
+        out_elems = op_profile._prod(out_shape) if out_shape else 0
         nodes.append(OpNode(id=i, category=s["category"], wl=wl, deps=deps, bytes_streamed=by,
-                            in_values=list(deps), out_value=i,
+                            in_values=list(deps), out_value=i, out_elems=out_elems,
                             precision=fixture_io.PRECISION_CONTRACT[s["category"]]))
     return Dag(nodes)
 

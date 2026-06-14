@@ -65,6 +65,7 @@ class SimConfig:
     units: dict = field(default_factory=_default_units)
     engine: dict = field(default_factory=_default_engine)
     scheduler: str = "all_cim"
+    precision_boundary_placement: str = "consumer"   # which unit pays a conversion op (2.2b): consumer|producer
     knee_GBs: float | None = None
     interconnect_efficiency: float = 1.0
     concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; no effect on the 2.1 serial path
@@ -109,6 +110,8 @@ class SimConfig:
             units=plat.get("units") or _default_units(),
             engine=plat.get("engine") or _default_engine(),
             scheduler=(sched.get("policy") if isinstance(sched, dict) else sched) or "all_cim",
+            precision_boundary_placement=(sched.get("precision_boundary_placement", "consumer")
+                                          if isinstance(sched, dict) else "consumer"),
             knee_GBs=tun.get("knee_GBs"),
             interconnect_efficiency=tun.get("interconnect_efficiency", 1.0),
             concurrency_overlap_factor=tun.get("concurrency_overlap_factor", 1.0),

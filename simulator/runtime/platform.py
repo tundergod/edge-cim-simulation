@@ -65,6 +65,10 @@ class Platform:
         if u not in ("cim", "cpu", "gpu", "mem"):
             raise ValueError(f"M3 platform: unknown/unpriced unit {u!r} "
                              f"(valid: cim/cpu/gpu/mem; npu pricing is Wave 2.2)")
+        if cat == "convert":   # precision-boundary cast: memory-bound, cost = bytes via M3 (compute 0)
+            return {"latency_us": 0.0, "source_model": "convert",
+                    "compute_provenance": f"precision cast {wl.extra.get('from')}->{wl.extra.get('to')} "
+                                          f"(memory-bound; cost = bytes_streamed via the M3 pool)"}
         if u == "cim":
             if cat == "matmul" and wl.K and wl.N:
                 lat = self.cim.dev_lat_us(wl.M, wl.K, wl.N)
