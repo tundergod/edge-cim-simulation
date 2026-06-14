@@ -15,7 +15,7 @@ sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools" / "trace_export"))
 from simulator.runtime.workload import build_token_dag  # noqa: E402
 from simulator.runtime.scheduler import (  # noqa: E402
-    Scheduler, AllCimScheduler, SCHEDULERS, all_cim_assign,
+    Scheduler, AllCimScheduler, CimHeteroScheduler, SCHEDULERS, all_cim_assign,
 )
 
 
@@ -54,6 +54,35 @@ def test_scheduler_registry():
     assert "all_cim" in SCHEDULERS
     assert isinstance(SCHEDULERS["all_cim"], Scheduler)
     assert isinstance(SCHEDULERS["all_cim"], AllCimScheduler)
+
+
+def test_cimhetero_scheduler_placement_and_conversions():
+    dag = CimHeteroScheduler().assign(build_token_dag("llama-3.2-1b", "decode", 512))
+    by_cat = {}
+    for n in dag.nodes:
+        by_cat.setdefault(n.category, set()).add(n.unit)
+    assert by_cat["matmul"] == {"cim"}
+    assert by_cat["softmax"] == {"cpu"} and by_cat["kv_cache"] == {"mem"}
+    bmm_units = {n.unit for n in dag.nodes if n.category == "attention" and "hd" in n.wl.extra}
+    assert bmm_units == {"gpu"}                                   # QK^T/S·V bmm on GPU
+    assert any(n.category == "convert" for n in dag.nodes)         # conversions inserted
+    assert all(n.mem_domain in ("dram", "cpu_cache", "none") for n in dag.nodes)  # incl converts
+
+
+def test_cimhetero_registry_and_pipeline_mode():
+    assert "cim_hetero" in SCHEDULERS and isinstance(SCHEDULERS["cim_hetero"], CimHeteroScheduler)
+    assert SCHEDULERS["cim_hetero"].pipeline is True              # genuine multi-unit overlap
+    assert SCHEDULERS["all_cim"].pipeline is False               # single-accelerator serial
+
+
+def test_cimhetero_runs_end_to_end_simulated():
+    from simulator.runtime.config import SimConfig
+    from simulator.runtime.runner import run
+    r = run(SimConfig.from_dict({"workload": {"model": "llama-3.2-1b", "context": 1024},
+                                 "scheduler": {"policy": "cim_hetero"}}))
+    assert r["tok_s"] > 0
+    assert r["calibrated_anchor"] is False                        # SIMULATED (no concurrent silicon)
+    assert any("simulated" in p for p in r["provenance"])
 
 
 if __name__ == "__main__":

@@ -36,9 +36,12 @@ def _residency(node):
 
 
 class Scheduler(ABC):
-    """Pure, idempotent op->unit placement. `assign` sets ONLY node.unit + node.mem_domain
-    (never category/wl/deps) and returns the dag; calling it twice gives the same result."""
+    """Pure, idempotent op->unit placement. `assign` sets node.unit + node.mem_domain (and may
+    insert conversion ops) and returns a dag; calling it twice gives the same result. `pipeline`
+    declares the engine execution mode: False = single-accelerator serial (AllCim, measured);
+    True = multi-unit cross-op overlap (heterogeneous, SIMULATED)."""
     name: str = ""
+    pipeline: bool = False
 
     @abstractmethod
     def assign(self, dag, cfg=None):
@@ -48,6 +51,7 @@ class Scheduler(ABC):
 class AllCimScheduler(Scheduler):
     """All-CIM baseline (the L4-gated all-AIPU INT8 placement)."""
     name = "all_cim"
+    pipeline = False
 
     def assign(self, dag, cfg=None):
         for n in dag.nodes:
@@ -56,7 +60,32 @@ class AllCimScheduler(Scheduler):
         return dag
 
 
-SCHEDULERS = {"all_cim": AllCimScheduler()}
+class CimHeteroScheduler(Scheduler):
+    """The project's mixed-precision config (SIMULATED): CIM-INT8 matmul × GPU-FP16 attention.
+    matmul->cim, the QK^T/S·V bmm->gpu, scale/mask + support->cpu, kv_cache/embedding->mem;
+    inserts int8<->fp16 conversion ops at the GPU boundary. Runs concurrent (pipeline=True)."""
+    name = "cim_hetero"
+    pipeline = True
+
+    def assign(self, dag, cfg=None):
+        from simulator.runtime.precision import insert_conversions   # deferred: avoids import cycle
+        for n in dag.nodes:
+            if n.category == "matmul":
+                n.unit = "cim"
+            elif n.category == "attention":
+                n.unit = "gpu" if "hd" in n.wl.extra else "cpu"      # QK^T/S·V bmm vs scale/mask
+            elif n.category in ("softmax", "norm", "rope", "ffn", "residual"):
+                n.unit = "cpu"
+            else:
+                n.unit = "mem"                                       # kv_cache, embedding
+        placement = getattr(cfg, "precision_boundary_placement", "consumer") if cfg else "consumer"
+        dag = insert_conversions(dag, placement=placement)          # returns a rebuilt Dag
+        for n in dag.nodes:
+            n.mem_domain = _residency(n)
+        return dag
+
+
+SCHEDULERS = {"all_cim": AllCimScheduler(), "cim_hetero": CimHeteroScheduler()}
 
 
 def all_cim_assign(dag):

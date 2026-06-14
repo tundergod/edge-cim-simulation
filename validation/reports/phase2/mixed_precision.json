@@ -1,0 +1,33 @@
+{
+ "module": "mixed_precision",
+ "phase": "2.2b",
+ "label": "simulated",
+ "config": "CIM-INT8 matmul \u00d7 GPU-FP16 attention (the project's mixed-precision config)",
+ "honesty": "SIMULATED \u2014 no concurrent-unit silicon (Aetina out for repair, #52). Reports the conversion-op COST + modeled heterogeneous decode vs the AllCim baseline ONLY; mixed-precision OUTPUT QUALITY is NOT modeled (D3). NOT validated/measured. CimHetero is compute-bound on the GPU attn_bmm_us (an unoptimised lower-bound), so it is SLOWER than AllCim \u2014 the value is the conversion cost + faithful structure, NOT a speedup.",
+ "models": {
+  "llama-3.2-1b": {
+   "allcim_tok_s": 14.4727,
+   "cimhetero_tok_s": 5.1346,
+   "cimhetero_over_allcim": 0.355,
+   "conversions_per_decode_token": 48,
+   "conversion_bytes_per_token": 25313280,
+   "calibrated_anchor": false
+  },
+  "llama-3.2-3b": {
+   "allcim_tok_s": 5.9659,
+   "cimhetero_tok_s": 3.0094,
+   "cimhetero_over_allcim": 0.504,
+   "conversions_per_decode_token": 84,
+   "conversion_bytes_per_token": 88510464,
+   "calibrated_anchor": false
+  },
+  "llama-3.1-8b": {
+   "allcim_tok_s": 2.7841,
+   "cimhetero_tok_s": 1.6453,
+   "cimhetero_over_allcim": 0.591,
+   "conversions_per_decode_token": 96,
+   "conversion_bytes_per_token": 101253120,
+   "calibrated_anchor": false
+  }
+ }
+}

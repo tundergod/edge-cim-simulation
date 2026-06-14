@@ -138,6 +138,9 @@ class SimConfig:
         if self.pipeline:
             p.append("simulated: pipeline overlap enabled (cross-op double-buffering; the "
                      "measured all-AIPU Card 1c single-core decode shows no cross-op overlap)")
+        if self.scheduler != "all_cim":
+            p.append(f"simulated: '{self.scheduler}' heterogeneous placement (only AllCim is "
+                     f"silicon-gated; no concurrent-unit silicon — Aetina out for repair, #52)")
         for u, e in self.engine.items():
             if e not in _SILICON_BACKENDS:
                 p.append(f"simulated: {u} engine='{e}' (non-silicon backend)")

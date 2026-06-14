@@ -51,7 +51,9 @@ def run(cfg):
     """Run one SimConfig -> metrics dict."""
     if cfg.scheduler not in _SCHEDULERS:
         raise ValueError(f"unknown scheduler '{cfg.scheduler}' (have {sorted(_SCHEDULERS)})")
-    assign = _SCHEDULERS[cfg.scheduler].assign   # bound annotator: assign(dag) -> dag
+    sched = _SCHEDULERS[cfg.scheduler]
+    def assign(dag):                              # annotator: places units/domains (+ conversions)
+        return sched.assign(dag, cfg)
 
     # fail-loud on knobs that are accepted by SimConfig but NOT yet wired in 2.1
     # (so a user can't run a silently-inert experiment). These land in later waves.
@@ -75,8 +77,8 @@ def run(cfg):
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off
     price_compute = not cfg.compute_off
-    pipeline = cfg.pipeline   # OFF (default) = single-accelerator serial (measured all-AIPU);
-                              # ON = SIMULATED cross-op overlap (provenance-flagged)
+    pipeline = cfg.pipeline or sched.pipeline   # AllCim: serial (measured). Heterogeneous schedulers
+                                                # declare pipeline=True (multi-unit overlap, SIMULATED).
 
     # capacity is a FEASIBILITY gate, NOT a throughput knob: decode tok/s is set by bandwidth,
     # not capacity (so it is deliberately not a Platform timing input). Fail-loud if the model's
