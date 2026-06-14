@@ -26,9 +26,30 @@ _BYTE_EPS = 1.0    # bytes: a stream with < 1 byte remaining is done (guards FP 
 _INF = float("inf")
 
 
-def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compute=True):
+def run_serial(dag, platform, bw, *, price_compute=True):
+    """SINGLE-ACCELERATOR execution (no cross-op pipeline): each op occupies the one
+    accelerator for max(compute, memory) — intra-op double-buffering only — and the
+    token latency is their sum. This is the FAITHFUL all-AIPU (AllCim) decode model:
+    the measured Metis 1c silicon exposes NO intra-frame op pipeline (SDK v1.3.1 walls
+    off multicore_mode pipeline/cooperative; `double_buffer` only overlaps host<->device
+    PCIe transfer, negligible for decode), so the measured tok/s is the no-cross-op-overlap
+    time. concurrency/contention are no-ops here by construction (one resource, k=1).
+    Order-independent (a sum of per-node maxima)."""
+    total = 0.0
+    for n in dag.nodes:
+        c = float(platform.compute_us(n)) if price_compute else 0.0
+        m = bw.stream_us(n.bytes_streamed, 1) if n.bytes_streamed > 0 else 0.0
+        total += max(c, m)
+    return total
+
+
+def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compute=True,
+            pipeline=True):
     """Return the token latency (microseconds) to execute the whole DAG.
-    `price_compute=False` zeroes every op's compute term (memory-only ablation)."""
+    `price_compute=False` zeroes every op's compute term (memory-only ablation).
+    `pipeline=False` runs the SINGLE-ACCELERATOR serial model (run_serial) — no cross-op
+    overlap, matching the measured all-AIPU silicon; `pipeline=True` (default) uses the
+    fluid concurrent event loop (cross-op overlap), a SIMULATED forward-looking mode."""
     # fail-loud preconditions (#56): never return a plausible latency for an invalid run
     if not dag.is_acyclic():
         raise ValueError("M3: cyclic DAG — a dependency cycle cannot be scheduled")
@@ -37,6 +58,8 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
     if any(n.bytes_streamed > 0 for n in dag.nodes) and bw.eff_BW <= 0:
         raise ValueError("M3: memory traffic present but SharedBandwidth eff_BW <= 0 "
                          "(degenerate bandwidth would stall the simulation)")
+    if not pipeline:
+        return run_serial(dag, platform, bw, price_compute=price_compute)
     n_total = len(dag.nodes)
     indeg = {n.id: len(n.deps) for n in dag.nodes}
     unit_free = {}                       # unit clock -> next-free time (compute serialization)

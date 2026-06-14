@@ -41,11 +41,12 @@ MODELS = ["llama-3.2-1b", "llama-3.2-3b", "llama-3.1-8b"]
 GATE = 0.15
 
 
-def _cfg(model, **abl):
+def _cfg(model, *, pipeline=False, **abl):
     return SimConfig.from_dict({
         "workload": {"model": model, "context": 1024},
         "platform": {"memory_spec": "mem_lpddr4x", "topology": "cim_topo_card"},
         "scheduler": {"policy": "all_cim"},
+        "tunables": {"pipeline": pipeline},
         "ablations": abl,
     })
 
@@ -81,17 +82,25 @@ def main():
                        "within_gate": bool(err0 <= GATE)}
     mem_only_fails_at = [m for m, v in mem_only.items() if not v["within_gate"]]
 
-    # ablations on 8B (AllCim decode is a serial single-stream chain -> concurrency/
-    # contention are no-ops here; both are exercised for real in test_event_engine /
-    # validate_contention. Reported honestly.)
+    # ablations on 8B. AllCim runs the value-flow DAG on a SINGLE accelerator (pipeline=off):
+    # the measured Metis 1c silicon exposes no intra-frame op pipeline (SDK v1.3.1 walls off
+    # multicore_mode pipeline/cooperative; `double_buffer` only overlaps host<->device PCIe,
+    # negligible for decode), so the measured tok/s is the no-cross-op-overlap time. Hence the
+    # DAG's parallel branches do NOT overlap and concurrency/contention are no-ops here by
+    # construction; pipeline=on (cross-op overlap) is a SIMULATED forward-looking mode
+    # (1B 17.9%, provenance-flagged). Overlap+knee are exercised in test_event_engine /
+    # validate_contention. Reported honestly.
     base = run(_cfg("llama-3.1-8b"))["tok_s"]
     abl = {
         "base_tok_s": base,
         "concurrency_off_tok_s": run(_cfg("llama-3.1-8b", concurrency_off=True))["tok_s"],
         "contention_off_tok_s": run(_cfg("llama-3.1-8b", contention_off=True))["tok_s"],
-        "note": "AllCim decode = serial single-stream chain; concurrency/contention "
-                "ablations are no-ops here by construction (no parallel branches, k=1). "
-                "Overlap + knee are exercised in test_event_engine + validate_contention.",
+        "pipeline_on_tok_s_simulated": run(_cfg("llama-3.1-8b", pipeline=True))["tok_s"],
+        "note": "AllCim = single accelerator running the value-flow DAG serially (pipeline=off): "
+                "the measured 1c silicon exposes NO intra-frame op pipeline (SDK v1.3.1), so "
+                "cross-op overlap is OFF and concurrency/contention are no-ops by construction "
+                "(k=1, one resource). pipeline=on is a SIMULATED forward-looking overlap mode. "
+                "Overlap+knee are exercised in test_event_engine + validate_contention.",
     }
 
     out = {

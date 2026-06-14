@@ -79,6 +79,28 @@ def test_fluid_fairshare_equal_costart():
     assert abs(run_dag(dag, plat, bw) - 2.0e6) < 1e-3
 
 
+def test_pipeline_off_is_single_resource_serial():
+    # AllCim = ONE accelerator (the measured Metis 1c path exposes NO intra-frame
+    # pipeline; SDK v1.3.1 walls off multicore_mode pipeline/cooperative). pipeline=False
+    # => no CROSS-op overlap: token = sum of per-op max(compute, memory), even for nodes
+    # that pipeline=True would overlap across units.
+    dag = Dag([_node(0, "cim", bytes_streamed=0), _node(1, "gpu", bytes_streamed=int(1e9))])
+    plat = _StubPlatform({0: 10.0, 1: 0.0})
+    bw = SharedBandwidth(eff_BW_GBs=10.0)            # node1 mem = 1e9/1e10 s = 1e5 us
+    on = run_dag(dag, plat, bw, pipeline=True)        # overlap: max(10, 1e5) ~ 1e5
+    off = run_dag(dag, plat, bw, pipeline=False)      # serial: 10 + 1e5
+    assert abs(off - (10.0 + 1e5)) < 1e-3
+    assert on < off                                   # cross-op overlap is faster
+
+
+def test_pipeline_off_keeps_intra_op_double_buffer():
+    # within ONE op compute and memory still overlap (max); only CROSS-op overlap is removed.
+    dag = Dag([_node(0, "cim", bytes_streamed=int(10e9))])   # mem 1e6 us
+    plat = _StubPlatform({0: 2e6})                            # compute 2e6 dominates
+    bw = SharedBandwidth(eff_BW_GBs=10.0)
+    assert abs(run_dag(dag, plat, bw, pipeline=False) - 2e6) < 1e-3   # max, not 3e6
+
+
 def test_cyclic_dag_raises():
     # 0 <-> 1 (both ids exist so Dag builds, but it is cyclic) -> fail loud, no latency
     dag = Dag([_node(0, "cim", deps=[1]), _node(1, "gpu", deps=[0])])

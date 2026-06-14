@@ -24,7 +24,7 @@ _KNOWN_TOP = {"workload", "platform", "scheduler", "tunables", "ablations", "swe
 _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine"}
 _KNOWN_SCHED = {"policy", "op_unit_overrides", "precision_boundary_placement"}
-_KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor"}
+_KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor", "pipeline"}
 _KNOWN_ABL = {"concurrency_off", "contention_off", "compute_off"}
 
 _CAL_MEMORY = "mem_lpddr4x"        # the measured 24.2 GB/s decode anchor
@@ -68,6 +68,9 @@ class SimConfig:
     knee_GBs: float | None = None
     interconnect_efficiency: float = 1.0
     concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; no effect on the 2.1 serial path
+    pipeline: bool = False                     # cross-op execution overlap. OFF (default) = single-accelerator
+                                               # serial = the measured all-AIPU path (Metis 1c, SDK v1.3.1 exposes
+                                               # no intra-frame pipeline). ON = SIMULATED forward-looking overlap.
     concurrency_off: bool = False
     contention_off: bool = False
     compute_off: bool = False                 # ablation: memory-only (zero unit compute) — isolates the non-circular compute correction
@@ -108,6 +111,7 @@ class SimConfig:
             knee_GBs=tun.get("knee_GBs"),
             interconnect_efficiency=tun.get("interconnect_efficiency", 1.0),
             concurrency_overlap_factor=tun.get("concurrency_overlap_factor", 1.0),
+            pipeline=tun.get("pipeline", False),
             concurrency_off=abl.get("concurrency_off", False),
             contention_off=abl.get("contention_off", False),
             compute_off=abl.get("compute_off", False),
@@ -127,6 +131,9 @@ class SimConfig:
             p.append(f"simulated: memory_spec '{self.memory_spec}' (not the measured {_CAL_MEMORY} anchor)")
         if self.bw_efficiency is not None:
             p.append(f"simulated: bw_efficiency override = {self.bw_efficiency}")
+        if self.pipeline:
+            p.append("simulated: pipeline overlap enabled (cross-op double-buffering; the "
+                     "measured all-AIPU 1c path exposes no intra-frame pipeline, SDK v1.3.1)")
         for u, e in self.engine.items():
             if e not in _SILICON_BACKENDS:
                 p.append(f"simulated: {u} engine='{e}' (non-silicon backend)")

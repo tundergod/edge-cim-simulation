@@ -1,22 +1,23 @@
-"""Phase 2.2a Step A — trace-truth value-flow fixture.
+"""Phase 2.2a Step A — trace-truth value-flow fixture GENERATOR (torch-only).
 
 Re-runs the Phase-0.1 eager FakeTensor trace (op_inventory's TorchDispatchMode +
 config), but additionally records the **producer->consumer value edges**: each
 tensor gets a monotonic value-id on first sight, an op's `in_values` are the
 value-ids it consumes and `out_values` the ids it produces. Contracting that full
-value graph onto the categorized compute ops yields the real intra-layer
-data-dependency DAG (#54) — the INDEPENDENT ground truth the Step-C structural
-oracle validates the M5 template DAG against (R6 anti-self-confirmation).
+value graph onto the categorized compute ops (fixture_io.compute_subgraph) yields
+the real intra-layer data-dependency DAG (#54) — the INDEPENDENT ground truth the
+Step-C structural oracle validates the M5 template DAG against.
 
-Two load-bearing details (verified):
-- **id-reuse (S1-1):** CPython recycles id() of a GC'd object, so without a
-  strong reference a fresh tensor can inherit a dead tensor's id and fabricate a
-  value edge (measured: 20 sequential FakeTensors -> 6 distinct ids). The recorder
-  holds a strong ref to every tensor (`_keep`) so producer ids never recycle.
+The torch-FREE consumer API (load_fixture / PRECISION_CONTRACT / compute_subgraph /
+validate_value_flow) lives in fixture_io.py so the simulator runtime needn't import
+torch; this module is only the offline generator. Two load-bearing details:
+- **id-reuse (S1-1):** CPython recycles id() of a GC'd object, so without a strong
+  reference a fresh tensor can inherit a dead tensor's id and fabricate a value edge
+  (measured: 20 sequential FakeTensors -> 6 distinct ids). The recorder holds a strong
+  ref to every tensor (`_keep`) so producer ids never recycle.
 - **sim_precision != trace_dtype (#8):** the eager trace runs fp32; the SIMULATED
-  placement quantises per ADR-0004c (CIM matmul INT8, Mali attention FP16, CPU
-  support FP16). `trace_dtype` records the eager reality; `sim_precision` the
-  contract. They differ by construction.
+  placement quantises per ADR-0004c. `trace_dtype` records the eager reality;
+  `sim_precision` (fixture_io.PRECISION_CONTRACT) the contract. They differ.
 
 Run (writes committed fixtures): ./.venv/bin/python tools/trace_export/trace_fixture.py
 """
@@ -30,28 +31,10 @@ from torch.utils._python_dispatch import TorchDispatchMode
 
 sys.path.insert(0, str(Path(__file__).parent))
 import op_inventory  # noqa: E402  (_src, _cfg, _out_shape, MODELS)
-from sweep_matrix import categorize  # noqa: E402  (9-class op + src categorizer)
-
-# sim_precision = the SIMULATED unit-native placement precision per category
-# (ADR-0004c: CIM=INT8, Mali GPU=FP16, CPU-support=FP16/FP32). NOT trace_dtype (#8):
-# the eager trace is fp32; GEMM is quantised to INT8 on the CIM in the simulator.
-PRECISION_CONTRACT = {
-    "matmul": "int8",      # CIM (q/k/v/o, gate/up/down, lm_head)
-    "attention": "fp16",   # Mali GPU (QK^T / S·V bmm)
-    "softmax": "fp16",     # CPU support
-    "norm": "fp16",        # CPU support (internal accumulation fp32; placement fp16)
-    "rope": "fp16",        # CPU support
-    "ffn": "fp16",         # CPU support (SiLU)
-    "residual": "fp16",    # CPU support
-    "kv_cache": "int8",    # INT8 KV cache (Metis scope)
-    "embedding": "fp16",   # FP16 table (memory)
-}
-
-# committed fixture lengths = op_profile anchors (avoid the head_dim 64/128 aliasing
-# where QK^T and S·V collapse to one sig); two lengths/phase cross-check counts.
-PREFILL_FIX = [256, 1024]
-DECODE_FIX = [512, 1024]
-FIXTURE_DIR = Path(__file__).resolve().parents[2] / "traces" / "fixture"
+from fixture_io import (  # noqa: E402  (re-exported for tests + reused here)
+    PRECISION_CONTRACT, PREFILL_FIX, DECODE_FIX, FIXTURE_DIR,
+    load_fixture, validate_value_flow, compute_subgraph,
+)
 
 _DTYPE = {torch.float16: "fp16", torch.float32: "fp32", torch.bfloat16: "bf16",
           torch.float64: "fp64", torch.int64: "int64", torch.int32: "int32",
@@ -171,73 +154,6 @@ class EdgeRecorder(TorchDispatchMode):
         return rv
 
 
-def validate_value_flow(records):
-    """Fail-loud (R5): every in_value must be produced by an earlier op or be
-    explicitly external; alias_of keys must be real outputs. Returns True or raises."""
-    produced, external = set(), set()
-    for i, r in enumerate(records):
-        external |= set(r.get("external_in", []))   # external once declared stays external
-        for v in r["in_values"]:                     # (a weight/const is consumed by many ops)
-            if v not in produced and v not in external:
-                raise ValueError(f"op {i} {r['op']}: in_value {v} unresolved "
-                                 f"(no earlier producer, not external)")
-        for ov in r.get("alias_of", {}):
-            if ov not in r["out_values"]:
-                raise ValueError(f"op {i} {r['op']}: alias_of output {ov} not in out_values")
-        produced |= set(r["out_values"])
-    return True
-
-
-def _compute_preds(i, records, producer, is_compute):
-    """Nearest compute-op ancestors of op i: walk input value-ids back through
-    uncategorized (view/host) producers until a compute op or an external leaf."""
-    preds, seen = set(), set()
-    stack = list(records[i]["in_values"])
-    while stack:
-        v = stack.pop()
-        if v in seen:
-            continue
-        seen.add(v)
-        p = producer.get(v)
-        if p is None:                 # external value (weight/const/input) — not a compute dep
-            continue
-        if is_compute[p]:
-            preds.add(p)
-        else:
-            stack.extend(records[p]["in_values"])
-    return preds
-
-
-def compute_subgraph(records):
-    """Contract the full value graph onto categorized compute ops: a compute node's
-    `deps` are the nearest compute ancestors (data deps), re-indexed 0..C-1 in trace
-    order. This is the independent intra-layer DAG truth (R1)."""
-    producer = {}
-    for i, r in enumerate(records):
-        for v in r["out_values"]:
-            producer.setdefault(v, i)
-    cats = [categorize(r) for r in records]
-    is_compute = [c is not None for c in cats]
-    local = {}
-    for i in range(len(records)):
-        if is_compute[i]:
-            local[i] = len(local)
-    nodes = []
-    for i, r in enumerate(records):
-        if not is_compute[i]:
-            continue
-        preds = _compute_preds(i, records, producer, is_compute)
-        nodes.append({
-            "idx": local[i],
-            "op": r["op"], "src": r["src"], "category": cats[i],
-            "in_shapes": r["in_shapes"], "out_shape": r["out_shape"],
-            "trace_dtype": r["trace_dtype"],
-            "sim_precision": PRECISION_CONTRACT[cats[i]],
-            "deps": sorted(local[p] for p in preds),
-        })
-    return nodes
-
-
 def trace_phase(name, cfg, phase, L):
     """Ordered value-flow records for one forward (prefill seq=L, or decode 1 token
     at past=L). Inputs built OUTSIDE the recorder so input-construction isn't traced
@@ -276,11 +192,6 @@ def build_fixture(key, repo):
         validate_value_flow(recs)
         out["decode"][str(L)] = compute_subgraph(recs)
     return out
-
-
-def load_fixture(key):
-    with gzip.open(FIXTURE_DIR / f"{key}.json.gz", "rt") as fh:
-        return json.load(fh)
 
 
 def main():

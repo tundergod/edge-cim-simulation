@@ -56,6 +56,8 @@ def run(cfg):
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off
     price_compute = not cfg.compute_off
+    pipeline = cfg.pipeline   # OFF (default) = single-accelerator serial (measured all-AIPU);
+                              # ON = SIMULATED cross-op overlap (provenance-flagged)
 
     # capacity is a FEASIBILITY gate, NOT a throughput knob: decode tok/s is set by bandwidth,
     # not capacity (so it is deliberately not a Platform timing input). Fail-loud if the model's
@@ -80,7 +82,7 @@ def run(cfg):
     kv_pts = sorted({kv_lo, (kv_lo + kv_hi) // 2 or 1, kv_hi})
     tok_us = [run_dag(assign(build_token_dag(cfg.model, "decode", k, _model_obj=model_obj)),
                       plat, plat.bw, concurrency=concurrency, contention=contention,
-                      price_compute=price_compute) for k in kv_pts]
+                      price_compute=price_compute, pipeline=pipeline) for k in kv_pts]
     t_dec_us = sum(tok_us) / len(tok_us)
     tok_s = 1e6 / t_dec_us if t_dec_us > 0 else 0.0
     total_generation_s = D * t_dec_us / 1e6
@@ -89,7 +91,7 @@ def run(cfg):
     # prefill: one forward at P (TTFT reported only, not gated)
     pre = assign(build_token_dag(cfg.model, "prefill", cfg.prefill_len, _model_obj=model_obj))
     t_pre_us = run_dag(pre, plat, plat.bw, concurrency=concurrency, contention=contention,
-                       price_compute=price_compute)
+                       price_compute=price_compute, pipeline=pipeline)
 
     e_tok = _energy_per_token_J(dec, plat)
     return {
