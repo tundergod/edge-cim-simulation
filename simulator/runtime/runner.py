@@ -66,10 +66,11 @@ def run(cfg):
         raise NotImplementedError(
             f"engine backend(s) {nonanalytic}: only 'analytic' is wired into the runtime in 2.1 "
             f"(onnxim/scalesim/ramulator2 heavy backends are a later wave).")
-    if cfg.scheduler == "all_cim" and not (cfg.units.get("cim") and cfg.units.get("cpu")):
-        raise ValueError("all_cim scheduler requires units cim+cpu enabled "
-                         "(gpu/npu toggles have no effect under all_cim — heterogeneous "
-                         "placement is Wave 2.2).")
+    missing = [u for u in sched.required_units if not cfg.units.get(u)]
+    if missing:
+        raise ValueError(f"scheduler '{cfg.scheduler}' requires units {list(sched.required_units)} "
+                         f"enabled but {missing} are disabled — an impossible config cannot run "
+                         f"(e.g. cim_hetero needs the GPU for attention).")
     plat = Platform(cfg.model, memory_spec=cfg.memory_spec, knee_GBs=cfg.knee_GBs,
                     interconnect_efficiency=cfg.interconnect_efficiency,
                     bw_efficiency=cfg.bw_efficiency)

@@ -69,6 +69,17 @@ def test_cimhetero_scheduler_placement_and_conversions():
     assert all(n.mem_domain in ("dram", "cpu_cache", "none") for n in dag.nodes)  # incl converts
 
 
+def test_cimhetero_scheduler_idempotent():
+    # re-assigning an already-converted DAG must not move convert nodes (their unit/domain
+    # encode "which unit pays the cast") nor insert new conversions.
+    d1 = CimHeteroScheduler().assign(build_token_dag("llama-3.2-1b", "decode", 128))
+    snap = [(n.id, n.category, n.unit, n.mem_domain) for n in d1.nodes]
+    d2 = CimHeteroScheduler().assign(d1)
+    assert [(n.id, n.category, n.unit, n.mem_domain) for n in d2.nodes] == snap
+    assert (sum(1 for n in d1.nodes if n.category == "convert")
+            == sum(1 for n in d2.nodes if n.category == "convert"))
+
+
 def test_cimhetero_registry_and_pipeline_mode():
     assert "cim_hetero" in SCHEDULERS and isinstance(SCHEDULERS["cim_hetero"], CimHeteroScheduler)
     assert SCHEDULERS["cim_hetero"].pipeline is True              # genuine multi-unit overlap

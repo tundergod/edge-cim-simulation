@@ -136,6 +136,19 @@ def test_platform_rejects_unknown_unit():
     raise AssertionError("unknown unit not rejected by platform")
 
 
+def test_cimhetero_requires_cim_gpu_cpu_units():
+    # an impossible config (cim_hetero needs the GPU for attention) must fail loud, not
+    # silently return a plausible tok/s.
+    cfg = SimConfig.from_dict({"workload": {"model": "llama-3.2-1b"},
+                               "scheduler": {"policy": "cim_hetero"},
+                               "platform": {"units": {"cim": True, "gpu": False, "cpu": True}}})
+    try:
+        run(cfg)
+    except ValueError:
+        return
+    raise AssertionError("cim_hetero with gpu disabled not rejected")
+
+
 def test_unknown_scheduler_rejected():
     cfg = _cfg("llama-3.2-1b")
     cfg.scheduler = "nope"

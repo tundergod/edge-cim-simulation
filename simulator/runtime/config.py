@@ -122,6 +122,9 @@ class SimConfig:
             sweep=d.get("sweep"))
         if cfg.batch != 1:
             raise ValueError("SimConfig: v1 scope is batch=1 (hook reserved)")
+        if cfg.precision_boundary_placement not in ("consumer", "producer"):
+            raise ValueError(f"SimConfig: precision_boundary_placement must be 'consumer' or "
+                             f"'producer', got {cfg.precision_boundary_placement!r}")
         cfg._flag_provenance()
         return cfg
 

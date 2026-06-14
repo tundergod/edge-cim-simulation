@@ -42,6 +42,7 @@ class Scheduler(ABC):
     True = multi-unit cross-op overlap (heterogeneous, SIMULATED)."""
     name: str = ""
     pipeline: bool = False
+    required_units: tuple = ()        # units that MUST be enabled for this scheduler (fail-loud gate)
 
     @abstractmethod
     def assign(self, dag, cfg=None):
@@ -52,6 +53,7 @@ class AllCimScheduler(Scheduler):
     """All-CIM baseline (the L4-gated all-AIPU INT8 placement)."""
     name = "all_cim"
     pipeline = False
+    required_units = ("cim", "cpu")
 
     def assign(self, dag, cfg=None):
         for n in dag.nodes:
@@ -66,10 +68,14 @@ class CimHeteroScheduler(Scheduler):
     inserts int8<->fp16 conversion ops at the GPU boundary. Runs concurrent (pipeline=True)."""
     name = "cim_hetero"
     pipeline = True
+    required_units = ("cim", "gpu", "cpu")
 
     def assign(self, dag, cfg=None):
         from simulator.runtime.precision import insert_conversions   # deferred: avoids import cycle
         for n in dag.nodes:
+            if n.category == "convert":
+                continue                                            # preserve an already-inserted
+                                                                    # convert's unit (idempotent re-assign)
             if n.category == "matmul":
                 n.unit = "cim"
             elif n.category == "attention":

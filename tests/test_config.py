@@ -64,6 +64,21 @@ def test_pipeline_knob_default_off_is_measured():
     assert any("pipeline" in p for p in cfg2.provenance)
 
 
+def test_precision_boundary_placement_rejects_invalid():
+    # a typo'd placement (e.g. 'prodcer') must fail loud, not silently fall back to consumer.
+    try:
+        SimConfig.from_dict({"workload": {"model": "llama-3.2-1b"},
+                             "scheduler": {"policy": "cim_hetero", "precision_boundary_placement": "prodcer"}})
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("invalid precision_boundary_placement not rejected")
+    for v in ("consumer", "producer"):
+        cfg = SimConfig.from_dict({"workload": {"model": "llama-3.2-1b"},
+                                   "scheduler": {"policy": "cim_hetero", "precision_boundary_placement": v}})
+        assert cfg.precision_boundary_placement == v
+
+
 def test_batch_must_be_one():
     try:
         SimConfig.from_dict({"workload": {"model": "llama-3.2-1b", "batch": 4}})
