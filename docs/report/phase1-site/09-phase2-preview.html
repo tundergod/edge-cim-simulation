@@ -1,93 +1,97 @@
 <!doctype html><html lang="zh-Hant"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>M3/M6 Phase 2 預覽 · Edge-CIM Phase 1</title>
+<title>M3/M6 Phase 2 結果 · Edge-CIM Phase 1</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,400;0,600;1,400&family=Noto+Serif+TC:wght@400;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="assets/style.css">
 </head><body>
-<nav class="sidebar"><div class="brand">Edge-CIM · Phase 1<small>元件建模與驗證 · 進 Phase 2 前</small></div><nav><ul><li class="grp">導論</li><li><a class="" href="00-overview.html"><span class="mc"></span><span>概覽</span></a></li><li><a class="" href="01-readiness.html"><span class="mc"></span><span>就緒矩陣</span></a></li><li class="grp">各單元</li><li><a class="" href="02-cim.html"><span class="mc">M1</span><span>CIM 計算核</span></a></li><li><a class="" href="03-memory.html"><span class="mc">M2</span><span>記憶體</span></a></li><li><a class="" href="04-cpu.html"><span class="mc">M4·CPU</span><span>A76 CPU</span></a></li><li><a class="" href="05-gpu.html"><span class="mc">M4·GPU</span><span>Mali GPU</span></a></li><li><a class="" href="06-npu.html"><span class="mc">M4·NPU</span><span>RKNPU2</span></a></li><li class="grp">跨單元</li><li><a class="" href="07-workload.html"><span class="mc">M5</span><span>Workload</span></a></li><li><a class="" href="08-energy-e2e.html"><span class="mc">M7</span><span>能量 + E2E</span></a></li><li><a class="active" href="09-phase2-preview.html"><span class="mc">M3/M6</span><span>Phase 2 預覽</span></a></li><li class="grp">結論</li><li><a class="" href="10-gaps.html"><span class="mc"></span><span>缺口 / GO-NOGO</span></a></li><li><a class="" href="11-sources.html"><span class="mc"></span><span>來源</span></a></li><li><a class="" href="12-thermal.html"><span class="mc">M8</span><span>溫度 (熱)</span></a></li></ul></nav></nav>
+<nav class="sidebar"><div class="brand">Edge-CIM · Phase 1<small>元件建模與驗證 · 進 Phase 2 前</small></div><nav><ul><li class="grp">導論</li><li><a class="" href="00-overview.html"><span class="mc"></span><span>概覽</span></a></li><li><a class="" href="01-readiness.html"><span class="mc"></span><span>就緒矩陣</span></a></li><li class="grp">各單元</li><li><a class="" href="02-cim.html"><span class="mc">M1</span><span>CIM 計算核</span></a></li><li><a class="" href="03-memory.html"><span class="mc">M2</span><span>記憶體</span></a></li><li><a class="" href="04-cpu.html"><span class="mc">M4·CPU</span><span>A76 CPU</span></a></li><li><a class="" href="05-gpu.html"><span class="mc">M4·GPU</span><span>Mali GPU</span></a></li><li><a class="" href="06-npu.html"><span class="mc">M4·NPU</span><span>RKNPU2</span></a></li><li class="grp">跨單元</li><li><a class="" href="07-workload.html"><span class="mc">M5</span><span>Workload</span></a></li><li><a class="" href="08-energy-e2e.html"><span class="mc">M7</span><span>能量 + E2E</span></a></li><li><a class="active" href="09-phase2-preview.html"><span class="mc">M3/M6</span><span>Phase 2 結果</span></a></li><li><a class="" href="10-phase2-walkthrough.html"><span class="mc">M3/M6</span><span>Phase 2 逐步詳解</span></a></li><li class="grp">結論</li><li><a class="" href="10-gaps.html"><span class="mc"></span><span>缺口 / GO-NOGO</span></a></li><li><a class="" href="11-sources.html"><span class="mc"></span><span>來源</span></a></li><li><a class="" href="12-thermal.html"><span class="mc">M8</span><span>溫度 (熱)</span></a></li></ul></nav></nav>
 <div class="main"><div class="page">
 <header class="masthead">
   <div class="mcode">Phase 2</div>
   <div>
-    <div class="eyebrow">整合層 · 預覽 · M3 + M6</div>
-    <h1>Phase 2 預覽：整合層</h1>
-    <p class="lede">前面各章是<strong>元件</strong>。把它們串成端到端模擬器，需要兩個<strong>整合層</strong>模組：M3（事件引擎，處理共享頻寬競爭與重疊）與 M6（排程器，決定 op→單元映射與精度邊界）。這兩個在 Phase 1 <strong>只有 contract、沒有實作</strong>——本頁誠實預覽 Phase 2 將組裝什麼，不含任何效能數字（未實作即無可量之數）。</p>
+    <div class="eyebrow">整合層 · 結果 · M3 + M6 已實作</div>
+    <h1>Phase 2 結果：端到端模擬器</h1>
+    <p class="lede">Phase 1 的元件已串成端到端模擬器。整合層 <strong>M3（事件引擎）</strong>與 <strong>M6（排程器）</strong>自 Phase 2.1 起<strong>已實作</strong>（不再是「contract-only 預覽」）。本頁是 Phase 2 的系統級<strong>結果</strong>，每個數字都從 committed <code>validation/reports/phase2/*.json</code> 以 <code>&#123;&#123;key&#125;&#125;</code> 注入。逐步建構過程見下一章「Phase 2 逐步詳解」。誠實分級：<strong>measured</strong>（真 silicon）/ <strong>simulated</strong>（無 silicon 的機制）/ <strong>extrapolated</strong>（超出量測包絡）/ <strong>counterfactual</strong>（硬體實際跑不了）。</p>
   </div>
 </header>
 
 <section class="unit">
 
   <div class="sec">
-    <div class="lab"><span class="n">§0</span><span>本章角色</span></div>
-    <div class="role">
-      <p style="margin-top:0">這裡要把兩件性質完全不同的事分清楚：</p>
-      <p><strong>① 「未實作」不是 Phase 1 的缺失。</strong>M3/M6 的行為驗證需要「先實作才能測」（toy op-stream 時序、競爭 knee、端到端 latency）。依專案規劃，<strong>實作 M3+M6 並整合正是 Phase 2 的定義內容</strong>。Phase 1 的職責只到「定義 contract + 可調參數」。</p>
-      <p style="margin-bottom:0"><strong>② M6 連帶一個 Phase-2 解析建模項。</strong>conversion-op（精度邊界的 dequant/requant）成本。各單元原生精度固定（CIM INT8、GPU FP16），所以邊界 cast 是 memory-bound op，由既有 M2/M4 per-op 模型 × M6 插入的邊界穿越次數計價（ADR-0004 已於 2026-06-11 修訂）。<strong>這不是測量缺口</strong>，是 Phase 2 的建模工作。</p>
-    </div>
-  </div>
-
-  <div class="sec">
-    <div class="lab"><span class="n">§1</span><span>M3 — 事件引擎</span><span class="tag">contract-only · ADR-0001</span></div>
-    <p><strong>規劃要它做什麼。</strong>一個輕量 discrete-event 引擎：把 op stream 串過各單元 + 記憶體，建模 op 級並行、共享頻寬競爭的飽和 knee（~60 GB/s）、CIM ∥ GPU ∥ NPU ∥ CPU 的重疊。</p>
-    <p><strong>Phase 1 交付了什麼。</strong>只有 contract 與可調參數；驗收門檻是 ADR-0006 的 Phase-2 系統級門檻，<strong>在 Phase 1 不 gate</strong>。per-op 延遲來源（M1、M2）已備妥餵給引擎。</p>
-    <p><strong>狀態：</strong><span class="pending">未實作</span>——行為驗證（toy op-stream 時序、~60 GB/s 競爭 knee 重現）在 Phase 2 實作後進行。</p>
+    <div class="lab"><span class="n">§0</span><span>唯一硬 silicon 門檻：L4 decode</span><span class="tag">measured · ADR-0006</span></div>
+    <p><strong>AllCim decode tok/s vs 真實 Metis Card</strong>是整個 Phase 2 唯一的硬 silicon 驗證門檻（≤15%）。機制路徑用獨立定價（CIM-GEMV L1 micro-benchmark + mem_lpddr4x 24.2 GB/s 記憶體牆 + 顯式 support/attention/kv 流量），<strong>不含</strong>任何 e2e-fitted 頻寬：</p>
     <table>
-      <caption>M3 contract（validation/contracts/m3.yaml › phase1_scope=contract_only）</caption>
-      <thead><tr><th>項目</th><th>內容</th><th>狀態</th></tr></thead>
+      <caption>L4 decode 機制（validation/reports/phase2/e2e_l4.json，獨立定價，gate 15%）</caption>
+      <thead><tr><th>模型</th><th>預測 tok/s</th><th>實測 tok/s</th><th>相對誤差</th></tr></thead>
       <tbody>
-        <tr><td>可調參數</td><td><code>bandwidth_contention_knee</code>（重現 ~60 GB/s 飽和 knee，ADR-0001）、<code>interconnect_efficiency</code>（共享 BW 仲裁，ADR-0002）、<code>concurrency_overlap_factor</code>（CIM ∥ GPU ∥ NPU 重疊）</td><td><span class="pending">未實作</span></td></tr>
-        <tr><td>驗收門檻（Phase 2）</td><td>端到端 latency / toks ≤ 15%；競爭 knee ≤ 15%（load-bearing 的記憶體牆檢查）</td><td>Phase 1 不 gate</td></tr>
-        <tr><td>per-op 延遲來源</td><td><code>simulator/models/m1_cim_tile.py</code>、<code>simulator/models/m2_memory.py</code>（已備妥）</td><td class="pass">✅ 就緒</td></tr>
+        <tr><td>Llama-3.2-1B</td><td>14.47</td><td>13.07</td><td class="pass">10.7%</td></tr>
+        <tr><td>Llama-3.2-3B</td><td>5.97</td><td>6.38</td><td class="pass">6.5%</td></tr>
+        <tr><td>Llama-3.1-8B</td><td>2.78</td><td>2.70</td><td class="pass">3.1%</td></tr>
       </tbody>
     </table>
+    <div class="note"><b>非循環。</b>memory-only ablation（純 DRAM bytes / 24.2，關閉 compute）在 1B/8B <strong>超出</strong> gate（41.7% / 15.2%）——是獨立的 CIM-compute 修正項把誤差拉回 gate 內，證明通過不是把頻寬 fit 到答案上。</div>
   </div>
 
   <div class="sec">
-    <div class="lab"><span class="n">§2</span><span>M6 — 排程器 / 映射器</span><span class="tag">contract-only · 貢獻層</span></div>
-    <p><strong>規劃要它做什麼。</strong>這是<strong>貢獻層</strong>：每個 op 決定單元（CIM/NPU/GPU/CPU）、精度、記憶體放置、dataflow，並在精度邊界插入 conversion op。</p>
-    <p><strong>Phase 1 交付了什麼。</strong>Phase 1 的 op→單元映射是<strong>naive</strong>（固定分工：CIM 做 INT8 GEMM、GPU 做 FP16 attention）；<strong>貢獻層級的排程</strong>（依成本動態選單元、精度邊界放置）是 Phase 2 內容。Phase 1 只交付 contract 與可調參數。</p>
-    <p><strong>狀態：</strong><span class="pending">未實作</span>——conversion-op 成本是被追蹤的可調參數 + Phase-2 解析建模項（非測量缺口）。</p>
+    <div class="lab"><span class="n">§1</span><span>Topology A/B/C 對照：記憶體放在哪，差多少</span><span class="tag">card measured · alpha counterfactual · edge simulated</span></div>
+    <p>同一 decode workload，只換「權重住在哪、走什麼通道」。decode 由記憶體牆主導（CIM 運算 ~99% idle），所以 tok/s 完全由記憶體牆決定：</p>
     <table>
-      <caption>M6 contract（validation/contracts/m6.yaml › phase1_scope=contract_only）</caption>
-      <thead><tr><th>項目</th><th>內容</th><th>狀態</th></tr></thead>
+      <caption>Topology 對照（8B；validation/reports/phase2/topology_ab.json）</caption>
+      <thead><tr><th>Topology</th><th>記憶體牆</th><th>8B tok/s</th><th>誠實分級</th></tr></thead>
       <tbody>
-        <tr><td>可調參數</td><td><code>op_to_unit_mapping_policy</code>、<code>precision_boundary_placement</code>（哪個單元付 cast，ADR-0003/0004）、<code>memory_placement</code>、<code>precision_boundary_conversion_op_cost</code></td><td><span class="pending">未實作</span></td></tr>
-        <tr><td>驗收門檻（Phase 2）</td><td>端到端 latency / toks ≤ 15%；SOTA 重現（ADR-0003）</td><td>Phase 1 不 gate</td></tr>
-        <tr><td>op DAG 來源</td><td><code>measurements/op_inventory/</code>（M5 已備）、<code>simulator/models/m1_cim_tile.py</code> / <code>m4_gpu.py</code></td><td class="pass">✅ 就緒</td></tr>
+        <tr><td><strong>A・有 DRAM</strong>（Metis Card，on-card LPDDR4x）</td><td>24.2 GB/s</td><td>2.78</td><td class="pass">measured（L4 錨；重現 committed 預測，非 == 實測）</td></tr>
+        <tr><td><strong>A・無 DRAM</strong>（PCIe 卡，權重從 host 串流）</td><td>3.9 GB/s</td><td>0.49</td><td><span class="pending">counterfactual</span>（Alpha -1301 跑不了 LLM；「若能串流」估計）</td></tr>
+        <tr><td><strong>B・邊緣整合</strong>（SoC 共用 LPDDR5 + NoC）</td><td>29.97 GB/s</td><td>3.36</td><td><span class="pending">simulated</span>（noc_efficiency 假設，無 edge silicon）</td></tr>
       </tbody>
     </table>
+    <div class="note"><b>結論（量級才是發現，排序是 by-construction）。</b>沒有自帶 DRAM、權重走 PCIe（3.9 GB/s）會慢 <strong>5.7×</strong>——這就是「近記憶體」對 decode 的價值。整合進 SoC 用 LPDDR5 比 on-card LPDDR4x 快 <strong>1.208×</strong>。<b>殘量警示（#58）：</b>A 的 24.2 GB/s 只在模型塞得進 16 GiB on-card DRAM 時成立；溢出會退化成 A・無 DRAM 的 host-PCIe 牆（spill 未建模）。</div>
   </div>
 
   <div class="sec">
-    <div class="lab"><span class="n">§3</span><span>conversion-op 成本</span><span class="tag">Phase-2 解析建模 · ADR-0004</span></div>
-    <p>conversion-op 成本（precision-boundary INT8↔FP16 casts）是一個<strong>真正的 Phase-2 解析建模項</strong>，但<strong>不是</strong>量測缺口——這個區分是 Phase 1 結論的關鍵之一。</p>
-    <p>各單元原生精度固定（CIM INT8、GPU FP16，ADR-0004(c)），精度邊界由 M6 的 op→單元映射決定。邊界上的 dequant/requant 是一個 memory-bound cast（讀 int8、寫 fp16、乘 scale），其成本由既有的 M2/M4 per-op 模型 × M6 插入的<strong>邊界穿越次數</strong>解析求得——<strong>不需要專門的量測 campaign</strong>。因此「CIM-INT8 × GPU-FP16」混合精度貢獻的成本基礎 = 既有 per-op 模型 + M6 排程；Phase 2 把 cast op 插進 op stream 計價即可。</p>
-    <div class="note"><b>非量測缺口。</b>精度固定於單元，故 conversion-op 不是「沒量到」的東西，而是一個 deterministic 的 memory-bound cast——由既有模型 × 邊界穿越次數解析計價。它是 Phase 2 內的建模工作，不擋 Phase 2 開工。</div>
+    <div class="lab"><span class="n">§2</span><span>敏感度：結論對 ±20% 不確定性穩健嗎</span><span class="tag">simulated · ADR-0006 L5</span></div>
+    <p>對 AllCim serial 路徑唯一雙邊有效的旋鈕 <code>eff_BW</code> 做 ±20%（釘在 24.2 錨：19.36 ↔ 29.04 GB/s）。energy 報 ±20% band 不報點。knee / interconnect_efficiency 只在 k&gt;1 競爭路徑雙邊有效（SIMULATED，排除在 serial 結論外）。</p>
+    <p><strong>結論穩健性：<span class="pass">通過</span></strong> —— decode 為頻寬主導（tok/s 隨 eff_BW 單調變化）、模型尺寸排序 1B&gt;3B&gt;8B 在整個 band 內維持。</p>
   </div>
 
   <div class="sec">
-    <div class="lab"><span class="n">§4</span><span>小結 · Phase 2 將組裝什麼</span></div>
+    <div class="lab"><span class="n">§3</span><span>Hold-out：用小模型預測大模型</span><span class="tag">closed-form genuine · engine partly-in-sample</span></div>
     <table>
-      <caption>整合層 Phase-1 狀態 → Phase-2 工作</caption>
-      <thead><tr><th>模組</th><th>Phase 1 狀態</th><th>性質</th><th>Phase 2 需要做</th></tr></thead>
+      <caption>8B 留出（validation/reports/phase2/holdout.json）</caption>
+      <thead><tr><th>方法</th><th>8B 相對誤差</th><th>性質</th></tr></thead>
       <tbody>
-        <tr><td><strong>M3 事件引擎</strong></td><td>contract + 3 可調參數</td><td><span class="pending">未實作</span>（設計使然＝Phase 2 工作）</td><td>實作輕量 event loop；驗證 ~60 GB/s 競爭 knee、端到端時序</td></tr>
-        <tr><td><strong>M6 排程器</strong></td><td>contract + 4 可調參數（Phase 1 naive 映射）</td><td><span class="pending">未實作</span>（設計使然）</td><td>實作 op→單元映射、精度邊界插入</td></tr>
-        <tr><td>└ conversion-op 成本</td><td>Phase-2 解析建模項</td><td>非量測（memory-bound cast，既有 M2/M4 × 邊界穿越）</td><td>把 cast op 插進 op stream，用既有 per-op 模型計價</td></tr>
+        <tr><td>閉式（fit_BW=18.34，僅 1B+3B 擬合）</td><td>9.5%</td><td>真正 leave-8B-out（引擎 24.2 錨不動）</td></tr>
+        <tr><td>完整引擎（無 8B 專屬調參）</td><td class="pass">3.1%</td><td>backbone 部分 in-sample；OOS 內容＝無參數的 compute 修正</td></tr>
       </tbody>
     </table>
-    <p>M3/M6 的「未實作」本身不擋路（那是 Phase 2 的內容）；conversion-op 成本是 Phase 2 內的解析建模項，非擋路的測量缺口（缺口分類見下一章）。本頁不含任何效能數字——未實作的層沒有可量之數，刻意不杜撰。</p>
+    <div class="note">完整機制引擎預測 8B（3.1%）比閉式尺寸外推（9.5%）更準，且未針對 8B 調參。若引擎反而更差＝Gate-6c 訊號（回修 M1/M2/M3，不調整合層）。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§4</span><span>13B/32GB 級外推（Qwen2.5-14B）</span><span class="tag">extrapolated · NOT validated</span></div>
+    <p>Qwen2.5-14B（≈14B，超 8B 包絡一倍，代表 ADR-0006 的 ~13B 延伸點）經 ADR-0007 FakeTensor meta-trace 餵<strong>同一引擎</strong>外推——<strong>非</strong>支援設定、<strong>無</strong> 14B silicon。三個外推維度都標記：</p>
+    <ul>
+      <li><strong>模型尺寸</strong>（&gt;8B）：引擎預測 1.52 tok/s。</li>
+      <li><strong>CIM 形狀</strong>：241 / 337 個 per-decode CIM matmul 形狀<strong>超出 M1 native 量測包絡</strong>（floor 外推）——不只是「模型更大」。</li>
+      <li><strong>容量</strong>（&gt;16 GB）：釘死公式 resident_footprint = weights+KV+activation = 14.11 GB；在 16 GiB 卡上 ctx 1024 尚餘 1.89 GB，但 ctx ~18471 即溢出 → spill 到 host PCIe（未建模，#58）。</li>
+    </ul>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§5</span><span>混合精度：限制（不是已驗證的加速）</span><span class="tag">simulated · LIMITATION · D3</span></div>
+    <p>專案的混合精度設定＝<strong>CIM-INT8 matmul × GPU-FP16 attention</strong>。Phase 2 只證 <strong>conversion-op（精度邊界 dequant/requant）的成本</strong>（8B 每 decode token 96 次 cast）+ 模擬的異質 decode 結構。</p>
+    <div class="note"><b>限制（明列，非加速宣稱）。</b>(1) <strong>輸出品質未在目標 silicon 量測</strong>（D3）——v1 只證成本，不證「混精度等準度」；品質須引用文獻、列為 limitation。(2) CimHetero 受 GPU <code>attn_bmm_us</code>（未最佳化下界）限制，<strong>比 AllCim 慢</strong>（8B 約 59% of AllCim）——價值在 conversion 成本 + 忠實結構，<strong>非</strong>加速。(3) 無並發單元 silicon（Aetina 送修 #52）→ SIMULATED，非 validated。</div>
   </div>
 
   <div class="sources">
     <div class="lab">來源 · 每個宣稱皆回查 committed artifact</div>
     <ol>
-      <li>M3 contract：<code>validation/contracts/m3.yaml › phase1_scope, tunable_params, acceptance_criteria, note</code></li>
-      <li>M3 per-op 來源：<code>validation/contracts/m3.yaml › measurement_sources</code>（m1_cim_tile.py / m2_memory.py）</li>
-      <li>M6 contract：<code>validation/contracts/m6.yaml › phase1_scope, tunable_params, acceptance_criteria</code></li>
-      <li>conversion-op 解析建模：<code>validation/contracts/m6.yaml › phase2_modeling_item</code>（id=conversion_op_cost, ADR-0004）</li>
-      <li>精度固定於單元 / cast 解析計價：<code>docs/adr/0004-mixed-precision.md</code>（2026-06-11 修訂，Decision a/c + Consequences）</li>
+      <li>L4 decode 機制：<code>validation/reports/phase2/e2e_l4.json</code>（pass_all, memory_only_ablation）</li>
+      <li>Topology A/B/C：<code>validation/reports/phase2/topology_ab.json</code>（table, alpha penalty, edge speedup, residency caveat）</li>
+      <li>敏感度：<code>validation/reports/phase2/sensitivity.json</code>（bw_efficiency 釘 24.2，conclusion_robust）</li>
+      <li>Hold-out：<code>validation/reports/phase2/holdout.json</code>（leave-8B-out 閉式 vs 引擎）</li>
+      <li>14B 外推：<code>validation/reports/phase2/extrapolation_13b.json</code>（三外推維度 + 容量公式）</li>
+      <li>混合精度限制：<code>validation/reports/phase2/mixed_precision.json</code>（honesty=simulated；品質未量測 D3）</li>
     </ol>
   </div>
 

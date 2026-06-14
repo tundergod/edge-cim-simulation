@@ -22,6 +22,9 @@ MODELS = {
     "llama-3.2-3b": "meta-llama/Llama-3.2-3B",
     "llama-3.1-8b": "meta-llama/Llama-3.1-8B",
     "qwen2.5-7b": "Qwen/Qwen2.5-7B",
+    # EXTRAPOLATION ONLY (>8B, ADR-0006 ~13B/32GB stretch) — NOT a supported config; the
+    # Phase-2.3 size-extrapolation point (in-family GQA, same op kinds as qwen2.5-7b).
+    "qwen2.5-14b": "Qwen/Qwen2.5-14B",
 }
 PREFILLS = [128, 256, 512, 1024]
 KV_LENS = [128, 512, 1024]

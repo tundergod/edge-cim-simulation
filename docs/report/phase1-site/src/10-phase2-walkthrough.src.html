@@ -1,0 +1,82 @@
+<header class="masthead">
+  <div class="mcode">Phase 2</div>
+  <div>
+    <div class="eyebrow">逐步詳解 · 2.1 → 2.2a → 2.2b → 2.3</div>
+    <h1>Phase 2 逐步詳解：一步一步看懂整合層怎麼建起來的</h1>
+    <p class="lede">本頁把 Phase 2 的每一步攤開：<strong>做了什麼 · 為什麼 · 產物（committed artifact）· 誠實標籤</strong>。讀完你應能理解端到端模擬器是如何從 Phase-1 元件組裝成、又如何在每一層守住「不循環、不假裝有 silicon」的紀律。結果數字見上一章「Phase 2 結果」。</p>
+  </div>
+</header>
+
+<section class="unit">
+
+  <div class="sec">
+    <div class="lab"><span class="n">Wave 2.1</span><span>把元件串成會跑的引擎 + L4 機制驗證</span></div>
+    <p><strong>目標：</strong>實作 M5（workload）→ M6（排程）→ M3（事件引擎）→ M7（能量），讓「一個 SimConfig 跑出 decode tok/s」，並用真 silicon 的 L4 decode 驗證機制（非循環）。</p>
+    <ol>
+      <li><strong>M5 值流 op-DAG。</strong>從每個模型的 op trace（device-independent，Phase 0.1）建一個 per-token 的有向圖：每個節點是一個 op（matmul / attention / norm / rope / kv），帶 shape 與 producer→consumer 依賴。<em>為什麼：</em>要逐 op 定價，先要知道有哪些 op、多大、誰餵誰。<em>產物：</em><code>simulator/runtime/workload.py</code>、<code>dag.py</code>。</li>
+      <li><strong>M3 事件引擎。</strong>把 DAG 串過各單元 + 共享記憶體，每個 op 取 <code>max(compute, dram_memory)</code>（運算與搬資料誰慢算誰）。<em>為什麼：</em>decode 的真相是「運算遠快於搬權重」，max() 自然讓記憶體牆浮現。<em>產物：</em><code>events.py</code>（run_dag 並行 / run_serial）。<span class="tag">lightweight, non-cycle-accurate</span></li>
+      <li><strong>M6 AllCim 排程。</strong>每個 op 指派單元（decode 全在 CIM；attention 走 GPU；support 走 CPU）+ 記憶體放置。<em>產物：</em><code>scheduler.py</code>。</li>
+      <li><strong>L4 decode 機制（唯一硬 silicon 門檻）。</strong>用<strong>獨立定價</strong>（CIM-GEMV L1 micro-benchmark + mem_lpddr4x 24.2 GB/s 記憶體牆 + 顯式 support/attn/kv），<strong>不含</strong> e2e-fitted 頻寬，預測 1B/3B/8B decode tok/s，gate ≤15%（10.7 / 6.5 / 3.1%）。<span class="tag">measured</span></li>
+      <li><strong>smoke vs mechanism 分離（反循環）。</strong>另有一條閉式「smoke」把 fit_BW 解到剛好命中錨點——明確標 <strong>BY-CONSTRUCTION，非證據</strong>，與機制路徑分開，避免「用答案驗答案」。</li>
+      <li><strong>memory-only ablation（非循環內容）。</strong>關閉 compute、只用純 DRAM bytes/24.2，在 1B/8B <strong>超出</strong> gate（41.7% / 15.2%）——證明是獨立的 CIM-compute 修正項把誤差拉回，通過不是循環校準。</li>
+      <li><strong>pipeline 旋鈕。</strong>AllCim 預設 <code>pipeline=False</code>＝單加速器序列＝實測的 Card 1c 單核 decode（無跨 op 重疊）。<code>pipeline=True</code> 是 SIMULATED 前瞻重疊模式。<em>為什麼重要：</em>實測 silicon 看不到跨 op 重疊，所以預設關＝忠實還原。</li>
+    </ol>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">Wave 2.2a</span><span>值流忠實度：fixture、結構 oracle、記憶體域、provenance</span></div>
+    <ol>
+      <li><strong>值流 fixture。</strong>把 trace 再追一次，額外記錄 producer→consumer 的<strong>值邊</strong>（哪個 op 的輸出餵哪個 op），存成 <code>traces/fixture/&lt;model&gt;.json.gz</code>。<em>為什麼：</em>引擎要按真實資料流跑，不能憑空假設拓樸。</li>
+      <li><strong>結構 oracle。</strong>用 fixture 獨立交叉檢查建出來的 DAG：softmax 數 == 層數、residual joins == 2×層數、唯一 embedding root、attention 跨 category/unit 鏈完整。<em>產物：</em><code>structural_check()</code>。</li>
+      <li><strong>記憶體域（R7）。</strong>把每個 op 的流量分到 <code>dram</code>（24.2 GB/s 主記憶體）或 <code>cpu_cache</code>（A76 片上 cache）——CPU-support 的 bytes 走 cache、<strong>不</strong>計入 DRAM 池，移除一個 double-count（8B 因此 14.9%→15.2%，誠實變差）。</li>
+      <li><strong>provenance。</strong>每個 op 記錄是哪個 Phase-1 單元模型定的價（#55），報告可逐 op 回溯。</li>
+      <li><strong>pipeline 旋鈕修正。</strong>值流 DAG 一度因跨 op 重疊打破 1B L4；用 pipeline on/off 旋鈕修好，OFF＝實測序列＝精確還原 2.1 數字。</li>
+    </ol>
+    <div class="note">結果：79 測試、L4 pass_all、Card 重新確認 live。值流讓引擎吃「trace 真值」而非假設拓樸。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">Wave 2.2b</span><span>排程抽象 + 精度邊界 + 異質混精度</span></div>
+    <ol>
+      <li><strong>Scheduler ABC + 註冊表。</strong>把排程抽象成介面，<code>SCHEDULERS</code> 註冊 <code>AllCimScheduler</code> 與 <code>CimHeteroScheduler</code>，可插拔。</li>
+      <li><strong>conversion-op（精度邊界）。</strong>各單元原生精度固定（CIM INT8、GPU FP16），跨邊界要 dequant/requant——一個 memory-bound cast op，由既有 M2/M4 per-op 模型 × M6 插入的邊界穿越次數計價（<code>precision.py</code>）。<em>非量測缺口</em>，是解析建模項。</li>
+      <li><strong>CimHetero 混精度排程。</strong>CIM-INT8 matmul × GPU-FP16 attention 的異質設定；插入 conversion op、走 <code>pipeline=True</code>（多單元重疊，SIMULATED）。<span class="tag">simulated</span></li>
+    </ol>
+    <div class="note">結果：104 測試、AllCim L4 byte-identical、CimHetero 為 simulated。混精度<strong>只證成本</strong>，不證輸出品質（見下方 2.3 限制）。</div>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">Wave 2.3</span><span>全驗證 + 敏感度 + 外推 + 誠實標註（本波）</span></div>
+    <ol>
+      <li><strong>三 topology 接線。</strong>單一頻寬來源＝topology spec（經既有 <code>m2_memory.MemoryModel</code>）：card 24.2（實測錨，byte-identical）、alpha PCIe 3.9（無自帶 DRAM）、edge LPDDR5×NoC 29.97。<code>memory_spec</code> 改成 sentinel + topology×memory_spec 一致性合約，不符就 fail-loud（config 與 run() 兩處）。per-call 911µs floor 只進 TTFT。<em>產物：</em><code>tests/test_topology.py</code>（12 測試）。</li>
+      <li><strong>Topology A/B/C 驗證。</strong>同 workload 跑三 topology；card 重現 committed 預測（非 == 實測，反循環）；結果：A・無 DRAM 慢 {{p2.topo_alpha_penalty_8b}}×、edge 快 {{p2.topo_edge_speedup_8b}}×。<span class="tag">card measured · alpha counterfactual · edge simulated</span></li>
+      <li><strong>敏感度（L5）。</strong>±20% 釘在 eff_BW 錨 24.2（{{p2.sens_bw_lo}}↔{{p2.sens_bw_hi}}）；結論穩健＝{{p2.sens_robust}}（頻寬主導 + 排序維持）；energy 報 band；knee/icn 只在 k&gt;1 競爭路徑（SIMULATED，排除在 serial 結論外）。</li>
+      <li><strong>Hold-out。</strong>閉式 fit_BW 僅用 1B+3B 擬合→預測 8B＝{{p2.hold_closed_pct}}%（真正 leave-8B-out）；完整引擎預測 8B＝{{p2.hold_engine_pct}}%（更準、未針對 8B 調參；backbone 部分 in-sample 已明列）。</li>
+      <li><strong>13B/32GB 級外推。</strong>Qwen2.5-14B 經 ADR-0007 meta-trace 餵同一引擎；三外推維度全標（模型尺寸 / CIM 形狀 {{p2.x13_cim_extrap}}/{{p2.x13_cim_total}} 超包絡 / 容量）；容量公式 footprint {{p2.x13_footprint}} GB，ctx ~{{p2.x13_overflow_ctx}} 溢出 16 GiB。<span class="tag">extrapolated · NOT validated</span></li>
+      <li><strong>混合精度限制。</strong>明列為 limitation：輸出品質未在目標 silicon 量測（D3）；CimHetero 比 AllCim 慢（非加速）；無並發 silicon（#52）。</li>
+      <li><strong>報告注入。</strong>結果以 <code>&#123;&#123;key&#125;&#125;</code> 從 committed JSON 注入本站，<code>build.py --strict</code> 對未解析 key fail。並修正過時的「M3/M6 尚未實作」文案（現已實作）。</li>
+    </ol>
+  </div>
+
+  <div class="sec">
+    <div class="lab"><span class="n">§ 貫穿全程的紀律</span></div>
+    <ul>
+      <li><strong>反循環：</strong>機制不含 e2e-fitted 頻寬；smoke 標 by-construction；memory-only ablation 證明非循環。</li>
+      <li><strong>誠實分級：</strong>measured / simulated / extrapolated / counterfactual 四級（見詞彙表），每個數字回查 committed JSON。</li>
+      <li><strong>唯一硬 silicon 門檻：</strong>AllCim L4 decode ≤15% 且 byte-identical；其餘（alpha/edge/敏感度/14B/混精度）皆 simulated/extrapolated/counterfactual。</li>
+      <li><strong>Gate-6c：</strong>驗證沒過就回修負責的模型元件（M1/M2/M3），不調整合層湊過。</li>
+    </ul>
+  </div>
+
+  <div class="sources">
+    <div class="lab">來源 · 每個宣稱皆回查 committed artifact</div>
+    <ol>
+      <li>Wave 2.1：<code>simulator/runtime/{workload,dag,events,scheduler}.py</code>、<code>validation/reports/phase2/e2e_l4.json</code></li>
+      <li>Wave 2.2a：<code>traces/fixture/</code>、<code>simulator/runtime/workload.structural_check</code></li>
+      <li>Wave 2.2b：<code>simulator/runtime/{scheduler,precision}.py</code>、<code>reports/phase2/mixed_precision.json</code></li>
+      <li>Wave 2.3：<code>validation/validate_{topology_ab,sensitivity_l5,holdout,extrapolation_13b}.py</code> + 對應 JSON；<code>tests/test_topology.py</code></li>
+      <li>誠實分級定義：<code>CONTEXT.md › Glossary › honesty tiers</code></li>
+    </ol>
+  </div>
+
+</section>

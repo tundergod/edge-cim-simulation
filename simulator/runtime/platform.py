@@ -30,13 +30,28 @@ class Platform:
     `interconnect_efficiency`, `bw_efficiency` are the forward-looking tunables
     (SIMULATED); `memory_spec` selects the committed memory anchor."""
 
-    def __init__(self, model, *, memory_spec="mem_lpddr4x", knee_GBs=None,
+    def __init__(self, model, *, memory_spec="mem_lpddr4x", topology=None, knee_GBs=None,
                  interconnect_efficiency=1.0, bw_efficiency=None):
         self.model = model
-        mem = load_spec(memory_spec)
-        eff = float(mem["eff_BW_GBs"])                       # measured anchor (e.g. 24.2)
-        if bw_efficiency is not None:                        # forward-looking override (sweep knob)
-            peak = mem.get("peak_BW_GBs") or (eff / float(mem.get("efficiency", 1.0)))
+        # Single bandwidth source = the topology spec (via the existing M2 MemoryModel resolver):
+        # card -> on-card LPDDR4x 24.2 (literal, byte-identical); alpha -> PCIe 3.9 (no on-card DRAM);
+        # edge -> mem_lpddr5 eff x noc_efficiency. The per-call floor (alpha 911.1 us) is exposed for
+        # the runner to add to TTFT only. When no topology is given, fall back to the bare memory_spec.
+        if topology is not None:
+            from simulator.models.m2_memory import MemoryModel
+            mm = MemoryModel(load_spec(topology))
+            eff = float(mm.eff_BW_GBs) if mm.eff_BW_GBs else float(mm.pcie_BW_GBs)  # alpha: no DRAM -> PCIe
+            self.per_call_floor_us = float(mm.floor_us)
+            peak_mem = load_spec(memory_spec) if memory_spec else None
+        else:
+            peak_mem = load_spec(memory_spec)
+            eff = float(peak_mem["eff_BW_GBs"])              # measured anchor (e.g. 24.2)
+            self.per_call_floor_us = 0.0
+        if bw_efficiency is not None:                        # forward-looking override (sensitivity knob)
+            if peak_mem is None:
+                raise ValueError("Platform: bw_efficiency override needs a memory_spec to read peak BW "
+                                 "from (topology without on-card DRAM has no peak to scale)")
+            peak = peak_mem.get("peak_GBs") or peak_mem.get("peak_BW_GBs") or (eff / float(peak_mem.get("efficiency", 1.0)))
             eff = float(peak) * float(bw_efficiency)
         self.bw = SharedBandwidth(eff, knee_GBs=knee_GBs,
                                   interconnect_efficiency=interconnect_efficiency)

@@ -82,6 +82,14 @@ def load():
     cpurk = _load_spec("cpu_rk3588")
     m5 = _load("phase1.1/m5.json")
     sweep = _load_meas("op_inventory/sweep_matrix.json")
+    # Phase 2.x system-level results (committed reports/phase2/*.json)
+    p2l4 = _load("phase2/e2e_l4.json")["mechanism_independent_pricing"]
+    p2topo = _load("phase2/topology_ab.json")
+    p2sens = _load("phase2/sensitivity.json")
+    p2hold = _load("phase2/holdout.json")
+    p2x13 = _load("phase2/extrapolation_13b.json")
+    p2mp = _load("phase2/mixed_precision.json")
+    _t8 = p2topo["table"]["llama-3.1-8b"]
     oh = cpuic["overhead_op_us"]
     a76 = cpurk["clusters"]["a76"]
     cbw = cpurk["cache_bw_GBs"]
@@ -235,6 +243,38 @@ def load():
         "thermal.sustained_min": _f(th["load"]["sustained_s"] / 60, 0),                # 11
         "thermal.ceiling":   _f(th["load_sweep"]["ceiling_C"], 0),                     # 44
         "thermal.max_busy":  _i(th["load_sweep"]["max_device_busy_pct"]),              # 48
+        # ---- Phase 2.3 system results (topology A/B/C, sensitivity, hold-out, 14B extrap, mixed-prec) ----
+        # L4 decode mechanism (the hard silicon gate) — injected, not hand-typed (honesty)
+        "p2.l4_1b_pred": _f(p2l4["llama-3.2-1b"]["pred_tok_s"], 2),                    # 14.47
+        "p2.l4_1b_meas": _f(p2l4["llama-3.2-1b"]["measured_tok_s"], 2),                # 13.07
+        "p2.l4_1b_err":  _p1(p2l4["llama-3.2-1b"]["rel_error"]),                       # 10.7
+        "p2.l4_3b_pred": _f(p2l4["llama-3.2-3b"]["pred_tok_s"], 2),                    # 5.97
+        "p2.l4_3b_meas": _f(p2l4["llama-3.2-3b"]["measured_tok_s"], 2),                # 6.38
+        "p2.l4_3b_err":  _p1(p2l4["llama-3.2-3b"]["rel_error"]),                       # 6.5
+        "p2.l4_8b_pred": _f(p2l4["llama-3.1-8b"]["pred_tok_s"], 2),                    # 2.78
+        "p2.l4_8b_meas": _f(p2l4["llama-3.1-8b"]["measured_tok_s"], 2),                # 2.70
+        "p2.l4_8b_err":  _p1(p2l4["llama-3.1-8b"]["rel_error"]),                       # 3.1
+        "p2.topo_card_8b_toks":  _f(_t8["cim_topo_card"]["tok_s"], 2),                 # 2.78
+        "p2.topo_alpha_8b_toks": _f(_t8["cim_topo_alpha"]["tok_s"], 2),                # 0.49
+        "p2.topo_edge_8b_toks":  _f(_t8["cim_topo_edge"]["tok_s"], 2),                 # 3.36
+        "p2.topo_alpha_eff":     _f(_t8["cim_topo_alpha"]["eff_BW_GBs"], 1),           # 3.9
+        "p2.topo_edge_eff":      _f(_t8["cim_topo_edge"]["eff_BW_GBs"], 2),            # 29.97
+        "p2.topo_alpha_penalty_8b": _f(p2topo["alpha_host_pcie_penalty_x_slower"]["llama-3.1-8b"], 1),  # 5.7
+        "p2.topo_edge_speedup_8b":  _f(p2topo["edge_lpddr5_speedup_x"]["llama-3.1-8b"], 3),             # 1.208
+        "p2.sens_bw_lo":  _f(p2sens["serial_eff_BW_sweep"]["llama-3.1-8b"]["0.8"]["eff_BW_GBs"], 2),    # 19.36
+        "p2.sens_bw_hi":  _f(p2sens["serial_eff_BW_sweep"]["llama-3.1-8b"]["1.2"]["eff_BW_GBs"], 2),    # 29.04
+        "p2.sens_robust": ("通過" if p2sens["conclusion_robust"] else "未通過"),         # 通過
+        "p2.hold_closed_pct": _p1(p2hold["genuine_leave_8b_out_closed_form"]["rel_error_8b"]),  # 9.5
+        "p2.hold_engine_pct": _p1(p2hold["engine_path"]["rel_error_8b"]),              # 3.1
+        "p2.hold_fit_bw":     _f(p2hold["genuine_leave_8b_out_closed_form"]["fit_BW_GBs"], 2),  # 18.34
+        "p2.x13_toks":       _f(p2x13["engine"]["tok_s"], 2),                          # 1.52
+        "p2.x13_footprint":  _f(p2x13["capacity"]["resident_footprint_GB"], 2),        # 14.11
+        "p2.x13_margin16":   _f(p2x13["capacity"]["footprint_16GiB_margin_GB"], 2),    # 1.89
+        "p2.x13_overflow_ctx": _i(p2x13["capacity"]["overflow_context_16GiB"]),        # 18471
+        "p2.x13_cim_extrap": _i(p2x13["cim_shape_extrapolated_count"]),                # 241
+        "p2.x13_cim_total":  _i(p2x13["cim_matmul_count"]),                            # 337
+        "p2.mp_hetero_8b_pct": _p0(p2mp["models"]["llama-3.1-8b"]["cimhetero_over_allcim"]),  # 59
+        "p2.mp_conv_8b":     _i(p2mp["models"]["llama-3.1-8b"]["conversions_per_decode_token"]),  # 112
     }
 
 
