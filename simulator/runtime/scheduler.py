@@ -1,15 +1,16 @@
-"""M6 (Phase 2.1 minimal) — AllCim static op->unit mapping.
+"""M6 — op->unit scheduler (Phase 2.2b): a `Scheduler` ABC + plugins.
 
-The all-CIM baseline mirrors the L4 vendor (all-AIPU INT8) compute placement:
-matmul on CIM, support ops (norm/rope/ffn/softmax/residual) on CPU, attention on
-CIM (no separate CIM-attention compute model in 2.1 -> treated as memory-bound
-via its bytes), kv-append + embedding through memory. The decode mechanism is
-priced from CIM-GEMV (L1) + the mem_lpddr4x 24.2 GB/s wall + explicit
-support/attention/kv terms — there is NO e2e-fitted bandwidth (fit_BW_GBs=18.33)
-anywhere in this path. The `Scheduler` ABC + SOTA plugins (HeteroInfer) arrive in
-Wave 2.2.
+`Scheduler.assign(dag, cfg) -> dag` is a pure, idempotent annotator that sets only
+`node.unit` + `node.mem_domain` (it never touches category/wl/deps). `AllCimScheduler`
+is the 2.1/2.2a all-CIM baseline (mirrors the L4 vendor all-AIPU INT8 placement: matmul
+on CIM, support ops on CPU, attention on CIM as memory-bound, kv-append + embedding
+through memory) — the ONLY hard-silicon-gated path (AllCim L4). `CimHeteroScheduler`
+(the project's CIM-INT8 matmul × GPU-FP16 attention mixed-precision config) lands later
+in this wave and is SIMULATED. The thin `all_cim_assign` wrapper is kept for callers.
 """
 from __future__ import annotations
+
+from abc import ABC, abstractmethod
 
 ALLCIM_MAP = {
     "matmul": "cim",
@@ -34,13 +35,33 @@ def _residency(node):
     return "dram"
 
 
+class Scheduler(ABC):
+    """Pure, idempotent op->unit placement. `assign` sets ONLY node.unit + node.mem_domain
+    (never category/wl/deps) and returns the dag; calling it twice gives the same result."""
+    name: str = ""
+
+    @abstractmethod
+    def assign(self, dag, cfg=None):
+        raise NotImplementedError
+
+
+class AllCimScheduler(Scheduler):
+    """All-CIM baseline (the L4-gated all-AIPU INT8 placement)."""
+    name = "all_cim"
+
+    def assign(self, dag, cfg=None):
+        for n in dag.nodes:
+            n.unit = ALLCIM_MAP.get(n.category, "cpu")
+            n.mem_domain = _residency(n)
+        return dag
+
+
+SCHEDULERS = {"all_cim": AllCimScheduler()}
+
+
 def all_cim_assign(dag):
-    """Annotate every node.unit per the all-CIM mapping AND its memory domain (in place);
-    returns dag."""
-    for n in dag.nodes:
-        n.unit = ALLCIM_MAP.get(n.category, "cpu")
-        n.mem_domain = _residency(n)
-    return dag
+    """Thin wrapper kept for existing callers (= AllCimScheduler().assign)."""
+    return AllCimScheduler().assign(dag)
 
 
 def domain_byte_audit(dag):

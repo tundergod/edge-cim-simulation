@@ -17,11 +17,11 @@ sys.path.insert(0, str(_ROOT / "tools" / "trace_export"))
 import op_profile  # noqa: E402
 
 from simulator.runtime.workload import build_token_dag  # noqa: E402
-from simulator.runtime.scheduler import all_cim_assign  # noqa: E402
+from simulator.runtime.scheduler import SCHEDULERS  # noqa: E402
 from simulator.runtime.platform import Platform  # noqa: E402
 from simulator.runtime.events import run_dag  # noqa: E402
 
-_SCHEDULERS = {"all_cim": all_cim_assign}
+_SCHEDULERS = SCHEDULERS
 
 
 def _energy_per_token_J(dag, plat):
@@ -51,7 +51,7 @@ def run(cfg):
     """Run one SimConfig -> metrics dict."""
     if cfg.scheduler not in _SCHEDULERS:
         raise ValueError(f"unknown scheduler '{cfg.scheduler}' (have {sorted(_SCHEDULERS)})")
-    assign = _SCHEDULERS[cfg.scheduler]
+    assign = _SCHEDULERS[cfg.scheduler].assign   # bound annotator: assign(dag) -> dag
 
     # fail-loud on knobs that are accepted by SimConfig but NOT yet wired in 2.1
     # (so a user can't run a silently-inert experiment). These land in later waves.
