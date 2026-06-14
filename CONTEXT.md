@@ -16,6 +16,7 @@ Directory-level map so you can locate things fast. Within a listed dir, the per-
 | `docs/plans/phase-*.md` | **Per-phase action-only plans** (0.1–0.3, 1.1–1.7 incl. 1.6b, + `phase-report-consolidation`). 1.3 sub-plans folded into `phase-1.3.md`. All plans live under `docs/` (moved from root). |
 | `simulator/models/*.py` | The M-module timing/energy models: `m1_cim_tile`, `m2_memory`, `m4_cpu`/`m4_gpu`/`m4_npu`, `m7_energy`. |
 | `simulator/models/params/*.json` | Fitted parameters per model (`m1_cim`, `m2_pcie`, `m2_lpddr5`, `m4_*`, `m7_energy`). |
+| `simulator/runtime/*.py` | Phase-2 per-token runtime: `config` (SimConfig), `workload`/`dag` (M5 value-flow op-DAG), `scheduler` (M6 `Scheduler` ABC + `AllCimScheduler`/`CimHeteroScheduler`), `precision` (int8↔fp16 conversion-op insertion), `resources`/`events` (M3 engine), `platform` (`price()` per-op), `runner`. |
 | `simulator/engines/{onnxim,scalesim,ramulator2}/*.json` | **Cached outputs of external heavy simulators** — the `engine=` backends (ONNXim/ScaleSim NPU tables + characteristic sweeps, Ramulator2 LPDDR5 eff). Read by `m4_npu`/`m2_memory`. simulated, NOT silicon — each file self-labels `honesty`. (Moved here from root `simulated/`.) |
 | `tools/analysis/*.py` | **Fit scripts** (`fit_m1_cim`, `fit_m2`, `fit_m4_cpu/gpu`, `recompose_e2e`) → produce params + validation reports. |
 | `tools/plotting/*.py` | One script per figure (regenerate from committed data; never hand-drawn). `_style.py` = shared style. Only **PNG** is committed under `docs/figures/`; PDF/SVG are regenerable + gitignored. |
