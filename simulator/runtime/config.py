@@ -65,6 +65,7 @@ class SimConfig:
     units: dict = field(default_factory=_default_units)
     engine: dict = field(default_factory=_default_engine)
     scheduler: str = "all_cim"
+    precision_boundary_placement: str = "consumer"   # which unit pays a conversion op (2.2b): consumer|producer
     knee_GBs: float | None = None
     interconnect_efficiency: float = 1.0
     concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; no effect on the 2.1 serial path
@@ -77,6 +78,21 @@ class SimConfig:
     compute_off: bool = False                 # ablation: memory-only (zero unit compute) — isolates the non-circular compute correction
     sweep: dict | None = None
     provenance: list = field(default_factory=list)
+
+    def __post_init__(self):
+        self.validate()
+
+    def validate(self):
+        """Re-check invariants + refresh provenance. Called at construction AND at the run() public
+        boundary — SimConfig is a MUTABLE dataclass, so a field broken after construction (e.g.
+        cfg.batch = 4) must still fail loud, and provenance must reflect the config as actually run."""
+        if self.batch != 1:
+            raise ValueError("SimConfig: v1 scope is batch=1 (hook reserved)")
+        if self.precision_boundary_placement not in ("consumer", "producer"):
+            raise ValueError(f"SimConfig: precision_boundary_placement must be 'consumer' or "
+                             f"'producer', got {self.precision_boundary_placement!r}")
+        self._flag_provenance()
+        return self
 
     @staticmethod
     def from_json(path):
@@ -109,6 +125,8 @@ class SimConfig:
             units=plat.get("units") or _default_units(),
             engine=plat.get("engine") or _default_engine(),
             scheduler=(sched.get("policy") if isinstance(sched, dict) else sched) or "all_cim",
+            precision_boundary_placement=(sched.get("precision_boundary_placement", "consumer")
+                                          if isinstance(sched, dict) else "consumer"),
             knee_GBs=tun.get("knee_GBs"),
             interconnect_efficiency=tun.get("interconnect_efficiency", 1.0),
             concurrency_overlap_factor=tun.get("concurrency_overlap_factor", 1.0),
@@ -116,10 +134,7 @@ class SimConfig:
             concurrency_off=abl.get("concurrency_off", False),
             contention_off=abl.get("contention_off", False),
             compute_off=abl.get("compute_off", False),
-            sweep=d.get("sweep"))
-        if cfg.batch != 1:
-            raise ValueError("SimConfig: v1 scope is batch=1 (hook reserved)")
-        cfg._flag_provenance()
+            sweep=d.get("sweep"))   # SimConfig.__post_init__ validates invariants + flags provenance
         return cfg
 
     def _flag_provenance(self):
@@ -135,6 +150,9 @@ class SimConfig:
         if self.pipeline:
             p.append("simulated: pipeline overlap enabled (cross-op double-buffering; the "
                      "measured all-AIPU Card 1c single-core decode shows no cross-op overlap)")
+        if self.scheduler != "all_cim":
+            p.append(f"simulated: '{self.scheduler}' heterogeneous placement (only AllCim is "
+                     f"silicon-gated; no concurrent-unit silicon — Aetina out for repair, #52)")
         for u, e in self.engine.items():
             if e not in _SILICON_BACKENDS:
                 p.append(f"simulated: {u} engine='{e}' (non-silicon backend)")

@@ -110,7 +110,7 @@ def test_gpu_attention_only_prices_bmm():
     from simulator.runtime.dag import OpNode
     from simulator.models.engine import Workload
     plat = Platform("llama-3.2-1b")
-    bmm = OpNode(id=0, category="attention", unit="gpu",
+    bmm = OpNode(id=0, category="attention", unit="gpu", pricing_group=0,   # grouped rep (2.2b R2)
                  wl=Workload(op="attention", kv=512, heads=32, K=64, dtype="fp16", extra={"hd": 64}))
     p = plat.price(bmm)
     assert p["latency_us"] > 0 and p["source_model"] == "m4_gpu"
@@ -134,6 +134,52 @@ def test_platform_rejects_unknown_unit():
     except ValueError:
         return
     raise AssertionError("unknown unit not rejected by platform")
+
+
+def test_cimhetero_requires_cim_gpu_cpu_units():
+    # an impossible config (cim_hetero needs the GPU for attention) must fail loud, not
+    # silently return a plausible tok/s.
+    cfg = SimConfig.from_dict({"workload": {"model": "llama-3.2-1b"},
+                               "scheduler": {"policy": "cim_hetero"},
+                               "platform": {"units": {"cim": True, "gpu": False, "cpu": True}}})
+    try:
+        run(cfg)
+    except ValueError:
+        return
+    raise AssertionError("cim_hetero with gpu disabled not rejected")
+
+
+def test_metrics_expose_conversion_cost():
+    # the conversion-op cost (a core 2.2b deliverable) must be visible in the public metrics,
+    # not only recomputed in report_mixed_precision.py.
+    from simulator.runtime.config import SimConfig
+    r_all = run(_cfg("llama-3.2-1b"))
+    assert r_all["conversion_count_per_decode_token"] == 0          # AllCim inserts none
+    assert r_all["conversion_bytes_per_decode_token"] == 0
+    r_het = run(SimConfig.from_dict({"workload": {"model": "llama-3.2-1b", "context": 1024},
+                                     "scheduler": {"policy": "cim_hetero"}}))
+    assert r_het["conversion_count_per_decode_token"] > 0
+    assert r_het["conversion_bytes_per_decode_token"] > 0
+
+
+def test_run_revalidates_mutated_config():
+    # SimConfig is a mutable dataclass; run() (the public boundary) must re-validate, not
+    # silently emit metrics for a config broken AFTER construction.
+    cfg = _cfg("llama-3.2-1b")
+    cfg.batch = 4
+    try:
+        run(cfg)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("run() did not re-validate a mutated batch")
+    cfg2 = _cfg("llama-3.2-1b")
+    cfg2.precision_boundary_placement = "prodcer"
+    try:
+        run(cfg2)
+    except ValueError:
+        return
+    raise AssertionError("run() did not re-validate a mutated precision_boundary_placement")
 
 
 def test_unknown_scheduler_rejected():

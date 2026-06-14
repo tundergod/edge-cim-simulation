@@ -41,6 +41,7 @@ class OpNode:
     precision: str | None = None                    # simulated placement precision
     pricing_group: int | None = None                # composite-pricing group (2.2b R2)
     mem_domain: str | None = None                   # 'dram'|'cpu_cache'|'none' (residency, set by scheduler)
+    out_elems: int = 0                              # element count of the produced value (conversion-byte source, 2.2b)
 
 
 class Dag:

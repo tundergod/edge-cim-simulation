@@ -1,15 +1,16 @@
-"""M6 (Phase 2.1 minimal) — AllCim static op->unit mapping.
+"""M6 — op->unit scheduler (Phase 2.2b): a `Scheduler` ABC + plugins.
 
-The all-CIM baseline mirrors the L4 vendor (all-AIPU INT8) compute placement:
-matmul on CIM, support ops (norm/rope/ffn/softmax/residual) on CPU, attention on
-CIM (no separate CIM-attention compute model in 2.1 -> treated as memory-bound
-via its bytes), kv-append + embedding through memory. The decode mechanism is
-priced from CIM-GEMV (L1) + the mem_lpddr4x 24.2 GB/s wall + explicit
-support/attention/kv terms — there is NO e2e-fitted bandwidth (fit_BW_GBs=18.33)
-anywhere in this path. The `Scheduler` ABC + SOTA plugins (HeteroInfer) arrive in
-Wave 2.2.
+`Scheduler.assign(dag, cfg) -> dag` is a pure, idempotent annotator that sets only
+`node.unit` + `node.mem_domain` (it never touches category/wl/deps). `AllCimScheduler`
+is the 2.1/2.2a all-CIM baseline (mirrors the L4 vendor all-AIPU INT8 placement: matmul
+on CIM, support ops on CPU, attention on CIM as memory-bound, kv-append + embedding
+through memory) — the ONLY hard-silicon-gated path (AllCim L4). `CimHeteroScheduler`
+(the project's CIM-INT8 matmul × GPU-FP16 attention mixed-precision config) lands later
+in this wave and is SIMULATED. The thin `all_cim_assign` wrapper is kept for callers.
 """
 from __future__ import annotations
+
+from abc import ABC, abstractmethod
 
 ALLCIM_MAP = {
     "matmul": "cim",
@@ -34,13 +35,68 @@ def _residency(node):
     return "dram"
 
 
+class Scheduler(ABC):
+    """Pure, idempotent op->unit placement. `assign` sets node.unit + node.mem_domain (and may
+    insert conversion ops) and returns a dag; calling it twice gives the same result. `pipeline`
+    declares the engine execution mode: False = single-accelerator serial (AllCim, measured);
+    True = multi-unit cross-op overlap (heterogeneous, SIMULATED)."""
+    name: str = ""
+    pipeline: bool = False
+    required_units: tuple = ()        # units that MUST be enabled for this scheduler (fail-loud gate)
+
+    @abstractmethod
+    def assign(self, dag, cfg=None):
+        raise NotImplementedError
+
+
+class AllCimScheduler(Scheduler):
+    """All-CIM baseline (the L4-gated all-AIPU INT8 placement)."""
+    name = "all_cim"
+    pipeline = False
+    required_units = ("cim", "cpu")
+
+    def assign(self, dag, cfg=None):
+        for n in dag.nodes:
+            n.unit = ALLCIM_MAP.get(n.category, "cpu")
+            n.mem_domain = _residency(n)
+        return dag
+
+
+class CimHeteroScheduler(Scheduler):
+    """The project's mixed-precision config (SIMULATED): CIM-INT8 matmul × GPU-FP16 attention.
+    matmul->cim, the QK^T/S·V bmm->gpu, scale/mask + support->cpu, kv_cache/embedding->mem;
+    inserts int8<->fp16 conversion ops at the GPU boundary. Runs concurrent (pipeline=True)."""
+    name = "cim_hetero"
+    pipeline = True
+    required_units = ("cim", "gpu", "cpu")
+
+    def assign(self, dag, cfg=None):
+        from simulator.runtime.precision import insert_conversions   # deferred: avoids import cycle
+        for n in dag.nodes:
+            if n.category == "convert":
+                continue                                            # preserve an already-inserted
+                                                                    # convert's unit (idempotent re-assign)
+            if n.category == "matmul":
+                n.unit = "cim"
+            elif n.category == "attention":
+                n.unit = "gpu" if "hd" in n.wl.extra else "cpu"      # QK^T/S·V bmm vs scale/mask
+            elif n.category in ("softmax", "norm", "rope", "ffn", "residual"):
+                n.unit = "cpu"
+            else:
+                n.unit = "mem"                                       # kv_cache, embedding
+        placement = getattr(cfg, "precision_boundary_placement", "consumer") if cfg else "consumer"
+        dag = insert_conversions(dag, placement=placement)          # returns a rebuilt Dag
+        for n in dag.nodes:
+            n.mem_domain = _residency(n)
+        return dag
+
+
+SCHEDULERS = {"all_cim": AllCimScheduler(), "cim_hetero": CimHeteroScheduler()}
+
+
 def all_cim_assign(dag):
-    """Annotate every node.unit per the all-CIM mapping AND its memory domain (in place);
-    returns dag."""
-    for n in dag.nodes:
-        n.unit = ALLCIM_MAP.get(n.category, "cpu")
-        n.mem_domain = _residency(n)
-    return dag
+    """Thin wrapper kept for existing callers (= AllCimScheduler().assign)."""
+    return AllCimScheduler().assign(dag)
 
 
 def domain_byte_audit(dag):

@@ -112,7 +112,9 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
         return bw.per_stream_GBs(len(active_mem), contention=contention) * 1e3
 
     while pending or active_mem or (started - done):
-        # 1) dispatch every pending node whose unit is free (compute serialization)
+        # 1) dispatch every pending node whose unit is free (compute serialization), and
+        # finish zero-cost nodes in the same pass — a finish can free a unit / make a
+        # successor pending, which must dispatch at THIS clock (else the loop stalls).
         progressed = True
         while progressed:
             progressed = False
@@ -130,8 +132,12 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
                     if node.bytes_streamed > 0 and node.mem_domain != "cpu_cache":
                         active_mem[nid] = float(node.bytes_streamed)
                     progressed = True
-        for nid in list(started):
-            finish(nid)
+            for nid in list(started):
+                if nid not in done:
+                    n_done = len(done)
+                    finish(nid)
+                    if len(done) > n_done:        # newly finished -> re-dispatch newly-ready nodes
+                        progressed = True
         if not (pending or active_mem or (started - done)):
             break
 

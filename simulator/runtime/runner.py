@@ -17,11 +17,11 @@ sys.path.insert(0, str(_ROOT / "tools" / "trace_export"))
 import op_profile  # noqa: E402
 
 from simulator.runtime.workload import build_token_dag  # noqa: E402
-from simulator.runtime.scheduler import all_cim_assign  # noqa: E402
+from simulator.runtime.scheduler import SCHEDULERS  # noqa: E402
 from simulator.runtime.platform import Platform  # noqa: E402
 from simulator.runtime.events import run_dag  # noqa: E402
 
-_SCHEDULERS = {"all_cim": all_cim_assign}
+_SCHEDULERS = SCHEDULERS
 
 
 def _energy_per_token_J(dag, plat):
@@ -49,9 +49,12 @@ def _op_provenance(dag, plat, bw):
 
 def run(cfg):
     """Run one SimConfig -> metrics dict."""
+    cfg.validate()   # re-validate at the public boundary (SimConfig is mutable; refreshes provenance)
     if cfg.scheduler not in _SCHEDULERS:
         raise ValueError(f"unknown scheduler '{cfg.scheduler}' (have {sorted(_SCHEDULERS)})")
-    assign = _SCHEDULERS[cfg.scheduler]
+    sched = _SCHEDULERS[cfg.scheduler]
+    def assign(dag):                              # annotator: places units/domains (+ conversions)
+        return sched.assign(dag, cfg)
 
     # fail-loud on knobs that are accepted by SimConfig but NOT yet wired in 2.1
     # (so a user can't run a silently-inert experiment). These land in later waves.
@@ -64,10 +67,11 @@ def run(cfg):
         raise NotImplementedError(
             f"engine backend(s) {nonanalytic}: only 'analytic' is wired into the runtime in 2.1 "
             f"(onnxim/scalesim/ramulator2 heavy backends are a later wave).")
-    if cfg.scheduler == "all_cim" and not (cfg.units.get("cim") and cfg.units.get("cpu")):
-        raise ValueError("all_cim scheduler requires units cim+cpu enabled "
-                         "(gpu/npu toggles have no effect under all_cim — heterogeneous "
-                         "placement is Wave 2.2).")
+    missing = [u for u in sched.required_units if not cfg.units.get(u)]
+    if missing:
+        raise ValueError(f"scheduler '{cfg.scheduler}' requires units {list(sched.required_units)} "
+                         f"enabled but {missing} are disabled — an impossible config cannot run "
+                         f"(e.g. cim_hetero needs the GPU for attention).")
     plat = Platform(cfg.model, memory_spec=cfg.memory_spec, knee_GBs=cfg.knee_GBs,
                     interconnect_efficiency=cfg.interconnect_efficiency,
                     bw_efficiency=cfg.bw_efficiency)
@@ -75,8 +79,8 @@ def run(cfg):
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off
     price_compute = not cfg.compute_off
-    pipeline = cfg.pipeline   # OFF (default) = single-accelerator serial (measured all-AIPU);
-                              # ON = SIMULATED cross-op overlap (provenance-flagged)
+    pipeline = cfg.pipeline or sched.pipeline   # AllCim: serial (measured). Heterogeneous schedulers
+                                                # declare pipeline=True (multi-unit overlap, SIMULATED).
 
     # capacity is a FEASIBILITY gate, NOT a throughput knob: decode tok/s is set by bandwidth,
     # not capacity (so it is deliberately not a Platform timing input). Fail-loud if the model's
@@ -113,6 +117,7 @@ def run(cfg):
                        price_compute=price_compute, pipeline=pipeline)
 
     e_tok = _energy_per_token_J(dec, plat)
+    convs = [n for n in dec.nodes if n.category == "convert"]   # precision-boundary casts (2.2b)
     return {
         "model": cfg.model,
         "scheduler": cfg.scheduler,
@@ -135,4 +140,6 @@ def run(cfg):
         "provenance": cfg.provenance,
         "calibrated_anchor": cfg.is_calibrated_anchor(),
         "op_provenance": _op_provenance(dec, plat, plat.bw),
+        "conversion_count_per_decode_token": len(convs),               # int8<->fp16 casts (0 for AllCim)
+        "conversion_bytes_per_decode_token": sum(n.bytes_streamed for n in convs),
     }

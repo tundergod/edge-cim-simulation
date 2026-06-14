@@ -12,3 +12,6 @@ M6 decides per-op unit, precision, placement, pipeline — this is the paper's c
 
 ## Consequences
 The `Scheduler` plugin interface must be expressive enough to encode SOTA strategies. External validation needs HeteroInfer's platform params (some estimated). op-vs-tensor finalization is a Phase-0.1-gated follow-up.
+
+## Revision (2026-06-14, Phase 2.2b)
+The `Scheduler(ABC).assign(dag, cfg) -> dag` interface is implemented (`simulator/runtime/scheduler.py`): a pure, idempotent op→unit + memory-domain annotator with a `SCHEDULERS` registry. Two plugins ship: **`AllCimScheduler`** (the L4-gated all-AIPU INT8 baseline; `pipeline=False`, single-accelerator serial) and **`CimHeteroScheduler`** (the project's own CIM-INT8 matmul × GPU-FP16 attention config; `pipeline=True`, SIMULATED — no concurrent-unit silicon, Aetina out). op-level placement is realized; **tensor-level weight-centric split is deferred** (post-Phase-2). The **"validation-first" SOTA reproduction (HeteroInfer/HPIM) is deferred to a later wave** (NOT cancelled) — 2.2a/2.2b prioritised the M6 ABC + the project's own CimHetero config + the conversion-op cost.
