@@ -56,12 +56,9 @@ def run(cfg):
     def assign(dag):                              # annotator: places units/domains (+ conversions)
         return sched.assign(dag, cfg)
 
-    # fail-loud on knobs that are accepted by SimConfig but NOT yet wired in 2.1
-    # (so a user can't run a silently-inert experiment). These land in later waves.
-    if cfg.topology != "cim_topo_card":
-        raise NotImplementedError(
-            f"topology '{cfg.topology}': the numeric topology effect (host-MMIO PCIe floor, "
-            f"on-card vs edge) is Wave 2.3 (validate_topology_ab). 2.1 wires cim_topo_card only.")
+    # Topology validity + the topology x memory_spec contract are enforced in cfg.validate()
+    # (called above) — Wave 2.3 wires cim_topo_card/alpha/edge. Heavy engine backends remain
+    # fail-loud below (so a user can't run a silently-inert experiment).
     nonanalytic = {u: e for u, e in cfg.engine.items() if e != "analytic"}
     if nonanalytic:
         raise NotImplementedError(
@@ -72,8 +69,8 @@ def run(cfg):
         raise ValueError(f"scheduler '{cfg.scheduler}' requires units {list(sched.required_units)} "
                          f"enabled but {missing} are disabled — an impossible config cannot run "
                          f"(e.g. cim_hetero needs the GPU for attention).")
-    plat = Platform(cfg.model, memory_spec=cfg.memory_spec, knee_GBs=cfg.knee_GBs,
-                    interconnect_efficiency=cfg.interconnect_efficiency,
+    plat = Platform(cfg.model, memory_spec=cfg.resolved_memory_spec(), topology=cfg.topology,
+                    knee_GBs=cfg.knee_GBs, interconnect_efficiency=cfg.interconnect_efficiency,
                     bw_efficiency=cfg.bw_efficiency)
     model_obj = op_profile.Model(cfg.model)
     concurrency = not cfg.concurrency_off
@@ -115,6 +112,9 @@ def run(cfg):
     pre = assign(build_token_dag(cfg.model, "prefill", cfg.prefill_len, _model_obj=model_obj))
     t_pre_us = run_dag(pre, plat, plat.bw, concurrency=concurrency, contention=contention,
                        price_compute=price_compute, pipeline=pipeline)
+    # per-call transport floor (alpha host-MMIO 911 us) is a TTFT artifact, amortized to ~0 over
+    # decode tokens -> added to the prefill/TTFT path ONLY (D11; decode tok/s stays bandwidth-bound).
+    t_pre_us += plat.per_call_floor_us
 
     e_tok = _energy_per_token_J(dec, plat)
     convs = [n for n in dec.nodes if n.category == "convert"]   # precision-boundary casts (2.2b)

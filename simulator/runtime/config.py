@@ -32,6 +32,13 @@ _CAL_TOPOLOGY = "cim_topo_card"    # the L4-anchored on-card-DRAM topology
 _ENVELOPE_GB = 16                  # largest measured M.2 SKU
 _SILICON_BACKENDS = {"analytic"}   # analytic CIM/CPU/GPU = silicon-calibrated; others = simulated
 
+# Wave 2.3: the three wired topologies + their REQUIRED memory_spec (the single physics source is
+# the topology spec; memory_spec is a consistency tag). None = no on-card DRAM (eff_BW from PCIe) ->
+# reject any explicit LPDDR memory_spec as misleading. memory_spec defaults to a SENTINEL (None) so
+# "omitted" is distinguishable from "explicitly set" (needed for the alpha+omitted case).
+_VALID_TOPOLOGIES = {"cim_topo_card", "cim_topo_alpha", "cim_topo_edge"}
+_TOPO_MEMORY = {"cim_topo_card": "mem_lpddr4x", "cim_topo_edge": "mem_lpddr5", "cim_topo_alpha": None}
+
 
 def _reject_unknown(d, known, where):
     extra = set(d) - known
@@ -58,7 +65,7 @@ class SimConfig:
     context: int = 1024
     batch: int = 1
     task: str | None = None
-    memory_spec: str = _CAL_MEMORY
+    memory_spec: str | None = None      # SENTINEL: None = use the topology's required spec (resolved)
     topology: str = _CAL_TOPOLOGY
     memory_capacity_GB: int = 16
     bw_efficiency: float | None = None
@@ -91,8 +98,24 @@ class SimConfig:
         if self.precision_boundary_placement not in ("consumer", "producer"):
             raise ValueError(f"SimConfig: precision_boundary_placement must be 'consumer' or "
                              f"'producer', got {self.precision_boundary_placement!r}")
+        # Wave 2.3 topology x memory_spec contract (fail-loud at construction AND at run()):
+        if self.topology not in _VALID_TOPOLOGIES:
+            raise ValueError(f"SimConfig: unknown topology {self.topology!r} "
+                             f"(wired: {sorted(_VALID_TOPOLOGIES)})")
+        required = _TOPO_MEMORY[self.topology]
+        if self.memory_spec is not None and self.memory_spec != required:
+            raise ValueError(
+                f"SimConfig: topology {self.topology!r} requires memory_spec "
+                f"{required!r} but got {self.memory_spec!r}. The topology spec is the single "
+                f"bandwidth source; memory_spec is a consistency tag (omit it to use the "
+                f"topology default). cim_topo_alpha has no on-card DRAM so it rejects any LPDDR spec.")
         self._flag_provenance()
         return self
+
+    def resolved_memory_spec(self):
+        """The concrete memory spec for this topology: the explicit value if given, else the
+        topology default (None for alpha — no on-card DRAM; eff_BW comes from the PCIe wall)."""
+        return self.memory_spec if self.memory_spec is not None else _TOPO_MEMORY[self.topology]
 
     @staticmethod
     def from_json(path):
@@ -118,7 +141,7 @@ class SimConfig:
             model=wl["model"], task=wl.get("task"),
             prefill_len=wl.get("prefill_len", 256), decode_len=wl.get("decode_len", 512),
             context=wl.get("context", 1024), batch=wl.get("batch", 1),
-            memory_spec=plat.get("memory_spec", _CAL_MEMORY),
+            memory_spec=plat.get("memory_spec"),   # None sentinel -> resolved per topology
             topology=plat.get("topology", _CAL_TOPOLOGY),
             memory_capacity_GB=plat.get("memory_capacity_GB", 16),
             bw_efficiency=plat.get("bw_efficiency"),
@@ -141,10 +164,15 @@ class SimConfig:
         p = []
         if self.memory_capacity_GB > _ENVELOPE_GB:
             p.append(f"extrapolated: memory_capacity {self.memory_capacity_GB}GB > measured {_ENVELOPE_GB}GB")
-        if self.topology != _CAL_TOPOLOGY:
+        if self.topology == "cim_topo_alpha":
+            p.append("counterfactual: topology 'cim_topo_alpha' (Metis Alpha is LLM-incapable — "
+                     "-1301 closed firmware + no on-card DRAM; a decode number here is a "
+                     "counterfactual host-PCIe-streaming estimate, NOT a runnable config)")
+        elif self.topology != _CAL_TOPOLOGY:
             p.append(f"simulated: topology '{self.topology}' (not the L4-anchored {_CAL_TOPOLOGY})")
-        if self.memory_spec != _CAL_MEMORY:
-            p.append(f"simulated: memory_spec '{self.memory_spec}' (not the measured {_CAL_MEMORY} anchor)")
+        rms = self.resolved_memory_spec()
+        if rms is not None and rms != _CAL_MEMORY:
+            p.append(f"simulated: memory_spec '{rms}' (not the measured {_CAL_MEMORY} anchor)")
         if self.bw_efficiency is not None:
             p.append(f"simulated: bw_efficiency override = {self.bw_efficiency}")
         if self.pipeline:
