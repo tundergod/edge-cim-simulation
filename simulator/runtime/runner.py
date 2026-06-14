@@ -28,6 +28,25 @@ def _energy_per_token_J(dag, plat):
     return sum(plat.energy_J(n, plat.compute_us(n)) for n in dag.nodes)
 
 
+def _op_provenance(dag, plat, bw):
+    """Per-(category, source_model) provenance summary (#55): which Phase-1 unit model priced
+    each op category, a representative compute_provenance, and the ENGINE-determined bound
+    distribution (M3 max(compute, dram_memory) — cpu_cache bytes never hit the DRAM pool)."""
+    summary = {}
+    for n in dag.nodes:
+        pr = plat.price(n)
+        dram_mem = (bw.stream_us(n.bytes_streamed, 1)
+                    if (n.bytes_streamed > 0 and n.mem_domain != "cpu_cache") else 0.0)
+        bound = "compute" if pr["latency_us"] >= dram_mem else "memory"
+        key = (n.category, pr["source_model"])
+        s = summary.setdefault(key, {"category": n.category, "source_model": pr["source_model"],
+                                     "compute_provenance": pr["compute_provenance"],
+                                     "count": 0, "bound": {"compute": 0, "memory": 0}})
+        s["count"] += 1
+        s["bound"][bound] += 1
+    return sorted(summary.values(), key=lambda s: (s["category"], s["source_model"]))
+
+
 def run(cfg):
     """Run one SimConfig -> metrics dict."""
     if cfg.scheduler not in _SCHEDULERS:
@@ -115,4 +134,5 @@ def run(cfg):
                       "compute_off": cfg.compute_off},
         "provenance": cfg.provenance,
         "calibrated_anchor": cfg.is_calibrated_anchor(),
+        "op_provenance": _op_provenance(dec, plat, plat.bw),
     }

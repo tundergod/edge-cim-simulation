@@ -53,6 +53,39 @@ def test_capacity_feasibility_gate():
     assert r["model_footprint_GB"] > 0 and r["tok_s"] > 0
 
 
+def test_per_op_provenance_summary():
+    # #55: every op exposes WHICH unit model priced its compute (source_model) + a
+    # compute_provenance string; the bound (compute vs memory) is the ENGINE's max() decision.
+    r = run(_cfg("llama-3.2-1b"))
+    prov = r["op_provenance"]
+    assert prov
+    for e in prov:
+        assert e["source_model"] and e["compute_provenance"]
+        assert e["bound"]["compute"] + e["bound"]["memory"] == e["count"]
+    # matmul priced by the CIM tile model; CPU-support by m4_cpu; mem ops unmodeled
+    assert any(e["category"] == "matmul" and e["source_model"] == "m1_cim_tile" for e in prov)
+    assert any(e["source_model"] == "m4_cpu" for e in prov)
+    assert any(e["source_model"] == "none" for e in prov)
+
+
+def test_platform_price_returns_provenance():
+    from simulator.runtime.platform import Platform
+    from simulator.runtime.dag import OpNode
+    from simulator.models.engine import Workload
+    plat = Platform("llama-3.2-1b")
+    mm = OpNode(id=0, category="matmul", wl=Workload(op="matmul", M=1, K=2048, N=2048), unit="cim")
+    p = plat.price(mm)
+    assert set(p) >= {"latency_us", "compute_provenance", "source_model"}
+    assert p["source_model"] == "m1_cim_tile" and p["latency_us"] > 0
+    assert plat.compute_us(mm) == p["latency_us"]   # compute_us delegates to price
+    bad = OpNode(id=1, category="matmul", wl=Workload(op="matmul"), unit="bogus")
+    try:
+        plat.price(bad)
+    except ValueError:
+        return
+    raise AssertionError("price did not reject unknown unit")
+
+
 def test_platform_rejects_unknown_unit():
     from simulator.runtime.platform import Platform
     from simulator.runtime.dag import OpNode
