@@ -137,6 +137,7 @@ def build_token_dag(model, phase, L, *, _model_obj=None):
     compatibility (structure is fixture-cached, not from the Model)."""
     struct = _load_structure(model, phase)
     nodes = []
+    pending_qk = None     # id of an attention QK^T bmm awaiting its S·V partner (R2 grouping)
     for i, s in enumerate(struct):
         in_shapes = [op_profile._inst_shape(t, L) for t in s["tin"]]
         out_shape = op_profile._inst_shape(s["tout"], L)
@@ -146,8 +147,17 @@ def build_token_dag(model, phase, L, *, _model_obj=None):
         wl = wl_from_row(row, model)
         deps = list(s["deps"])
         out_elems = op_profile._prod(out_shape) if out_shape else 0
+        # R2 pricing_group: pair each attention block's QK^T + S·V bmm so the GPU composite
+        # (m4_gpu.attn_bmm_us) is priced once. The QK^T (first bmm) is the rep (pricing_group ==
+        # its own id); the S·V carries the rep's id. Non-bmm attention (scale/mask) is ungrouped.
+        pg = None
+        if s["category"] == "attention" and "hd" in wl.extra:
+            if pending_qk is None:
+                pg = i; pending_qk = i
+            else:
+                pg = pending_qk; pending_qk = None
         nodes.append(OpNode(id=i, category=s["category"], wl=wl, deps=deps, bytes_streamed=by,
-                            in_values=list(deps), out_value=i, out_elems=out_elems,
+                            in_values=list(deps), out_value=i, out_elems=out_elems, pricing_group=pg,
                             precision=fixture_io.PRECISION_CONTRACT[s["category"]]))
     return Dag(nodes)
 

@@ -110,7 +110,7 @@ def test_gpu_attention_only_prices_bmm():
     from simulator.runtime.dag import OpNode
     from simulator.models.engine import Workload
     plat = Platform("llama-3.2-1b")
-    bmm = OpNode(id=0, category="attention", unit="gpu",
+    bmm = OpNode(id=0, category="attention", unit="gpu", pricing_group=0,   # grouped rep (2.2b R2)
                  wl=Workload(op="attention", kv=512, heads=32, K=64, dtype="fp16", extra={"hd": 64}))
     p = plat.price(bmm)
     assert p["latency_us"] > 0 and p["source_model"] == "m4_gpu"

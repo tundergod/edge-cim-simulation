@@ -94,10 +94,19 @@ class Platform:
             if "hd" not in wl.extra:   # the bmm branch of wl_from_row sets 'hd'; scale/mask don't
                 raise NotImplementedError(
                     f"GPU pricing for non-bmm attention subtype (op={wl.extra.get('aten', '?')}): "
-                    f"attn_bmm_us models the QK^T/S·V bmm ONLY. The group-aware QK^T+S·V composite "
-                    f"GPU-attention model (scale/mask included) is Wave 2.2b (R2).")
-            lat = self.gpu.attn_bmm_us(wl.kv or 1, heads=wl.heads, layers=1)
-            return {"latency_us": float(lat), "compute_provenance": "Mali GPU attn_bmm (m4_gpu)", "source_model": "m4_gpu"}
+                    f"attn_bmm_us models the QK^T/S·V bmm ONLY (scale/mask go to CPU support).")
+            # R2 group-aware composite: attn_bmm_us is the COMBINED QK^T+S·V cost, so price it
+            # ONCE per pricing_group — on the rep (pricing_group == id); grouped members return 0.
+            if node.pricing_group is None:
+                raise NotImplementedError(
+                    "GPU attention bmm without a pricing_group: the QK^T+S·V composite must be "
+                    "grouped (build_token_dag pairs them) so attn_bmm_us is priced once, not per-bmm.")
+            if node.pricing_group == node.id:
+                lat = self.gpu.attn_bmm_us(wl.kv or 1, heads=wl.heads, layers=1)
+                return {"latency_us": float(lat), "source_model": "m4_gpu",
+                        "compute_provenance": "Mali GPU attn_bmm composite QK^T+S·V (group rep, priced once)"}
+            return {"latency_us": 0.0, "source_model": "m4_gpu",
+                    "compute_provenance": "GPU attention grouped (composite priced on the QK^T rep)"}
         return {"latency_us": 0.0, "source_model": "none",
                 "compute_provenance": "mem/unmodeled (cost = bytes via the DRAM pool)"}
 
