@@ -40,6 +40,7 @@ class OpNode:
     out_value: int | None = None                    # value-id produced (== id in 2.2a)
     precision: str | None = None                    # simulated placement precision
     pricing_group: int | None = None                # composite-pricing group (2.2b R2)
+    mem_domain: str | None = None                   # 'dram'|'cpu_cache'|'none' (residency, set by scheduler)
 
 
 class Dag:

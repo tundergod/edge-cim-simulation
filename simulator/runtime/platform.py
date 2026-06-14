@@ -44,6 +44,16 @@ class Platform:
         self.gpu = MaliGpuModel()
         self.energy = EnergyModel()
 
+    @property
+    def mem_domains(self):
+        """The two memory pools the residency rule (R7) routes ops to: the shared `dram`
+        (the measured 24.2 GB/s on-card LPDDR4x — the Metis Card's 16 GiB device DRAM, where
+        weights/KV/embedding are resident, metered by the M3 engine) and `cpu_cache` (the A76
+        tiered on-chip cache, priced INSIDE m4_cpu for CPU-support ops — a labelled proxy for
+        the all-AIPU Card's on-chip support; NEVER the DRAM pool, which removes the S-dc
+        double-count)."""
+        return {"dram": self.bw.eff_BW, "cpu_cache": self.cpu.spec["cache_bw_GBs"]}
+
     def compute_us(self, node):
         """Compute latency (us) of one op on its assigned unit. 0.0 = no compute
         model (pure-memory op; cost is its bytes_streamed via the engine)."""

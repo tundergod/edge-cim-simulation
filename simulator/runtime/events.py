@@ -40,7 +40,9 @@ def run_serial(dag, platform, bw, *, price_compute=True):
     total = 0.0
     for n in dag.nodes:
         c = float(platform.compute_us(n)) if price_compute else 0.0
-        m = bw.stream_us(n.bytes_streamed, 1) if n.bytes_streamed > 0 else 0.0
+        # only DRAM-domain bytes hit the 24.2 GB/s wall; cpu_cache bytes are already inside
+        # compute_us via m4_cpu (the S-dc double-count fix).
+        m = bw.stream_us(n.bytes_streamed, 1) if (n.bytes_streamed > 0 and n.mem_domain != "cpu_cache") else 0.0
         total += max(c, m)
     return total
 
@@ -57,8 +59,8 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
         raise ValueError("M3: cyclic DAG — a dependency cycle cannot be scheduled")
     if any(n.unit is None for n in dag.nodes):
         raise ValueError("M3: unscheduled node(s) with unit=None — run a scheduler before run_dag")
-    if any(n.bytes_streamed > 0 for n in dag.nodes) and bw.eff_BW <= 0:
-        raise ValueError("M3: memory traffic present but SharedBandwidth eff_BW <= 0 "
+    if any(n.bytes_streamed > 0 and n.mem_domain != "cpu_cache" for n in dag.nodes) and bw.eff_BW <= 0:
+        raise ValueError("M3: DRAM memory traffic present but SharedBandwidth eff_BW <= 0 "
                          "(degenerate bandwidth would stall the simulation)")
     if not pipeline:
         return run_serial(dag, platform, bw, price_compute=price_compute)
@@ -108,7 +110,9 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
                     ct = compute_us(node)
                     unit_free[u] = clock + ct
                     compute_done_at[nid] = clock + ct
-                    if node.bytes_streamed > 0:
+                    # only DRAM-domain bytes contend on the shared channel; cpu_cache bytes
+                    # are priced inside compute_us (m4_cpu) and don't drag the DRAM pool.
+                    if node.bytes_streamed > 0 and node.mem_domain != "cpu_cache":
                         active_mem[nid] = float(node.bytes_streamed)
                     progressed = True
         for nid in list(started):
