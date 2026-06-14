@@ -41,25 +41,26 @@
  "mechanism_pass_3x1c": true,
  "memory_only_ablation": {
   "llama-3.2-1b": {
-   "pred_tok_s": 18.4563,
-   "rel_error": 0.4121,
+   "pred_tok_s": 18.5222,
+   "rel_error": 0.4172,
    "within_gate": false
   },
   "llama-3.2-3b": {
-   "pred_tok_s": 7.0479,
-   "rel_error": 0.1047,
+   "pred_tok_s": 7.0682,
+   "rel_error": 0.1079,
    "within_gate": true
   },
   "llama-3.1-8b": {
-   "pred_tok_s": 3.1035,
-   "rel_error": 0.1494,
-   "within_gate": true
+   "pred_tok_s": 3.1098,
+   "rel_error": 0.1518,
+   "within_gate": false
   }
  },
  "memory_only_fails_at": [
-  "llama-3.2-1b"
+  "llama-3.2-1b",
+  "llama-3.1-8b"
  ],
- "non_circular_content": "NARROW: memory-only (pure bytes/24.2) fails the gate ONLY at llama-3.2-1b \u2014 there the independent CIM-compute correction is what earns the pass. For 3B/8B, memory-only ALREADY passes (10.5%/14.9%), and the 24.2 anchor is regressed across all sizes (memory backbone partly IN-SAMPLE), so those passes are weaker evidence. The genuinely out-of-sample non-circular content is the 1B compute correction; 8B is the hold-out for the SMOKE closed-form only.",
+ "non_circular_content": "memory-only (pure DRAM bytes/24.2, compute_off) fails the gate at llama-3.2-1b (41.7%), llama-3.1-8b (15.2%) \u2014 there the independent CIM-compute correction is what earns the mechanism pass. Memory-only PASSES at llama-3.2-3b (10.8%); the 24.2 anchor is regressed across all sizes (memory backbone partly IN-SAMPLE), so those passes are weaker evidence. The out-of-sample non-circular content is the CIM compute correction. NB after the Step-D double-count fix the memory-only DRAM volume EXCLUDES the on-chip CPU-support bytes (cpu_cache domain), so these are pure-DRAM-wall errors (8B moved 14.9%->15.2% over the gate as a result).",
  "simulated_demo": {
   "4c_1c_trend": "see validation/reports/phase2/contention.json (SIMULATED knee; measured 4c/1c = 1.130/1.096/1.081, vendor_llm_int8.json)",
   "long_context": "LongBench is prefill-heavy (prefill 11753 / decode 4); no measured high-context DECODE point -> simulated extrapolation, not gated."
@@ -68,7 +69,8 @@
   "base_tok_s": 2.7841,
   "concurrency_off_tok_s": 2.7841,
   "contention_off_tok_s": 2.7841,
-  "note": "AllCim decode = serial single-stream chain; concurrency/contention ablations are no-ops here by construction (no parallel branches, k=1). Overlap + knee are exercised in test_event_engine + validate_contention."
+  "pipeline_on_tok_s_simulated": 2.8761,
+  "note": "AllCim = single accelerator running the value-flow DAG serially (pipeline=off): the Card 1c (single AIPU core) decode measures at/below the serial no-overlap bound (4c/1c ~1.1x), so cross-op overlap is OFF and concurrency/contention are no-ops by construction (k=1, one resource). pipeline=on is a SIMULATED forward-looking overlap mode. Overlap+knee in test_event_engine + validate_contention."
  },
  "honesty": "mechanism uses NO e2e-fitted BW (fit_BW_GBs=18.33); decode priced from CIM-GEMV(L1) + mem_lpddr4x 24.2 anchor + explicit support/attn/kv. Claims: decode mechanism, smoke-vs-mechanism, simulated contention trend ONLY. NOT a full prefill/TTFT validation (prefill path analytic/unvalidated, D9).",
  "pass_all": true

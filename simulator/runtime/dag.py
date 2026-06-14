@@ -23,13 +23,24 @@ CATEGORIES = (
 class OpNode:
     """One op in the per-token DAG. `wl` is the frozen Workload a unit engine
     eats; `unit` is filled by the scheduler; `bytes_streamed` is the
-    shared-memory traffic this op pulls (used by the M3 contention model)."""
+    shared-memory traffic this op pulls (used by the M3 contention model).
+
+    Wave 2.2 value-flow: `in_values` are the value-ids this op consumes and
+    `out_value` the one it produces (at node granularity value-id == producer
+    node id, so in_values == deps); `precision` is the SIMULATED placement
+    precision (ADR-0004c, fixture_io.PRECISION_CONTRACT); `pricing_group` lets
+    2.2b price a composite op-pair (QK^T + S·V) once (R2)."""
     id: int
     category: str
     wl: Workload
     deps: list = field(default_factory=list)   # predecessor node ids
     unit: str | None = None                     # 'cim'|'gpu'|'npu'|'cpu'|'mem' (set by scheduler)
     bytes_streamed: int = 0
+    in_values: list = field(default_factory=list)   # value-ids consumed (== deps in 2.2a)
+    out_value: int | None = None                    # value-id produced (== id in 2.2a)
+    precision: str | None = None                    # simulated placement precision
+    pricing_group: int | None = None                # composite-pricing group (2.2b R2)
+    mem_domain: str | None = None                   # 'dram'|'cpu_cache'|'none' (residency, set by scheduler)
 
 
 class Dag:

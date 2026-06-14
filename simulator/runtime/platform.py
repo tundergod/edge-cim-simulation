@@ -13,6 +13,7 @@ capacity / topology are user-settable.
 from __future__ import annotations
 
 from simulator.specs.loader import load_spec
+from simulator.models.engine import Workload
 from simulator.models.m1_cim_tile import CimTileModel
 from simulator.models.m4_cpu import CpuModel
 from simulator.models.m4_gpu import MaliGpuModel
@@ -44,31 +45,70 @@ class Platform:
         self.gpu = MaliGpuModel()
         self.energy = EnergyModel()
 
-    def compute_us(self, node):
-        """Compute latency (us) of one op on its assigned unit. 0.0 = no compute
-        model (pure-memory op; cost is its bytes_streamed via the engine)."""
+    @property
+    def mem_domains(self):
+        """The two memory pools the residency rule (R7) routes ops to: the shared `dram`
+        (the measured 24.2 GB/s on-card LPDDR4x — the Metis Card's 16 GiB device DRAM, where
+        weights/KV/embedding are resident, metered by the M3 engine) and `cpu_cache` (the A76
+        tiered on-chip cache, priced INSIDE m4_cpu for CPU-support ops — a labelled proxy for
+        the all-AIPU Card's on-chip support; NEVER the DRAM pool, which removes the S-dc
+        double-count)."""
+        return {"dram": self.bw.eff_BW, "cpu_cache": self.cpu.spec["cache_bw_GBs"]}
+
+    def price(self, node):
+        """Price one op's COMPUTE on its assigned unit (#55 per-op provenance). Returns
+        {latency_us, compute_provenance, source_model} — which Phase-1 unit model produced
+        the latency and a human-readable provenance string. latency_us=0.0 = no compute model
+        (pure-memory op; cost is its bytes_streamed via the engine). NB the final compute-vs-
+        memory BOUND is the M3 engine's max(compute, dram_memory) decision, not this method's."""
         u, cat, wl = node.unit, node.category, node.wl
         if u not in ("cim", "cpu", "gpu", "mem"):
             raise ValueError(f"M3 platform: unknown/unpriced unit {u!r} "
                              f"(valid: cim/cpu/gpu/mem; npu pricing is Wave 2.2)")
         if u == "cim":
             if cat == "matmul" and wl.K and wl.N:
-                return self.cim.dev_lat_us(wl.M, wl.K, wl.N)
-            return 0.0   # CIM attention/elementwise: no compute model in 2.1 -> memory-bound (bytes)
+                lat = self.cim.dev_lat_us(wl.M, wl.K, wl.N)
+                prov = "CIM-GEMV dev_lat (M1 tile model, Alpha-calibrated)"
+                if self.cim.is_extrapolated(wl.K, wl.N):
+                    prov += "; EXTRAPOLATED beyond native envelope"
+                return {"latency_us": float(lat), "compute_provenance": prov, "source_model": "m1_cim_tile"}
+            return {"latency_us": 0.0, "source_model": "none",
+                    "compute_provenance": "CIM attention/elementwise: memory-bound (no compute model in 2.1; cost = bytes)"}
         if u == "cpu":
             op = _CPU_OP.get(cat)
             if op is None:
-                return 0.0
-            return self.cpu.op_us(op, self.model, dtype="fp32", kv=(wl.kv or None))
+                return {"latency_us": 0.0, "source_model": "none",
+                        "compute_provenance": f"no CPU compute model for category '{cat}'"}
+            # NB the descriptive placement precision (node.precision='fp16', ADR-0004c) is
+            # intentionally decoupled from the PRICING dtype: m4_cpu is calibrated only on fp32
+            # cpu_ops.json (the fp16 set was numpy-emulated/unrepresentative), so we price fp32.
+            wl2 = Workload(op=("softmax" if op.startswith("softmax") else op), kv=(wl.kv or 0),
+                           extra={"model": self.model, "dtype": "fp32"})
+            r = self.cpu.predict(wl2)
+            return {"latency_us": r["latency_us"], "compute_provenance": r["provenance"], "source_model": "m4_cpu"}
         if u == "gpu" and cat == "attention":
-            return self.gpu.attn_bmm_us(wl.kv or 1, heads=wl.heads, layers=1)
-        return 0.0       # mem / unmodeled
+            if "hd" not in wl.extra:   # the bmm branch of wl_from_row sets 'hd'; scale/mask don't
+                raise NotImplementedError(
+                    f"GPU pricing for non-bmm attention subtype (op={wl.extra.get('aten', '?')}): "
+                    f"attn_bmm_us models the QK^T/S·V bmm ONLY. The group-aware QK^T+S·V composite "
+                    f"GPU-attention model (scale/mask included) is Wave 2.2b (R2).")
+            lat = self.gpu.attn_bmm_us(wl.kv or 1, heads=wl.heads, layers=1)
+            return {"latency_us": float(lat), "compute_provenance": "Mali GPU attn_bmm (m4_gpu)", "source_model": "m4_gpu"}
+        return {"latency_us": 0.0, "source_model": "none",
+                "compute_provenance": "mem/unmodeled (cost = bytes via the DRAM pool)"}
+
+    def compute_us(self, node):
+        """Compute latency (us) of one op on its assigned unit. 0.0 = no compute model
+        (pure-memory op; cost is its bytes_streamed via the engine). Delegates to price()."""
+        return self.price(node)["latency_us"]
 
     def energy_J(self, node, compute_us):
         """Per-op energy estimate (J). CIM matmul from flops; memory from bytes;
         CPU support from active compute time. ESTIMATED (M7, +/-20% band)."""
         cat, wl = node.category, node.wl
-        e = self.energy.dram_J(node.bytes_streamed) if node.bytes_streamed else 0.0
+        # DRAM energy only for DRAM-domain traffic — cpu_cache (CPU-support) bytes are on-chip,
+        # priced inside the cpu_J term below (consistent with the latency-side domain split, R7).
+        e = self.energy.dram_J(node.bytes_streamed) if (node.bytes_streamed and node.mem_domain == "dram") else 0.0
         if node.unit == "cim" and cat == "matmul":
             e += self.energy.cim_J(2 * wl.M * wl.K * wl.N)
         elif node.unit == "cpu" and compute_us > 0:

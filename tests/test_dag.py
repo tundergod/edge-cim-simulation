@@ -76,6 +76,14 @@ def test_every_node_wl_sane():
     assert all(wl_is_sane(n.wl) for n in dag.nodes)
 
 
+def test_opnode_value_flow_fields():
+    # Wave 2.2: OpNode carries value-flow identity (in_values/out_value), the
+    # simulated placement precision, and a pricing_group hook (used by 2.2b R2).
+    n = OpNode(id=3, category="matmul", wl=_wl(M=1, K=64, N=64))
+    assert n.in_values == [] and n.out_value is None
+    assert n.precision is None and n.pricing_group is None
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:

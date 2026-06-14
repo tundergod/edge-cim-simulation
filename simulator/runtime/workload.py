@@ -21,6 +21,7 @@ from pathlib import Path
 _ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_ROOT / "tools" / "trace_export"))
 import op_profile  # noqa: E402  (Model, _instantiate, _flops_bytes, _key, _sum_by_key)
+import fixture_io  # noqa: E402  (load_fixture, PRECISION_CONTRACT, PREFILL_FIX, DECODE_FIX)
 
 from simulator.models.engine import Workload  # noqa: E402
 from simulator.runtime.dag import OpNode, Dag  # noqa: E402
@@ -78,32 +79,75 @@ def wl_from_row(row, model):
                     extra={"model": model, "category": cat, "aten": op})
 
 
-def _phase_templates(m, phase):
-    return m.dec if phase == "decode" else m.pre
+_STRUCT_CACHE = {}
+
+
+def _phase_anchors(phase):
+    return fixture_io.PREFILL_FIX if phase == "prefill" else fixture_io.DECODE_FIX
+
+
+def _check_anchor_structure(a, b, model, phase, lo, hi):
+    """Fail-loud: the two committed fixture lengths must be positionally identical in STRUCTURE
+    (same node count; same per-node op/category/deps/src) so the lo<->hi shape-fit is aligned.
+    A silent zip() over mismatched anchors would misalign every downstream node."""
+    if len(a) != len(b):
+        raise ValueError(f"{model} {phase}: fixture anchor node counts differ "
+                         f"({len(a)} @ {lo} vs {len(b)} @ {hi}) — structure not length-independent")
+    for i, (na, nb) in enumerate(zip(a, b)):
+        ka = (na["op"], na["category"], na["deps"], na.get("src"))
+        kb = (nb["op"], nb["category"], nb["deps"], nb.get("src"))
+        if ka != kb:
+            raise ValueError(f"{model} {phase} node {i}: anchor structure mismatch "
+                             f"({na['op']}/{na['category']} @ {lo} vs {nb['op']}/{nb['category']} @ {hi})")
+
+
+def _load_structure(model, phase):
+    """The phase's value-flow STRUCTURE from the committed trace-truth fixture: the
+    ordered compute nodes (op/src/category/deps) + a per-node shape-template fit from
+    the two committed lengths (lo<->hi), so build_token_dag can instantiate shapes at
+    ANY L. Structure is length-independent (verified: the two lengths are positionally
+    identical). Cached per (model, phase)."""
+    key = (model, phase)
+    if key in _STRUCT_CACHE:
+        return _STRUCT_CACHE[key]
+    fx = fixture_io.load_fixture(model)
+    lo, hi = _phase_anchors(phase)
+    a, b = fx[phase][str(lo)], fx[phase][str(hi)]
+    _check_anchor_structure(a, b, model, phase, lo, hi)
+    struct = []
+    for i, (na, nb) in enumerate(zip(a, b)):
+        tin = [op_profile._fit_shape(sa, sb, lo, hi)
+               for sa, sb in zip(na["in_shapes"], nb["in_shapes"])]
+        tout = op_profile._fit_shape(na["out_shape"], nb["out_shape"], lo, hi)
+        if any(t is None for t in tin) or (na["out_shape"] is not None and tout is None):
+            raise ValueError(f"{model} {phase} node {i} ({na['op']}): shape not fittable "
+                             f"from lengths {lo}/{hi} — fixture/anchor mismatch")
+        struct.append({"op": na["op"], "category": na["category"],
+                       "deps": na["deps"], "tin": tin, "tout": tout})
+    _STRUCT_CACHE[key] = struct
+    return struct
 
 
 def build_token_dag(model, phase, L, *, _model_obj=None):
-    """Per-forward op DAG for one token at sequence/kv length L (prefill: L=P;
-    decode: L=past). Each profile template -> `count` serially-chained nodes.
-    Returns a Dag. `_model_obj` lets callers reuse a loaded Model."""
-    m = _model_obj or op_profile.Model(model)
+    """Per-forward value-flow op DAG for one token at sequence/kv length L (prefill:
+    L=P; decode: L=past). STRUCTURE (order + data-dependency edges) comes from the
+    trace-truth fixture (real intra-layer DAG, #54); SHAPES/bytes are instantiated at
+    L from the per-node template. Each node produces its own value (out_value == id),
+    so in_values == deps. Returns a Dag. `_model_obj` is accepted for caller-signature
+    compatibility (structure is fixture-cached, not from the Model)."""
+    struct = _load_structure(model, phase)
     nodes = []
-    nid = 0
-    prev = None
-    for t in _phase_templates(m, phase):
-        sig = op_profile._instantiate(t, L)
-        cat = op_profile.categorize(sig)
-        if cat is None:
-            continue
-        fl, by = op_profile._flops_bytes(sig)
-        row = {"op": sig["op"], "in_shapes": sig["in_shapes"], "out_shape": sig["out_shape"],
-               "category": cat, "bytes": by}
+    for i, s in enumerate(struct):
+        in_shapes = [op_profile._inst_shape(t, L) for t in s["tin"]]
+        out_shape = op_profile._inst_shape(s["tout"], L)
+        _, by = op_profile._flops_bytes({"op": s["op"], "in_shapes": in_shapes, "out_shape": out_shape})
+        row = {"op": s["op"], "in_shapes": in_shapes, "out_shape": out_shape,
+               "category": s["category"], "bytes": by}
         wl = wl_from_row(row, model)
-        for _ in range(t["count"]):
-            nodes.append(OpNode(id=nid, category=cat, wl=wl, deps=[prev] if prev is not None else [],
-                                bytes_streamed=by))
-            prev = nid
-            nid += 1
+        deps = list(s["deps"])
+        nodes.append(OpNode(id=i, category=s["category"], wl=wl, deps=deps, bytes_streamed=by,
+                            in_values=list(deps), out_value=i,
+                            precision=fixture_io.PRECISION_CONTRACT[s["category"]]))
     return Dag(nodes)
 
 
@@ -133,6 +177,34 @@ def _dag_counts_bytes(model, P, D, m):
                 counts[(phase, n.category)] = counts.get((phase, n.category), 0) + 1
                 total_bytes += n.bytes_streamed
     return counts, total_bytes
+
+
+def structural_check(model, phase, L):
+    """Structural oracle (R1): the built DAG's topology must reproduce the INDEPENDENTLY-
+    loaded trace-truth fixture (fixture_io.load_fixture, NOT build_token_dag's cache) AND
+    satisfy architecture-config invariants. Since the DAG structure is fixture-derived, the
+    fixture comparison is a faithful-reproduction + length-independence check (L is generally
+    NOT a committed fixture length); the genuinely-independent content is the config cross-
+    check — softmax count == n_layers, residual joins == 2*n_layers, exactly one embedding —
+    from op_profile.Model(model).config. Returns (ok, detail)."""
+    fx = fixture_io.load_fixture(model)
+    ref = _phase_anchors(phase)[-1]                 # a committed length (topology is length-indep)
+    fix = fx[phase][str(ref)]
+    dag = build_token_dag(model, phase, L)
+    reproduces = len(dag.nodes) == len(fix) and all(
+        dag.nodes[i].category == fix[i]["category"] and list(dag.nodes[i].deps) == fix[i]["deps"]
+        for i in range(len(fix)))
+    cfg = op_profile.Model(model).config
+    nL = cfg["n_layers"]
+    softmax_n = sum(1 for n in dag.nodes if n.category == "softmax")
+    res_joins = sum(1 for n in dag.nodes if n.category == "residual" and len(n.deps) >= 2)
+    embeds = sum(1 for n in dag.nodes if n.category == "embedding")
+    invariants = (softmax_n == nL and res_joins == 2 * nL and embeds == 1)
+    ok = reproduces and invariants
+    detail = {"model": model, "phase": phase, "L": L, "reproduces_fixture": reproduces,
+              "n_layers": nL, "softmax_n": softmax_n, "residual_joins": res_joins,
+              "embeddings": embeds, "invariants_ok": invariants}
+    return ok, detail
 
 
 def oracle_check(model, P, D):

@@ -41,11 +41,12 @@ MODELS = ["llama-3.2-1b", "llama-3.2-3b", "llama-3.1-8b"]
 GATE = 0.15
 
 
-def _cfg(model, **abl):
+def _cfg(model, *, pipeline=False, **abl):
     return SimConfig.from_dict({
         "workload": {"model": model, "context": 1024},
         "platform": {"memory_spec": "mem_lpddr4x", "topology": "cim_topo_card"},
         "scheduler": {"policy": "all_cim"},
+        "tunables": {"pipeline": pipeline},
         "ablations": abl,
     })
 
@@ -81,17 +82,24 @@ def main():
                        "within_gate": bool(err0 <= GATE)}
     mem_only_fails_at = [m for m, v in mem_only.items() if not v["within_gate"]]
 
-    # ablations on 8B (AllCim decode is a serial single-stream chain -> concurrency/
-    # contention are no-ops here; both are exercised for real in test_event_engine /
-    # validate_contention. Reported honestly.)
+    # ablations on 8B. AllCim runs the value-flow DAG on a SINGLE accelerator (pipeline=off):
+    # the L4 anchor is the Card's 1c (single AIPU core) decode, whose measured tok/s sits
+    # at/below the serial no-cross-op-overlap bound (1B 13.07 < 14.47) with a tiny 4c/1c ratio
+    # (~1.1x, on-card-DRAM-bandwidth-bound) -> the silicon shows no cross-op compute/memory
+    # hiding. Hence the DAG's parallel branches do NOT overlap and concurrency/contention are
+    # no-ops here; pipeline=on (cross-op overlap) is a SIMULATED forward-looking mode (1B 17.9%,
+    # provenance-flagged). Overlap+knee are exercised in test_event_engine / validate_contention.
     base = run(_cfg("llama-3.1-8b"))["tok_s"]
     abl = {
         "base_tok_s": base,
         "concurrency_off_tok_s": run(_cfg("llama-3.1-8b", concurrency_off=True))["tok_s"],
         "contention_off_tok_s": run(_cfg("llama-3.1-8b", contention_off=True))["tok_s"],
-        "note": "AllCim decode = serial single-stream chain; concurrency/contention "
-                "ablations are no-ops here by construction (no parallel branches, k=1). "
-                "Overlap + knee are exercised in test_event_engine + validate_contention.",
+        "pipeline_on_tok_s_simulated": run(_cfg("llama-3.1-8b", pipeline=True))["tok_s"],
+        "note": "AllCim = single accelerator running the value-flow DAG serially (pipeline=off): "
+                "the Card 1c (single AIPU core) decode measures at/below the serial no-overlap "
+                "bound (4c/1c ~1.1x), so cross-op overlap is OFF and concurrency/contention are "
+                "no-ops by construction (k=1, one resource). pipeline=on is a SIMULATED forward-"
+                "looking overlap mode. Overlap+knee in test_event_engine + validate_contention.",
     }
 
     out = {
@@ -101,14 +109,17 @@ def main():
         "mechanism_pass_3x1c": bool(mech_pass),
         "memory_only_ablation": mem_only,
         "memory_only_fails_at": mem_only_fails_at,
-        "non_circular_content": "NARROW: memory-only (pure bytes/24.2) fails the gate ONLY at "
-                                + (", ".join(mem_only_fails_at) or "(none)") + " — there the "
-                                "independent CIM-compute correction is what earns the pass. For "
-                                "3B/8B, memory-only ALREADY passes (10.5%/14.9%), and the 24.2 "
-                                "anchor is regressed across all sizes (memory backbone partly "
-                                "IN-SAMPLE), so those passes are weaker evidence. The genuinely "
-                                "out-of-sample non-circular content is the 1B compute correction; "
-                                "8B is the hold-out for the SMOKE closed-form only.",
+        "non_circular_content": (
+            "memory-only (pure DRAM bytes/24.2, compute_off) fails the gate at "
+            + (", ".join(f"{m} ({mem_only[m]['rel_error']*100:.1f}%)" for m in mem_only_fails_at) or "(none)")
+            + " — there the independent CIM-compute correction is what earns the mechanism pass. "
+            "Memory-only PASSES at "
+            + (", ".join(f"{m} ({mem_only[m]['rel_error']*100:.1f}%)" for m in MODELS if m not in mem_only_fails_at) or "(none)")
+            + "; the 24.2 anchor is regressed across all sizes (memory backbone partly IN-SAMPLE), so "
+            "those passes are weaker evidence. The out-of-sample non-circular content is the CIM "
+            "compute correction. NB after the Step-D double-count fix the memory-only DRAM volume "
+            "EXCLUDES the on-chip CPU-support bytes (cpu_cache domain), so these are pure-DRAM-wall "
+            "errors (8B moved 14.9%->15.2% over the gate as a result)."),
         "simulated_demo": {
             "4c_1c_trend": "see validation/reports/phase2/contention.json (SIMULATED knee; "
                            "measured 4c/1c = 1.130/1.096/1.081, vendor_llm_int8.json)",
@@ -130,9 +141,9 @@ def main():
               f"err={v['rel_error']*100:.1f}% {'OK' if v['within_gate'] else 'FAIL'}")
     print(f"  smoke (closed-form, by-construction): 8B {smoke['pred_8b_tok_s']} vs {smoke['measured_8b_tok_s']} "
           f"[NOT evidence]")
-    print(f"  memory-only ablation (pure bytes/24.2) fails ONLY at {mem_only_fails_at or '(none)'} "
-          f"(=> the non-circular compute correction is decisive there; 3B/8B pass on the "
-          f"partly-in-sample backbone):")
+    print(f"  memory-only ablation (pure DRAM bytes/24.2) fails at {mem_only_fails_at or '(none)'} "
+          f"(=> the independent CIM-compute correction is decisive there; the rest pass on the "
+          f"partly-in-sample 24.2 backbone):")
     for m in MODELS:
         v = mem_only[m]
         print(f"    {m}: pred={v['pred_tok_s']:.2f} err={v['rel_error']*100:.1f}% "

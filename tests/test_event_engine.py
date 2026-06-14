@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 from simulator.models.engine import Workload  # noqa: E402
 from simulator.runtime.dag import OpNode, Dag  # noqa: E402
 from simulator.runtime.resources import SharedBandwidth  # noqa: E402
-from simulator.runtime.events import run_dag  # noqa: E402
+from simulator.runtime.events import run_dag, run_serial  # noqa: E402
 
 
 class _StubPlatform:
@@ -27,7 +27,8 @@ class _StubPlatform:
 
 def _node(i, unit, deps=(), bytes_streamed=0):
     return OpNode(id=i, category="matmul", wl=Workload(op="matmul", M=1, K=64, N=64),
-                  deps=list(deps), unit=unit, bytes_streamed=bytes_streamed)
+                  deps=list(deps), unit=unit, bytes_streamed=bytes_streamed,
+                  mem_domain="dram" if bytes_streamed > 0 else "none")
 
 
 def test_serial_chain_sums():
@@ -79,6 +80,28 @@ def test_fluid_fairshare_equal_costart():
     assert abs(run_dag(dag, plat, bw) - 2.0e6) < 1e-3
 
 
+def test_pipeline_off_is_single_resource_serial():
+    # AllCim = ONE accelerator. The L4 anchor is the Card's 1c (single AIPU core) decode,
+    # which measures at/below the serial no-cross-op-overlap bound (1B 13.07 < 14.47) with a
+    # tiny 4c/1c ratio (~1.1x) -> no cross-op overlap. pipeline=False => token = sum of per-op
+    # max(compute, memory), even for nodes that pipeline=True would overlap across units.
+    dag = Dag([_node(0, "cim", bytes_streamed=0), _node(1, "gpu", bytes_streamed=int(1e9))])
+    plat = _StubPlatform({0: 10.0, 1: 0.0})
+    bw = SharedBandwidth(eff_BW_GBs=10.0)            # node1 mem = 1e9/1e10 s = 1e5 us
+    on = run_dag(dag, plat, bw, pipeline=True)        # overlap: max(10, 1e5) ~ 1e5
+    off = run_dag(dag, plat, bw, pipeline=False)      # serial: 10 + 1e5
+    assert abs(off - (10.0 + 1e5)) < 1e-3
+    assert on < off                                   # cross-op overlap is faster
+
+
+def test_pipeline_off_keeps_intra_op_double_buffer():
+    # within ONE op compute and memory still overlap (max); only CROSS-op overlap is removed.
+    dag = Dag([_node(0, "cim", bytes_streamed=int(10e9))])   # mem 1e6 us
+    plat = _StubPlatform({0: 2e6})                            # compute 2e6 dominates
+    bw = SharedBandwidth(eff_BW_GBs=10.0)
+    assert abs(run_dag(dag, plat, bw, pipeline=False) - 2e6) < 1e-3   # max, not 3e6
+
+
 def test_cyclic_dag_raises():
     # 0 <-> 1 (both ids exist so Dag builds, but it is cyclic) -> fail loud, no latency
     dag = Dag([_node(0, "cim", deps=[1]), _node(1, "gpu", deps=[0])])
@@ -102,12 +125,34 @@ def test_zero_bandwidth_raises():
 
 def test_unscheduled_node_raises():
     # unit=None (no scheduler run) must fail loud, not fall back to "cpu"
-    dag = Dag([OpNode(id=0, category="matmul", wl=Workload(op="matmul"), deps=[], unit=None)])
+    dag = Dag([OpNode(id=0, category="matmul", wl=Workload(op="matmul"), deps=[], unit=None,
+                      mem_domain="none")])
     try:
         run_dag(dag, _StubPlatform({0: 1.0}), SharedBandwidth(24.2))
     except ValueError:
         return
     raise AssertionError("unscheduled node (unit=None) not rejected")
+
+
+def test_invalid_mem_domain_raises():
+    # bytes>0 tagged none/local/None would be SILENTLY metered as DRAM -> fail loud instead
+    # (the engine must not produce a plausible-but-wrong latency from a mis-domained node).
+    for dom in (None, "local", "none"):
+        n = OpNode(id=0, category="matmul", wl=Workload(op="matmul", M=1, K=64, N=64),
+                   unit="cim", bytes_streamed=int(1e9), mem_domain=dom)
+        try:
+            run_dag(Dag([n]), _StubPlatform({0: 0.0}), SharedBandwidth(24.2))
+        except ValueError:
+            continue
+        raise AssertionError(f"mem_domain={dom!r} with bytes not rejected by run_dag")
+    # run_serial (called directly) must validate too
+    n = OpNode(id=0, category="matmul", wl=Workload(op="matmul"), unit="cim",
+               bytes_streamed=int(1e9), mem_domain=None)
+    try:
+        run_serial(Dag([n]), _StubPlatform({0: 0.0}), SharedBandwidth(24.2))
+    except ValueError:
+        return
+    raise AssertionError("run_serial did not reject invalid mem_domain")
 
 
 def test_empty_dag():

@@ -28,6 +28,25 @@ def _energy_per_token_J(dag, plat):
     return sum(plat.energy_J(n, plat.compute_us(n)) for n in dag.nodes)
 
 
+def _op_provenance(dag, plat, bw):
+    """Per-(category, source_model) provenance summary (#55): which Phase-1 unit model priced
+    each op category, a representative compute_provenance, and the ENGINE-determined bound
+    distribution (M3 max(compute, dram_memory) — cpu_cache bytes never hit the DRAM pool)."""
+    summary = {}
+    for n in dag.nodes:
+        pr = plat.price(n)
+        dram_mem = (bw.stream_us(n.bytes_streamed, 1)
+                    if (n.bytes_streamed > 0 and n.mem_domain != "cpu_cache") else 0.0)
+        bound = "compute" if pr["latency_us"] >= dram_mem else "memory"
+        key = (n.category, pr["source_model"])
+        s = summary.setdefault(key, {"category": n.category, "source_model": pr["source_model"],
+                                     "compute_provenance": pr["compute_provenance"],
+                                     "count": 0, "bound": {"compute": 0, "memory": 0}})
+        s["count"] += 1
+        s["bound"][bound] += 1
+    return sorted(summary.values(), key=lambda s: (s["category"], s["source_model"]))
+
+
 def run(cfg):
     """Run one SimConfig -> metrics dict."""
     if cfg.scheduler not in _SCHEDULERS:
@@ -56,6 +75,8 @@ def run(cfg):
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off
     price_compute = not cfg.compute_off
+    pipeline = cfg.pipeline   # OFF (default) = single-accelerator serial (measured all-AIPU);
+                              # ON = SIMULATED cross-op overlap (provenance-flagged)
 
     # capacity is a FEASIBILITY gate, NOT a throughput knob: decode tok/s is set by bandwidth,
     # not capacity (so it is deliberately not a Platform timing input). Fail-loud if the model's
@@ -80,7 +101,7 @@ def run(cfg):
     kv_pts = sorted({kv_lo, (kv_lo + kv_hi) // 2 or 1, kv_hi})
     tok_us = [run_dag(assign(build_token_dag(cfg.model, "decode", k, _model_obj=model_obj)),
                       plat, plat.bw, concurrency=concurrency, contention=contention,
-                      price_compute=price_compute) for k in kv_pts]
+                      price_compute=price_compute, pipeline=pipeline) for k in kv_pts]
     t_dec_us = sum(tok_us) / len(tok_us)
     tok_s = 1e6 / t_dec_us if t_dec_us > 0 else 0.0
     total_generation_s = D * t_dec_us / 1e6
@@ -89,7 +110,7 @@ def run(cfg):
     # prefill: one forward at P (TTFT reported only, not gated)
     pre = assign(build_token_dag(cfg.model, "prefill", cfg.prefill_len, _model_obj=model_obj))
     t_pre_us = run_dag(pre, plat, plat.bw, concurrency=concurrency, contention=contention,
-                       price_compute=price_compute)
+                       price_compute=price_compute, pipeline=pipeline)
 
     e_tok = _energy_per_token_J(dec, plat)
     return {
@@ -113,4 +134,5 @@ def run(cfg):
                       "compute_off": cfg.compute_off},
         "provenance": cfg.provenance,
         "calibrated_anchor": cfg.is_calibrated_anchor(),
+        "op_provenance": _op_provenance(dec, plat, plat.bw),
     }

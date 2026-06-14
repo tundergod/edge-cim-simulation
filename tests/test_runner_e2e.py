@@ -53,6 +53,76 @@ def test_capacity_feasibility_gate():
     assert r["model_footprint_GB"] > 0 and r["tok_s"] > 0
 
 
+def test_per_op_provenance_summary():
+    # #55: every op exposes WHICH unit model priced its compute (source_model) + a
+    # compute_provenance string; the bound (compute vs memory) is the ENGINE's max() decision.
+    r = run(_cfg("llama-3.2-1b"))
+    prov = r["op_provenance"]
+    assert prov
+    for e in prov:
+        assert e["source_model"] and e["compute_provenance"]
+        assert e["bound"]["compute"] + e["bound"]["memory"] == e["count"]
+    # matmul priced by the CIM tile model; CPU-support by m4_cpu; mem ops unmodeled
+    assert any(e["category"] == "matmul" and e["source_model"] == "m1_cim_tile" for e in prov)
+    assert any(e["source_model"] == "m4_cpu" for e in prov)
+    assert any(e["source_model"] == "none" for e in prov)
+
+
+def test_platform_price_returns_provenance():
+    from simulator.runtime.platform import Platform
+    from simulator.runtime.dag import OpNode
+    from simulator.models.engine import Workload
+    plat = Platform("llama-3.2-1b")
+    mm = OpNode(id=0, category="matmul", wl=Workload(op="matmul", M=1, K=2048, N=2048), unit="cim")
+    p = plat.price(mm)
+    assert set(p) >= {"latency_us", "compute_provenance", "source_model"}
+    assert p["source_model"] == "m1_cim_tile" and p["latency_us"] > 0
+    assert plat.compute_us(mm) == p["latency_us"]   # compute_us delegates to price
+    bad = OpNode(id=1, category="matmul", wl=Workload(op="matmul"), unit="bogus")
+    try:
+        plat.price(bad)
+    except ValueError:
+        return
+    raise AssertionError("price did not reject unknown unit")
+
+
+def test_energy_excludes_cpu_cache_from_dram():
+    # latency excludes cpu_cache bytes from the DRAM pool; energy must be consistent —
+    # a CPU-support op's on-chip bytes must NOT be charged DRAM energy (only its cpu energy).
+    from simulator.runtime.platform import Platform
+    from simulator.runtime.dag import OpNode
+    from simulator.models.engine import Workload
+    plat = Platform("llama-3.2-1b")
+    cache = OpNode(id=0, category="norm", wl=Workload(op="norm", nbytes=10000), unit="cpu",
+                   bytes_streamed=10000, mem_domain="cpu_cache")
+    dram = OpNode(id=1, category="matmul", wl=Workload(op="matmul", M=1, K=2048, N=2048),
+                  unit="cim", bytes_streamed=10000, mem_domain="dram")
+    e_cache = plat.energy_J(cache, plat.compute_us(cache))
+    e_dram = plat.energy_J(dram, plat.compute_us(dram))
+    assert e_cache == plat.energy.cpu_J(plat.compute_us(cache))   # ONLY cpu energy, no dram term
+    assert e_dram >= plat.energy.dram_J(10000)                    # dram node IS charged dram energy
+
+
+def test_gpu_attention_only_prices_bmm():
+    # the GPU attn_bmm_us model is for the QK^T/S·V bmm ONLY; scale/mask elementwise
+    # attention must NOT be priced as a bmm — fail loud (group-aware composite is 2.2b R2).
+    from simulator.runtime.platform import Platform
+    from simulator.runtime.dag import OpNode
+    from simulator.models.engine import Workload
+    plat = Platform("llama-3.2-1b")
+    bmm = OpNode(id=0, category="attention", unit="gpu",
+                 wl=Workload(op="attention", kv=512, heads=32, K=64, dtype="fp16", extra={"hd": 64}))
+    p = plat.price(bmm)
+    assert p["latency_us"] > 0 and p["source_model"] == "m4_gpu"
+    scale = OpNode(id=1, category="attention", unit="gpu",
+                   wl=Workload(op="attention", kv=0, extra={"aten": "aten.mul.Tensor", "category": "attention"}))
+    try:
+        plat.price(scale)
+    except NotImplementedError:
+        return
+    raise AssertionError("non-bmm GPU attention (scale/mask) was priced as a bmm, not fail-loud")
+
+
 def test_platform_rejects_unknown_unit():
     from simulator.runtime.platform import Platform
     from simulator.runtime.dag import OpNode

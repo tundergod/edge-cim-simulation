@@ -26,17 +26,59 @@ _BYTE_EPS = 1.0    # bytes: a stream with < 1 byte remaining is done (guards FP 
 _INF = float("inf")
 
 
-def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compute=True):
+def _validate_mem_domains(dag):
+    """Fail-loud: every node must carry a valid memory domain, and a byte-streaming node may
+    not be tagged 'none' — otherwise the DRAM-metering rule (meter unless cpu_cache) would
+    SILENTLY treat a mis-domained node as DRAM and emit a plausible-but-wrong latency."""
+    for n in dag.nodes:
+        if n.mem_domain not in ("dram", "cpu_cache", "none"):
+            raise ValueError(f"M3: node {n.id} has invalid/missing mem_domain {n.mem_domain!r} "
+                             f"(expected dram/cpu_cache/none — run a scheduler before the engine)")
+        if n.bytes_streamed > 0 and n.mem_domain == "none":
+            raise ValueError(f"M3: node {n.id} streams {n.bytes_streamed} bytes but mem_domain='none' "
+                             f"(a byte-streaming op must reside in dram or cpu_cache)")
+
+
+def run_serial(dag, platform, bw, *, price_compute=True):
+    """SINGLE-ACCELERATOR execution (no cross-op pipeline): each op occupies the one
+    accelerator for max(compute, memory) — intra-op double-buffering only — and the
+    token latency is their sum. This is the FAITHFUL all-AIPU (AllCim) decode model. The
+    L4 anchor is the Metis Card's 1c (SINGLE AIPU core) axllm decode: one core runs ops in
+    dataflow order with no cross-core op pipeline, and the measured tok/s sits AT/BELOW the
+    serial no-cross-op-overlap bound (1B measured 13.07 < this model's 14.47 tok/s) with a
+    tiny 4c/1c ratio (~1.1x — decode is on-card-DRAM-bandwidth-bound), i.e. the silicon shows
+    no cross-op compute/memory hiding. (`double_buffer` overlaps only host<->device PCIe,
+    negligible for decode.) concurrency/contention are no-ops here (one resource, k=1).
+    Order-independent (a sum of per-node maxima)."""
+    _validate_mem_domains(dag)
+    total = 0.0
+    for n in dag.nodes:
+        c = float(platform.compute_us(n)) if price_compute else 0.0
+        # only DRAM-domain bytes hit the 24.2 GB/s wall; cpu_cache bytes are already inside
+        # compute_us via m4_cpu (the S-dc double-count fix).
+        m = bw.stream_us(n.bytes_streamed, 1) if (n.bytes_streamed > 0 and n.mem_domain != "cpu_cache") else 0.0
+        total += max(c, m)
+    return total
+
+
+def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compute=True,
+            pipeline=True):
     """Return the token latency (microseconds) to execute the whole DAG.
-    `price_compute=False` zeroes every op's compute term (memory-only ablation)."""
+    `price_compute=False` zeroes every op's compute term (memory-only ablation).
+    `pipeline=False` runs the SINGLE-ACCELERATOR serial model (run_serial) — no cross-op
+    overlap, matching the measured all-AIPU silicon; `pipeline=True` (default) uses the
+    fluid concurrent event loop (cross-op overlap), a SIMULATED forward-looking mode."""
     # fail-loud preconditions (#56): never return a plausible latency for an invalid run
     if not dag.is_acyclic():
         raise ValueError("M3: cyclic DAG — a dependency cycle cannot be scheduled")
     if any(n.unit is None for n in dag.nodes):
         raise ValueError("M3: unscheduled node(s) with unit=None — run a scheduler before run_dag")
-    if any(n.bytes_streamed > 0 for n in dag.nodes) and bw.eff_BW <= 0:
-        raise ValueError("M3: memory traffic present but SharedBandwidth eff_BW <= 0 "
+    _validate_mem_domains(dag)
+    if any(n.bytes_streamed > 0 and n.mem_domain != "cpu_cache" for n in dag.nodes) and bw.eff_BW <= 0:
+        raise ValueError("M3: DRAM memory traffic present but SharedBandwidth eff_BW <= 0 "
                          "(degenerate bandwidth would stall the simulation)")
+    if not pipeline:
+        return run_serial(dag, platform, bw, price_compute=price_compute)
     n_total = len(dag.nodes)
     indeg = {n.id: len(n.deps) for n in dag.nodes}
     unit_free = {}                       # unit clock -> next-free time (compute serialization)
@@ -83,7 +125,9 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
                     ct = compute_us(node)
                     unit_free[u] = clock + ct
                     compute_done_at[nid] = clock + ct
-                    if node.bytes_streamed > 0:
+                    # only DRAM-domain bytes contend on the shared channel; cpu_cache bytes
+                    # are priced inside compute_us (m4_cpu) and don't drag the DRAM pool.
+                    if node.bytes_streamed > 0 and node.mem_domain != "cpu_cache":
                         active_mem[nid] = float(node.bytes_streamed)
                     progressed = True
         for nid in list(started):
