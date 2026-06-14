@@ -109,14 +109,17 @@ def main():
         "mechanism_pass_3x1c": bool(mech_pass),
         "memory_only_ablation": mem_only,
         "memory_only_fails_at": mem_only_fails_at,
-        "non_circular_content": "NARROW: memory-only (pure bytes/24.2) fails the gate ONLY at "
-                                + (", ".join(mem_only_fails_at) or "(none)") + " — there the "
-                                "independent CIM-compute correction is what earns the pass. For "
-                                "3B/8B, memory-only ALREADY passes (10.5%/14.9%), and the 24.2 "
-                                "anchor is regressed across all sizes (memory backbone partly "
-                                "IN-SAMPLE), so those passes are weaker evidence. The genuinely "
-                                "out-of-sample non-circular content is the 1B compute correction; "
-                                "8B is the hold-out for the SMOKE closed-form only.",
+        "non_circular_content": (
+            "memory-only (pure DRAM bytes/24.2, compute_off) fails the gate at "
+            + (", ".join(f"{m} ({mem_only[m]['rel_error']*100:.1f}%)" for m in mem_only_fails_at) or "(none)")
+            + " — there the independent CIM-compute correction is what earns the mechanism pass. "
+            "Memory-only PASSES at "
+            + (", ".join(f"{m} ({mem_only[m]['rel_error']*100:.1f}%)" for m in MODELS if m not in mem_only_fails_at) or "(none)")
+            + "; the 24.2 anchor is regressed across all sizes (memory backbone partly IN-SAMPLE), so "
+            "those passes are weaker evidence. The out-of-sample non-circular content is the CIM "
+            "compute correction. NB after the Step-D double-count fix the memory-only DRAM volume "
+            "EXCLUDES the on-chip CPU-support bytes (cpu_cache domain), so these are pure-DRAM-wall "
+            "errors (8B moved 14.9%->15.2% over the gate as a result)."),
         "simulated_demo": {
             "4c_1c_trend": "see validation/reports/phase2/contention.json (SIMULATED knee; "
                            "measured 4c/1c = 1.130/1.096/1.081, vendor_llm_int8.json)",
@@ -138,9 +141,9 @@ def main():
               f"err={v['rel_error']*100:.1f}% {'OK' if v['within_gate'] else 'FAIL'}")
     print(f"  smoke (closed-form, by-construction): 8B {smoke['pred_8b_tok_s']} vs {smoke['measured_8b_tok_s']} "
           f"[NOT evidence]")
-    print(f"  memory-only ablation (pure bytes/24.2) fails ONLY at {mem_only_fails_at or '(none)'} "
-          f"(=> the non-circular compute correction is decisive there; 3B/8B pass on the "
-          f"partly-in-sample backbone):")
+    print(f"  memory-only ablation (pure DRAM bytes/24.2) fails at {mem_only_fails_at or '(none)'} "
+          f"(=> the independent CIM-compute correction is decisive there; the rest pass on the "
+          f"partly-in-sample 24.2 backbone):")
     for m in MODELS:
         v = mem_only[m]
         print(f"    {m}: pred={v['pred_tok_s']:.2f} err={v['rel_error']*100:.1f}% "
