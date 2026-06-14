@@ -83,6 +83,7 @@ def load():
     m5 = _load("phase1.1/m5.json")
     sweep = _load_meas("op_inventory/sweep_matrix.json")
     # Phase 2.x system-level results (committed reports/phase2/*.json)
+    p2l4 = _load("phase2/e2e_l4.json")["mechanism_independent_pricing"]
     p2topo = _load("phase2/topology_ab.json")
     p2sens = _load("phase2/sensitivity.json")
     p2hold = _load("phase2/holdout.json")
@@ -243,6 +244,16 @@ def load():
         "thermal.ceiling":   _f(th["load_sweep"]["ceiling_C"], 0),                     # 44
         "thermal.max_busy":  _i(th["load_sweep"]["max_device_busy_pct"]),              # 48
         # ---- Phase 2.3 system results (topology A/B/C, sensitivity, hold-out, 14B extrap, mixed-prec) ----
+        # L4 decode mechanism (the hard silicon gate) — injected, not hand-typed (honesty)
+        "p2.l4_1b_pred": _f(p2l4["llama-3.2-1b"]["pred_tok_s"], 2),                    # 14.47
+        "p2.l4_1b_meas": _f(p2l4["llama-3.2-1b"]["measured_tok_s"], 2),                # 13.07
+        "p2.l4_1b_err":  _p1(p2l4["llama-3.2-1b"]["rel_error"]),                       # 10.7
+        "p2.l4_3b_pred": _f(p2l4["llama-3.2-3b"]["pred_tok_s"], 2),                    # 5.97
+        "p2.l4_3b_meas": _f(p2l4["llama-3.2-3b"]["measured_tok_s"], 2),                # 6.38
+        "p2.l4_3b_err":  _p1(p2l4["llama-3.2-3b"]["rel_error"]),                       # 6.5
+        "p2.l4_8b_pred": _f(p2l4["llama-3.1-8b"]["pred_tok_s"], 2),                    # 2.78
+        "p2.l4_8b_meas": _f(p2l4["llama-3.1-8b"]["measured_tok_s"], 2),                # 2.70
+        "p2.l4_8b_err":  _p1(p2l4["llama-3.1-8b"]["rel_error"]),                       # 3.1
         "p2.topo_card_8b_toks":  _f(_t8["cim_topo_card"]["tok_s"], 2),                 # 2.78
         "p2.topo_alpha_8b_toks": _f(_t8["cim_topo_alpha"]["tok_s"], 2),                # 0.49
         "p2.topo_edge_8b_toks":  _f(_t8["cim_topo_edge"]["tok_s"], 2),                 # 3.36

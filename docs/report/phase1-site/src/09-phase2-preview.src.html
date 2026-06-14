@@ -16,9 +16,9 @@
       <caption>L4 decode 機制（validation/reports/phase2/e2e_l4.json，獨立定價，gate 15%）</caption>
       <thead><tr><th>模型</th><th>預測 tok/s</th><th>實測 tok/s</th><th>相對誤差</th></tr></thead>
       <tbody>
-        <tr><td>Llama-3.2-1B</td><td>14.47</td><td>13.07</td><td class="pass">10.7%</td></tr>
-        <tr><td>Llama-3.2-3B</td><td>5.97</td><td>6.38</td><td class="pass">6.5%</td></tr>
-        <tr><td>Llama-3.1-8B</td><td>2.78</td><td>2.70</td><td class="pass">3.1%</td></tr>
+        <tr><td>Llama-3.2-1B</td><td>{{p2.l4_1b_pred}}</td><td>{{p2.l4_1b_meas}}</td><td class="pass">{{p2.l4_1b_err}}%</td></tr>
+        <tr><td>Llama-3.2-3B</td><td>{{p2.l4_3b_pred}}</td><td>{{p2.l4_3b_meas}}</td><td class="pass">{{p2.l4_3b_err}}%</td></tr>
+        <tr><td>Llama-3.1-8B</td><td>{{p2.l4_8b_pred}}</td><td>{{p2.l4_8b_meas}}</td><td class="pass">{{p2.l4_8b_err}}%</td></tr>
       </tbody>
     </table>
     <div class="note"><b>非循環。</b>memory-only ablation（純 DRAM bytes / 24.2，關閉 compute）在 1B/8B <strong>超出</strong> gate（41.7% / 15.2%）——是獨立的 CIM-compute 修正項把誤差拉回 gate 內，證明通過不是把頻寬 fit 到答案上。</div>
