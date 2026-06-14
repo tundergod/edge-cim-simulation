@@ -149,6 +149,26 @@ def test_cimhetero_requires_cim_gpu_cpu_units():
     raise AssertionError("cim_hetero with gpu disabled not rejected")
 
 
+def test_run_revalidates_mutated_config():
+    # SimConfig is a mutable dataclass; run() (the public boundary) must re-validate, not
+    # silently emit metrics for a config broken AFTER construction.
+    cfg = _cfg("llama-3.2-1b")
+    cfg.batch = 4
+    try:
+        run(cfg)
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("run() did not re-validate a mutated batch")
+    cfg2 = _cfg("llama-3.2-1b")
+    cfg2.precision_boundary_placement = "prodcer"
+    try:
+        run(cfg2)
+    except ValueError:
+        return
+    raise AssertionError("run() did not re-validate a mutated precision_boundary_placement")
+
+
 def test_unknown_scheduler_rejected():
     cfg = _cfg("llama-3.2-1b")
     cfg.scheduler = "nope"

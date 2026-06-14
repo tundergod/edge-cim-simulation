@@ -80,14 +80,19 @@ class SimConfig:
     provenance: list = field(default_factory=list)
 
     def __post_init__(self):
-        # invariants + provenance enforced on EVERY construction path (from_dict AND the direct
-        # dataclass ctor) — runner.run(cfg) must never get an invalid/unflagged config.
+        self.validate()
+
+    def validate(self):
+        """Re-check invariants + refresh provenance. Called at construction AND at the run() public
+        boundary — SimConfig is a MUTABLE dataclass, so a field broken after construction (e.g.
+        cfg.batch = 4) must still fail loud, and provenance must reflect the config as actually run."""
         if self.batch != 1:
             raise ValueError("SimConfig: v1 scope is batch=1 (hook reserved)")
         if self.precision_boundary_placement not in ("consumer", "producer"):
             raise ValueError(f"SimConfig: precision_boundary_placement must be 'consumer' or "
                              f"'producer', got {self.precision_boundary_placement!r}")
         self._flag_provenance()
+        return self
 
     @staticmethod
     def from_json(path):

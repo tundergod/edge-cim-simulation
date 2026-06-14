@@ -49,6 +49,7 @@ def _op_provenance(dag, plat, bw):
 
 def run(cfg):
     """Run one SimConfig -> metrics dict."""
+    cfg.validate()   # re-validate at the public boundary (SimConfig is mutable; refreshes provenance)
     if cfg.scheduler not in _SCHEDULERS:
         raise ValueError(f"unknown scheduler '{cfg.scheduler}' (have {sorted(_SCHEDULERS)})")
     sched = _SCHEDULERS[cfg.scheduler]
