@@ -48,6 +48,9 @@ MODELS = {
     "llama-3.2-3b": dict(H=3072, F=8192, heads=24, hd=128, V=128256),
     "llama-3.1-8b": dict(H=4096, F=14336, heads=32, hd=128, V=128256),
     "qwen2.5-7b":   dict(H=3584, F=18944, heads=28, hd=128, V=152064),
+    # EXTRAPOLATION ONLY (>8B, ADR-0006 ~13B/32GB stretch) — NOT a supported config; dims from the
+    # Qwen2.5-14B HF config (same source as the op_inventory trace) so CPU support ops can price.
+    "qwen2.5-14b":  dict(H=5120, F=13824, heads=40, hd=128, V=152064),
 }
 
 # --- Structural instruction-count physics (ASSUMPTION). exp() = the cost driver.

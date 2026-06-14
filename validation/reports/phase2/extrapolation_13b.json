@@ -1,0 +1,83 @@
+{
+ "module": "extrapolation_13b",
+ "phase": "2.3",
+ "model": "qwen2.5-14b",
+ "hf_repo": "Qwen/Qwen2.5-14B",
+ "params_approx": "~14B",
+ "label": "engine extrapolation (mechanistic-model extrapolation via ADR-0007 meta-trace); NOT validated \u2014 no 14B silicon. Stands in for the ADR-0006 ~13B/32GB stretch point.",
+ "config": {
+  "n_layers": 48,
+  "hidden": 5120,
+  "heads": 40,
+  "kv_heads": 8,
+  "head_dim": 128,
+  "intermediate": 13824,
+  "vocab": 152064
+ },
+ "artifacts": {
+  "op_inventory": "measurements/op_inventory/qwen2.5-14b.json",
+  "value_flow_fixture": "traces/fixture/qwen2.5-14b.json.gz"
+ },
+ "op_profile_self_validation": true,
+ "structural_oracle": {
+  "decode": {
+   "ok": true,
+   "detail": {
+    "model": "qwen2.5-14b",
+    "phase": "decode",
+    "L": 300,
+    "reproduces_fixture": true,
+    "n_layers": 48,
+    "softmax_n": 48,
+    "residual_joins": 96,
+    "embeddings": 1,
+    "invariants_ok": true
+   }
+  },
+  "prefill": {
+   "ok": true,
+   "detail": {
+    "model": "qwen2.5-14b",
+    "phase": "prefill",
+    "L": 700,
+    "reproduces_fixture": true,
+    "n_layers": 48,
+    "softmax_n": 48,
+    "residual_joins": 96,
+    "embeddings": 1,
+    "invariants_ok": true
+   }
+  }
+ },
+ "engine": {
+  "tok_s": 1.5206,
+  "decode_token_us": 657655.13,
+  "eff_BW_GBs": 24.2,
+  "energy_band_J": [
+   0.516012560563549,
+   0.7740188408453235
+  ],
+  "sane": true
+ },
+ "extrapolation_flags": {
+  "model_size_extrapolated": true,
+  "capacity_extrapolated": true,
+  "unit_shape_extrapolated": true
+ },
+ "cim_shape_extrapolated_count": 241,
+ "cim_matmul_count": 337,
+ "cim_shape_note": "not merely 'a bigger model': 241 of 337 per-decode CIM matmuls have shapes BEYOND the M1 native measured envelope (floor extrapolation, m1_cim_tile.is_extrapolated).",
+ "capacity": {
+  "context": 1024,
+  "weights_GB": 13.995,
+  "kv_GB": 0.1007,
+  "act_GB": 0.0105,
+  "resident_footprint_GB": 14.106,
+  "footprint_16GiB_margin_GB": 1.894,
+  "footprint_32GiB_margin_GB": 17.894,
+  "capacity_risk_16GiB": false,
+  "overflow_context_16GiB": 18471,
+  "note": "at ctx 1024, 14B fits the 16 GiB card with 1.89 GB headroom, but overflows it at ctx ~18471 -> spill to host LPDDR over PCIe (~3.9 GB/s) -> decode collapse, NOT modelled in v1 (capacity = fail-loud feasibility gate; #58)."
+ },
+ "pass_all": true
+}
