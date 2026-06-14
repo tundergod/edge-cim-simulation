@@ -79,6 +79,9 @@ class Platform:
             if op is None:
                 return {"latency_us": 0.0, "source_model": "none",
                         "compute_provenance": f"no CPU compute model for category '{cat}'"}
+            # NB the descriptive placement precision (node.precision='fp16', ADR-0004c) is
+            # intentionally decoupled from the PRICING dtype: m4_cpu is calibrated only on fp32
+            # cpu_ops.json (the fp16 set was numpy-emulated/unrepresentative), so we price fp32.
             wl2 = Workload(op=("softmax" if op.startswith("softmax") else op), kv=(wl.kv or 0),
                            extra={"model": self.model, "dtype": "fp32"})
             r = self.cpu.predict(wl2)

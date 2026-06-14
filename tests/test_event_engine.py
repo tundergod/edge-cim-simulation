@@ -80,10 +80,10 @@ def test_fluid_fairshare_equal_costart():
 
 
 def test_pipeline_off_is_single_resource_serial():
-    # AllCim = ONE accelerator (the measured Metis 1c path exposes NO intra-frame
-    # pipeline; SDK v1.3.1 walls off multicore_mode pipeline/cooperative). pipeline=False
-    # => no CROSS-op overlap: token = sum of per-op max(compute, memory), even for nodes
-    # that pipeline=True would overlap across units.
+    # AllCim = ONE accelerator. The L4 anchor is the Card's 1c (single AIPU core) decode,
+    # which measures at/below the serial no-cross-op-overlap bound (1B 13.07 < 14.47) with a
+    # tiny 4c/1c ratio (~1.1x) -> no cross-op overlap. pipeline=False => token = sum of per-op
+    # max(compute, memory), even for nodes that pipeline=True would overlap across units.
     dag = Dag([_node(0, "cim", bytes_streamed=0), _node(1, "gpu", bytes_streamed=int(1e9))])
     plat = _StubPlatform({0: 10.0, 1: 0.0})
     bw = SharedBandwidth(eff_BW_GBs=10.0)            # node1 mem = 1e9/1e10 s = 1e5 us

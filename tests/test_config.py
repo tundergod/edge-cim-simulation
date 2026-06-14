@@ -55,8 +55,8 @@ def test_pipeline_knob_default_off_is_measured():
     cfg = SimConfig.from_dict({"workload": {"model": "llama-3.2-1b"}})
     assert cfg.pipeline is False
     assert cfg.is_calibrated_anchor()
-    # turning pipeline ON is a forward-looking SIMULATED mode (v1.3.1 exposes no intra-frame
-    # pipeline) -> flagged simulated, not a calibrated anchor.
+    # turning pipeline ON is a forward-looking SIMULATED mode (the measured Card 1c single-core
+    # decode shows no cross-op overlap) -> flagged simulated, not a calibrated anchor.
     cfg2 = SimConfig.from_dict({"workload": {"model": "llama-3.2-1b"},
                                 "tunables": {"pipeline": True}})
     assert cfg2.pipeline is True
