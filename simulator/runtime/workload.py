@@ -163,6 +163,34 @@ def _dag_counts_bytes(model, P, D, m):
     return counts, total_bytes
 
 
+def structural_check(model, phase, L):
+    """Structural oracle (R1): the built DAG's topology must reproduce the INDEPENDENTLY-
+    loaded trace-truth fixture (fixture_io.load_fixture, NOT build_token_dag's cache) AND
+    satisfy architecture-config invariants. Since the DAG structure is fixture-derived, the
+    fixture comparison is a faithful-reproduction + length-independence check (L is generally
+    NOT a committed fixture length); the genuinely-independent content is the config cross-
+    check — softmax count == n_layers, residual joins == 2*n_layers, exactly one embedding —
+    from op_profile.Model(model).config. Returns (ok, detail)."""
+    fx = fixture_io.load_fixture(model)
+    ref = _phase_anchors(phase)[-1]                 # a committed length (topology is length-indep)
+    fix = fx[phase][str(ref)]
+    dag = build_token_dag(model, phase, L)
+    reproduces = len(dag.nodes) == len(fix) and all(
+        dag.nodes[i].category == fix[i]["category"] and list(dag.nodes[i].deps) == fix[i]["deps"]
+        for i in range(len(fix)))
+    cfg = op_profile.Model(model).config
+    nL = cfg["n_layers"]
+    softmax_n = sum(1 for n in dag.nodes if n.category == "softmax")
+    res_joins = sum(1 for n in dag.nodes if n.category == "residual" and len(n.deps) >= 2)
+    embeds = sum(1 for n in dag.nodes if n.category == "embedding")
+    invariants = (softmax_n == nL and res_joins == 2 * nL and embeds == 1)
+    ok = reproduces and invariants
+    detail = {"model": model, "phase": phase, "L": L, "reproduces_fixture": reproduces,
+              "n_layers": nL, "softmax_n": softmax_n, "residual_joins": res_joins,
+              "embeddings": embeds, "invariants_ok": invariants}
+    return ok, detail
+
+
 def oracle_check(model, P, D):
     """Fail-loud oracle: the DAG's per-(phase,category) node counts AND total streamed
     bytes summed over a (P,D) generation must equal Model.profile(P,D) (no dropped or
