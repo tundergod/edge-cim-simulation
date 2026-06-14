@@ -79,6 +79,16 @@ class SimConfig:
     sweep: dict | None = None
     provenance: list = field(default_factory=list)
 
+    def __post_init__(self):
+        # invariants + provenance enforced on EVERY construction path (from_dict AND the direct
+        # dataclass ctor) — runner.run(cfg) must never get an invalid/unflagged config.
+        if self.batch != 1:
+            raise ValueError("SimConfig: v1 scope is batch=1 (hook reserved)")
+        if self.precision_boundary_placement not in ("consumer", "producer"):
+            raise ValueError(f"SimConfig: precision_boundary_placement must be 'consumer' or "
+                             f"'producer', got {self.precision_boundary_placement!r}")
+        self._flag_provenance()
+
     @staticmethod
     def from_json(path):
         return SimConfig.from_dict(json.loads(Path(path).read_text()))
@@ -119,13 +129,7 @@ class SimConfig:
             concurrency_off=abl.get("concurrency_off", False),
             contention_off=abl.get("contention_off", False),
             compute_off=abl.get("compute_off", False),
-            sweep=d.get("sweep"))
-        if cfg.batch != 1:
-            raise ValueError("SimConfig: v1 scope is batch=1 (hook reserved)")
-        if cfg.precision_boundary_placement not in ("consumer", "producer"):
-            raise ValueError(f"SimConfig: precision_boundary_placement must be 'consumer' or "
-                             f"'producer', got {cfg.precision_boundary_placement!r}")
-        cfg._flag_provenance()
+            sweep=d.get("sweep"))   # SimConfig.__post_init__ validates invariants + flags provenance
         return cfg
 
     def _flag_provenance(self):

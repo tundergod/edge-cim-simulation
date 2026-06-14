@@ -79,6 +79,20 @@ def test_precision_boundary_placement_rejects_invalid():
         assert cfg.precision_boundary_placement == v
 
 
+def test_direct_construction_validates_and_flags():
+    # invariants + provenance must hold on the dataclass constructor, not only from_dict()
+    # (else runner.run(SimConfig(...)) emits plausible metrics for an invalid/uncalibrated config).
+    for bad in (dict(precision_boundary_placement="prodcer"), dict(batch=4)):
+        try:
+            SimConfig(model="llama-3.2-1b", **bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"direct ctor accepted {bad}")
+    cfg = SimConfig(model="llama-3.2-1b", scheduler="cim_hetero")
+    assert not cfg.is_calibrated_anchor()           # simulated flagged via the ctor too
+    assert any("cim_hetero" in p for p in cfg.provenance)
+
+
 def test_batch_must_be_one():
     try:
         SimConfig.from_dict({"workload": {"model": "llama-3.2-1b", "batch": 4}})
