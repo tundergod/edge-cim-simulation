@@ -117,6 +117,7 @@ def run(cfg):
                        price_compute=price_compute, pipeline=pipeline)
 
     e_tok = _energy_per_token_J(dec, plat)
+    convs = [n for n in dec.nodes if n.category == "convert"]   # precision-boundary casts (2.2b)
     return {
         "model": cfg.model,
         "scheduler": cfg.scheduler,
@@ -139,4 +140,6 @@ def run(cfg):
         "provenance": cfg.provenance,
         "calibrated_anchor": cfg.is_calibrated_anchor(),
         "op_provenance": _op_provenance(dec, plat, plat.bw),
+        "conversion_count_per_decode_token": len(convs),               # int8<->fp16 casts (0 for AllCim)
+        "conversion_bytes_per_decode_token": sum(n.bytes_streamed for n in convs),
     }

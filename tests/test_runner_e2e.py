@@ -149,6 +149,19 @@ def test_cimhetero_requires_cim_gpu_cpu_units():
     raise AssertionError("cim_hetero with gpu disabled not rejected")
 
 
+def test_metrics_expose_conversion_cost():
+    # the conversion-op cost (a core 2.2b deliverable) must be visible in the public metrics,
+    # not only recomputed in report_mixed_precision.py.
+    from simulator.runtime.config import SimConfig
+    r_all = run(_cfg("llama-3.2-1b"))
+    assert r_all["conversion_count_per_decode_token"] == 0          # AllCim inserts none
+    assert r_all["conversion_bytes_per_decode_token"] == 0
+    r_het = run(SimConfig.from_dict({"workload": {"model": "llama-3.2-1b", "context": 1024},
+                                     "scheduler": {"policy": "cim_hetero"}}))
+    assert r_het["conversion_count_per_decode_token"] > 0
+    assert r_het["conversion_bytes_per_decode_token"] > 0
+
+
 def test_run_revalidates_mutated_config():
     # SimConfig is a mutable dataclass; run() (the public boundary) must re-validate, not
     # silently emit metrics for a config broken AFTER construction.

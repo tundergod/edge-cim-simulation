@@ -130,6 +130,16 @@ def test_convert_priced_as_pure_memory():
     assert p["latency_us"] == 0.0 and p["source_model"] == "convert"   # cost is bytes only
 
 
+def test_insert_conversions_rejects_invalid_placement():
+    # component-level fail-loud: a typo'd placement must raise at the API, not be treated as consumer.
+    dag = _cimhetero_place(build_token_dag("llama-3.2-1b", "decode", 128))
+    try:
+        insert_conversions(dag, placement="prodcer")
+    except ValueError:
+        return
+    raise AssertionError("insert_conversions accepted an invalid placement")
+
+
 def test_build_token_dag_sets_out_elems():
     dag = build_token_dag("llama-3.2-1b", "decode", 512)
     compute = [n for n in dag.nodes if n.category in ("matmul", "attention", "kv_cache")]

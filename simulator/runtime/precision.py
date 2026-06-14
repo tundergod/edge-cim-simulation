@@ -51,6 +51,9 @@ def insert_conversions(dag, *, placement="consumer"):
     """Return a REBUILT Dag with a `convert` node on every int8<->fp16 GPU-boundary edge.
     Originals are not mutated (fresh OpNode copies with rewired deps), so the call is pure
     and idempotent. One convert per crossing (producer, consumer) edge."""
+    if placement not in ("consumer", "producer"):
+        raise ValueError(f"insert_conversions: placement must be 'consumer' or 'producer', "
+                         f"got {placement!r}")
     by_id = {n.id: n for n in dag.nodes}
     next_id = max(by_id) + 1 if by_id else 0
     converts = {}                                    # (p_id, c_id) -> convert node
