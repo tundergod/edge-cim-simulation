@@ -69,8 +69,9 @@ class SimConfig:
     interconnect_efficiency: float = 1.0
     concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; no effect on the 2.1 serial path
     pipeline: bool = False                     # cross-op execution overlap. OFF (default) = single-accelerator
-                                               # serial = the measured all-AIPU path (Metis 1c, SDK v1.3.1 exposes
-                                               # no intra-frame pipeline). ON = SIMULATED forward-looking overlap.
+                                               # serial = the measured all-AIPU path (Card 1c = single AIPU core;
+                                               # measured tok/s at/below the serial no-overlap bound, 4c/1c ~1.1x).
+                                               # ON = SIMULATED forward-looking overlap.
     concurrency_off: bool = False
     contention_off: bool = False
     compute_off: bool = False                 # ablation: memory-only (zero unit compute) — isolates the non-circular compute correction
@@ -133,7 +134,7 @@ class SimConfig:
             p.append(f"simulated: bw_efficiency override = {self.bw_efficiency}")
         if self.pipeline:
             p.append("simulated: pipeline overlap enabled (cross-op double-buffering; the "
-                     "measured all-AIPU 1c path exposes no intra-frame pipeline, SDK v1.3.1)")
+                     "measured all-AIPU Card 1c single-core decode shows no cross-op overlap)")
         for u, e in self.engine.items():
             if e not in _SILICON_BACKENDS:
                 p.append(f"simulated: {u} engine='{e}' (non-silicon backend)")

@@ -29,11 +29,13 @@ _INF = float("inf")
 def run_serial(dag, platform, bw, *, price_compute=True):
     """SINGLE-ACCELERATOR execution (no cross-op pipeline): each op occupies the one
     accelerator for max(compute, memory) — intra-op double-buffering only — and the
-    token latency is their sum. This is the FAITHFUL all-AIPU (AllCim) decode model:
-    the measured Metis 1c silicon exposes NO intra-frame op pipeline (SDK v1.3.1 walls
-    off multicore_mode pipeline/cooperative; `double_buffer` only overlaps host<->device
-    PCIe transfer, negligible for decode), so the measured tok/s is the no-cross-op-overlap
-    time. concurrency/contention are no-ops here by construction (one resource, k=1).
+    token latency is their sum. This is the FAITHFUL all-AIPU (AllCim) decode model. The
+    L4 anchor is the Metis Card's 1c (SINGLE AIPU core) axllm decode: one core runs ops in
+    dataflow order with no cross-core op pipeline, and the measured tok/s sits AT/BELOW the
+    serial no-cross-op-overlap bound (1B measured 13.07 < this model's 14.47 tok/s) with a
+    tiny 4c/1c ratio (~1.1x — decode is on-card-DRAM-bandwidth-bound), i.e. the silicon shows
+    no cross-op compute/memory hiding. (`double_buffer` overlaps only host<->device PCIe,
+    negligible for decode.) concurrency/contention are no-ops here (one resource, k=1).
     Order-independent (a sum of per-node maxima)."""
     total = 0.0
     for n in dag.nodes:

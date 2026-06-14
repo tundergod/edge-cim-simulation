@@ -83,13 +83,12 @@ def main():
     mem_only_fails_at = [m for m, v in mem_only.items() if not v["within_gate"]]
 
     # ablations on 8B. AllCim runs the value-flow DAG on a SINGLE accelerator (pipeline=off):
-    # the measured Metis 1c silicon exposes no intra-frame op pipeline (SDK v1.3.1 walls off
-    # multicore_mode pipeline/cooperative; `double_buffer` only overlaps host<->device PCIe,
-    # negligible for decode), so the measured tok/s is the no-cross-op-overlap time. Hence the
-    # DAG's parallel branches do NOT overlap and concurrency/contention are no-ops here by
-    # construction; pipeline=on (cross-op overlap) is a SIMULATED forward-looking mode
-    # (1B 17.9%, provenance-flagged). Overlap+knee are exercised in test_event_engine /
-    # validate_contention. Reported honestly.
+    # the L4 anchor is the Card's 1c (single AIPU core) decode, whose measured tok/s sits
+    # at/below the serial no-cross-op-overlap bound (1B 13.07 < 14.47) with a tiny 4c/1c ratio
+    # (~1.1x, on-card-DRAM-bandwidth-bound) -> the silicon shows no cross-op compute/memory
+    # hiding. Hence the DAG's parallel branches do NOT overlap and concurrency/contention are
+    # no-ops here; pipeline=on (cross-op overlap) is a SIMULATED forward-looking mode (1B 17.9%,
+    # provenance-flagged). Overlap+knee are exercised in test_event_engine / validate_contention.
     base = run(_cfg("llama-3.1-8b"))["tok_s"]
     abl = {
         "base_tok_s": base,
@@ -97,10 +96,10 @@ def main():
         "contention_off_tok_s": run(_cfg("llama-3.1-8b", contention_off=True))["tok_s"],
         "pipeline_on_tok_s_simulated": run(_cfg("llama-3.1-8b", pipeline=True))["tok_s"],
         "note": "AllCim = single accelerator running the value-flow DAG serially (pipeline=off): "
-                "the measured 1c silicon exposes NO intra-frame op pipeline (SDK v1.3.1), so "
-                "cross-op overlap is OFF and concurrency/contention are no-ops by construction "
-                "(k=1, one resource). pipeline=on is a SIMULATED forward-looking overlap mode. "
-                "Overlap+knee are exercised in test_event_engine + validate_contention.",
+                "the Card 1c (single AIPU core) decode measures at/below the serial no-overlap "
+                "bound (4c/1c ~1.1x), so cross-op overlap is OFF and concurrency/contention are "
+                "no-ops by construction (k=1, one resource). pipeline=on is a SIMULATED forward-"
+                "looking overlap mode. Overlap+knee in test_event_engine + validate_contention.",
     }
 
     out = {
