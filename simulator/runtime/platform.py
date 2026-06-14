@@ -87,6 +87,11 @@ class Platform:
             r = self.cpu.predict(wl2)
             return {"latency_us": r["latency_us"], "compute_provenance": r["provenance"], "source_model": "m4_cpu"}
         if u == "gpu" and cat == "attention":
+            if "hd" not in wl.extra:   # the bmm branch of wl_from_row sets 'hd'; scale/mask don't
+                raise NotImplementedError(
+                    f"GPU pricing for non-bmm attention subtype (op={wl.extra.get('aten', '?')}): "
+                    f"attn_bmm_us models the QK^T/S·V bmm ONLY. The group-aware QK^T+S·V composite "
+                    f"GPU-attention model (scale/mask included) is Wave 2.2b (R2).")
             lat = self.gpu.attn_bmm_us(wl.kv or 1, heads=wl.heads, layers=1)
             return {"latency_us": float(lat), "compute_provenance": "Mali GPU attn_bmm (m4_gpu)", "source_model": "m4_gpu"}
         return {"latency_us": 0.0, "source_model": "none",
@@ -101,7 +106,9 @@ class Platform:
         """Per-op energy estimate (J). CIM matmul from flops; memory from bytes;
         CPU support from active compute time. ESTIMATED (M7, +/-20% band)."""
         cat, wl = node.category, node.wl
-        e = self.energy.dram_J(node.bytes_streamed) if node.bytes_streamed else 0.0
+        # DRAM energy only for DRAM-domain traffic — cpu_cache (CPU-support) bytes are on-chip,
+        # priced inside the cpu_J term below (consistent with the latency-side domain split, R7).
+        e = self.energy.dram_J(node.bytes_streamed) if (node.bytes_streamed and node.mem_domain == "dram") else 0.0
         if node.unit == "cim" and cat == "matmul":
             e += self.energy.cim_J(2 * wl.M * wl.K * wl.N)
         elif node.unit == "cpu" and compute_us > 0:

@@ -80,6 +80,26 @@ def test_precision_from_contract():
         assert n.precision == fixture_io.PRECISION_CONTRACT[n.category]
 
 
+def test_anchor_structure_mismatch_fails_loud():
+    # _load_structure zips the two committed fixture lengths positionally; a length or
+    # per-node (op/category/deps/src) mismatch must fail loud, not silently misalign.
+    from simulator.runtime.workload import _check_anchor_structure
+    good = [{"op": "aten.mm.default", "category": "matmul", "deps": [], "src": "S"}]
+    _check_anchor_structure(good, good, "m", "decode", 512, 1024)        # identical -> ok
+    try:
+        _check_anchor_structure(good, good + good, "m", "decode", 512, 1024)   # length mismatch
+    except ValueError:
+        pass
+    else:
+        raise AssertionError("anchor length mismatch not caught")
+    bad = [{"op": "aten.add.Tensor", "category": "norm", "deps": [0], "src": "S"}]
+    try:
+        _check_anchor_structure(good, bad, "m", "decode", 512, 1024)      # per-node mismatch
+    except ValueError:
+        return
+    raise AssertionError("anchor per-node structure mismatch not caught")
+
+
 def test_categories_are_known():
     from simulator.runtime.dag import CATEGORIES
     dag = build_token_dag("llama-3.2-1b", "decode", 128)

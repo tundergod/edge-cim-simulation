@@ -86,6 +86,43 @@ def test_platform_price_returns_provenance():
     raise AssertionError("price did not reject unknown unit")
 
 
+def test_energy_excludes_cpu_cache_from_dram():
+    # latency excludes cpu_cache bytes from the DRAM pool; energy must be consistent —
+    # a CPU-support op's on-chip bytes must NOT be charged DRAM energy (only its cpu energy).
+    from simulator.runtime.platform import Platform
+    from simulator.runtime.dag import OpNode
+    from simulator.models.engine import Workload
+    plat = Platform("llama-3.2-1b")
+    cache = OpNode(id=0, category="norm", wl=Workload(op="norm", nbytes=10000), unit="cpu",
+                   bytes_streamed=10000, mem_domain="cpu_cache")
+    dram = OpNode(id=1, category="matmul", wl=Workload(op="matmul", M=1, K=2048, N=2048),
+                  unit="cim", bytes_streamed=10000, mem_domain="dram")
+    e_cache = plat.energy_J(cache, plat.compute_us(cache))
+    e_dram = plat.energy_J(dram, plat.compute_us(dram))
+    assert e_cache == plat.energy.cpu_J(plat.compute_us(cache))   # ONLY cpu energy, no dram term
+    assert e_dram >= plat.energy.dram_J(10000)                    # dram node IS charged dram energy
+
+
+def test_gpu_attention_only_prices_bmm():
+    # the GPU attn_bmm_us model is for the QK^T/S·V bmm ONLY; scale/mask elementwise
+    # attention must NOT be priced as a bmm — fail loud (group-aware composite is 2.2b R2).
+    from simulator.runtime.platform import Platform
+    from simulator.runtime.dag import OpNode
+    from simulator.models.engine import Workload
+    plat = Platform("llama-3.2-1b")
+    bmm = OpNode(id=0, category="attention", unit="gpu",
+                 wl=Workload(op="attention", kv=512, heads=32, K=64, dtype="fp16", extra={"hd": 64}))
+    p = plat.price(bmm)
+    assert p["latency_us"] > 0 and p["source_model"] == "m4_gpu"
+    scale = OpNode(id=1, category="attention", unit="gpu",
+                   wl=Workload(op="attention", kv=0, extra={"aten": "aten.mul.Tensor", "category": "attention"}))
+    try:
+        plat.price(scale)
+    except NotImplementedError:
+        return
+    raise AssertionError("non-bmm GPU attention (scale/mask) was priced as a bmm, not fail-loud")
+
+
 def test_platform_rejects_unknown_unit():
     from simulator.runtime.platform import Platform
     from simulator.runtime.dag import OpNode

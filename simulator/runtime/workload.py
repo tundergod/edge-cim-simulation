@@ -86,6 +86,21 @@ def _phase_anchors(phase):
     return fixture_io.PREFILL_FIX if phase == "prefill" else fixture_io.DECODE_FIX
 
 
+def _check_anchor_structure(a, b, model, phase, lo, hi):
+    """Fail-loud: the two committed fixture lengths must be positionally identical in STRUCTURE
+    (same node count; same per-node op/category/deps/src) so the lo<->hi shape-fit is aligned.
+    A silent zip() over mismatched anchors would misalign every downstream node."""
+    if len(a) != len(b):
+        raise ValueError(f"{model} {phase}: fixture anchor node counts differ "
+                         f"({len(a)} @ {lo} vs {len(b)} @ {hi}) — structure not length-independent")
+    for i, (na, nb) in enumerate(zip(a, b)):
+        ka = (na["op"], na["category"], na["deps"], na.get("src"))
+        kb = (nb["op"], nb["category"], nb["deps"], nb.get("src"))
+        if ka != kb:
+            raise ValueError(f"{model} {phase} node {i}: anchor structure mismatch "
+                             f"({na['op']}/{na['category']} @ {lo} vs {nb['op']}/{nb['category']} @ {hi})")
+
+
 def _load_structure(model, phase):
     """The phase's value-flow STRUCTURE from the committed trace-truth fixture: the
     ordered compute nodes (op/src/category/deps) + a per-node shape-template fit from
@@ -98,6 +113,7 @@ def _load_structure(model, phase):
     fx = fixture_io.load_fixture(model)
     lo, hi = _phase_anchors(phase)
     a, b = fx[phase][str(lo)], fx[phase][str(hi)]
+    _check_anchor_structure(a, b, model, phase, lo, hi)
     struct = []
     for i, (na, nb) in enumerate(zip(a, b)):
         tin = [op_profile._fit_shape(sa, sb, lo, hi)

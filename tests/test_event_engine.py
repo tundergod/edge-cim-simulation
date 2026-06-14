@@ -13,7 +13,7 @@ sys.path.insert(0, str(ROOT))
 from simulator.models.engine import Workload  # noqa: E402
 from simulator.runtime.dag import OpNode, Dag  # noqa: E402
 from simulator.runtime.resources import SharedBandwidth  # noqa: E402
-from simulator.runtime.events import run_dag  # noqa: E402
+from simulator.runtime.events import run_dag, run_serial  # noqa: E402
 
 
 class _StubPlatform:
@@ -27,7 +27,8 @@ class _StubPlatform:
 
 def _node(i, unit, deps=(), bytes_streamed=0):
     return OpNode(id=i, category="matmul", wl=Workload(op="matmul", M=1, K=64, N=64),
-                  deps=list(deps), unit=unit, bytes_streamed=bytes_streamed)
+                  deps=list(deps), unit=unit, bytes_streamed=bytes_streamed,
+                  mem_domain="dram" if bytes_streamed > 0 else "none")
 
 
 def test_serial_chain_sums():
@@ -124,12 +125,34 @@ def test_zero_bandwidth_raises():
 
 def test_unscheduled_node_raises():
     # unit=None (no scheduler run) must fail loud, not fall back to "cpu"
-    dag = Dag([OpNode(id=0, category="matmul", wl=Workload(op="matmul"), deps=[], unit=None)])
+    dag = Dag([OpNode(id=0, category="matmul", wl=Workload(op="matmul"), deps=[], unit=None,
+                      mem_domain="none")])
     try:
         run_dag(dag, _StubPlatform({0: 1.0}), SharedBandwidth(24.2))
     except ValueError:
         return
     raise AssertionError("unscheduled node (unit=None) not rejected")
+
+
+def test_invalid_mem_domain_raises():
+    # bytes>0 tagged none/local/None would be SILENTLY metered as DRAM -> fail loud instead
+    # (the engine must not produce a plausible-but-wrong latency from a mis-domained node).
+    for dom in (None, "local", "none"):
+        n = OpNode(id=0, category="matmul", wl=Workload(op="matmul", M=1, K=64, N=64),
+                   unit="cim", bytes_streamed=int(1e9), mem_domain=dom)
+        try:
+            run_dag(Dag([n]), _StubPlatform({0: 0.0}), SharedBandwidth(24.2))
+        except ValueError:
+            continue
+        raise AssertionError(f"mem_domain={dom!r} with bytes not rejected by run_dag")
+    # run_serial (called directly) must validate too
+    n = OpNode(id=0, category="matmul", wl=Workload(op="matmul"), unit="cim",
+               bytes_streamed=int(1e9), mem_domain=None)
+    try:
+        run_serial(Dag([n]), _StubPlatform({0: 0.0}), SharedBandwidth(24.2))
+    except ValueError:
+        return
+    raise AssertionError("run_serial did not reject invalid mem_domain")
 
 
 def test_empty_dag():

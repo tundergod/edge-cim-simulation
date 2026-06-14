@@ -26,6 +26,19 @@ _BYTE_EPS = 1.0    # bytes: a stream with < 1 byte remaining is done (guards FP 
 _INF = float("inf")
 
 
+def _validate_mem_domains(dag):
+    """Fail-loud: every node must carry a valid memory domain, and a byte-streaming node may
+    not be tagged 'none' — otherwise the DRAM-metering rule (meter unless cpu_cache) would
+    SILENTLY treat a mis-domained node as DRAM and emit a plausible-but-wrong latency."""
+    for n in dag.nodes:
+        if n.mem_domain not in ("dram", "cpu_cache", "none"):
+            raise ValueError(f"M3: node {n.id} has invalid/missing mem_domain {n.mem_domain!r} "
+                             f"(expected dram/cpu_cache/none — run a scheduler before the engine)")
+        if n.bytes_streamed > 0 and n.mem_domain == "none":
+            raise ValueError(f"M3: node {n.id} streams {n.bytes_streamed} bytes but mem_domain='none' "
+                             f"(a byte-streaming op must reside in dram or cpu_cache)")
+
+
 def run_serial(dag, platform, bw, *, price_compute=True):
     """SINGLE-ACCELERATOR execution (no cross-op pipeline): each op occupies the one
     accelerator for max(compute, memory) — intra-op double-buffering only — and the
@@ -37,6 +50,7 @@ def run_serial(dag, platform, bw, *, price_compute=True):
     no cross-op compute/memory hiding. (`double_buffer` overlaps only host<->device PCIe,
     negligible for decode.) concurrency/contention are no-ops here (one resource, k=1).
     Order-independent (a sum of per-node maxima)."""
+    _validate_mem_domains(dag)
     total = 0.0
     for n in dag.nodes:
         c = float(platform.compute_us(n)) if price_compute else 0.0
@@ -59,6 +73,7 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
         raise ValueError("M3: cyclic DAG — a dependency cycle cannot be scheduled")
     if any(n.unit is None for n in dag.nodes):
         raise ValueError("M3: unscheduled node(s) with unit=None — run a scheduler before run_dag")
+    _validate_mem_domains(dag)
     if any(n.bytes_streamed > 0 and n.mem_domain != "cpu_cache" for n in dag.nodes) and bw.eff_BW <= 0:
         raise ValueError("M3: DRAM memory traffic present but SharedBandwidth eff_BW <= 0 "
                          "(degenerate bandwidth would stall the simulation)")
