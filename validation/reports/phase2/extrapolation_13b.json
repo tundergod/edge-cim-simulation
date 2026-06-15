@@ -49,6 +49,11 @@
    }
   }
  },
+ "cross_artifact_oracle": {
+  "ok": true,
+  "counts_match": true,
+  "bytes_match": true
+ },
  "engine": {
   "tok_s": 1.5206,
   "decode_token_us": 657655.13,

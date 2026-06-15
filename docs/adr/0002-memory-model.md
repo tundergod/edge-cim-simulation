@@ -20,3 +20,6 @@ LPDDR4/4x have **no first-class Ramulator2 preset** — **CONFIRMED 2026-06-06**
 
 ## Consequences
 M2 budgets Ramulator2 LPDDR5/PIM config + Python co-sim (OVERALL.md risk #6). The per-token-smoothness assumption is validated once against silicon. The swappable interface is also what enables the L4 validate-then-swap bridging (ADR-0006).
+
+## Note (Phase 2.3): topology as the single bandwidth source + memory_spec contract
+The runtime decode memory wall is sourced from the **topology spec** via the existing `MemoryModel` resolver (`simulator/models/m2_memory.py`) — the single physics source: `cim_topo_card` → on-card LPDDR4x `dram_eff_BW_GBs` 24.2 (literal, the byte-identical L4 anchor); `cim_topo_alpha` → `pcie_BW_GBs` 3.9 (no on-card DRAM, traffic over host PCIe + 911 µs per-call floor added to TTFT only); `cim_topo_edge` → `mem_spec_ref` (LPDDR5) eff × `noc_efficiency`. `SimConfig.memory_spec` is a **sentinel-default consistency tag** (None → the topology's required spec), NOT a second bandwidth feed: an explicit `memory_spec` disagreeing with the topology fails loud at both construction and `runner.run()`; alpha rejects any LPDDR spec. `bw_efficiency` is a **card-only** sensitivity knob (rejected on alpha/edge, whose walls are physics-derived — #63). Capacity overflow on the card degrades toward the alpha host-PCIe wall (spill not modelled; #58).

@@ -108,7 +108,9 @@ def main():
                     "AllCim serial robustness claim.",
         },
         "energy_band_pm20": energy,
-        "pass_all": conclusion_robust and bool(eff_endpoints_ok),
+        # gate the contention-path two-sidedness too: if knee/icn ever degrade to one-sided/inert the
+        # report's "two-sided" claim would become display text, not a checked fact -> fail-loud.
+        "pass_all": conclusion_robust and bool(eff_endpoints_ok) and bool(knee_two_sided),
     }
     (OUT / "sensitivity.json").write_text(json.dumps(out, indent=1))
 

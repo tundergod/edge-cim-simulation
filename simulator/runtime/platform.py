@@ -48,6 +48,13 @@ class Platform:
             eff = float(peak_mem["eff_BW_GBs"])              # measured anchor (e.g. 24.2)
             self.per_call_floor_us = 0.0
         if bw_efficiency is not None:                        # forward-looking override (sensitivity knob)
+            # card-only: alpha/edge have a physics-derived wall (PCIe / LPDDR5 x NoC) that peak-scaling
+            # would silently bypass -> reject (single physics source = the topology spec). #63.
+            if topology is not None and topology != "cim_topo_card":
+                raise ValueError(
+                    f"Platform: bw_efficiency is a card-only sensitivity knob; topology {topology!r} has "
+                    f"its own physics-derived effective wall (e.g. edge = LPDDR5 x noc_efficiency) that "
+                    f"peak-scaling would discard. Sweep eff via the topology spec, not bw_efficiency.")
             if peak_mem is None:
                 raise ValueError("Platform: bw_efficiency override needs a memory_spec to read peak BW "
                                  "from (topology without on-card DRAM has no peak to scale)")

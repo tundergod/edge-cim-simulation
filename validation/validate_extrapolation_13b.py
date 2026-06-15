@@ -27,7 +27,7 @@ from simulator.runtime.config import SimConfig  # noqa: E402
 from simulator.runtime.runner import run  # noqa: E402
 from simulator.runtime.platform import Platform  # noqa: E402
 from simulator.runtime.scheduler import SCHEDULERS  # noqa: E402
-from simulator.runtime.workload import build_token_dag, structural_check  # noqa: E402
+from simulator.runtime.workload import build_token_dag, structural_check, oracle_check  # noqa: E402
 import op_profile  # noqa: E402
 
 OUT = ROOT / "validation/reports/phase2"
@@ -58,6 +58,11 @@ def main():
     op_profile.Model(KEY)
     struct = {phase: structural_check(KEY, phase, L) for phase, L in (("decode", 300), ("prefill", 700))}
     struct_ok = all(ok for ok, _ in struct.values())
+    # cross-artifact oracle (HARD drift gate): the fixture-derived DAG's per-(phase,category) counts
+    # AND total streamed bytes must equal op_profile.Model.profile over a (P,D) generation — locks the
+    # 14B fixture <-> op_profile against future drift (the in-scope pytest oracle list excludes 14B by
+    # design, so this dedicated gate carries it).
+    oracle_ok, oracle_detail = oracle_check(KEY, 256, 8)
 
     # engine extrapolation on a 32 GB SKU
     cfg = SimConfig.from_dict({
@@ -101,6 +106,8 @@ def main():
                       "value_flow_fixture": str(fix_path.relative_to(ROOT))},
         "op_profile_self_validation": True,    # would have raised above otherwise
         "structural_oracle": {p: {"ok": ok, "detail": d} for p, (ok, d) in struct.items()},
+        "cross_artifact_oracle": {"ok": bool(oracle_ok), "counts_match": oracle_detail["counts_match"],
+                                  "bytes_match": oracle_detail["bytes_match"]},
         "engine": {"tok_s": r["tok_s"], "decode_token_us": r["decode_token_us"],
                    "eff_BW_GBs": round(r["memory_eff_BW_GBs"], 3),
                    "energy_band_J": r["energy_band_J"], "sane": bool(engine_sane)},
@@ -122,13 +129,13 @@ def main():
                      "modelled in v1 (capacity = fail-loud feasibility gate; #58)."
                      % (CONTEXT, margin_16, overflow_ctx_16)),
         },
-        "pass_all": bool(struct_ok and engine_sane and all(flags.values())),
+        "pass_all": bool(struct_ok and oracle_ok and engine_sane and all(flags.values())),
     }
     (OUT / "extrapolation_13b.json").write_text(json.dumps(out, indent=1))
 
     print(f"13B-class extrapolation = {KEY} (~14B, engine extrapolation, NOT validated):")
     print(f"  engine: {r['tok_s']:.3f} tok/s @ {r['memory_eff_BW_GBs']:.1f} GB/s (decode {r['decode_token_us']:.0f} us)")
-    print(f"  structural oracle: {struct_ok}; op_profile self-val: OK")
+    print(f"  structural oracle: {struct_ok}; cross-artifact oracle (count/bytes): {oracle_ok}; op_profile self-val: OK")
     print(f"  extrapolation flags: {flags}  cim_shape_extrapolated={cim_shape_extrap}/{len(cim_matmuls)}")
     print(f"  capacity@ctx{CONTEXT}: footprint={footprint_GB:.2f} GB (16GiB margin {margin_16:.2f}, "
           f"32GiB margin {margin_32:.2f}); overflows 16 GiB at ctx ~{overflow_ctx_16}")
