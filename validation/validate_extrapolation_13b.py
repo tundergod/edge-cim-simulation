@@ -91,6 +91,10 @@ def main():
     # slice is priced) -> footprint OPTIMISTIC by ~0.78 GB; see weights_GB_note below.
     weights_GB = r["model_footprint_GB"]
     footprint_GB, kv_GB, act_GB = _footprint_GB(weights_GB, cfg_dims, CONTEXT)
+    # NB all capacity terms are DECIMAL GB (/1e9, matching runner.py weight_bytes/1e9). ENVELOPE_GB=16
+    # and SKU_GB=32 are applied as decimal-GB thresholds; the physical SKUs are 16/32 GiB (~17.2/34.4
+    # decimal GB), so these thresholds are CONSERVATIVE by ~7% (understate capacity) — the margins below
+    # are a lower bound, which is the safe direction for a feasibility/risk flag.
     margin_16 = round(ENVELOPE_GB - footprint_GB, 3)
     margin_32 = round(SKU_GB - footprint_GB, 3)
     # context at which footprint crosses 16 GiB: weights + C*(per-ctx kv+act) = 16

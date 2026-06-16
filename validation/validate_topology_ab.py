@@ -71,7 +71,7 @@ def main():
             r = run(_cfg(m, topo, mspec))
             table[m][topo] = {
                 "tok_s": r["tok_s"],
-                "decode_token_us": r["decode_token_us"],         # = data-movement time (bytes / eff_BW)
+                "decode_token_us": r["decode_token_us"],         # per-token latency = max(compute, bytes/eff_BW), memory-bound here
                 "eff_BW_GBs": round(r["memory_eff_BW_GBs"], 3),
                 "ttft_s": r["ttft_s_reported_not_gated"],         # alpha's includes the 911 us per-call floor
                 "tier": tier,
