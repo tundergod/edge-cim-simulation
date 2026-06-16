@@ -26,8 +26,6 @@ import fixture_io  # noqa: E402  (load_fixture, PRECISION_CONTRACT, PREFILL_FIX,
 from simulator.models.engine import Workload  # noqa: E402
 from simulator.runtime.dag import OpNode, Dag  # noqa: E402
 
-GEMM_OPS = op_profile.GEMM_OPS
-
 
 def _mkn(sig):
     """(M,K,N) for a matmul/bmm sig — mirrors op_profile._flops_bytes shape logic."""

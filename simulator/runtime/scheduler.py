@@ -57,7 +57,10 @@ class AllCimScheduler(Scheduler):
 
     def assign(self, dag, cfg=None):
         for n in dag.nodes:
-            n.unit = ALLCIM_MAP.get(n.category, "cpu")
+            if n.category not in ALLCIM_MAP:        # fail-loud: a new M5 category must be mapped explicitly
+                raise ValueError(f"AllCimScheduler: no unit mapping for category {n.category!r} "
+                                 f"(known: {sorted(ALLCIM_MAP)}); map it explicitly, do not silently place.")
+            n.unit = ALLCIM_MAP[n.category]
             n.mem_domain = _residency(n)
         return dag
 
@@ -82,8 +85,11 @@ class CimHeteroScheduler(Scheduler):
                 n.unit = "gpu" if "hd" in n.wl.extra else "cpu"      # QK^T/S·V bmm vs scale/mask
             elif n.category in ("softmax", "norm", "rope", "ffn", "residual"):
                 n.unit = "cpu"
-            else:
-                n.unit = "mem"                                       # kv_cache, embedding
+            elif n.category in ("kv_cache", "embedding"):
+                n.unit = "mem"
+            else:                                                   # fail-loud: don't silently mis-route
+                raise ValueError(f"CimHeteroScheduler: no unit mapping for category {n.category!r}; "
+                                 f"map it explicitly, do not silently place on mem.")
         placement = getattr(cfg, "precision_boundary_placement", "consumer") if cfg else "consumer"
         dag = insert_conversions(dag, placement=placement)          # returns a rebuilt Dag
         for n in dag.nodes:
