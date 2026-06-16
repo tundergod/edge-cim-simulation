@@ -131,6 +131,8 @@ class CpuModel(UnitEngine):
     def _latency(self, base, n_elem, cores, cluster, dtype):
         """max(compute, memory) + overhead_op -> (latency_us, bound). dtype selects the NEON lane
         count + element size: fp16 -> native fp16_lanes (2x) + 2-byte (analytic, NOT calibrated)."""
+        if dtype not in ("fp32", "fp16"):
+            raise ValueError(f"CPU model supports dtype fp32|fp16, got {dtype!r}")
         bpe = 2 if dtype == "fp16" else 4
         lanes_key = "fp16_lanes" if dtype == "fp16" else "fp32_lanes"
         peak = _peak_lane_ops(self.spec, cores, cluster, lanes_key)

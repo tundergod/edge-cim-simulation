@@ -73,7 +73,7 @@
     <ul>
       <li><strong>模型尺寸</strong>（&gt;8B）：引擎預測 1.52 tok/s。</li>
       <li><strong>CIM 形狀</strong>：241 / 337 個 per-decode CIM matmul 形狀<strong>超出 M1 native 量測包絡</strong>（floor 外推）——不只是「模型更大」。</li>
-      <li><strong>容量</strong>（&gt;16 GB）：釘死公式 resident_footprint = weights+KV+activation = 14.11 GB；在 16 GiB 卡上 ctx 1024 尚餘 1.89 GB，但 ctx ~18471 即溢出 → spill 到 host PCIe（未建模，#58）。</li>
+      <li><strong>容量</strong>（&gt;16 GB）：釘死公式 resident_footprint = weights+KV+activation = 14.11 GB；在 16 GiB 卡上 ctx 1024 尚餘 1.89 GB，但 ctx ~18471 即溢出 → spill 到 host PCIe（未建模，#58）。<em>注意：</em>footprint 省略 embedding/tied-lm_head 表（~0.78 GB INT8，gather 非 matmul row），故 margin 與 overflow ctx 皆為樂觀值（真 margin ~1.1 GB）。</li>
     </ul>
   </div>
 

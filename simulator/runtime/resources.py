@@ -22,9 +22,19 @@ class SharedBandwidth:
 
     def __init__(self, eff_BW_GBs, knee_GBs=None, interconnect_efficiency=1.0):
         self.eff_BW = float(eff_BW_GBs)
-        # default knee = single-stream eff_BW (no headroom for concurrency) unless given
-        self.knee = float(knee_GBs) if knee_GBs else float(eff_BW_GBs)
+        # default knee = single-stream eff_BW (no headroom for concurrency) unless given.
+        # Distinguish None (use default) from 0/negative (invalid) -> fail loud, never mask.
+        self.knee = float(eff_BW_GBs) if knee_GBs is None else float(knee_GBs)
         self.icn = float(interconnect_efficiency)
+        if self.eff_BW < 0:
+            raise ValueError(f"SharedBandwidth: eff_BW_GBs must be >= 0 (got {eff_BW_GBs!r})")
+        if self.knee <= 0:
+            raise ValueError(
+                f"SharedBandwidth: knee_GBs must resolve to > 0 "
+                f"(got {self.knee!r}; knee_GBs={knee_GBs!r}, eff_BW={self.eff_BW!r})")
+        if self.icn <= 0:
+            raise ValueError(
+                f"SharedBandwidth: interconnect_efficiency must be > 0 (got {interconnect_efficiency!r})")
 
     def aggregate_GBs(self, k, *, contention=True):
         """Total achievable bandwidth with k concurrent memory streams (GB/s)."""

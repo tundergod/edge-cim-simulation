@@ -22,7 +22,7 @@ from simulator.models.m7_energy import EnergyModel  # noqa: E402
 PARAMS = {
     "_doc": "M7 spec-based energy (ADR-0005). Estimated, not measured. +/-20% sensitivity.",
     "cim_tops_w": 15.0,            # vendor Metis INT8
-    "lpddr5_pj_per_bit": 4.0,      # JEDEC LPDDR5 access (assumption; cited)
+    "dram_pj_per_bit": 4.0,        # generation-neutral JEDEC LPDDR access (covers LPDDR4x/5 within +/-20%; assumption, cited)
     "pcie_pj_per_bit": 5.0,        # PCIe spec (assumption)
     "a76_core_w": 0.75,            # ARM A76 datasheet active (per core)
     "cpu_cores": 4,
@@ -62,6 +62,11 @@ def main():
     om_ok = 0.1 <= avg_power_W <= 20.0              # plausible mobile-SoC envelope
 
     # (4) +/-20% sensitivity: does "memory dominates" survive every corner?
+    # NB: cim_J assumes peak (100%) CIM utilization (ADR-0005 folds utilization=1 into the
+    # coefficient). The +/-20% band does NOT probe that assumption; what makes the conclusion
+    # robust to it is the ~240x DRAM-vs-CIM headroom below (8B decode), under which even
+    # 1-50% utilization (CIM x2..x100) keeps DRAM dominant. The 20% band is a separate,
+    # additional robustness check on the named coefficients.
     flips = []
     for sc in product([0.8, 1.2], repeat=4):
         scale = dict(zip(["cim", "dram", "pcie", "cpu"], sc))

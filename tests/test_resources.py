@@ -10,6 +10,8 @@ validated here as a shape, not against a measured knee.
 import sys
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from simulator.runtime.resources import SharedBandwidth, ComputeUnit  # noqa: E402
@@ -46,6 +48,30 @@ def test_stream_us():
     bw = SharedBandwidth(eff_BW_GBs=10.0)             # 10 GB/s
     assert abs(bw.stream_us(10e9, 1) - 1e6) < 1e-3    # 10 GB / 10 GB/s = 1 s = 1e6 us
     assert bw.stream_us(0, 1) == 0.0
+
+
+def test_invalid_knee_fails_loud():
+    # fail loud on a non-positive knee, never silently fall back to eff_BW
+    for k in (0, -1):
+        with pytest.raises(ValueError):
+            SharedBandwidth(24.2, knee_GBs=k)
+
+
+def test_invalid_eff_BW_fails_loud():
+    with pytest.raises(ValueError):
+        SharedBandwidth(-1)
+
+
+def test_invalid_interconnect_efficiency_fails_loud():
+    for e in (0, -1):
+        with pytest.raises(ValueError):
+            SharedBandwidth(24.2, interconnect_efficiency=e)
+
+
+def test_knee_zero_no_longer_silently_defaults():
+    # knee_GBs=0 must raise, NOT fall back to eff_BW (the old falsy-check masked this)
+    with pytest.raises(ValueError):
+        SharedBandwidth(24.2, knee_GBs=0)
 
 
 def test_compute_unit_defaults():

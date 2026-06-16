@@ -43,29 +43,38 @@ def _mkn(sig):
     return int(M), int(K), int(N)
 
 
-def _attn_kv_heads(sig):
-    """(kv, heads, hd) for an attention bmm sig. QK^T = [[H,Sq,hd],[H,hd,Skv]],
-    S·V = [[H,Sq,Skv],[H,Skv,hd]]. kv = the sequence axis being attended over."""
+def _attn_kv_heads(sig, role):
+    """(kv, heads, hd) for an attention bmm sig, derived from the bmm ROLE (not from
+    dim magnitudes — which swap kv/hd whenever Skv < hd, e.g. short-context decode).
+    The contracted pair a[2]==b[1] always holds; QK^T = [[H,Sq,hd],[H,hd,Skv]] so
+    hd=b[1], kv=b[2]; S·V = [[H,Sq,Skv],[H,Skv,hd]] so kv=b[1], hd=b[2]. role is
+    'qk' (first attention bmm in a block) or 'sv' (the second)."""
     ins = sig["in_shapes"]
     H = ins[0][0] if ins and ins[0] else 1
-    # kv = the larger of the two inner sequence dims (Skv); hd = head dim
     a, b = ins[0], ins[1]
-    kv = max(a[2], b[2])
-    hd = min(a[2], b[1]) if len(b) == 3 else a[2]
+    if a[2] != b[1]:
+        raise ValueError(f"attention bmm contracted axis mismatch (a[2]={a[2]} != b[1]={b[1]}): {ins}")
+    if role == "qk":
+        kv, hd = b[2], b[1]
+    elif role == "sv":
+        kv, hd = b[1], b[2]
+    else:
+        raise ValueError(f"unknown attention bmm role {role!r} (expected 'qk' or 'sv')")
     return int(kv), int(H), int(hd)
 
 
-def wl_from_row(row, model):
+def wl_from_row(row, model, *, attn_role=None):
     """Map an op_profile row (op, in_shapes, out_shape, category) -> Workload.
     dtype = the op's natural precision (matmul int8 = CIM scope; non-GEMM fp16);
-    the scheduler later decides which unit prices it."""
+    the scheduler later decides which unit prices it. `attn_role` ('qk'/'sv') tags
+    the attention bmm so _attn_kv_heads picks kv/hd by role, not by magnitude."""
     op, cat = row["op"], row["category"]
     nbytes = int(row["bytes"])
     if cat == "matmul":                                   # mm/addmm (q/k/v/o, gate/up/down, lm_head)
         M, K, N = _mkn(row)
         return Workload(op="matmul", M=M, K=K, N=N, dtype="int8", nbytes=nbytes)
     if cat == "attention" and op == "aten.bmm.default":   # QK^T / S·V (the real attention GEMM)
-        kv, heads, hd = _attn_kv_heads(row)
+        kv, heads, hd = _attn_kv_heads(row, attn_role)
         return Workload(op="attention", kv=kv, heads=heads, K=hd, dtype="fp16",
                         nbytes=nbytes, extra={"hd": hd})
     if cat == "kv_cache":                                 # DynamicCache append (memory movement)
@@ -144,18 +153,19 @@ def build_token_dag(model, phase, L, *, _model_obj=None):
         _, by = op_profile._flops_bytes({"op": s["op"], "in_shapes": in_shapes, "out_shape": out_shape})
         row = {"op": s["op"], "in_shapes": in_shapes, "out_shape": out_shape,
                "category": s["category"], "bytes": by}
-        wl = wl_from_row(row, model)
-        deps = list(s["deps"])
-        out_elems = op_profile._prod(out_shape) if out_shape else 0
         # R2 pricing_group: pair each attention block's QK^T + S·V bmm so the GPU composite
         # (m4_gpu.attn_bmm_us) is priced once. The QK^T (first bmm) is the rep (pricing_group ==
         # its own id); the S·V carries the rep's id. Non-bmm attention (scale/mask) is ungrouped.
-        pg = None
-        if s["category"] == "attention" and "hd" in wl.extra:
+        # The same pairing fixes the bmm ROLE so kv/hd are read by role, not by magnitude.
+        pg = attn_role = None
+        if s["category"] == "attention" and s["op"] == "aten.bmm.default":
             if pending_qk is None:
-                pg = i; pending_qk = i
+                pg = i; pending_qk = i; attn_role = "qk"
             else:
-                pg = pending_qk; pending_qk = None
+                pg = pending_qk; pending_qk = None; attn_role = "sv"
+        wl = wl_from_row(row, model, attn_role=attn_role)
+        deps = list(s["deps"])
+        out_elems = op_profile._prod(out_shape) if out_shape else 0
         nodes.append(OpNode(id=i, category=s["category"], wl=wl, deps=deps, bytes_streamed=by,
                             in_values=list(deps), out_value=i, out_elems=out_elems, pricing_group=pg,
                             precision=fixture_io.PRECISION_CONTRACT[s["category"]]))
@@ -214,7 +224,12 @@ def structural_check(model, phase, L):
     ok = reproduces and invariants
     detail = {"model": model, "phase": phase, "L": L, "reproduces_fixture": reproduces,
               "n_layers": nL, "softmax_n": softmax_n, "residual_joins": res_joins,
-              "embeddings": embeds, "invariants_ok": invariants}
+              "embeddings": embeds, "invariants_ok": invariants,
+              # honesty surface: reproduces_fixture is a by-construction self-consistency
+              # check (the DAG is fixture-derived); the genuinely-independent content is
+              # invariants_ok, cross-checked against op_inventory config (op_profile.Model).
+              "reproduces_fixture_is_by_construction": True,
+              "independent_content": "invariants_ok"}
     return ok, detail
 
 

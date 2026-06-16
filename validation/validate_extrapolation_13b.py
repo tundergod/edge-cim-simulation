@@ -82,7 +82,14 @@ def main():
                            if "EXTRAPOLATED beyond native envelope" in plat.price(n).get("compute_provenance", ""))
 
     # pinned capacity formula -> margins + overflow crossover context
-    weights_GB = r["model_footprint_GB"]                       # unique INT8 weights (runner footprint)
+    # runner per-op matmul footprint = sum(row.bytes x row.count) over decode matmul rows
+    # (runner.py): dominated by the INT8 weight matrices (count==n_layers, no layer double-count),
+    # plus a small per-op activation term (~3 orders below the weight matrix). NOT a deduplicated
+    # unique-weight count -> labelled honestly below, not as "unique INT8 weights".
+    # The summed decode matmul rows INCLUDE the untied lm_head (vocab*hidden INT8 ~0.78 GB) but
+    # OMIT the separate input-embedding table (a gather: category=='embedding', only the per-token
+    # slice is priced) -> footprint OPTIMISTIC by ~0.78 GB; see weights_GB_note below.
+    weights_GB = r["model_footprint_GB"]
     footprint_GB, kv_GB, act_GB = _footprint_GB(weights_GB, cfg_dims, CONTEXT)
     margin_16 = round(ENVELOPE_GB - footprint_GB, 3)
     margin_32 = round(SKU_GB - footprint_GB, 3)
@@ -119,7 +126,19 @@ def main():
                           "is_extrapolated)." % (cim_shape_extrap, len(cim_matmuls)),
         "capacity": {
             "context": CONTEXT,
-            "weights_GB": round(weights_GB, 3), "kv_GB": round(kv_GB, 4), "act_GB": round(act_GB, 4),
+            "weights_GB": round(weights_GB, 3),
+            "weights_GB_note": ("runner per-op matmul footprint = sum(row.bytes x row.count) over "
+                                "decode matmul rows; dominated by the INT8 weight matrices (no layer "
+                                "double-count) plus a small per-op activation term, NOT a deduplicated "
+                                "unique-weight count. INCLUDES the untied lm_head (vocab*hidden INT8 "
+                                "~0.78 GB, count==1) -- a matmul row that IS summed. OMITS the separate "
+                                "INPUT-EMBEDDING table (vocab*hidden INT8 ~0.78 GB), which is a gather "
+                                "(category=='embedding', only the per-token slice is priced) and never a "
+                                "matmul row. Qwen2.5-14B is UNTIED, so lm_head and the embedding table "
+                                "are distinct resident tensors -> resident_footprint_GB and the 16 GiB "
+                                "margin are OPTIMISTIC by ~0.78 GB (the omitted embedding table); "
+                                "overflow_context_16GiB is correspondingly optimistic."),
+            "kv_GB": round(kv_GB, 4), "act_GB": round(act_GB, 4),
             "resident_footprint_GB": round(footprint_GB, 3),
             "footprint_16GiB_margin_GB": margin_16, "footprint_32GiB_margin_GB": margin_32,
             "capacity_risk_16GiB": bool(margin_16 < 0),

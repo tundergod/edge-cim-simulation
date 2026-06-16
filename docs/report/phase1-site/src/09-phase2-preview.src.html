@@ -21,7 +21,7 @@
         <tr><td>Llama-3.1-8B</td><td>{{p2.l4_8b_pred}}</td><td>{{p2.l4_8b_meas}}</td><td class="pass">{{p2.l4_8b_err}}%</td></tr>
       </tbody>
     </table>
-    <div class="note"><b>非循環。</b>memory-only ablation（純 DRAM bytes / 24.2，關閉 compute）在 1B/8B <strong>超出</strong> gate（41.7% / 15.2%）——是獨立的 CIM-compute 修正項把誤差拉回 gate 內，證明通過不是把頻寬 fit 到答案上。</div>
+    <div class="note"><b>非循環。</b>memory-only ablation（純 DRAM bytes / 24.2，關閉 compute）在 1B/8B <strong>超出</strong> gate（{{p2.abl_1b_pct}}% / {{p2.abl_8b_pct}}%）——是獨立的 CIM-compute 修正項把誤差拉回 gate 內，證明通過不是把頻寬 fit 到答案上。</div>
   </div>
 
   <div class="sec">
@@ -31,7 +31,7 @@
       <caption>Topology 對照（8B；validation/reports/phase2/topology_ab.json）</caption>
       <thead><tr><th>Topology</th><th>記憶體牆</th><th>8B tok/s</th><th>誠實分級</th></tr></thead>
       <tbody>
-        <tr><td><strong>A・有 DRAM</strong>（Metis Card，on-card LPDDR4x）</td><td>24.2 GB/s</td><td>{{p2.topo_card_8b_toks}}</td><td class="pass">measured（L4 錨；重現 committed 預測，非 == 實測）</td></tr>
+        <tr><td><strong>A・有 DRAM</strong>（Metis Card，on-card LPDDR4x）</td><td>{{mem.lpddr4x_eff}} GB/s</td><td>{{p2.topo_card_8b_toks}}</td><td class="pass">measured（L4 錨；重現 committed 預測，非 == 實測）</td></tr>
         <tr><td><strong>A・無 DRAM</strong>（PCIe 卡，權重從 host 串流）</td><td>{{p2.topo_alpha_eff}} GB/s</td><td>{{p2.topo_alpha_8b_toks}}</td><td><span class="pending">counterfactual</span>（Alpha -1301 跑不了 LLM；「若能串流」估計）</td></tr>
         <tr><td><strong>B・邊緣整合</strong>（SoC 共用 LPDDR5 + NoC）</td><td>{{p2.topo_edge_eff}} GB/s</td><td>{{p2.topo_edge_8b_toks}}</td><td><span class="pending">simulated</span>（noc_efficiency 假設，無 edge silicon）</td></tr>
       </tbody>
@@ -64,7 +64,7 @@
     <ul>
       <li><strong>模型尺寸</strong>（&gt;8B）：引擎預測 {{p2.x13_toks}} tok/s。</li>
       <li><strong>CIM 形狀</strong>：{{p2.x13_cim_extrap}} / {{p2.x13_cim_total}} 個 per-decode CIM matmul 形狀<strong>超出 M1 native 量測包絡</strong>（floor 外推）——不只是「模型更大」。</li>
-      <li><strong>容量</strong>（&gt;16 GB）：釘死公式 resident_footprint = weights+KV+activation = {{p2.x13_footprint}} GB；在 16 GiB 卡上 ctx 1024 尚餘 {{p2.x13_margin16}} GB，但 ctx ~{{p2.x13_overflow_ctx}} 即溢出 → spill 到 host PCIe（未建模，#58）。</li>
+      <li><strong>容量</strong>（&gt;16 GB）：釘死公式 resident_footprint = weights+KV+activation = {{p2.x13_footprint}} GB；在 16 GiB 卡上 ctx 1024 尚餘 {{p2.x13_margin16}} GB，但 ctx ~{{p2.x13_overflow_ctx}} 即溢出 → spill 到 host PCIe（未建模，#58）。<em>注意：</em>footprint 省略 embedding/tied-lm_head 表（~0.78 GB INT8，gather 非 matmul row），故 margin 與 overflow ctx 皆為樂觀值（真 margin ~1.1 GB）。</li>
     </ul>
   </div>
 

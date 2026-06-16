@@ -3,7 +3,7 @@
  "model": "spec-based (ADR-0005): CIM 15 TOPS/W, DRAM/PCIe pJ/bit, CPU A76 W*cores*t",
  "params": {
   "cim_tops_w": 15.0,
-  "lpddr5_pj_per_bit": 4.0,
+  "dram_pj_per_bit": 4.0,
   "pcie_pj_per_bit": 5.0,
   "a76_core_w": 0.75,
   "cpu_cores": 4

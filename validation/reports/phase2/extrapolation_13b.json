@@ -31,7 +31,9 @@
     "softmax_n": 48,
     "residual_joins": 96,
     "embeddings": 1,
-    "invariants_ok": true
+    "invariants_ok": true,
+    "reproduces_fixture_is_by_construction": true,
+    "independent_content": "invariants_ok"
    }
   },
   "prefill": {
@@ -45,7 +47,9 @@
     "softmax_n": 48,
     "residual_joins": 96,
     "embeddings": 1,
-    "invariants_ok": true
+    "invariants_ok": true,
+    "reproduces_fixture_is_by_construction": true,
+    "independent_content": "invariants_ok"
    }
   }
  },
@@ -75,6 +79,7 @@
  "capacity": {
   "context": 1024,
   "weights_GB": 13.995,
+  "weights_GB_note": "runner per-op matmul footprint = sum(row.bytes x row.count) over decode matmul rows; dominated by the INT8 weight matrices (no layer double-count) plus a small per-op activation term, NOT a deduplicated unique-weight count. INCLUDES the untied lm_head (vocab*hidden INT8 ~0.78 GB, count==1) -- a matmul row that IS summed. OMITS the separate INPUT-EMBEDDING table (vocab*hidden INT8 ~0.78 GB), which is a gather (category=='embedding', only the per-token slice is priced) and never a matmul row. Qwen2.5-14B is UNTIED, so lm_head and the embedding table are distinct resident tensors -> resident_footprint_GB and the 16 GiB margin are OPTIMISTIC by ~0.78 GB (the omitted embedding table); overflow_context_16GiB is correspondingly optimistic.",
   "kv_GB": 0.1007,
   "act_GB": 0.0105,
   "resident_footprint_GB": 14.106,

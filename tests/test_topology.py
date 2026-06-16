@@ -81,6 +81,18 @@ def test_mismatch_raises_at_config_boundary(topology, memory_spec):
         SimConfig.from_dict(_cfg(topology, memory_spec))
 
 
+@pytest.mark.parametrize("topology", ["cim_topo_edge", "cim_topo_alpha"])
+def test_bw_efficiency_on_non_card_topology_raises_at_config_boundary(topology):
+    # bw_efficiency is a card-only peak-scaling knob; non-card topologies have a physics-derived
+    # wall. Must fail loud at the SimConfig boundary too (mirrors the Platform run() guard, #63).
+    with pytest.raises(ValueError):
+        SimConfig.from_dict(_cfg(topology, bw_efficiency=0.7))
+
+
+def test_bw_efficiency_on_card_accepted():
+    SimConfig.from_dict(_cfg("cim_topo_card", bw_efficiency=0.7))
+
+
 def test_mismatch_raises_at_runner_boundary():
     # construct a valid card cfg, then mutate to an inconsistent memory_spec -> run() re-validates
     cfg = SimConfig.from_dict(_cfg("cim_topo_card"))

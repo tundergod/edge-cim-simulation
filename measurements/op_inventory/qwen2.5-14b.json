@@ -20278,5 +20278,19 @@
     }
    ]
   }
+ },
+ "expected_ops_check": {
+  "covered": {
+   "matmul (QKV/O/FFN/lm_head)": true,
+   "attention QK^T / S.V": true,
+   "softmax": true,
+   "RMSNorm": true,
+   "RoPE": true,
+   "SwiGLU": true,
+   "residual add": true,
+   "embedding": true
+  },
+  "unmatched": [],
+  "all_semantic_covered": true
  }
 }

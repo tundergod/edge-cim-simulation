@@ -83,7 +83,9 @@ def load():
     m5 = _load("phase1.1/m5.json")
     sweep = _load_meas("op_inventory/sweep_matrix.json")
     # Phase 2.x system-level results (committed reports/phase2/*.json)
-    p2l4 = _load("phase2/e2e_l4.json")["mechanism_independent_pricing"]
+    _p2e2e = _load("phase2/e2e_l4.json")
+    p2l4 = _p2e2e["mechanism_independent_pricing"]
+    p2abl = _p2e2e["memory_only_ablation"]
     p2topo = _load("phase2/topology_ab.json")
     p2sens = _load("phase2/sensitivity.json")
     p2hold = _load("phase2/holdout.json")
@@ -254,6 +256,9 @@ def load():
         "p2.l4_8b_pred": _f(p2l4["llama-3.1-8b"]["pred_tok_s"], 2),                    # 2.78
         "p2.l4_8b_meas": _f(p2l4["llama-3.1-8b"]["measured_tok_s"], 2),                # 2.70
         "p2.l4_8b_err":  _p1(p2l4["llama-3.1-8b"]["rel_error"]),                       # 3.1
+        # memory-only ablation (compute OFF) — anti-circularity evidence, injected not hand-typed
+        "p2.abl_1b_pct": _p1(p2abl["llama-3.2-1b"]["rel_error"]),                      # 41.7
+        "p2.abl_8b_pct": _p1(p2abl["llama-3.1-8b"]["rel_error"]),                      # 15.2
         "p2.topo_card_8b_toks":  _f(_t8["cim_topo_card"]["tok_s"], 2),                 # 2.78
         "p2.topo_alpha_8b_toks": _f(_t8["cim_topo_alpha"]["tok_s"], 2),                # 0.49
         "p2.topo_edge_8b_toks":  _f(_t8["cim_topo_edge"]["tok_s"], 2),                 # 3.36
@@ -274,7 +279,7 @@ def load():
         "p2.x13_cim_extrap": _i(p2x13["cim_shape_extrapolated_count"]),                # 241
         "p2.x13_cim_total":  _i(p2x13["cim_matmul_count"]),                            # 337
         "p2.mp_hetero_8b_pct": _p0(p2mp["models"]["llama-3.1-8b"]["cimhetero_over_allcim"]),  # 59
-        "p2.mp_conv_8b":     _i(p2mp["models"]["llama-3.1-8b"]["conversions_per_decode_token"]),  # 112
+        "p2.mp_conv_8b":     _i(p2mp["models"]["llama-3.1-8b"]["conversions_per_decode_token"]),  # 96
     }
 
 

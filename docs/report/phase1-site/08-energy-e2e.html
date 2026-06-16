@@ -16,7 +16,7 @@
   </div>
 </header>
 
-<div class="chips"><span class="chip off" title="N/A for energy — NO power telemetry on either board (ADR-0005); energy never measured. (Distinct: the e2e recompose 8B tok/s IS silicon-validated — that is throughput, not power.)">calibrated</span><span class="chip on" title="validation/reports/phase1.1/recompose.json › fit_BW_GBs (two-pillar 1B+3B BW fit) -> pred_8b_tok_s, rel_error_8b=0.095">fitted</span><span class="chip off" title="none — no heavy-sim for M7 or e2e; recompose is an analytic cross-model hold-out.">simulated</span><span class="chip on warn" title="simulator/models/params/m7_energy.json › cim_tops_w=15.0, lpddr5_pj_per_bit=4.0, pcie_pj_per_bit=5.0, a76_core_w=0.75 — spec/datasheet constants + coarse activity factor (ADR-0005)">assumption</span><span class="chip on" title="vendor/datasheet power numbers (Metis 15 TOPS/W, LPDDR5 4 pJ/bit, PCIe 5 pJ/bit, A76 0.75 W/core) taken verbatim as energy coefficients.">borrowed</span></div>
+<div class="chips"><span class="chip off" title="N/A for energy — NO power telemetry on either board (ADR-0005); energy never measured. (Distinct: the e2e recompose 8B tok/s IS silicon-validated — that is throughput, not power.)">calibrated</span><span class="chip on" title="validation/reports/phase1.1/recompose.json › fit_BW_GBs (two-pillar 1B+3B BW fit) -> pred_8b_tok_s, rel_error_8b=0.095">fitted</span><span class="chip off" title="none — no heavy-sim for M7 or e2e; recompose is an analytic cross-model hold-out.">simulated</span><span class="chip on warn" title="simulator/models/params/m7_energy.json › cim_tops_w=15.0, dram_pj_per_bit=4.0, pcie_pj_per_bit=5.0, a76_core_w=0.75 — spec/datasheet constants + coarse activity factor (ADR-0005)">assumption</span><span class="chip on" title="vendor/datasheet power numbers (Metis 15 TOPS/W, JEDEC LPDDR 4 pJ/bit, PCIe 5 pJ/bit, A76 0.75 W/core) taken verbatim as energy coefficients.">borrowed</span></div>
 
 <section class="unit">
 
@@ -50,7 +50,7 @@
 
     <h3>能量模型：活動因子 × 規格功率</h3>
     <div class="eq">cim_proj_mJ    = (op_count / cim_tops_w) · 1e-9            <span class="c"># 投影算力 × 能效</span>
-dram_stream_mJ = weight_bits · lpddr5_pj_per_bit · 1e-9   <span class="c"># 串權重的搬移能量</span>
+dram_stream_mJ = weight_bits · dram_pj_per_bit · 1e-9   <span class="c"># 串權重的搬移能量</span>
 cpu_support_mJ = a76_core_w · cpu_cores · t_support_s · 1e3   <span class="c"># 功率 × 時間</span>
 total_mJ       = cim_proj + dram_stream + cpu_support</div>
     <p><strong>模型很簡單，關鍵在每個常數都是規格推算（assumption）、不是量測</strong>。能量 = 活動因子（搬幾個 bit、算幾個 op、CPU 幫忙多久）× 硬體規格功率。每個參數的物理意義與來源：</p>
@@ -138,7 +138,7 @@ pred_8B = BW_eff / weight_bytes(8B)                    <span class="c"># 8B 外�
     <ol>
       <li>能量分解：<code>validation/reports/phase1.1/m7.json › per_token_8b_decode_mJ / per_token_total_mJ / dominant_term</code></li>
       <li>能量敏感度：<code>validation/reports/phase1.1/m7.json › sensitivity_pm20pct (corners_tested / conclusion_flips) / sanity</code></li>
-      <li>能量規格常數：<code>simulator/models/params/m7_energy.json</code>（cim_tops_w / lpddr5_pj_per_bit / pcie_pj_per_bit / a76_core_w / cpu_cores）</li>
+      <li>能量規格常數：<code>simulator/models/params/m7_energy.json</code>（cim_tops_w / dram_pj_per_bit / pcie_pj_per_bit / a76_core_w / cpu_cores）</li>
       <li>能量 contract / 限制：<code>validation/contracts/m7.yaml</code>（measurement_sources = none，ADR-0005）</li>
       <li>recompose hold-out：<code>validation/reports/phase1.1/recompose.json › fit_BW_GBs / pred_8b_tok_s / measured_8b_tok_s / rel_error_8b / GATE_within_25pct</code></li>
       <li>per-token 權重位元組 / 量測 tok/s：<code>validation/reports/phase1.1/recompose.json › per_token_weight_bytes / measured_tok_s_1c</code></li>

@@ -80,9 +80,9 @@
     {"label": "simulated", "on": false,
      "src": "none — no heavy-sim for M7 or e2e; recompose is an analytic cross-model hold-out."},
     {"label": "assumption", "on": true, "warn": true,
-     "src": "simulator/models/params/m7_energy.json › cim_tops_w=15.0, lpddr5_pj_per_bit=4.0, pcie_pj_per_bit=5.0, a76_core_w=0.75 — spec/datasheet constants + coarse activity factor (ADR-0005)"},
+     "src": "simulator/models/params/m7_energy.json › cim_tops_w=15.0, dram_pj_per_bit=4.0, pcie_pj_per_bit=5.0, a76_core_w=0.75 — spec/datasheet constants + coarse activity factor (ADR-0005)"},
     {"label": "borrowed", "on": true,
-     "src": "vendor/datasheet power numbers (Metis 15 TOPS/W, LPDDR5 4 pJ/bit, PCIe 5 pJ/bit, A76 0.75 W/core) taken verbatim as energy coefficients."}
+     "src": "vendor/datasheet power numbers (Metis 15 TOPS/W, JEDEC LPDDR 4 pJ/bit, PCIe 5 pJ/bit, A76 0.75 W/core) taken verbatim as energy coefficients."}
   ],
   "12-thermal": [
     {"label": "calibrated", "on": true,
