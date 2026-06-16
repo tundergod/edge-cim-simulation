@@ -61,7 +61,7 @@
       <li><strong>Topology A/B/C 驗證。</strong>同 workload 跑三 topology；card 重現 committed 預測（非 == 實測，反循環）；結果：A・無 DRAM 慢 5.7×、edge 快 1.208×。<span class="tag">card measured · alpha counterfactual · edge simulated</span></li>
       <li><strong>敏感度（L5）。</strong>±20% 釘在 eff_BW 錨 24.2（19.36↔29.04）；結論穩健＝通過（頻寬主導 + 排序維持）；energy 報 band；knee/icn 只在 k&gt;1 競爭路徑（SIMULATED，排除在 serial 結論外）。</li>
       <li><strong>Hold-out。</strong>閉式 fit_BW 僅用 1B+3B 擬合→預測 8B＝9.5%（真正 leave-8B-out）；完整引擎預測 8B＝3.1%（更準、未針對 8B 調參；backbone 部分 in-sample 已明列）。</li>
-      <li><strong>13B/32GB 級外推。</strong>Qwen2.5-14B 經 ADR-0007 meta-trace 餵同一引擎；三外推維度全標（模型尺寸 / CIM 形狀 241/337 超包絡 / 容量）；容量公式 footprint 14.11 GB，ctx ~18471 溢出 16 GiB（footprint 省略 embedding/tied-lm_head ~0.78 GB INT8，故 margin/overflow ctx 為樂觀值）。<span class="tag">extrapolated · NOT validated</span></li>
+      <li><strong>13B/32GB 級外推。</strong>Qwen2.5-14B 經 ADR-0007 meta-trace 餵同一引擎；三外推維度全標（模型尺寸 / CIM 形狀 241/337 超包絡 / 容量）；容量公式 footprint 14.11 GB，ctx ~18471 溢出 16 GiB（footprint 省略獨立的 input-embedding gather 表 ~0.78 GB INT8；Qwen2.5-14B untied、lm_head 已計入，故 margin/overflow ctx 為樂觀值）。<span class="tag">extrapolated · NOT validated</span></li>
       <li><strong>混合精度限制。</strong>明列為 limitation：輸出品質未在目標 silicon 量測（D3）；CimHetero 比 AllCim 慢（非加速）；無並發 silicon（#52）。</li>
       <li><strong>報告注入。</strong>結果以 <code>&#123;&#123;key&#125;&#125;</code> 從 committed JSON 注入本站，<code>build.py --strict</code> 對未解析 key fail。並修正過時的「M3/M6 尚未實作」文案（現已實作）。</li>
     </ol>

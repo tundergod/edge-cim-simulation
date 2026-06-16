@@ -72,8 +72,9 @@ class Platform:
     @property
     def mem_domains(self):
         """The two memory pools the residency rule (R7) routes ops to: the shared `dram`
-        (the measured 24.2 GB/s on-card LPDDR4x — the Metis Card's 16 GiB device DRAM, where
-        weights/KV/embedding are resident, metered by the M3 engine) and `cpu_cache` (the A76
+        (the resolved decode memory wall for THIS topology — the measured 24.2 GB/s on-card LPDDR4x
+        on cim_topo_card; the counterfactual PCIe 3.9 GB/s on alpha; the simulated LPDDR5×noc on edge —
+        where weights/KV/embedding are resident, metered by the M3 engine) and `cpu_cache` (the A76
         tiered on-chip cache, priced INSIDE m4_cpu for CPU-support ops — a labelled proxy for
         the all-AIPU Card's on-chip support; NEVER the DRAM pool, which removes the S-dc
         double-count)."""
