@@ -104,8 +104,8 @@ def main():
     sm_lo = cpu_c.op_us("softmax_kv128", "llama-3.1-8b", kv=128)
     sm_hi = cpu_c.op_us("softmax_kv1024", "llama-3.1-8b", kv=1024)
     chk(sm_hi > sm_lo, f"CPU monotonic_in_op_size: softmax kv1024 {sm_hi:.1f}us > kv128 {sm_lo:.1f}us")
-    c1 = cpu_c.predict(Workload(op="swiglu", N=14336, extra={"model": "llama-3.1-8b", "cores": 1}))["latency_us"]
-    c2 = cpu_c.predict(Workload(op="swiglu", N=14336, extra={"model": "llama-3.1-8b", "cores": 2}))["latency_us"]
+    c1 = cpu_c.predict(Workload(op="swiglu", N=14336, extra={"model": "llama-3.1-8b", "cores": 1, "dtype": "fp32"}))["latency_us"]
+    c2 = cpu_c.predict(Workload(op="swiglu", N=14336, extra={"model": "llama-3.1-8b", "cores": 2, "dtype": "fp32"}))["latency_us"]
     chk(c2 < c1, f"CPU multicore_lowers_compute: swiglu 2-core {c2:.1f}us < 1-core {c1:.1f}us")
 
     print("\n=== 6. engine interface conformance test still green ===")
