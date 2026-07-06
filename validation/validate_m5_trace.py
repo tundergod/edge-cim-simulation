@@ -12,6 +12,7 @@ Writes validation/reports/phase1.1/m5.json
 Run: ./.venv/bin/python validation/validate_m5_trace.py
 """
 import json
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -56,7 +57,8 @@ def main():
         print(f"M5 {m:14s}: covered={r['semantic_covered']} distinct={r['n_distinct_ops']} "
               f"rows={r['n_profile_rows']} orphans={len(r['orphan_ops'])} PASS={r['pass']}")
     print(f"M5 pass_all={all_ok}")
+    return 0 if all_ok else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

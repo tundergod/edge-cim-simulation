@@ -102,7 +102,8 @@ def main():
           f"avg_power={s['implied_avg_power_W']}W(plausible={s['implied_avg_power_W_plausible']}) "
           f"no_flip_pm20={s['memory_dominates_robust_to_pm20pct']}")
     print(f"  PASS={all(s[k] for k in bool_checks)}")
+    return 0 if all(s[k] for k in bool_checks) else 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

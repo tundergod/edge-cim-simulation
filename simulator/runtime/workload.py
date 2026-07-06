@@ -167,6 +167,10 @@ def build_token_dag(model, phase, L, *, _model_obj=None):
         nodes.append(OpNode(id=i, category=s["category"], wl=wl, deps=deps, bytes_streamed=by,
                             in_values=list(deps), out_value=i, out_elems=out_elems, pricing_group=pg,
                             precision=fixture_io.PRECISION_CONTRACT[s["category"]]))
+    if pending_qk is not None:                    # fail-loud: a dangling QK^T with no S·V partner means
+        raise ValueError(                         # an odd attention-bmm count -> role tagging (qk/sv) is
+            f"{model} {phase}: odd attention-bmm count — QK^T at node {pending_qk} has no S·V partner; "
+            f"the by-role kv/hd tagging assumes paired bmms (was silently relying on even counts).")
     return Dag(nodes)
 
 

@@ -7,7 +7,6 @@ Regenerable from committed JSON: the on-board heat campaign (measurements/metis_
 
 Run: ./.venv/bin/python tools/plotting/site_m8.py
 """
-import json
 import sys
 from pathlib import Path
 
@@ -20,12 +19,11 @@ import numpy as np  # noqa: E402
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "tools/plotting"))
 import _style as S  # noqa: E402
+from _site_style import load, HERO, WARM, INK, SOFT, PAPER, GRID  # noqa: E402  (rcParams/_grid differ here, stay local)
 
 HEAT = ROOT / "measurements/metis_card/thermal_heat_20260612.json"
 FIT = ROOT / "validation/reports/phase0.4/thermal.json"
 OUT = ROOT / "docs/figures/phase1-site"
-HERO = "#0072B2"; WARM = "#C45A12"; OK = "#1b7f5a"; INK = "#17150f"; SOFT = "#5b554a"
-PAPER = "#fbf6ec"; GRID = "#e8e1d2"
 
 mpl.rcParams.update({
     "font.family": "sans-serif", "font.sans-serif": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
@@ -36,10 +34,6 @@ mpl.rcParams.update({
     "axes.edgecolor": "#888", "xtick.color": "#555", "ytick.color": "#555",
     "axes.labelcolor": INK, "text.color": INK, "legend.frameon": False, "figure.dpi": 150,
 })
-
-
-def load(p):
-    return json.loads(Path(p).read_text())
 
 
 def _grid(ax):

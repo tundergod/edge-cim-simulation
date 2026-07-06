@@ -147,6 +147,31 @@ def test_attn_kv_hd_correct_for_short_context():
                 f"{m} decode L={L}: hd={n.wl.extra['hd']} != config head_dim {hd_cfg}")
 
 
+def test_odd_attention_bmm_count_fails_loud():
+    # the pending_qk parity guard (build_token_dag): a QK^T bmm with no S·V partner means the
+    # by-role kv/hd tagging (qk/sv) assumed paired bmms and silently relied on an even count.
+    # Prime _STRUCT_CACHE with a minimal HERMETIC one-node struct (a single attention
+    # aten.bmm.default, no partner) so _load_structure returns it without touching real
+    # fixtures — the struct shape matches what _load_structure normally produces: a list of
+    # {op, category, deps, tin, tout} where tin/tout are op_profile shape "templates" (a plain
+    # int list here, i.e. length-independent, since L doesn't matter for this guard).
+    from simulator.runtime import workload
+    model, phase = "fake-odd-attn-model", "decode"
+    key = (model, phase)
+    assert key not in workload._STRUCT_CACHE, "test model name collided with a cached struct"
+    struct = [{"op": "aten.bmm.default", "category": "attention", "deps": [],
+              "tin": [[1, 1, 64], [1, 64, 128]], "tout": [1, 1, 128]}]
+    workload._STRUCT_CACHE[key] = struct
+    try:
+        workload.build_token_dag(model, phase, 10)
+    except ValueError as e:
+        assert "odd attention-bmm count" in str(e)
+    else:
+        raise AssertionError("odd attention-bmm count (dangling QK^T) not rejected")
+    finally:
+        del workload._STRUCT_CACHE[key]
+
+
 def test_categories_are_known():
     from simulator.runtime.dag import CATEGORIES
     dag = build_token_dag("llama-3.2-1b", "decode", 128)

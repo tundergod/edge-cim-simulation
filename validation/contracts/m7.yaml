@@ -7,6 +7,6 @@ acceptance_criteria:
   - {type: sensitivity, rule: "qualitative conclusion (memory dominates) robust to +/-20% on every coefficient"}
 spec_constants:
   - {cim_tops_w: 15.0, source: vendor Metis INT8}
-  - {lpddr5_pj_per_bit: 4.0, pcie_pj_per_bit: 5.0, a76_core_w: 0.75}   # assumptions, cited
+  - {dram_pj_per_bit: 4.0, pcie_pj_per_bit: 5.0, a76_core_w: 0.75}   # assumptions, cited
 limitation: "energy ESTIMATED not measured; conclusions must hold under +/-20% (ADR-0005)"
 sample_strategy: n/a

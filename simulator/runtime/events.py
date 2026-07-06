@@ -59,6 +59,9 @@ def run_serial(dag, platform, bw, *, price_compute=True):
         c = float(platform.compute_us(n)) if price_compute else 0.0
         # only DRAM-domain bytes hit the 24.2 GB/s wall; cpu_cache bytes are already inside
         # compute_us via m4_cpu (the S-dc double-count fix).
+        # WATCH (#67): 24.2 was fit on WEIGHT bytes only; KV/attn/embedding stream through this same
+        # pool -> latent double-count. Resolve the weight-only-vs-all-traffic basis (number-changing, not
+        # in the 2.4 hardening scope).
         m = bw.stream_us(n.bytes_streamed, 1) if (n.bytes_streamed > 0 and n.mem_domain != "cpu_cache") else 0.0
         total += max(c, m)
     return total
@@ -132,6 +135,7 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
                     compute_done_at[nid] = clock + ct
                     # only DRAM-domain bytes contend on the shared channel; cpu_cache bytes
                     # are priced inside compute_us (m4_cpu) and don't drag the DRAM pool.
+                    # WATCH (#67): same weight-only-vs-all-traffic double-count as run_serial above.
                     if node.bytes_streamed > 0 and node.mem_domain != "cpu_cache":
                         active_mem[nid] = float(node.bytes_streamed)
                     progressed = True

@@ -182,6 +182,18 @@ def test_run_revalidates_mutated_config():
     raise AssertionError("run() did not re-validate a mutated precision_boundary_placement")
 
 
+def test_nonanalytic_engine_backend_not_implemented():
+    # only 'analytic' engine backends are wired into the 2.1 runtime; ramulator2/onnxim/scalesim
+    # heavy backends are accepted by SimConfig (a later-wave knob) but must fail loud at run().
+    cfg = SimConfig.from_dict({"workload": {"model": "llama-3.2-1b"},
+                               "platform": {"engine": {"cim": "ramulator2"}}})
+    try:
+        run(cfg)
+    except NotImplementedError:
+        return
+    raise AssertionError("engine={'cim': 'ramulator2'} not rejected as NotImplementedError")
+
+
 def test_unknown_scheduler_rejected():
     cfg = _cfg("llama-3.2-1b")
     cfg.scheduler = "nope"

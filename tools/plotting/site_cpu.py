@@ -13,13 +13,11 @@ Regenerable from committed JSON only. Writes PNG (+PDF/SVG) to docs/figures/phas
 
 Run: ./.venv/bin/python tools/plotting/site_cpu.py
 """
-import json
 import sys
 from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib as mpl  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
@@ -27,6 +25,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools/plotting"))
 import _style as S  # noqa: E402
+from _site_style import apply_site_style, load, _grid, HERO, WARM, INK, SOFT, PAPER, GRID  # noqa: E402
 from simulator.models.m4_cpu import CpuModel  # noqa: E402
 
 SPEC = ROOT / "simulator/specs/cpu_rk3588.json"
@@ -35,35 +34,12 @@ INSTR = ROOT / "simulator/models/params/m4_cpu_instrcount.json"
 REPORT = ROOT / "validation/reports/phase1.2/m4_cpu.json"
 OUT = ROOT / "docs/figures/phase1-site"
 
-HERO = "#0072B2"; WARM = "#C45A12"; OK = "#1b7f5a"; GREY = "#b9b09c"
-INK = "#17150f"; SOFT = "#5b554a"; PAPER = "#fbf6ec"; GRID = "#e8e1d2"
-
 # ops grouped: exp()-driven (cost driver, warm) vs the rest (hero blue)
 EXP_OPS = {"softmax", "swiglu"}
 OP_LABEL = {"residual": "residual", "rmsnorm": "rmsnorm", "rope_apply": "rope_apply",
             "swiglu": "swiglu", "softmax": "softmax", "sampling_argmax": "sampling\nargmax"}
 
-mpl.rcParams.update({
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
-    "svg.fonttype": "none", "pdf.fonttype": 42,
-    "font.size": 9, "axes.titlesize": 10, "axes.labelsize": 9.5,
-    "xtick.labelsize": 8.5, "ytick.labelsize": 8.5, "legend.fontsize": 8,
-    "axes.spines.right": False, "axes.spines.top": False,
-    "axes.linewidth": 0.9, "axes.edgecolor": "#888",
-    "xtick.color": "#555", "ytick.color": "#555",
-    "axes.labelcolor": INK, "text.color": INK,
-    "legend.frameon": False, "figure.dpi": 150,
-})
-
-
-def load(p):
-    return json.loads(Path(p).read_text())
-
-
-def _grid(ax):
-    ax.grid(True, which="major", color=GRID, lw=0.8, zorder=0)
-    ax.set_axisbelow(True)
+apply_site_style()
 
 
 def _meas_pred():

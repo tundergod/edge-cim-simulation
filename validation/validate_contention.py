@@ -26,10 +26,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 from simulator.runtime.resources import SharedBandwidth  # noqa: E402
+from simulator.specs.loader import load_spec  # noqa: E402
 
 MC = ROOT / "measurements/metis_card"
 OUT = ROOT / "validation/reports/phase2"
 EFF_BW = 24.2                                  # measured on-card LPDDR4x single-stream anchor
+assert EFF_BW == load_spec("mem_lpddr4x")["eff_BW_GBs"], \
+    "contention ANCHOR EFF_BW desynced from mem_lpddr4x spec eff_BW_GBs"
 
 
 def main():
@@ -82,7 +85,7 @@ def main():
           f"(knee calibrated to it; measured {meas_ratio}) — calibration, NOT validation")
     print(f"  GENUINE content = SHAPE: rising-then-saturating={rising_then_flat}  "
           f"contention-off-linear={off_linear}")
-    return 0
+    return 0 if (rising_then_flat and off_linear) else 1
 
 
 if __name__ == "__main__":

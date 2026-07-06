@@ -83,7 +83,8 @@ class MemoryModel(UnitEngine):
         """Time one memory op. `op='pcie'` needs a topology spec; stream/kv-append need a
         memory spec (or the Card's on-card DRAM). bytes come from wl.nbytes (or kv)."""
         if wl.op == "pcie":
-            assert self.is_topo and self.pcie_BW_GBs, "op='pcie' needs a CIM topology spec with pcie_BW_GBs"
+            if not (self.is_topo and self.pcie_BW_GBs):
+                raise ValueError("op='pcie' needs a CIM topology spec with pcie_BW_GBs")
             bw_us = wl.nbytes / (self.pcie_BW_GBs * 1e9) * 1e6
             lat = self.floor_us + bw_us
             bound = "floor" if self.floor_us > 0 else "memory"
@@ -91,7 +92,8 @@ class MemoryModel(UnitEngine):
                     f"[{'measured' if self.floor_us else 'architecture (card, no floor)'}], "
                     f"BW={self.pcie_BW_GBs}GB/s [measured]")
         else:  # stream / kv_append: pure-bandwidth at the spec's effective BW
-            assert self.eff_BW_GBs, "stream/kv-append needs a memory spec (eff_BW_GBs) or on-card DRAM"
+            if not self.eff_BW_GBs:
+                raise ValueError("stream/kv-append needs a memory spec (eff_BW_GBs) or on-card DRAM")
             nbytes = wl.nbytes if wl.nbytes else wl.kv
             lat = nbytes / (self.eff_BW_GBs * 1e9) * 1e6
             bound = "memory"
