@@ -55,7 +55,7 @@ class CimTileModel:
         self.mt_floor_gops = p.get("multitile_floor_gops")         # DRAM-spill memory-bound floor
         self.native_envelope_kn = p.get("native_envelope_kn", self.native_max_kn)  # max natively measured K*N
         # prefill (M>1): canonical-tile latency is AFFINE in M, tile_lat=a+b*M (Card-measured by
-        # fit_cim_prefill.py at M<={1,64,128,256}; M>prefill_M_max extrapolated). None until fit.
+        # fit_cim_prefill.py on the dense sweep M=2..prefill_M_max (508); M>prefill_M_max extrapolated). None until fit.
         self.prefill_a_us = p.get("prefill_tile_a_us")
         self.prefill_b_us = p.get("prefill_tile_b_us")
         self.prefill_M_max = p.get("prefill_M_max")
@@ -77,22 +77,23 @@ class CimTileModel:
         (a partial last tile adds less, not a full tile). K*N > native_max_kn is extrapolation.
 
         M>1 (PREFILL, Card-measured): the 2048x2048 weight tile's load is amortized over M
-        activation columns -> tile latency is AFFINE in M (a + b*M, fit on the FULL-tile prefill
-        points M in {64,128,256}; the M=1 decode point is NOT in this fit). A GEMM costs
+        activation columns -> tile latency is AFFINE in M (a + b*M, fit on the dense full-tile
+        prefill sweep M=2..prefill_M_max (508); the M=1 decode point is NOT in this fit). A GEMM costs
         (K*N / W^2) * (a + b*M): FRACTIONAL tile area (NOT ceil), so compute and weight-load scale
         with the actual K*N -- a partial-width GEMM is not over-charged a full tile, and the value
         equals the integer tile count for W-multiple shapes. Linear-in-M extrapolation of the DECODE
         law would over-predict ~80x. UNVALIDATED where prefill_extrapolated() is True: M>prefill_M_max
-        (256), M<prefill_M_min (the 1<M<64 below-fit band), or partial-width tiles (K or N not a
-        multiple of W) -- the fit used only full tiles at M in {64,128,256}.
+        (508; M=511/512 fail to compile), or partial-width tiles (K or N not a multiple of W) --
+        the fit used only full 2048x2048 tiles.
 
         NO monotonicity clamp across the decode<->prefill boundary (issues #35/#39): decode (M=1) and
-        prefill (M>=64) are two separately-calibrated models with NO data between, disagreeing up to
+        prefill (M=2..508) are two separately-calibrated models with NO data between, disagreeing up to
         ~2.5x at the narrow-K corner. Any clamp either over-charges partial-width (#39) or mixes cost
         bases (#35). So the un-bridged region -- where the prefill value can dip BELOW the M=1 decode
-        value -- is surfaced HONESTLY by prefill_extrapolated()==True rather than fake-monotonized. In
-        the CALIBRATED region (M>=64, full-width) prefill is monotone in M and sits above the M=1 decode.
+        value -- is surfaced HONESTLY by prefill_extrapolated()==True rather than fake-monotonized.
         """
+        if M <= 0 or K <= 0 or N <= 0:
+            raise ValueError(f"dev_lat_us requires M,K,N > 0; got M={M}, K={K}, N={N}")
         if M <= 1:
             return self._decode_lat_us_full(K, N) * M   # M=1 = the calibrated decode floor (linear in M)
         if self.prefill_a_us is None:
@@ -133,16 +134,18 @@ class CimTileModel:
         return 2.0 * kn / (self.mt_floor_gops * 1e9) * 1e6
 
     def is_extrapolated(self, K, N):
-        """True if (K,N) is beyond the natively measured envelope. Single-tile (both dims <= W) and
-        multi-tile up to native_envelope_kn are Card-measured; beyond that the spill floor is
-        memory-bound-linear extrapolated."""
+        """True if (K,N) is beyond the natively measured M=1/K*N envelope ONLY. Single-tile (both dims
+        <= W) and multi-tile up to native_envelope_kn are Card-measured; beyond that the spill floor is
+        memory-bound-linear extrapolated. Prefill (M>1) extrapolation is NOT covered here -- use
+        prefill_extrapolated() for the M-axis (M>prefill_M_max / partial-width) calibration limits."""
         return K * N > self.native_envelope_kn
 
     def prefill_extrapolated(self, M, K, N):
-        """True if an M>1 prefill prediction is outside the calibrated range: M>prefill_M_max (only
-        M<=256 compiles/was measured), M<prefill_M_min (below the M>=64 fit basis -- 1<M<64 is
-        extrapolation, NOT calibrated), or a partial-width tile (K or N not a multiple of W -- the
-        affine fit used only full 2048x2048 tiles, so sub-tile-width prefill is uncalibrated)."""
+        """True if an M>1 prefill prediction is outside the calibrated range: M>prefill_M_max (508;
+        M=511/512 fail to compile), M<prefill_M_min (below the dense fit basis -- prefill_M_min =
+        min(prefill_M_fit) = 2, so M=2..508 IS calibrated), or a partial-width tile (K or N not a
+        multiple of W -- the affine fit used only full 2048x2048 tiles, so sub-tile-width prefill is
+        uncalibrated)."""
         W = self.width
         return (M > (self.prefill_M_max or M) or M < (self.prefill_M_min or 0)
                 or (K % W != 0) or (N % W != 0))

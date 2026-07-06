@@ -23,7 +23,7 @@ from pathlib import Path
 _KNOWN_TOP = {"workload", "platform", "scheduler", "tunables", "ablations", "sweep", "_doc"}
 _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine"}
-_KNOWN_SCHED = {"policy", "op_unit_overrides", "precision_boundary_placement"}
+_KNOWN_SCHED = {"policy", "precision_boundary_placement"}
 _KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor", "pipeline"}
 _KNOWN_ABL = {"concurrency_off", "contention_off", "compute_off"}
 
@@ -31,6 +31,20 @@ _CAL_MEMORY = "mem_lpddr4x"        # the measured 24.2 GB/s decode anchor
 _CAL_TOPOLOGY = "cim_topo_card"    # the L4-anchored on-card-DRAM topology
 _ENVELOPE_GB = 16                  # largest measured M.2 SKU
 _SILICON_BACKENDS = {"analytic"}   # analytic CIM/CPU/GPU = silicon-calibrated; others = simulated
+
+# Wave 2.3: the three wired topologies + their REQUIRED memory_spec (the single physics source is
+# the topology spec; memory_spec is a consistency tag). None = no on-card DRAM (eff_BW from PCIe) ->
+# reject any explicit LPDDR memory_spec as misleading. memory_spec defaults to a SENTINEL (None) so
+# "omitted" is distinguishable from "explicitly set" (needed for the alpha+omitted case).
+_VALID_TOPOLOGIES = {"cim_topo_card", "cim_topo_alpha", "cim_topo_edge"}
+_TOPO_MEMORY = {"cim_topo_card": "mem_lpddr4x", "cim_topo_edge": "mem_lpddr5", "cim_topo_alpha": None}
+
+# The wired scheduler names. runner.run() (which imports the actual SCHEDULERS registry) is the
+# authoritative check; config cannot import it (layering), so this small frozenset lets the
+# user-input contract reject an unknown/garbage scheduler at construction instead of silently
+# provenance-labelling it as a real "simulated heterogeneous placement". Keep in sync with
+# simulator/runtime/scheduler.py SCHEDULERS.
+_KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero"})
 
 
 def _reject_unknown(d, known, where):
@@ -58,7 +72,7 @@ class SimConfig:
     context: int = 1024
     batch: int = 1
     task: str | None = None
-    memory_spec: str = _CAL_MEMORY
+    memory_spec: str | None = None      # SENTINEL: None = use the topology's required spec (resolved)
     topology: str = _CAL_TOPOLOGY
     memory_capacity_GB: int = 16
     bw_efficiency: float | None = None
@@ -68,7 +82,8 @@ class SimConfig:
     precision_boundary_placement: str = "consumer"   # which unit pays a conversion op (2.2b): consumer|producer
     knee_GBs: float | None = None
     interconnect_efficiency: float = 1.0
-    concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; no effect on the 2.1 serial path
+    concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; not wired on the 2.1
+                                               # serial path (a non-default value is rejected fail-loud in validate())
     pipeline: bool = False                     # cross-op execution overlap. OFF (default) = single-accelerator
                                                # serial = the measured all-AIPU path (Card 1c = single AIPU core;
                                                # measured tok/s at/below the serial no-overlap bound, 4c/1c ~1.1x).
@@ -88,11 +103,66 @@ class SimConfig:
         cfg.batch = 4) must still fail loud, and provenance must reflect the config as actually run."""
         if self.batch != 1:
             raise ValueError("SimConfig: v1 scope is batch=1 (hook reserved)")
+        if self.prefill_len < 1 or self.decode_len < 1 or self.context < 1:
+            raise ValueError(
+                f"SimConfig: prefill_len/decode_len/context must each be >= 1, got "
+                f"prefill_len={self.prefill_len!r}, decode_len={self.decode_len!r}, "
+                f"context={self.context!r} (a degenerate length yields an internally "
+                f"inconsistent metrics dict — the runner clamps to 1 but echoes the raw value).")
+        if self.prefill_len > self.context:
+            raise ValueError(
+                f"SimConfig: prefill_len ({self.prefill_len}) must not exceed context "
+                f"({self.context}).")
+        if not isinstance(self.scheduler, str):
+            raise ValueError(f"SimConfig: scheduler must be a str, got {type(self.scheduler).__name__}")
+        if self.scheduler not in _KNOWN_SCHEDULERS:
+            raise ValueError(f"SimConfig: unknown scheduler {self.scheduler!r} "
+                             f"(wired: {sorted(_KNOWN_SCHEDULERS)})")
         if self.precision_boundary_placement not in ("consumer", "producer"):
             raise ValueError(f"SimConfig: precision_boundary_placement must be 'consumer' or "
                              f"'producer', got {self.precision_boundary_placement!r}")
+        if self.concurrency_overlap_factor != 1.0:
+            raise ValueError(
+                f"SimConfig: concurrency_overlap_factor is RESERVED for Wave 2.2 cross-unit overlap "
+                f"and is not wired on the 2.1 serial path; only the default 1.0 is accepted "
+                f"(got {self.concurrency_overlap_factor!r}).")
+        # Wave 2.3 topology x memory_spec contract (fail-loud at construction AND at run()):
+        if self.topology not in _VALID_TOPOLOGIES:
+            raise ValueError(f"SimConfig: unknown topology {self.topology!r} "
+                             f"(wired: {sorted(_VALID_TOPOLOGIES)})")
+        required = _TOPO_MEMORY[self.topology]
+        if self.memory_spec is not None and self.memory_spec != required:
+            raise ValueError(
+                f"SimConfig: topology {self.topology!r} requires memory_spec "
+                f"{required!r} but got {self.memory_spec!r}. The topology spec is the single "
+                f"bandwidth source; memory_spec is a consistency tag (omit it to use the "
+                f"topology default). cim_topo_alpha has no on-card DRAM so it rejects any LPDDR spec.")
+        if self.bw_efficiency is not None and self.bw_efficiency <= 0:
+            raise ValueError(
+                f"SimConfig: bw_efficiency is a peak-scaling sensitivity knob and must be > 0 "
+                f"(a non-physical effective bandwidth would result), got {self.bw_efficiency!r}.")
+        if self.interconnect_efficiency <= 0:
+            raise ValueError(
+                f"SimConfig: interconnect_efficiency must be > 0 (a non-physical effective "
+                f"bandwidth would result), got {self.interconnect_efficiency!r}. "
+                f"(Mirrors the SharedBandwidth guard, resources.py.)")
+        if self.knee_GBs is not None and self.knee_GBs <= 0:
+            raise ValueError(
+                f"SimConfig: knee_GBs is the saturation knee and must be > 0, "
+                f"got {self.knee_GBs!r}. (Mirrors the SharedBandwidth guard, resources.py.)")
+        if self.bw_efficiency is not None and self.topology != _CAL_TOPOLOGY:
+            raise ValueError(
+                f"SimConfig: bw_efficiency is a card-only peak-scaling knob; topology "
+                f"{self.topology!r} has its own physics-derived effective wall (e.g. edge = LPDDR5 x "
+                f"noc_efficiency, alpha = PCIe) that peak-scaling would silently bypass. Sweep eff via "
+                f"the topology spec, not bw_efficiency. (Mirrors the Platform guard, #63.)")
         self._flag_provenance()
         return self
+
+    def resolved_memory_spec(self):
+        """The concrete memory spec for this topology: the explicit value if given, else the
+        topology default (None for alpha — no on-card DRAM; eff_BW comes from the PCIe wall)."""
+        return self.memory_spec if self.memory_spec is not None else _TOPO_MEMORY[self.topology]
 
     @staticmethod
     def from_json(path):
@@ -112,19 +182,27 @@ class SimConfig:
             _reject_unknown(sched, _KNOWN_SCHED, "scheduler")
         _reject_unknown(tun, _KNOWN_TUN, "tunables")
         _reject_unknown(abl, _KNOWN_ABL, "ablations")
+        u = plat.get("units")
+        eng = plat.get("engine")
+        if u is not None:
+            _reject_unknown(u, set(_default_units()), "platform.units")
+        if eng is not None:
+            _reject_unknown(eng, set(_default_engine()), "platform.engine")
         if "model" not in wl:
             raise ValueError("SimConfig: workload.model is required")
+        # None (omitted/null) -> default; any explicit value (incl. "" garbage) reaches validate().
+        _sched_pol = sched.get("policy") if isinstance(sched, dict) else sched
         cfg = SimConfig(
             model=wl["model"], task=wl.get("task"),
             prefill_len=wl.get("prefill_len", 256), decode_len=wl.get("decode_len", 512),
             context=wl.get("context", 1024), batch=wl.get("batch", 1),
-            memory_spec=plat.get("memory_spec", _CAL_MEMORY),
+            memory_spec=plat.get("memory_spec"),   # None sentinel -> resolved per topology
             topology=plat.get("topology", _CAL_TOPOLOGY),
             memory_capacity_GB=plat.get("memory_capacity_GB", 16),
             bw_efficiency=plat.get("bw_efficiency"),
-            units=plat.get("units") or _default_units(),
-            engine=plat.get("engine") or _default_engine(),
-            scheduler=(sched.get("policy") if isinstance(sched, dict) else sched) or "all_cim",
+            units=_default_units() if u is None else u,
+            engine=_default_engine() if eng is None else eng,
+            scheduler="all_cim" if _sched_pol is None else _sched_pol,
             precision_boundary_placement=(sched.get("precision_boundary_placement", "consumer")
                                           if isinstance(sched, dict) else "consumer"),
             knee_GBs=tun.get("knee_GBs"),
@@ -141,10 +219,15 @@ class SimConfig:
         p = []
         if self.memory_capacity_GB > _ENVELOPE_GB:
             p.append(f"extrapolated: memory_capacity {self.memory_capacity_GB}GB > measured {_ENVELOPE_GB}GB")
-        if self.topology != _CAL_TOPOLOGY:
+        if self.topology == "cim_topo_alpha":
+            p.append("counterfactual: topology 'cim_topo_alpha' (Metis Alpha is LLM-incapable — "
+                     "-1301 closed firmware + no on-card DRAM; a decode number here is a "
+                     "counterfactual host-PCIe-streaming estimate, NOT a runnable config)")
+        elif self.topology != _CAL_TOPOLOGY:
             p.append(f"simulated: topology '{self.topology}' (not the L4-anchored {_CAL_TOPOLOGY})")
-        if self.memory_spec != _CAL_MEMORY:
-            p.append(f"simulated: memory_spec '{self.memory_spec}' (not the measured {_CAL_MEMORY} anchor)")
+        rms = self.resolved_memory_spec()
+        if rms is not None and rms != _CAL_MEMORY:
+            p.append(f"simulated: memory_spec '{rms}' (not the measured {_CAL_MEMORY} anchor)")
         if self.bw_efficiency is not None:
             p.append(f"simulated: bw_efficiency override = {self.bw_efficiency}")
         if self.pipeline:
@@ -158,6 +241,13 @@ class SimConfig:
                 p.append(f"simulated: {u} engine='{e}' (non-silicon backend)")
         if self.units.get("npu"):
             p.append("simulated: NPU enabled (no RKNPU2 silicon, #13)")
+        if self.compute_off:
+            p.append("counterfactual: compute_off memory-only ablation (zero unit compute; isolates "
+                     "the non-circular CIM-compute correction — must NOT be read as a calibrated anchor)")
+        if self.concurrency_off:
+            p.append("ablation: concurrency_off (forced-serial counterfactual; not a calibrated anchor)")
+        if self.contention_off:
+            p.append("ablation: contention_off (no-knee linear-BW counterfactual; not a calibrated anchor)")
         self.provenance = p
 
     def is_calibrated_anchor(self):

@@ -17,6 +17,15 @@ from simulator.runtime.workload import build_token_dag  # noqa: E402
 from simulator.runtime.scheduler import (  # noqa: E402
     Scheduler, AllCimScheduler, CimHeteroScheduler, SCHEDULERS, all_cim_assign,
 )
+from simulator.runtime.config import _KNOWN_SCHEDULERS  # noqa: E402
+
+
+def test_known_schedulers_matches_registry():
+    # config._KNOWN_SCHEDULERS is a hand-maintained mirror of the SCHEDULERS registry (config must
+    # not import scheduler, by layering). Guard against silent drift: a newly-wired scheduler missing
+    # from the mirror would be fail-loud-REJECTED by SimConfig despite being valid.
+    assert _KNOWN_SCHEDULERS == set(SCHEDULERS), (
+        f"config._KNOWN_SCHEDULERS {set(_KNOWN_SCHEDULERS)} != SCHEDULERS registry {set(SCHEDULERS)}")
 
 
 def test_allcim_scheduler_assigns_units_and_domains():

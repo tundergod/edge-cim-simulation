@@ -45,6 +45,12 @@ class MemoryModel(UnitEngine):
     def __init__(self, spec, engine="analytic"):
         super().__init__(spec, engine)
         self.is_topo = "topology" in spec
+        if engine == "ramulator2" and self.is_topo:
+            # The Ramulator2 heavy backend takes a MEMORY spec (eff_BW from the LPDDR5 sweep);
+            # a CIM topology spec resolves BW through mem_spec_ref x noc_efficiency / on-card DRAM
+            # instead. Reject the combination loudly (invariant 4) rather than mis-route it.
+            raise ValueError("engine='ramulator2' needs a memory spec, not a CIM topology spec "
+                             "(pass the topology's mem_spec_ref directly)")
         if self.is_topo:
             self.pcie_BW_GBs = spec["pcie_BW_GBs"] if "pcie_BW_GBs" in spec else None
             self.floor_us = spec.get("per_call_floor_us", 0.0)

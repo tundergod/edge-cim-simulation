@@ -100,6 +100,53 @@ def test_anchor_structure_mismatch_fails_loud():
     raise AssertionError("anchor per-node structure mismatch not caught")
 
 
+def test_attn_head_dim_correct_for_both_bmms():
+    # _attn_kv_heads must derive hd == config head_dim for BOTH attention bmms:
+    # QK^T ([H,Sq,hd]·[H,hd,Skv]) and S·V ([H,Sq,Skv]·[H,Skv,hd]). A naive
+    # min/contracted-axis pick returns Skv (=kv) for S·V instead of head dim.
+    import op_profile
+    import fixture_io
+    from simulator.runtime.workload import _attn_kv_heads
+    for m in MODELS:
+        cfg = op_profile.Model(m).config
+        hd_cfg = cfg.get("head_dim") or cfg["hidden_size"] // cfg["n_heads"]
+        fx = fixture_io.load_fixture(m)
+        for phase in ("prefill", "decode"):
+            for L, nodes in fx[phase].items():
+                attn_bmms = [n for n in nodes
+                             if n["category"] == "attention" and n["op"] == "aten.bmm.default"]
+                assert attn_bmms, f"{m} {phase}/{L}: no attention bmm in fixture"
+                # bmms appear in QK^T, S·V order per attention block
+                for j, n in enumerate(attn_bmms):
+                    role = "qk" if j % 2 == 0 else "sv"
+                    _, _, hd = _attn_kv_heads(n, role)
+                    assert hd == hd_cfg, (f"{m} {phase}/{L} {n['in_shapes']} role={role}: "
+                                          f"hd={hd} != config head_dim {hd_cfg}")
+
+
+def test_attn_kv_hd_correct_for_short_context():
+    # Regression for the magnitude-based kv/hd swap: when the kv/sequence axis is
+    # SMALLER than head_dim (Skv < hd, i.e. prefill_len < head_dim-1), the old
+    # max()/inequality heuristic returned kv=head_dim, hd=Skv. Build a decode DAG at
+    # L < head_dim-1 and assert each attention bmm reports kv == L+1 (past+current)
+    # and extra['hd'] == config head_dim. Fixture lengths (256/512/1024) all have
+    # kv>>hd so they cannot catch this.
+    import op_profile
+    for m in MODELS:
+        cfg = op_profile.Model(m).config
+        hd_cfg = cfg.get("head_dim") or cfg["hidden_size"] // cfg["n_heads"]
+        L = hd_cfg - 5                      # short context: kv (=L+1) < hd
+        assert L > 0
+        dag = build_token_dag(m, "decode", L)
+        bmms = [n for n in dag.nodes
+                if n.category == "attention" and "hd" in n.wl.extra]
+        assert bmms, f"{m}: no attention bmm nodes at L={L}"
+        for n in bmms:
+            assert n.wl.kv == L + 1, f"{m} decode L={L}: kv={n.wl.kv} != L+1={L+1}"
+            assert n.wl.extra["hd"] == hd_cfg, (
+                f"{m} decode L={L}: hd={n.wl.extra['hd']} != config head_dim {hd_cfg}")
+
+
 def test_categories_are_known():
     from simulator.runtime.dag import CATEGORIES
     dag = build_token_dag("llama-3.2-1b", "decode", 128)

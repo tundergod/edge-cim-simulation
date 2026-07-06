@@ -5,7 +5,7 @@ single-thread, numpy fp32 support-op latencies (measurements/aetina/cpu_ops.json
 
     latency_us = max(compute_us, memory_us) + overhead_op
     compute_us = (n_elem * ops_per_elem) / (W*IPC*freq) / eta_c        # eta_c CALIBRATED here
-    memory_us  = working_set_bytes / (BW_tier(working_set) * eta_bw)   # eta_bw ASSUMPTION (see below)
+    memory_us  = working_set_bytes / (BW_tier(single_copy) * eta_bw)   # tier by residency; eta_bw ASSUMPTION
 
 Structural inputs (ASSUMPTION, instruction-count physics, NOT fit): ops_per_elem and byte-passes per
 op (simulator/models/m4_cpu.py). exp() (softmax/swiglu) is the cost driver -> a large transcendental
@@ -64,9 +64,10 @@ def _rows(ops, spec):
         base = "softmax" if op.startswith("softmax") else op
         c = MODELS[model]
         n = _n_elem(op, c)
-        wsb = _working_set_bytes(base, n)
+        wsb = _working_set_bytes(base, n)                        # total streamed bytes (the BW volume)
+        single_copy = n * 4                                      # fp32 cache RESIDENCY = single-copy footprint, NOT x passes
         compute_raw = n * OPS_PER_ELEM[base] / peak * 1e6        # us at eta_c = 1
-        memory_us = wsb / (_tier_bw(spec, wsb) * ETA_BW * 1e9) * 1e6
+        memory_us = wsb / (_tier_bw(spec, single_copy) * ETA_BW * 1e9) * 1e6  # tier by residency, stream wsb (matches engine)
         rows.append((base, model, med, compute_raw, memory_us))
     return rows
 
@@ -133,7 +134,7 @@ def main():
                    "-> extrapolated). eta_bw = ASSUMPTION.",
         "equation": "latency_us = max(compute_us, memory_us) + overhead_op; "
                     "compute_us = n_elem*ops_per_elem/(W*IPC*freq)/eta_c; "
-                    "memory_us = working_set_bytes/(BW_tier*eta_bw)",
+                    "memory_us = working_set_bytes/(BW_tier(single_copy)*eta_bw)",
         "calibrated": {"eta_c": round(eta_c, 4), "basis": params["calibration_basis"]},
         "assumption": {"eta_bw": ETA_BW, "why": "no bandwidth-resolved op in fp32 decode data; no CPU "
                        "mem-BW micro-benchmark (audit gap). Corroborated (not contradicted) by the qwen "

@@ -26,8 +26,8 @@
   "7": 169.4,
   "8": 193.6
  },
- "validated_shape_rising_then_saturating": true,
- "validated_shape_contention_off_is_linear": true,
+ "shape_rising_then_saturating": true,
+ "shape_contention_off_is_linear": true,
  "card_4c_1c_measured": {
   "llama-3.2-1b": 1.13,
   "llama-3.2-3b": 1.096,

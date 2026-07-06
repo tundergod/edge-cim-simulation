@@ -40,7 +40,7 @@ def test_out_of_envelope_flags_provenance():
     cfg = SimConfig.from_dict({
         "workload": {"model": "llama-3.1-8b"},
         "platform": {"memory_capacity_GB": 32, "topology": "cim_topo_edge",
-                     "memory_spec": "mem_lpddr5", "bw_efficiency": 0.7,
+                     "memory_spec": "mem_lpddr5",
                      "units": {"cim": True, "npu": True}},
     })
     assert not cfg.is_calibrated_anchor()

@@ -1,0 +1,119 @@
+{
+ "module": "topology_ab",
+ "phase": "2.3",
+ "honesty": "card = MEASURED L4 anchor (rows reproduce the COMMITTED mechanism predictions, NOT the measured vendor tok/s \u2014 pred==measured would be circular). alpha = COUNTERFACTUAL (LLM-incapable hardware). edge = SIMULATED (noc assumption). The alpha<card<edge ordering is BY CONSTRUCTION (eff_BW constants); the reported finding is the alpha host-PCIe penalty magnitude + the edge LPDDR5 speedup.",
+ "topologies": {
+  "cim_topo_card": {
+   "tier": "measured",
+   "label": "on-card LPDDR4x 24.2 GB/s \u2014 MEASURED L4 anchor"
+  },
+  "cim_topo_alpha": {
+   "tier": "counterfactual",
+   "label": "host PCIe 3.9 GB/s + 911us floor \u2014 COUNTERFACTUAL (Alpha is LLM-incapable, -1301; no on-card DRAM; number = 'if it could stream over PCIe')"
+  },
+  "cim_topo_edge": {
+   "tier": "simulated",
+   "label": "integrated SoC LPDDR5 33.3 x noc 0.9 = 29.97 GB/s \u2014 SIMULATED (noc_efficiency assumption, no edge silicon)"
+  }
+ },
+ "table": {
+  "llama-3.2-1b": {
+   "cim_topo_card": {
+    "tok_s": 14.4727,
+    "decode_token_us": 69095.499,
+    "eff_BW_GBs": 24.2,
+    "ttft_s": 0.0889,
+    "tier": "measured",
+    "label": "on-card LPDDR4x 24.2 GB/s \u2014 MEASURED L4 anchor"
+   },
+   "cim_topo_alpha": {
+    "tok_s": 2.8562,
+    "decode_token_us": 350116.128,
+    "eff_BW_GBs": 3.9,
+    "ttft_s": 0.4818,
+    "tier": "counterfactual",
+    "label": "host PCIe 3.9 GB/s + 911us floor \u2014 COUNTERFACTUAL (Alpha is LLM-incapable, -1301; no on-card DRAM; number = 'if it could stream over PCIe')"
+   },
+   "cim_topo_edge": {
+    "tok_s": 17.0354,
+    "decode_token_us": 58701.185,
+    "eff_BW_GBs": 29.97,
+    "ttft_s": 0.0744,
+    "tier": "simulated",
+    "label": "integrated SoC LPDDR5 33.3 x noc 0.9 = 29.97 GB/s \u2014 SIMULATED (noc_efficiency assumption, no edge silicon)"
+   }
+  },
+  "llama-3.2-3b": {
+   "cim_topo_card": {
+    "tok_s": 5.9659,
+    "decode_token_us": 167618.898,
+    "eff_BW_GBs": 24.2,
+    "ttft_s": 0.1964,
+    "tier": "measured",
+    "label": "on-card LPDDR4x 24.2 GB/s \u2014 MEASURED L4 anchor"
+   },
+   "cim_topo_alpha": {
+    "tok_s": 1.1061,
+    "decode_token_us": 904038.797,
+    "eff_BW_GBs": 3.9,
+    "ttft_s": 1.0944,
+    "tier": "counterfactual",
+    "label": "host PCIe 3.9 GB/s + 911us floor \u2014 COUNTERFACTUAL (Alpha is LLM-incapable, -1301; no on-card DRAM; number = 'if it could stream over PCIe')"
+   },
+   "cim_topo_edge": {
+    "tok_s": 7.1235,
+    "decode_token_us": 140380.4,
+    "eff_BW_GBs": 29.97,
+    "ttft_s": 0.1633,
+    "tier": "simulated",
+    "label": "integrated SoC LPDDR5 33.3 x noc 0.9 = 29.97 GB/s \u2014 SIMULATED (noc_efficiency assumption, no edge silicon)"
+   }
+  },
+  "llama-3.1-8b": {
+   "cim_topo_card": {
+    "tok_s": 2.7841,
+    "decode_token_us": 359178.181,
+    "eff_BW_GBs": 24.2,
+    "ttft_s": 0.4074,
+    "tier": "measured",
+    "label": "on-card LPDDR4x 24.2 GB/s \u2014 MEASURED L4 anchor"
+   },
+   "cim_topo_alpha": {
+    "tok_s": 0.4919,
+    "decode_token_us": 2032978.879,
+    "eff_BW_GBs": 3.9,
+    "ttft_s": 2.3491,
+    "tier": "counterfactual",
+    "label": "host PCIe 3.9 GB/s + 911us floor \u2014 COUNTERFACTUAL (Alpha is LLM-incapable, -1301; no on-card DRAM; number = 'if it could stream over PCIe')"
+   },
+   "cim_topo_edge": {
+    "tok_s": 3.364,
+    "decode_token_us": 297268.098,
+    "eff_BW_GBs": 29.97,
+    "ttft_s": 0.3356,
+    "tier": "simulated",
+    "label": "integrated SoC LPDDR5 33.3 x noc 0.9 = 29.97 GB/s \u2014 SIMULATED (noc_efficiency assumption, no edge silicon)"
+   }
+  }
+ },
+ "card_reproduces_committed_anchor": true,
+ "card_anchor_committed_pred": {
+  "llama-3.2-1b": 14.4727,
+  "llama-3.2-3b": 5.9659,
+  "llama-3.1-8b": 2.7841
+ },
+ "ordering_alpha_lt_card_lt_edge_by_construction": true,
+ "alpha_host_pcie_penalty_x_slower": {
+  "llama-3.2-1b": 5.07,
+  "llama-3.2-3b": 5.39,
+  "llama-3.1-8b": 5.66
+ },
+ "edge_lpddr5_speedup_x": {
+  "llama-3.2-1b": 1.177,
+  "llama-3.2-3b": 1.194,
+  "llama-3.1-8b": 1.208
+ },
+ "per_call_floor_note": "alpha pays the measured 911 us per-call DMA floor in TTFT ONLY (amortized to ~0 over decode tokens, D11); decode tok/s is bandwidth-bound.",
+ "residency_caveat": "topology A's 24.2 GB/s holds only within the 16 GiB on-card DRAM; overflow degrades toward the alpha host-PCIe wall (spill not modelled; #58). 1B/3B/8B fit 16 GiB so this table is spill-free.",
+ "pass_all": true
+}

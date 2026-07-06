@@ -30,13 +30,37 @@ class Platform:
     `interconnect_efficiency`, `bw_efficiency` are the forward-looking tunables
     (SIMULATED); `memory_spec` selects the committed memory anchor."""
 
-    def __init__(self, model, *, memory_spec="mem_lpddr4x", knee_GBs=None,
+    def __init__(self, model, *, memory_spec="mem_lpddr4x", topology=None, knee_GBs=None,
                  interconnect_efficiency=1.0, bw_efficiency=None):
         self.model = model
-        mem = load_spec(memory_spec)
-        eff = float(mem["eff_BW_GBs"])                       # measured anchor (e.g. 24.2)
-        if bw_efficiency is not None:                        # forward-looking override (sweep knob)
-            peak = mem.get("peak_BW_GBs") or (eff / float(mem.get("efficiency", 1.0)))
+        # Single bandwidth source = the topology spec (via the existing M2 MemoryModel resolver):
+        # card -> on-card LPDDR4x 24.2 (literal, byte-identical); alpha -> PCIe 3.9 (no on-card DRAM);
+        # edge -> mem_lpddr5 eff x noc_efficiency. The per-call floor (alpha 911.1 us) is exposed for
+        # the runner to add to TTFT only. When no topology is given, fall back to the bare memory_spec.
+        if topology is not None:
+            from simulator.models.m2_memory import MemoryModel
+            mm = MemoryModel(load_spec(topology))
+            eff = float(mm.eff_BW_GBs) if mm.eff_BW_GBs else float(mm.pcie_BW_GBs)  # alpha: no DRAM -> PCIe
+            self.per_call_floor_us = float(mm.floor_us)
+            peak_mem = load_spec(memory_spec) if memory_spec else None
+        else:
+            peak_mem = load_spec(memory_spec)
+            eff = float(peak_mem["eff_BW_GBs"])              # measured anchor (e.g. 24.2)
+            self.per_call_floor_us = 0.0
+        if bw_efficiency is not None:                        # forward-looking override (sensitivity knob)
+            if bw_efficiency <= 0:                            # non-physical effective BW -> reject at this boundary
+                raise ValueError(f"Platform: bw_efficiency must be > 0 (got {bw_efficiency!r})")
+            # card-only: alpha/edge have a physics-derived wall (PCIe / LPDDR5 x NoC) that peak-scaling
+            # would silently bypass -> reject (single physics source = the topology spec). #63.
+            if topology is not None and topology != "cim_topo_card":
+                raise ValueError(
+                    f"Platform: bw_efficiency is a card-only sensitivity knob; topology {topology!r} has "
+                    f"its own physics-derived effective wall (e.g. edge = LPDDR5 x noc_efficiency) that "
+                    f"peak-scaling would discard. Sweep eff via the topology spec, not bw_efficiency.")
+            if peak_mem is None:
+                raise ValueError("Platform: bw_efficiency override needs a memory_spec to read peak BW "
+                                 "from (topology without on-card DRAM has no peak to scale)")
+            peak = peak_mem.get("peak_GBs") or peak_mem.get("peak_BW_GBs") or (eff / float(peak_mem.get("efficiency", 1.0)))
             eff = float(peak) * float(bw_efficiency)
         self.bw = SharedBandwidth(eff, knee_GBs=knee_GBs,
                                   interconnect_efficiency=interconnect_efficiency)
@@ -48,8 +72,9 @@ class Platform:
     @property
     def mem_domains(self):
         """The two memory pools the residency rule (R7) routes ops to: the shared `dram`
-        (the measured 24.2 GB/s on-card LPDDR4x — the Metis Card's 16 GiB device DRAM, where
-        weights/KV/embedding are resident, metered by the M3 engine) and `cpu_cache` (the A76
+        (the resolved decode memory wall for THIS topology — the measured 24.2 GB/s on-card LPDDR4x
+        on cim_topo_card; the counterfactual PCIe 3.9 GB/s on alpha; the simulated LPDDR5×noc on edge —
+        where weights/KV/embedding are resident, metered by the M3 engine) and `cpu_cache` (the A76
         tiered on-chip cache, priced INSIDE m4_cpu for CPU-support ops — a labelled proxy for
         the all-AIPU Card's on-chip support; NEVER the DRAM pool, which removes the S-dc
         double-count)."""
@@ -72,8 +97,9 @@ class Platform:
         if u == "cim":
             if cat == "matmul" and wl.K and wl.N:
                 lat = self.cim.dev_lat_us(wl.M, wl.K, wl.N)
-                prov = "CIM-GEMV dev_lat (M1 tile model, Alpha-calibrated)"
-                if self.cim.is_extrapolated(wl.K, wl.N):
+                prov = "CIM-GEMV dev_lat (M1 tile model, Card-calibrated Phase 1.5; Alpha 13-pt cross-check)"
+                if self.cim.is_extrapolated(wl.K, wl.N) or (
+                        wl.M > 1 and self.cim.prefill_extrapolated(wl.M, wl.K, wl.N)):
                     prov += "; EXTRAPOLATED beyond native envelope"
                 return {"latency_us": float(lat), "compute_provenance": prov, "source_model": "m1_cim_tile"}
             return {"latency_us": 0.0, "source_model": "none",
@@ -107,6 +133,9 @@ class Platform:
                         "compute_provenance": "Mali GPU attn_bmm composite QK^T+S·V (group rep, priced once)"}
             return {"latency_us": 0.0, "source_model": "m4_gpu",
                     "compute_provenance": "GPU attention grouped (composite priced on the QK^T rep)"}
+        if u == "gpu":
+            raise NotImplementedError(
+                f"GPU pricing only models attention bmm in 2.1; got category {cat!r} on the GPU")
         return {"latency_us": 0.0, "source_model": "none",
                 "compute_provenance": "mem/unmodeled (cost = bytes via the DRAM pool)"}
 

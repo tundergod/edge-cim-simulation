@@ -282,7 +282,7 @@ def measured_set():
 
 
 def main():
-    models = ["llama-3.2-1b", "llama-3.2-3b", "llama-3.1-8b", "qwen2.5-7b"]
+    models = ["llama-3.2-1b", "llama-3.2-3b", "llama-3.1-8b", "qwen2.5-7b", "qwen2.5-14b"]
     for m in models:
         M = Model(m)
         # sanity: a small workload profiles without error

@@ -51,6 +51,9 @@ def run_serial(dag, platform, bw, *, price_compute=True):
     negligible for decode.) concurrency/contention are no-ops here (one resource, k=1).
     Order-independent (a sum of per-node maxima)."""
     _validate_mem_domains(dag)
+    if any(n.bytes_streamed > 0 and n.mem_domain != "cpu_cache" for n in dag.nodes) and bw.eff_BW <= 0:
+        raise ValueError("M3: DRAM memory traffic present but SharedBandwidth eff_BW <= 0 "
+                         "(degenerate bandwidth would stall the simulation)")
     total = 0.0
     for n in dag.nodes:
         c = float(platform.compute_us(n)) if price_compute else 0.0

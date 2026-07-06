@@ -1,0 +1,40 @@
+{
+ "module": "holdout",
+ "phase": "2.3",
+ "gate_threshold": 0.15,
+ "fit_set": [
+  "llama-3.2-1b",
+  "llama-3.2-3b"
+ ],
+ "holdout": "llama-3.1-8b",
+ "genuine_leave_8b_out_closed_form": {
+  "fitted_scalar": "fit_BW (two-pillar effective decode BW), re-derived from {1B,3B} ONLY",
+  "per_token_weight_bytes_GB": {
+   "llama-3.2-1b": 1.237,
+   "llama-3.2-3b": 3.214,
+   "llama-3.1-8b": 7.507
+  },
+  "implied_BW_GBs_fit_set": {
+   "llama-3.2-1b": 16.168,
+   "llama-3.2-3b": 20.505
+  },
+  "fit_BW_GBs": 18.336,
+  "committed_fit_BW_GBs": 18.33,
+  "pred_8b_tok_s": 2.443,
+  "measured_8b_tok_s": 2.7,
+  "rel_error_8b": 0.0953,
+  "note": "engine 24.2 anchor untouched; this is the TRUE size hold-out (8B never in the fit)."
+ },
+ "engine_path": {
+  "pred_8b_tok_s": 2.7841,
+  "measured_8b_tok_s": 2.7,
+  "rel_error_8b": 0.0311,
+  "byte_identical_to_committed_L4": true,
+  "CAVEAT": "the engine's 24.2 backbone is regressed across ALL sizes incl. 8B in Phase 1 -> PARTLY IN-SAMPLE; the genuinely out-of-sample content is the parameter-free CIM-compute correction. Do NOT read the engine 8B error as a pure hold-out."
+ },
+ "within_gate": true,
+ "not_worse_than_closed_form": true,
+ "gate_6c_signal": false,
+ "finding": "genuine leave-8B-out closed form predicts 8B at 9.5%; the full engine (parameter-free compute correction on the partly-in-sample 24.2 backbone) predicts 8B at 3.1% \u2014 within 15% and not worse than the closed form. If the engine were worse = Gate-6c (fix M1/M2/M3, not integration).",
+ "pass_all": true
+}

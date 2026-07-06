@@ -63,8 +63,8 @@ def main():
         "aggregate_sweep_GBs": sweep,
         "aggregate_sweep_contention_off_GBs": sweep_off,
         # the only genuine (non-by-construction) content: the SHAPE
-        "validated_shape_rising_then_saturating": bool(rising_then_flat),
-        "validated_shape_contention_off_is_linear": bool(off_linear),
+        "shape_rising_then_saturating": bool(rising_then_flat),
+        "shape_contention_off_is_linear": bool(off_linear),
         "card_4c_1c_measured": meas_ratio,
         "card_4c_1c_mean": round(mean_ratio, 3),
         "model_4c_1c_ratio": model_ratio_4c,

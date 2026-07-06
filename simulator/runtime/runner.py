@@ -1,10 +1,10 @@
 """Runner — wire SimConfig -> M5 (workload) -> M6 (scheduler) -> M3 (engine) -> M7
 (energy) and emit metrics (Phase 2.1).
 
-Decode tok/s is the gated quantity: build one steady-state decode token DAG at a
-representative kv (= context//2; LLMServingSim-style per-iteration reuse, not a
-full-generation expansion), price it through the event engine, tok/s = 1e6 /
-token_us. TTFT is REPORTED, not gated (prefill path is analytic/unvalidated, D9).
+Decode tok/s is the gated quantity: tok/s = 1e6 / (mean per-token latency averaged
+over kv points sampled across [P, min(context, P+D)]; LLMServingSim-style
+per-iteration reuse, not a full-generation expansion), so decode_len / context
+affect the result. TTFT is REPORTED, not gated (prefill path is analytic/unvalidated, D9).
 Energy is an estimate reported as a +/-20% band (M7, no power telemetry).
 """
 from __future__ import annotations
@@ -30,8 +30,10 @@ def _energy_per_token_J(dag, plat):
 
 def _op_provenance(dag, plat, bw):
     """Per-(category, source_model) provenance summary (#55): which Phase-1 unit model priced
-    each op category, a representative compute_provenance, and the ENGINE-determined bound
-    distribution (M3 max(compute, dram_memory) — cpu_cache bytes never hit the DRAM pool)."""
+    each op category, a representative compute_provenance, and the serial-equivalent bound
+    distribution (k=1: max(compute, dram_memory) — cpu_cache bytes never hit the DRAM pool).
+    Matches the engine exactly on the serial path (pipeline=off, AllCim); under pipeline=on
+    the engine's fair-share memory cost can differ. Unsurfaced (no committed report JSON)."""
     summary = {}
     for n in dag.nodes:
         pr = plat.price(n)
@@ -56,12 +58,9 @@ def run(cfg):
     def assign(dag):                              # annotator: places units/domains (+ conversions)
         return sched.assign(dag, cfg)
 
-    # fail-loud on knobs that are accepted by SimConfig but NOT yet wired in 2.1
-    # (so a user can't run a silently-inert experiment). These land in later waves.
-    if cfg.topology != "cim_topo_card":
-        raise NotImplementedError(
-            f"topology '{cfg.topology}': the numeric topology effect (host-MMIO PCIe floor, "
-            f"on-card vs edge) is Wave 2.3 (validate_topology_ab). 2.1 wires cim_topo_card only.")
+    # Topology validity + the topology x memory_spec contract are enforced in cfg.validate()
+    # (called above) — Wave 2.3 wires cim_topo_card/alpha/edge. Heavy engine backends remain
+    # fail-loud below (so a user can't run a silently-inert experiment).
     nonanalytic = {u: e for u, e in cfg.engine.items() if e != "analytic"}
     if nonanalytic:
         raise NotImplementedError(
@@ -72,8 +71,8 @@ def run(cfg):
         raise ValueError(f"scheduler '{cfg.scheduler}' requires units {list(sched.required_units)} "
                          f"enabled but {missing} are disabled — an impossible config cannot run "
                          f"(e.g. cim_hetero needs the GPU for attention).")
-    plat = Platform(cfg.model, memory_spec=cfg.memory_spec, knee_GBs=cfg.knee_GBs,
-                    interconnect_efficiency=cfg.interconnect_efficiency,
+    plat = Platform(cfg.model, memory_spec=cfg.resolved_memory_spec(), topology=cfg.topology,
+                    knee_GBs=cfg.knee_GBs, interconnect_efficiency=cfg.interconnect_efficiency,
                     bw_efficiency=cfg.bw_efficiency)
     model_obj = op_profile.Model(cfg.model)
     concurrency = not cfg.concurrency_off
@@ -102,7 +101,7 @@ def run(cfg):
     P, D = cfg.prefill_len, max(1, cfg.decode_len)
     kv_hi = max(1, min(cfg.context, P + D))
     kv_lo = max(1, min(P, kv_hi))
-    kv_pts = sorted({kv_lo, (kv_lo + kv_hi) // 2 or 1, kv_hi})
+    kv_pts = sorted({kv_lo, (kv_lo + kv_hi) // 2, kv_hi})
     tok_us = [run_dag(assign(build_token_dag(cfg.model, "decode", k, _model_obj=model_obj)),
                       plat, plat.bw, concurrency=concurrency, contention=contention,
                       price_compute=price_compute, pipeline=pipeline) for k in kv_pts]
@@ -115,6 +114,9 @@ def run(cfg):
     pre = assign(build_token_dag(cfg.model, "prefill", cfg.prefill_len, _model_obj=model_obj))
     t_pre_us = run_dag(pre, plat, plat.bw, concurrency=concurrency, contention=contention,
                        price_compute=price_compute, pipeline=pipeline)
+    # per-call transport floor (alpha host-MMIO 911 us) is a TTFT artifact, amortized to ~0 over
+    # decode tokens -> added to the prefill/TTFT path ONLY (D11; decode tok/s stays bandwidth-bound).
+    t_pre_us += plat.per_call_floor_us
 
     e_tok = _energy_per_token_J(dec, plat)
     convs = [n for n in dec.nodes if n.category == "convert"]   # precision-boundary casts (2.2b)
