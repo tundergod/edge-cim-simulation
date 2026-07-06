@@ -1,5 +1,5 @@
 {
-  "_doc": "CIM topology B = production Metis Card. HAS on-card LPDDR4x DRAM; LLM-CAPABLE (runs precompiled INT8 LLMs). Carries TRANSPORT differences only; the CIM COMPUTE engine (M1, m1_cim.json) is topology-agnostic and SHARED with topology A. On-card LPDDR4x decode eff_BW 24.2 GB/s is the MEASURED L4 anchor (the decode memory wall). NO per-call PCIe floor for on-card weight streaming. 16 GiB capacity (machines.md). SAME 800 MHz AIPU as Alpha -> Card axrunmodel dev_lat/dev_gflops are directly comparable to Alpha's 13 points (CIM kernel re-validatable, not frozen).",
+  "_doc": "CIM topology B = production Metis Card. HAS on-card LPDDR4x DRAM; LLM-CAPABLE (runs precompiled INT8 LLMs). Carries TRANSPORT differences only; the CIM COMPUTE engine (M1) is RESOLVED from this spec's cim_compute_params (here: the Metis-calibrated m1_cim.json, the same fit topology A uses). On-card LPDDR4x decode eff_BW 24.2 GB/s is the MEASURED L4 anchor (the decode memory wall). NO per-call PCIe floor for on-card weight streaming. 16 GiB capacity (machines.md). SAME 800 MHz AIPU as Alpha -> Card axrunmodel dev_lat/dev_gflops are directly comparable to Alpha's 13 points (CIM kernel re-validatable, not frozen).",
   "topology": "card",
   "on_card_dram": true,
   "llm_capable": true,
