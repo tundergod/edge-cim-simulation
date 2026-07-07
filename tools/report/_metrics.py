@@ -246,7 +246,8 @@ def load():
         "thermal.ceiling":   _f(th["load_sweep"]["ceiling_C"], 0),                     # 44
         "thermal.max_busy":  _i(th["load_sweep"]["max_device_busy_pct"]),              # 48
         # ---- Phase 2.3 system results (topology A/B/C, sensitivity, hold-out, 14B extrap, mixed-prec) ----
-        # L4 decode mechanism (the hard silicon gate) — injected, not hand-typed (honesty)
+        # L4 decode mechanism: silicon-gated <=15% vs measured tok/s, but PARTLY IN-SAMPLE on the 24.2
+        # backbone (out-of-sample content = the CIM-compute correction). Injected, not hand-typed (honesty).
         "p2.l4_1b_pred": _f(p2l4["llama-3.2-1b"]["pred_tok_s"], 2),                    # 14.47
         "p2.l4_1b_meas": _f(p2l4["llama-3.2-1b"]["measured_tok_s"], 2),                # 13.07
         "p2.l4_1b_err":  _p1(p2l4["llama-3.2-1b"]["rel_error"]),                       # 10.7

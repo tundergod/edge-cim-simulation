@@ -18,6 +18,14 @@ from simulator.runtime.scheduler import (  # noqa: E402
     Scheduler, AllCimScheduler, CimHeteroScheduler, SCHEDULERS, all_cim_assign,
 )
 from simulator.runtime.config import _KNOWN_SCHEDULERS  # noqa: E402
+from simulator.runtime.dag import OpNode, Dag  # noqa: E402
+from simulator.models.engine import Workload  # noqa: E402
+
+
+def _unmapped_category_dag():
+    # a category no scheduler map knows about (M5 categories are a closed, hand-maintained
+    # set on each scheduler) — both schedulers must fail loud, not silently place it.
+    return Dag([OpNode(id=0, category="bogus", wl=Workload(op="bogus"), deps=[])])
 
 
 def test_known_schedulers_matches_registry():
@@ -93,6 +101,22 @@ def test_cimhetero_registry_and_pipeline_mode():
     assert "cim_hetero" in SCHEDULERS and isinstance(SCHEDULERS["cim_hetero"], CimHeteroScheduler)
     assert SCHEDULERS["cim_hetero"].pipeline is True              # genuine multi-unit overlap
     assert SCHEDULERS["all_cim"].pipeline is False               # single-accelerator serial
+
+
+def test_allcim_rejects_unmapped_category():
+    try:
+        AllCimScheduler().assign(_unmapped_category_dag())
+    except ValueError:
+        return
+    raise AssertionError("AllCimScheduler did not reject an unmapped category")
+
+
+def test_cimhetero_rejects_unmapped_category():
+    try:
+        CimHeteroScheduler().assign(_unmapped_category_dag())
+    except ValueError:
+        return
+    raise AssertionError("CimHeteroScheduler did not reject an unmapped category")
 
 
 def test_cimhetero_runs_end_to_end_simulated():

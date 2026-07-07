@@ -32,6 +32,8 @@ from simulator.specs.loader import load_spec  # noqa: E402
 OUT = ROOT / "validation/reports/phase2"
 MODELS = ["llama-3.2-1b", "llama-3.2-3b", "llama-3.1-8b"]
 ANCHOR = 24.2                                     # measured on-card LPDDR4x decode anchor
+assert ANCHOR == load_spec("mem_lpddr4x")["eff_BW_GBs"], \
+    "sensitivity ANCHOR desynced from mem_lpddr4x spec eff_BW_GBs"
 PEAK = float(load_spec("mem_lpddr4x")["peak_GBs"])   # 34.1
 FACTORS = [0.8, 1.0, 1.2]                         # +/-20% on the eff_BW anchor
 
@@ -97,9 +99,11 @@ def main():
         "bw_efficiency_two_sided_tok_moves": bool(tok_moves_both_ways),
         "model_ordering_1b_gt_3b_gt_8b_all_points": bool(ordering_ok),
         "conclusion_robust": conclusion_robust,
-        "conclusion": "decode is BANDWIDTH-BOUND: tok/s rises monotonically with eff_BW across the "
-                      "+/-20% band and the model-size ordering holds — the memory-wall term dominates, "
-                      "robust to +/-20% BW uncertainty.",
+        "conclusion": "internal-consistency band (NOT an empirical discovery): because the model computes "
+                      "decode = bytes/eff_BW, tok/s rising monotonically with eff_BW and the 1B>3B>8B "
+                      "ordering are CONSEQUENCES of the model form, not findings; this sweep bounds the "
+                      "+/-20% BW-uncertainty SENSITIVITY of those consequences and confirms they hold "
+                      "across the band (the memory-wall term dominates by construction).",
         "contention_path_band_SIMULATED": {
             "k": K, "baseline_aggregate_GBs": round(base, 2),
             "knee_pm20_aggregate_GBs": knee_band, "icn_pm20_aggregate_GBs": icn_band,

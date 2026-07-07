@@ -11,13 +11,11 @@ Regenerable from committed JSON only. Writes PNG (+PDF/SVG) to docs/figures/phas
 
 Run: ./.venv/bin/python tools/plotting/site_m1.py
 """
-import json
 import sys
 from pathlib import Path
 
 import matplotlib
 matplotlib.use("Agg")
-import matplotlib as mpl  # noqa: E402
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
@@ -25,6 +23,7 @@ ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "tools/plotting"))
 import _style as S  # noqa: E402  (for save(); rcParams overridden below for editorial sizing)
+from _site_style import apply_site_style, load, HERO, WARM, INK, SOFT, FAINT, PAPER, GRID  # noqa: E402
 from simulator.models.m1_cim_tile import CimTileModel  # noqa: E402
 
 AET = ROOT / "measurements/aetina"
@@ -34,28 +33,10 @@ PREF = ROOT / "validation/reports/phase1.2/cim_prefill_fit.json"
 PARAMS = ROOT / "simulator/models/params/m1_cim.json"
 OUT = ROOT / "docs/figures/phase1-site"
 
-# editorial palette — page CIM-blue hero, warm accent, restrained neutrals
-HERO = "#0072B2"; WARM = "#C45A12"; INK = "#17150f"; SOFT = "#5b554a"; FAINT = "#b9b09c"
-PAPER = "#fbf6ec"; GRID = "#e8e1d2"
 # sequential blue ramp for ascending K (darker = wider K = higher throughput)
 KRAMP = {1024: "#a8cbe0", 2048: "#5b9bc4", 3072: "#2680b4", 3584: "#0a6298", 4096: WARM}
 
-mpl.rcParams.update({
-    "font.family": "sans-serif",
-    "font.sans-serif": ["Helvetica Neue", "Helvetica", "Arial", "DejaVu Sans"],
-    "svg.fonttype": "none", "pdf.fonttype": 42,
-    "font.size": 9, "axes.titlesize": 10, "axes.labelsize": 9.5,
-    "xtick.labelsize": 8.5, "ytick.labelsize": 8.5, "legend.fontsize": 8,
-    "axes.spines.right": False, "axes.spines.top": False,
-    "axes.linewidth": 0.9, "axes.edgecolor": "#888",
-    "xtick.color": "#555", "ytick.color": "#555",
-    "axes.labelcolor": INK, "text.color": INK,
-    "legend.frameon": False, "figure.dpi": 150,
-})
-
-
-def load(p):
-    return json.loads(Path(p).read_text())
+apply_site_style()
 
 
 def _grid(ax):
