@@ -25,7 +25,7 @@ Directory-level map so you can locate things fast. Within a listed dir, the per-
 | `tools/trace_export/*.py` | Phase 0.1/0.2: op inventory, op profile, trace generation, sweep matrix. |
 | `validation/contracts/m*.yaml` | **Per-module validation contracts** (acceptance criteria, tunable params, gaps). |
 | `validation/reports/phase*/m*.json` | Validation results (fit errors, gate pass/fail). |
-| `validation/validate_*.py` | Per-module validators (m5 trace, m7 energy). |
+| `validation/validate_*.py` | Validators / gates — each `sys.exit(0/1)` and writes a committed `reports/` JSON. Per-module: `m5_trace`, `m7_energy`. Phase-2 system gates: `e2e_l4` (the L4 decode ≤15% gate), `topology_ab` (A/B/C swap), `sensitivity_l5` (±20% band), `holdout` (leave-8B-out), `extrapolation_13b` (14B), `contention` (shared-BW shape). These double as the runnable end-to-end examples (README § Quickstart). |
 | `characterization/aetina/*` | **On-board micro-benchmark scripts** for the Aetina/Alpha board (`run_metis_cim`, `run_cpu_ops`, `run_mali_matmul`, `run_rknpu2`). |
 | `characterization/metis_card/*` | Metis Card scripts (`run_vendor_llm` = L4 tok/s anchor, `convert_rknn`). |
 | `measurements/aetina/*.json` | **Alpha silicon measurements** (CIM matmul, cpu_ops, mali_matmul, cim_attention). |

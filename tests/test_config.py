@@ -101,6 +101,20 @@ def test_batch_must_be_one():
     raise AssertionError("batch!=1 not rejected")
 
 
+def test_sweep_knobs_flagged_off_anchor():
+    # knee_GBs / interconnect_efficiency alter the decode BW wall -> a non-default value must be flagged
+    # simulated (else a swept result reads as a calibrated anchor). Defaults stay calibrated.
+    base = {"workload": {"model": "llama-3.2-1b", "context": 1024},
+            "platform": {"topology": "cim_topo_card", "memory_spec": "mem_lpddr4x"},
+            "scheduler": {"policy": "all_cim"}}
+    assert SimConfig.from_dict(base).is_calibrated_anchor()
+    for tun, key in (({"interconnect_efficiency": 0.5}, "interconnect_efficiency"),
+                     ({"knee_GBs": 5.0}, "knee_GBs")):
+        cfg = SimConfig.from_dict({**base, "tunables": tun})
+        assert not cfg.is_calibrated_anchor(), tun
+        assert any(key in p for p in cfg.provenance), cfg.provenance
+
+
 if __name__ == "__main__":
     fns = [v for k, v in sorted(globals().items()) if k.startswith("test_") and callable(v)]
     for fn in fns:

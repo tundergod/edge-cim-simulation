@@ -240,6 +240,15 @@ class SimConfig:
             p.append(f"simulated: memory_spec '{rms}' (not the measured {_CAL_MEMORY} anchor)")
         if self.bw_efficiency is not None:
             p.append(f"simulated: bw_efficiency override = {self.bw_efficiency}")
+        # knee_GBs / interconnect_efficiency are forward-looking sweep knobs that DO alter the decode
+        # bandwidth wall (they feed SharedBandwidth) but have no concurrent-unit silicon (#52) -> a
+        # non-default value is off-anchor and must be flagged, else a swept result reads as calibrated.
+        if self.knee_GBs is not None:
+            p.append(f"simulated: knee_GBs override = {self.knee_GBs} (contention saturation knob; "
+                     f"no concurrent-unit silicon, #52)")
+        if self.interconnect_efficiency != 1.0:
+            p.append(f"simulated: interconnect_efficiency = {self.interconnect_efficiency} "
+                     f"(forward-looking NoC de-rate knob; not silicon-measured)")
         if self.pipeline:
             p.append("simulated: pipeline overlap enabled (cross-op double-buffering; the "
                      "measured all-AIPU Card 1c single-core decode shows no cross-op overlap)")
