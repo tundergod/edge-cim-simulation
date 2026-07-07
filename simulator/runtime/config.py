@@ -20,6 +20,8 @@ import json
 from dataclasses import dataclass, field
 from pathlib import Path
 
+from simulator.specs.loader import load_spec
+
 _KNOWN_TOP = {"workload", "platform", "scheduler", "tunables", "ablations", "sweep", "_doc"}
 _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine"}
@@ -29,6 +31,7 @@ _KNOWN_ABL = {"concurrency_off", "contention_off", "compute_off"}
 
 _CAL_MEMORY = "mem_lpddr4x"        # the measured 24.2 GB/s decode anchor
 _CAL_TOPOLOGY = "cim_topo_card"    # the L4-anchored on-card-DRAM topology
+_CAL_CIM_PARAMS = "simulator/models/params/m1_cim.json"  # the Metis-calibrated CIM compute fit (Alpha 13pt/Card)
 _ENVELOPE_GB = 16                  # largest measured M.2 SKU
 _SILICON_BACKENDS = {"analytic"}   # analytic CIM/CPU/GPU = silicon-calibrated; others = simulated
 
@@ -225,6 +228,13 @@ class SimConfig:
                      "counterfactual host-PCIe-streaming estimate, NOT a runnable config)")
         elif self.topology != _CAL_TOPOLOGY:
             p.append(f"simulated: topology '{self.topology}' (not the L4-anchored {_CAL_TOPOLOGY})")
+        # CIM COMPUTE engine provenance: a topology may swap the accelerator geometry via
+        # cim_compute_params. Exact-string compare (a differently-formatted path reads as non-Metis —
+        # the conservative direction). Non-Metis params = a different fit with NO silicon -> `simulated`.
+        _ccp = load_spec(self.topology).get("cim_compute_params")
+        if _ccp is not None and _ccp != _CAL_CIM_PARAMS:
+            p.append(f"simulated: CIM compute params '{_ccp}' (non-Metis geometry, no silicon ground "
+                     f"truth; not the Metis-calibrated {_CAL_CIM_PARAMS})")
         rms = self.resolved_memory_spec()
         if rms is not None and rms != _CAL_MEMORY:
             p.append(f"simulated: memory_spec '{rms}' (not the measured {_CAL_MEMORY} anchor)")

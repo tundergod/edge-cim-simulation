@@ -1,5 +1,5 @@
 {
-  "_doc": "CIM topology A = Metis Alpha (Aetina, pre-production M.2). NO on-card DRAM; LLM-INCAPABLE (closed-firmware -1301 wall). Carries the TRANSPORT/ENVELOPE differences only; the CIM COMPUTE engine (M1, simulator/models/params/m1_cim.json) is topology-agnostic and SHARED with topology B. PCIe Gen3x4 3.9 GB/s + 911 us per-call DMA floor are MEASURED. alloc envelope ~14 MB is an ASSUMPTION (vs 1 GiB BAR). alloc_envelope_param_count (6M, SDK weight-alloc limit) != native_max_kn (4.19M K*N area, m1_cim.json).",
+  "_doc": "CIM topology A = Metis Alpha (Aetina, pre-production M.2). NO on-card DRAM; LLM-INCAPABLE (closed-firmware -1301 wall). Carries the TRANSPORT/ENVELOPE differences only; the CIM COMPUTE engine (M1) is RESOLVED from this spec's cim_compute_params (here: the Metis-calibrated m1_cim.json, the same fit topology B uses). PCIe Gen3x4 3.9 GB/s + 911 us per-call DMA floor are MEASURED. alloc envelope ~14 MB is an ASSUMPTION (vs 1 GiB BAR). alloc_envelope_param_count (6M, SDK weight-alloc limit) != native_max_kn (4.19M K*N area, m1_cim.json).",
   "topology": "alpha",
   "on_card_dram": false,
   "llm_capable": false,

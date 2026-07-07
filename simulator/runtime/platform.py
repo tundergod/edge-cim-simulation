@@ -12,6 +12,9 @@ capacity / topology are user-settable.
 """
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 from simulator.specs.loader import load_spec
 from simulator.models.engine import Workload
 from simulator.models.m1_cim_tile import CimTileModel
@@ -37,12 +40,31 @@ class Platform:
         # card -> on-card LPDDR4x 24.2 (literal, byte-identical); alpha -> PCIe 3.9 (no on-card DRAM);
         # edge -> mem_lpddr5 eff x noc_efficiency. The per-call floor (alpha 911.1 us) is exposed for
         # the runner to add to TTFT only. When no topology is given, fall back to the bare memory_spec.
+        # CIM COMPUTE engine params: resolved from the topology's `cim_compute_params` (repo-root path);
+        # all three wired topologies point at m1_cim.json so this equals the CimTileModel() default (L4
+        # byte-identical). A topology declaring a DIFFERENT params file swaps the accelerator geometry;
+        # config._flag_provenance tags any non-Metis params `simulated` (no silicon).
+        cim_params = None
         if topology is not None:
             from simulator.models.m2_memory import MemoryModel
-            mm = MemoryModel(load_spec(topology))
+            topo_spec = load_spec(topology)
+            mm = MemoryModel(topo_spec)
             eff = float(mm.eff_BW_GBs) if mm.eff_BW_GBs else float(mm.pcie_BW_GBs)  # alpha: no DRAM -> PCIe
             self.per_call_floor_us = float(mm.floor_us)
             peak_mem = load_spec(memory_spec) if memory_spec else None
+            _ccp = topo_spec.get("cim_compute_params")
+            if _ccp:
+                # Must be a repo-relative path that resolves INSIDE the repo: a spec may only reference
+                # params committed to the repo, so the same commit is reproducible on any machine.
+                # Reject absolute paths and `..` escapes (fail-loud) rather than read an out-of-repo file.
+                repo_root = Path(__file__).resolve().parents[2]
+                if Path(_ccp).is_absolute():
+                    raise ValueError(f"cim_compute_params must be a repo-relative path, got absolute {_ccp!r}")
+                _cpath = (repo_root / _ccp).resolve()
+                if not _cpath.is_relative_to(repo_root):
+                    raise ValueError(f"cim_compute_params {_ccp!r} escapes the repo root "
+                                     f"({repo_root}); a topology may only reference in-repo params")
+                cim_params = json.loads(_cpath.read_text())
         else:
             peak_mem = load_spec(memory_spec)
             eff = float(peak_mem["eff_BW_GBs"])              # measured anchor (e.g. 24.2)
@@ -64,7 +86,7 @@ class Platform:
             eff = float(peak) * float(bw_efficiency)
         self.bw = SharedBandwidth(eff, knee_GBs=knee_GBs,
                                   interconnect_efficiency=interconnect_efficiency)
-        self.cim = CimTileModel()
+        self.cim = CimTileModel(params=cim_params)
         self.cpu = CpuModel(load_spec("cpu_rk3588"))
         self.gpu = MaliGpuModel()
         self.energy = EnergyModel()
