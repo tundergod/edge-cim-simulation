@@ -8,12 +8,15 @@ equal today's default → AllCim L4 stays 0.1073/0.0649/0.0311 byte-identical.
 
 1. `simulator/runtime/platform.py` (the `self.cim = CimTileModel()` site): when a topology is given, read
    `topo_spec["cim_compute_params"]` (a repo-root-relative path), resolve it against the repo root
-   explicitly — `repo_root = Path(__file__).resolve().parents[2]`, `params = json.loads((repo_root /
-   topo_spec["cim_compute_params"]).read_text())` — and pass `CimTileModel(params=params)`. If the field
-   is absent OR no topology, keep `CimTileModel()` (Metis default). Reuse the topo spec already loaded for
-   the BW resolver (no second load). Geometry (n_cores/core_width) follows from the params dict via
-   `CimTileModel`'s `p.get(...)` — no separate plumbing → verify: `Platform(model,
-   topology="cim_topo_card").cim` has params equal to `m1_cim.json` (dev_lat_us identical to today).
+   explicitly — `repo_root = Path(__file__).resolve().parents[2]`. The path MUST stay inside the repo:
+   reject `Path(_ccp).is_absolute()` and, after `(repo_root / _ccp).resolve()`, reject
+   `not .is_relative_to(repo_root)` (fail-loud) — a spec may only reference in-repo params so the same
+   commit is reproducible on any machine (review P2). Then `params = json.loads(resolved.read_text())` and
+   pass `CimTileModel(params=params)`. If the field is absent OR no topology, keep `CimTileModel()` (Metis
+   default). Reuse the topo spec already loaded for the BW resolver (no second load). Geometry
+   (n_cores/core_width) follows from the params dict via `CimTileModel`'s `p.get(...)` — no separate
+   plumbing → verify: `Platform(model, topology="cim_topo_card").cim` has params equal to `m1_cim.json`
+   (dev_lat_us identical to today); an absolute or `..`-escaping path raises ValueError.
 2. `simulator/runtime/config.py`: add `_CAL_CIM_PARAMS = "simulator/models/params/m1_cim.json"`. In
    `_flag_provenance()`, `load_spec(self.topology).get("cim_compute_params")`; if it is present and
    `!= _CAL_CIM_PARAMS`, append `simulated: CIM compute params '<x>' (non-Metis geometry, no silicon

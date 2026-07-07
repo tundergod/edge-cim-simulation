@@ -49,27 +49,55 @@ def test_different_params_change_compute():
     assert swapped.dev_lat_us(1, 2048, 2048) != metis.dev_lat_us(1, 2048, 2048)
 
 
-def test_platform_resolves_params_through_topology(monkeypatch, tmp_path):
-    """Pins the platform.py resolver itself: a topology pointing at a DIFFERENT params file makes
-    Platform's CimTileModel compute differently. Without this, reverting platform.py to a bare
-    CimTileModel() would go undetected (card->m1_cim.json IS the default). An absolute cim_compute_params
-    path wins the `repo_root / _ccp` join, so it resolves to the tmp file."""
+def test_platform_resolves_params_through_topology(monkeypatch):
+    """Pins the platform.py resolver itself: a topology pointing (REPO-RELATIVE, the required contract)
+    at a DIFFERENT params file makes Platform's CimTileModel compute differently. Without this, reverting
+    platform.py to a bare CimTileModel() would go undetected (card->m1_cim.json IS the default). The alt
+    params file must live INSIDE the repo (the resolver rejects absolute/escaping paths), so it is
+    written to a repo-relative path and removed in finally."""
     base = json.loads(_M1.read_text())
     base["core_width"] = base.get("core_width", 512) // 2
     base["G_eff_Gmax_gops"] = base["G_eff_Gmax_gops"] * 0.5
-    pf = tmp_path / "other_arch.json"
-    pf.write_text(json.dumps(base))
+    rel = "simulator/models/params/_pytest_swap_arch.json"   # repo-relative (the contract)
+    abs_p = ROOT / rel
+    abs_p.write_text(json.dumps(base))
+    try:
+        real = platmod.load_spec
+
+        def fake(name):
+            s = dict(real(name))
+            if name == "cim_topo_card":
+                s["cim_compute_params"] = rel
+            return s
+
+        monkeypatch.setattr(platmod, "load_spec", fake)
+        p = Platform("llama-3.1-8b", topology="cim_topo_card", memory_spec="mem_lpddr4x")
+        assert p.cim.dev_lat_us(1, 2048, 2048) != CimTileModel().dev_lat_us(1, 2048, 2048)
+    finally:
+        abs_p.unlink(missing_ok=True)
+
+
+def test_platform_rejects_out_of_repo_params(monkeypatch, tmp_path):
+    """The resolver must fail-loud on an absolute or repo-escaping cim_compute_params: a topology spec
+    may only reference params committed INSIDE the repo (reproducibility/safety — a bare absolute path
+    would read a machine-local file that isn't in the commit)."""
     real = platmod.load_spec
 
-    def fake(name):
-        s = dict(real(name))
-        if name == "cim_topo_card":
-            s["cim_compute_params"] = str(pf)      # absolute -> repo_root / abs == abs
-        return s
+    def make(bad):
+        def fake(name):
+            s = dict(real(name))
+            if name == "cim_topo_card":
+                s["cim_compute_params"] = bad
+            return s
+        return fake
 
-    monkeypatch.setattr(platmod, "load_spec", fake)
-    p = Platform("llama-3.1-8b", topology="cim_topo_card", memory_spec="mem_lpddr4x")
-    assert p.cim.dev_lat_us(1, 2048, 2048) != CimTileModel().dev_lat_us(1, 2048, 2048)
+    for bad in [str(tmp_path / "x.json"), "/etc/passwd", "../../../../../../etc/passwd"]:
+        monkeypatch.setattr(platmod, "load_spec", make(bad))
+        try:
+            Platform("llama-3.1-8b", topology="cim_topo_card", memory_spec="mem_lpddr4x")
+            raise AssertionError(f"out-of-repo cim_compute_params {bad!r} was not rejected")
+        except ValueError:
+            pass
 
 
 def test_nonmetis_params_tagged_simulated(monkeypatch):

@@ -54,7 +54,17 @@ class Platform:
             peak_mem = load_spec(memory_spec) if memory_spec else None
             _ccp = topo_spec.get("cim_compute_params")
             if _ccp:
-                cim_params = json.loads((Path(__file__).resolve().parents[2] / _ccp).read_text())
+                # Must be a repo-relative path that resolves INSIDE the repo: a spec may only reference
+                # params committed to the repo, so the same commit is reproducible on any machine.
+                # Reject absolute paths and `..` escapes (fail-loud) rather than read an out-of-repo file.
+                repo_root = Path(__file__).resolve().parents[2]
+                if Path(_ccp).is_absolute():
+                    raise ValueError(f"cim_compute_params must be a repo-relative path, got absolute {_ccp!r}")
+                _cpath = (repo_root / _ccp).resolve()
+                if not _cpath.is_relative_to(repo_root):
+                    raise ValueError(f"cim_compute_params {_ccp!r} escapes the repo root "
+                                     f"({repo_root}); a topology may only reference in-repo params")
+                cim_params = json.loads(_cpath.read_text())
         else:
             peak_mem = load_spec(memory_spec)
             eff = float(peak_mem["eff_BW_GBs"])              # measured anchor (e.g. 24.2)
