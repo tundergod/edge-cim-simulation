@@ -43,8 +43,16 @@ def per_token_breakdown(m):
     }
 
 
+def _write_if_changed(path, text):
+    """Write only when content differs, so a no-op re-run doesn't bump the file's mtime — the report
+    builder's mtime-staleness check (build.py --strict) would otherwise flag figures as stale when the
+    documented gate runs validators before the build."""
+    if not (path.exists() and path.read_text() == text):
+        path.write_text(text)
+
+
 def main():
-    (ROOT / "simulator/models/params/m7_energy.json").write_text(json.dumps(PARAMS, indent=1))
+    _write_if_changed(ROOT / "simulator/models/params/m7_energy.json", json.dumps(PARAMS, indent=1))
     m = EnergyModel(PARAMS)
 
     base = per_token_breakdown(m)
@@ -92,7 +100,7 @@ def main():
         "limitation": "energy ESTIMATED not measured (no telemetry, ADR-0005); conclusions "
                       "robust to +/-20%. CPU support time is a coarse per-token estimate.",
     }
-    (ROOT / "validation/reports/phase1.1/m7.json").write_text(json.dumps(report, indent=1))
+    _write_if_changed(ROOT / "validation/reports/phase1.1/m7.json", json.dumps(report, indent=1))
     s = report["sanity"]
     bool_checks = ["all_positive", "monotonic_with_activity", "implied_avg_power_W_plausible",
                    "memory_dominates_robust_to_pm20pct"]

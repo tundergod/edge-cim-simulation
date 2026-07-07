@@ -21,6 +21,14 @@ PROF = ROOT / "measurements/op_profile"
 MODELS = ["llama-3.2-1b", "llama-3.2-3b", "llama-3.1-8b", "qwen2.5-7b"]
 
 
+def _write_if_changed(path, text):
+    """Write only when content differs, so a no-op re-run doesn't bump the file's mtime — the report
+    builder's mtime-staleness check (build.py --strict) would otherwise flag figures as stale when the
+    documented gate runs validators before the build."""
+    if not (path.exists() and path.read_text() == text):
+        path.write_text(text)
+
+
 def main():
     per_model = {}
     all_ok = True
@@ -52,7 +60,7 @@ def main():
         "per_model": per_model,
         "pass_all": all_ok,
     }
-    (ROOT / "validation/reports/phase1.1/m5.json").write_text(json.dumps(report, indent=1))
+    _write_if_changed(ROOT / "validation/reports/phase1.1/m5.json", json.dumps(report, indent=1))
     for m, r in per_model.items():
         print(f"M5 {m:14s}: covered={r['semantic_covered']} distinct={r['n_distinct_ops']} "
               f"rows={r['n_profile_rows']} orphans={len(r['orphan_ops'])} PASS={r['pass']}")
