@@ -9,6 +9,35 @@ Reverse-chronological (newest first).
 
 ---
 
+## 2026-07-07 — Phase 2.1–2.5 complete; honesty reframe + docs sync (touches Phase-1 deliverables)
+
+The integrated per-token simulator (`simulator/runtime/`) shipped across waves 2.1–2.5 (PRs #51/#53,
+#60, #61, #64, #68, #69 — all merged to main). Most of it is new phase work living in its plans/PRs;
+this entry records only the parts that **retroactively touched already-merged prior deliverables**:
+
+- **Honesty reframe (Phase 2.4, retroactive on Phase-1/report + ADR layer).** `docs/adr/0006` no longer
+  frames the LPDDR4x **24.2 GB/s** anchor as an *independent* streaming benchmark — it is the inverse
+  slope of decode-time∝weight-bytes across the 1B/3B/8B decode sweep (r²=0.997), i.e. **partly
+  in-sample** for the L4 reproduction. `tools/report/_metrics.py`'s "hard silicon gate" caption was
+  refined accordingly, and `validate_sensitivity_l5.py`'s `conclusion` value relabelled an
+  *internal-consistency band* (a bandwidth-bound model can't *discover* it's bandwidth-bound). No
+  committed number changed. **Filed issue #67**: KV/attention/embedding bytes are metered against a
+  weight-fitted anchor → latent double-count; resolving it is number-changing and deferred.
+- **`validate_m5_trace` / `validate_m7_energy` made idempotent (Phase 2.4 review P1).** These Phase-1
+  validators now write their JSON only when content changes, so a no-op re-run doesn't bump mtime and
+  `build.py --strict`'s mtime-staleness check no longer false-flags the m5/m7 figures. This makes the
+  documented gate order (validators → build --strict) reproducible.
+- **CIM compute engine de-hardwired (Phase 2.5).** The `cim_compute_params` field in
+  `simulator/specs/cim_topo_*.json` was previously **dead metadata** (no reader); it is now resolved by
+  `platform.py` into the `CimTileModel` (path confined inside the repo, review P2). All three wired
+  topologies still point at `m1_cim.json` (L4 byte-identical); a non-Metis geometry is tagged
+  `simulated`. The specs' `_doc` strings were corrected (compute engine "resolved from
+  cim_compute_params", not "hardcoded/SHARED"). `CONTEXT.md` gained the compute-swap-surface note.
+- **Docs sync.** README (Status → Phase-2-done + a runnable usage tutorial), OVERALL (phase table +
+  repo structure + modules M3/M6 + risks/checkpoints), and CONTEXT (validation-row) brought up to date.
+
+---
+
 ## 2026-06-13 — retire old reports + phase-framing reframe
 
 - **Retired** `docs/report/phase0/` + `docs/report/phase1/` (the old static-HTML / markdown-chapter

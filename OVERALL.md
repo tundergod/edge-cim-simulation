@@ -5,7 +5,7 @@
 > **設計紀律 — CIM-centric：** 系統先繞著 CIM 的限制走（擅長 weight-stationary GEMV、不擅長 dynamic attention、tile 對齊 channel×64、weight residency 上限、host-device 來回成本）；GPU/NPU/CPU 為支援層；op→unit 分工由特性量測決定，不預設。
 >
 > **Workload：** Llama-3 + Qwen-2.5，1B–8B（stretch 13B），INT8，batch=1，prefill+decode。
-> **狀態：** Phase 0.1–0.3 + Phase 1.1–1.3 完成（**1.4–1.6b 是補強，已折入對應子階段**）；Phase 0.4（熱，Metis Card）已量 Card 部分、Aetina 待修復後補；**下一步 = Phase 2（整合）**。Aetina 送修中。
+> **狀態：** Phase 0.1–0.3 + Phase 1.1–1.3 + **Phase 2.1–2.5 完成**——端到端 per-token 事件驅動模擬器（`simulator/runtime/`）已建成並驗證：M3 事件引擎 + M5 workload op-DAG + M6 排程器（AllCim / CimHetero）、L4 decode 重現 silicon ≤15%（1B 10.7 / 3B 6.5 / 8B 3.1%，memory-only ablation 反證非循環）、topology A/B/C 可換（card / host-PCIe / edge-LPDDR5）、±20% 敏感度 + leave-8B-out hold-out + 14B 外推（皆誠實標註）、**CIM compute 引擎已 spec 驅動**（`cim_compute_params` 可換幾何，非 Metis 標 `simulated`）。1.4–1.6b 是補強，已折入對應子階段；Phase 0.4（熱，Metis Card）已量 Card 部分、Aetina 待修復後補。Aetina 送修中。
 > **設計決策見 [docs/adr/](docs/adr/)**（0001 引擎 fidelity · 0002 記憶體 · 0003 scheduler · 0004 混合精度 · 0005 能耗 · 0006 驗證/橋接/外推 · 0007 op inventory）；**文獻見 [docs/papers/](docs/papers/)**（16 篇，README 列篩選理由）；**Metis 量測面見 [docs/voyager-sdk.md](docs/voyager-sdk.md)**。
 
 ## 平台假設（橋接）
@@ -48,7 +48,12 @@
 | &nbsp;&nbsp;**Phase 1.1** ✅（CIM 經 1.5 再 review） | silicon 校準並過 ADR-0006 gate：M1-CIM（2.7%）、M4-GPU/CPU、M2-DRAM（Card LPDDR4x）、M5-trace、M7-energy + 端到端 recompose hold-out（8B 9.5%）。**1.5 上 Card 補量**：native multi-tile residency-cliff（31%→2.4%）、dense prefill M=2..320、prefill M-wall=**512**、KV-BW 驗證。報告 `docs/report/phase1-site/`。 | 量測級可信的核心 decode 路徑 |
 | &nbsp;&nbsp;**Phase 1.2** ✅ | 模組化「engine + 可換 spec」校準-analytic 元件層（換型號=換 spec）：CPU（殘差 1.15%）、NPU（解析 systolic-roofline，`simulated`、#13）、記憶體（analytic LPDDR4/4X/5 + SRAM CACTI）、GPU、CIM 雙拓樸。CIM 已 **`CARD_REVALIDATED`**（800MHz 13 點，median 4.8%）。**1.4 再 review**：conversion-op→analytic 重分類、報告數字重生。報告 `docs/report/phase1-site/`、findings `docs/phase1.2-findings.md`。 | 完整、可換型號的輕引擎模擬器 |
 | &nbsp;&nbsp;**Phase 1.3** ✅ | 重型保真引擎插同一 `engine=` 介面：**ONNXim**（NPU）、**Ramulator2**（LPDDR5）皆 LIVE，驗 1.2 單串流趨勢。多單元競爭 / 逐 token 整機在 Phase 2。NPU 第三引擎 **ScaleSim 已建**（Phase 1.6，純 Python；1.6b 進一步實測 ONNXim/ScaleSim 是否有 32-systolic 特性）。 | 高保真引擎就緒 |
-| **Phase 2** ⏳ | 整合成端到端 event-driven 模擬器（M3 事件引擎 + M6 排程器），跑完整 prefill+decode，做 L4/L6 端到端 + L5 敏感度 + 混合精度驗證。 | 完整模擬器 |
+| **Phase 2**（傘狀）✅ | 整合成端到端 event-driven 模擬器（M3 事件引擎 + M6 排程器），跑完整 prefill+decode，做 L4 端到端 + L5 敏感度 + 混合精度 + topology 可換。實作於 `simulator/runtime/`。 | 完整模擬器 |
+| &nbsp;&nbsp;**Phase 2.1** ✅ | M5 workload op-DAG + M3 事件引擎 + AllCim 排程器 + L4 decode 重現（1B 10.7 / 3B 6.5 / 8B 3.1%，獨立定價；memory-only ablation *失敗* = 非循環證據）。 | 量測級可信的整機 decode |
+| &nbsp;&nbsp;**Phase 2.2a/b** ✅ | value-flow op-DAG + 記憶體域路由 + per-op provenance（2.2a）；`Scheduler` ABC + CimHetero 混合精度（CIM-INT8 matmul × GPU-FP16 attention + 精度邊界 conversion，2.2b）。 | 可換排程 + 混合精度 |
+| &nbsp;&nbsp;**Phase 2.3** ✅ | topology A/B/C 可換（card 量測 / alpha host-PCIe counterfactual / edge LPDDR5 simulated）、±20% 敏感度、真 leave-8B-out hold-out、14B 大小外推——各以 measured/simulated/counterfactual/extrapolated 標註。 | 壓力測 + 誠實邊界 |
+| &nbsp;&nbsp;**Phase 2.4** ✅ | gate/test hardening：validator fail-loud exit code、fail-loud 分支測試、honesty 措辭修正（24.2 partly-in-sample）、繪圖去重。issue #67（權重-vs-全流量 double-count）已記錄待處理。 | 可重現、可 CI 的 gate |
+| &nbsp;&nbsp;**Phase 2.5** ✅ | CIM compute 引擎 spec 驅動：`cim_compute_params` 接進 `platform.py`→`CimTileModel`（三拓樸皆指 m1_cim.json → L4 byte-identical），非 Metis 幾何自動標 `simulated`；路徑限制在 repo 內。 | 可換 compute 架構（誠實標註） |
 
 > **Phase 1.4–1.6b 是補強波，非新階段**：1.4 重審 1.2、1.5 上 Card 補量 1.1、1.6 建 ScaleSim 第三引擎 + 1.6b 實測 NPU systolic 特性補強 1.3——全折進上表的 1.1/1.2/1.3。熱量測歸 **Phase 0.4**。各 phase findings 在 `docs/phase1.{1,2,3}-findings.md`；整併報告為單一 `docs/report/phase1-site/`。
 
@@ -92,9 +97,9 @@
 - **排程器（M6）**：Phase 1 只做 **naive 版、不 claim contribution**；貢獻框架延到 Phase 2。
 - **定位**：Ramulator2 = 入場券（與純模擬的 PAPI/CENT 打平）；silicon 校準的 per-unit + 單串流 + L4 = 差異化。
 
-## Phase 2 — 模擬器實作（整合，下一步）
+## Phase 2 — 模擬器實作（整合，已完成 2.1–2.5）
 
-照 **CLAUDE.md per-phase workflow** 走（branch → plan → subagent 審 → 批准 → 執行 → code-review → PR → merge），與前四波一致。整合切成 M3 事件引擎、M5 workload、M6 排程器三塊，逐塊對 `validation/contracts/*` + `measurements/` 驗證。
+照 **CLAUDE.md per-phase workflow** 走（branch → plan → subagent 審 → 批准 → 執行 → code-review → PR → merge），與前四波一致。整合切成 M3 事件引擎、M5 workload、M6 排程器三塊，逐塊對 `validation/contracts/*` + `measurements/` 驗證。**已落地於 `simulator/runtime/`**：`config`（SimConfig，fail-loud 使用者合約）→ `workload`/`dag`（M5 value-flow op-DAG，結構取自 trace fixture）→ `scheduler`（M6：`AllCimScheduler` / `CimHeteroScheduler`）→ `platform`（逐-op 定價，凍結 Phase-1 單元模型 + topology 解析的頻寬牆 + spec 驅動的 CIM compute 幾何）→ `resources`/`events`（M3 事件引擎，`max(compute, memory)`）→ `runner`（emit metrics）。使用方式見 README § Quickstart。
 
 ### 模擬器架構（6 box 資料流）
 
@@ -122,18 +127,19 @@
 edge-cim-simulation/
 ├── CLAUDE.md  CONTEXT.md  OVERALL.md  README.md  LOG.md  requirements.phase0.txt
 ├── docs/                  # papers/ plans/ adr/ agents/ figures/ report/ + *-findings.md handoff-*.md voyager-sdk.md
-├── simulator/
-│   ├── specs/             # 可換硬體規格 json（換型號=換 spec）
+├── simulator/            # 套件名維持 simulator（Phase 2 未依早期草案改名 units/engine；改採新增 runtime/）
+│   ├── runtime/           # Phase 2 per-token 模擬器：config(SimConfig) · workload/dag(M5 op-DAG) ·
+│   │                      #   scheduler(M6: AllCim/CimHetero) · precision · resources/events(M3 引擎) ·
+│   │                      #   platform(逐-op 定價) · runner · configs/(範例 JSON)
+│   ├── specs/             # 可換硬體規格 json（換型號=換 spec；含 cim_topo_* 拓樸 + cim_compute_params 換算幾何）
 │   ├── models/            # Phase 1 擬合元件 M1/M2/M4/M7 + engine.py（可換引擎介面）+ params/
-│   │                      #   [Phase 2 進入時重構：models/→units/、engine.py→base.py、新增 engine/
-│   │                      #    (M3 事件 + M5 workload + M6 排程 + runner)；30+ import 一次改，與 Phase 2 一併做]
 │   └── engines/           # 外部 heavy-sim 快取（ONNXim/ScaleSim/Ramulator2 輸出，非 silicon；engine= 後端）
 ├── tools/                 # analysis/ plotting/ report/ trace_export/ onnxim/ ramulator2/(vendored)
 ├── characterization/      # 板上量測腳本：aetina/ metis_card/
 ├── measurements/          # op_inventory/ op_profile/ aetina/ metis_card/（silicon 量測，非 sim）
-├── traces/                # 每 token op×shape 串流（per model, workload）
-├── validation/            # contracts/(m*.yaml) reports/(phase1.*) validate_m5_trace.py validate_m7_energy.py
-└── tests/                 # pytest tests/（vendored upstream/ 不收集）
+├── traces/                # 每 token op×shape 串流（per model, workload）；fixture/ = committed DAG 結構來源
+├── validation/            # contracts/(m*.yaml) reports/(phase1.*/phase2/) validate_*.py（含 e2e_l4/topology_ab/sensitivity/holdout/…）
+└── tests/                 # pytest tests/（160；vendored upstream/ 不收集）
 ```
 
 ### 模組（Modules）
@@ -142,10 +148,10 @@ edge-cim-simulation/
 | --- | --- | --- | --- |
 | M1 | CIM tile timing | Metis Alpha CNN + matmul | 擬合參數方程式為主、lookup fallback；NeuroSim 選用交叉檢查 |
 | M2 | Memory hierarchy | Ramulator2 LPDDR5 + Alpha PCIe DMA | 容量為參數；BW 效率 0.65（silicon）/ 可 sweep；多單元競爭 = Ramulator2 |
-| M3 | Event-driven engine | M1 + M2 | Python event loop；op stream 串過各單元 + 記憶體（Phase 2 建） |
+| M3 | Event-driven engine | M1 + M2 | Python event loop；op stream 串過各單元 + 記憶體。**已建**（`simulator/runtime/events.py`：serial + fair-share pipeline 兩路，`max(compute, memory)`） |
 | M4 | NPU / GPU / CPU | RKNPU2、Mali OpenCL、A76 | 各單元擬合方程式；NPU 三引擎 analytic/onnxim/scalesim（皆非 silicon，#13） |
 | M5 | LLM workload generator | HF → PyTorch tracer → per-token op DAG | 前半即 Phase 0.1（ADR-0007） |
-| M6 | Scheduler / Mapper | M3 + M4 + M5 | op→unit + 記憶體 + dataflow + 精度邊界。**Phase 1 naive、貢獻延 Phase 2** |
+| M6 | Scheduler / Mapper | M3 + M4 + M5 | op→unit + 記憶體 + dataflow + 精度邊界。**已建**（`simulator/runtime/scheduler.py`：`Scheduler` ABC + AllCim / CimHetero，unmapped category fail-loud） |
 | M7 | Energy estimation | 廠商規格 + ARM datasheet | 規格 + activity-factor 估算（板無功耗儀表） |
 | M8 | Thermal（選用） | Phase 0.4 熱量測 | 事後附加層；v1 不做閉環 throttling |
 
@@ -170,11 +176,11 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 ## 開放風險
 
 1. ✅ **已解 — NeuroSim 整合成本**：M1 改用 Metis Alpha 量測 + lookup fallback；NeuroSim 降為選用「模型形式」交叉檢查（Metis 是 digital SRAM-CIM ≠ analog RRAM）。
-2. 🔶 **保留（Phase 2）— 橋接假設**：L4 錨「CIM + on-card-DRAM」、模擬器用 host-LPDDR + PCIe。需兩拓樸敏感度子實驗（=檢查點 #6）。
+2. ✅ **已解（Phase 2.3）— 橋接假設**：L4 錨「CIM + on-card-DRAM」；`validate_topology_ab.py` 做 A/B/C 拓樸敏感度子實驗（card 重現 committed prediction，非 == measured；alpha host-PCIe ~5.1–5.7× 慢、edge LPDDR5 ~1.18–1.21× 快（隨模型；此為 8B 行），皆標 counterfactual/simulated）。誠實限制：24.2 GB/s 錨是 decode 導出、partly-in-sample（見 ADR-0006 + issue #67 的 double-count）。
 3. 🔶 **watch — HPIM 頂會搶先**（[筆記](docs/papers/pim-llm-accelerators/hpim-arxiv2025.md)）。差異化（mobile-SoC、真實晶片校準、混合精度、量測驅動分工）仍成立。
 4. ✅ **已解 — agent 自主性**：前四波證明 per-phase workflow 可行；autoresearch 自走迴圈已棄用。
 5. ✅ **已解 — ONNX export 品質**（ADR-0007）：op inventory 用 PyTorch runtime tracer，不靠 `torch.onnx.export`。
-6. 🔶 **保留（Phase 2）— Ramulator2 多單元競爭**：1.3 已驗單串流；多單元在 Phase 2 為 primary（無 silicon 驗證，ADR-0002 修訂）。LPDDR4/4x 無 Ramulator2 preset（只有 LPDDR5）。
+6. 🔶 **部分解（Phase 2.1/2.3）— 多單元競爭**：`resources.py` 的 saturating-knee 共享頻寬 + `validate_contention.py` 做 SHAPE 驗證（rising-then-saturating，`simulated`，knee 對齊 Card 4c/1c ~1.1× 為 by-construction）。**仍無並發 silicon**（Aetina 送修，#52）；Ramulator2 多串流交叉檢查為 FUTURE。LPDDR4/4x 無 Ramulator2 preset（只有 LPDDR5）。
 7. ⬇ **降級 — NPU 模擬器契合度**：ONNXim/SCALE-Sim 皆通用 systolic、皆非 silicon（#13），ONNXim 偏 ~4×。緩解：三引擎 + lookup override + L4 裁 + 敏感度（§1c）。
 8. ⚠ **Aetina 送修中**：量測凍結、**並發 BW 量測被阻** → 多單元競爭 fallback 到 Ramulator2。Metis Card 仍可用（含 0.4 溫度）。
 
@@ -187,9 +193,9 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 
 ## 開放檢查點
 
-1. 🔶 **Phase 1/2 邊界**（Phase 2 入口）：M3/M6 這類「需先實作才能測」的 component 怎麼驗 — 沿 per-phase workflow 逐塊。
+1. ✅ **已答（Phase 2）— Phase 1/2 邊界**：M3/M6 這類「需先實作才能測」的 component，沿 per-phase workflow 逐塊建 + 對 L4/structural-oracle 驗（2.1–2.5）。
 2. ✅ **方程式擬合誤差**（1.x 已答）：roofline 參數式 + lookup fallback，median/p95/max + ADR-0006 gate（CIM 2.4–4.8%、CPU 1.15%）。
 3. ✅ **op inventory 完整性**（0.1 已答）：runtime tracer + 架構解析 → 580-sig matrix，decode 逐 kv 展開。
-4. 🔶 **記憶體外推有效邊界**（部分答）：容量 + BW 效率已是參數；32GB+ 趨勢佐證待 Phase 2 敏感度。
+4. ✅ **已答（Phase 2.3）— 記憶體/大小外推有效邊界**：容量 + BW 效率已是參數；`validate_sensitivity_l5.py`（±20% 頻寬帶）+ `validate_extrapolation_13b.py`（14B footprint 14.11 GB、16 GiB @ctx1024 fits、ctx≈18,471 overflow → spill 未建模 #58）+ hold-out。皆標 extrapolated，非 validated。
 5. ✅ **熱**（0.4 取代）：Metis Card 量溫度（開環 M8），最後做。
-6. 🔶 **L4 橋接驗證強度**（Phase 2 入口）：on-card-DRAM vs host-MMIO 敏感度實驗設計（=風險 #2）。
+6. ✅ **已答（Phase 2.3）— L4 橋接驗證強度**：`validate_topology_ab.py` 做 on-card-DRAM vs host-PCIe vs edge 敏感度實驗（=風險 #2）。誠實限制：24.2 錨 partly-in-sample（ADR-0006）。
