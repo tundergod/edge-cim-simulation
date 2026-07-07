@@ -85,7 +85,9 @@ which becomes the byte-identical baseline for E-18). No committed number changes
 
 - `.venv/bin/pytest tests/` all green (existing + new).
 - All 8 validators exit 0; the 3 newly-wired gates (steps 1-3) return non-zero under a forced-false probe.
-- `docs/report/phase1-site/build.py --strict` green (14 pages).
+- `docs/report/phase1-site/build.py --strict` green (14 pages) — reproducible IN THIS ORDER: `validate_m5_trace`/
+  `validate_m7_energy` write their JSON only when content changes (idempotent), so a no-op re-run does not
+  bump mtime and the builder's mtime-staleness check does not falsely flag m5/m7 figures.
 - `validation/reports/phase2/e2e_l4.json` unchanged (0.1073/0.0649/0.0311).
 - `phase2/*.json` byte-identical to the post-D snapshot (only `sensitivity.json` changes vs main, at
   step 15; step 18 dropped so no validator refactor touches the JSONs).
