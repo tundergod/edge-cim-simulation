@@ -51,6 +51,7 @@ MODELS = {
     # EXTRAPOLATION ONLY (>8B, ADR-0006 ~13B/32GB stretch) — NOT a supported config; dims from the
     # Qwen2.5-14B HF config (same source as the op_inventory trace) so CPU support ops can price.
     "qwen2.5-14b":  dict(H=5120, F=13824, heads=40, hd=128, V=152064),
+    "phi3-mini":     dict(H=3072, F=8192, heads=32, hd=96, V=32064),
 }
 
 # --- Structural instruction-count physics (ASSUMPTION). exp() = the cost driver.
