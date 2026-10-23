@@ -173,7 +173,7 @@ def run(cfg):
         # scheduler, so the config value alone is not enough to label a run)
         "host": getattr(dec, "host", None),                        # graph-owning unit chosen for decode
         "prefill_host": getattr(pre, "host", None),
-        "host_candidates_est_us": getattr(dec, "host_candidates", None),   # host=auto: {unit: est us}
+        "host_candidates_est_us": getattr(dec, "host_candidates", None),   # host=auto: {unit: {est_us, engine_us}}; chosen by engine_us
         "cim_n_cores": plat.cim_n_cores,
         "npu_scale": plat.npu_scale,
         "knee_GBs": plat.bw.knee,

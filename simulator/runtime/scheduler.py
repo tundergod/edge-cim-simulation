@@ -347,12 +347,20 @@ class TiledHeteroScheduler(Scheduler):
         prev = getattr(dag, "host", None)
         if prev in units:                         # idempotent re-assign: keep the host already chosen
             return self._assign_host(dag, cfg, platform, units, prev)
-        best, est = None, {}
+        # host=auto: solve once per candidate host, then let the EVENT ENGINE (not the solver's
+        # serial estimate) rank the candidates: the estimates tie within <0.1% while the engine
+        # (cross-op overlap, fair-share bandwidth) separates them by several % (matrix v0 anomaly 5).
+        # `host_candidates` keeps both numbers per host for reporting. Tie-break: solver estimate.
+        from simulator.runtime.events import run_dag          # deferred: events is a leaf module
+        best, best_key, est = None, None, {}
         for h in units:
             out = self._assign_host(copy.deepcopy(dag), cfg, platform, units, h)
-            est[h] = out.host_est_us
-            if best is None or out.host_est_us < best.host_est_us - 1e-9:
-                best = out
+            bw = getattr(platform, "bw", None)
+            eng = float(run_dag(out, platform, bw)) if bw is not None else float(out.host_est_us)
+            est[h] = {"est_us": float(out.host_est_us), "engine_us": eng}
+            key = (eng, float(out.host_est_us))
+            if best is None or key < best_key:
+                best, best_key = out, key
         best.host_candidates = est
         return best
 

@@ -141,15 +141,15 @@ def test_host_auto_picks_lowest_estimate_and_is_idempotent():
     plat = AnalyticFakePlatform()
     sched = SCHEDULERS["tiled_hetero"]
     auto = sched.assign(build_token_dag(MODEL, "decode", 512), Cfg(host="auto"), platform=plat)
-    est = auto.host_candidates
-    assert set(est) == {"gpu", "npu", "cim"} and all(v > 0 for v in est.values())
-    assert auto.host == min(est, key=est.get)
+    est = auto.host_candidates                     # {unit: {est_us, engine_us}}; ranked by engine_us
+    assert set(est) == {"gpu", "npu", "cim"} and all(v["est_us"] > 0 and v["engine_us"] > 0 for v in est.values())
+    assert auto.host == min(est, key=lambda h: (est[h]["engine_us"], est[h]["est_us"]))
     # == the explicit-host run of the chosen host (same decisions, same estimate)
     fixed = sched.assign(build_token_dag(MODEL, "decode", 512), Cfg(host=auto.host), platform=plat)
     assert _snap(fixed) == _snap(auto) and fixed.host_est_us == pytest.approx(auto.host_est_us)
     for h, e in est.items():                      # every candidate estimate is reproducible
         other = sched.assign(build_token_dag(MODEL, "decode", 512), Cfg(host=h), platform=plat)
-        assert other.host_est_us == pytest.approx(e)
+        assert other.host_est_us == pytest.approx(e["est_us"])
     # idempotent: a re-assign keeps the chosen host and changes nothing
     again = sched.assign(auto, Cfg(host="auto"), platform=plat)
     assert again.host == auto.host and _snap(again) == _snap(auto)
