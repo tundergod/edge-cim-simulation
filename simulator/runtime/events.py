@@ -39,7 +39,45 @@ def _validate_mem_domains(dag):
                              f"(a byte-streaming op must reside in dram or cpu_cache)")
 
 
-def run_serial(dag, platform, bw, *, price_compute=True):
+def _critical_path_us(dag, dur):
+    """Longest dependency path with per-node durations `dur` (resource-free lower bound)."""
+    order = []
+    indeg = {n.id: len(n.deps) for n in dag.nodes}
+    ready = [nid for nid, d in indeg.items() if d == 0]
+    while ready:
+        nid = ready.pop()
+        order.append(nid)
+        for s in dag.successors(nid):
+            indeg[s] -= 1
+            if indeg[s] == 0:
+                ready.append(s)
+    finish = {}
+    for nid in order:
+        start = max((finish[d] for d in dag[nid].deps), default=0.0)
+        finish[nid] = start + dur[nid]
+    return max(finish.values(), default=0.0)
+
+
+def _fill_stats(stats, dag, latency_us, unit_busy, dur, bytes_drained, mem_active_us):
+    """ADR-0009 run statistics: per-unit busy time, sync/merge counts, achieved aggregate
+    bandwidth (bytes drained / time with >= 1 active DRAM stream), critical path."""
+    syncs = [n.wl.extra.get("sync_us", 0.0) for n in dag.nodes]
+    stats.update({
+        "latency_us": latency_us,
+        "unit_busy_us": dict(sorted(unit_busy.items())),
+        "unit_utilisation": {u: (b / latency_us if latency_us > 0 else 0.0) for u, b in sorted(unit_busy.items())},
+        "n_sync": sum(1 for x in syncs if x > 0),
+        "sync_us": float(sum(syncs)),
+        "n_merge": sum(1 for n in dag.nodes if n.category == "merge"),
+        "dram_bytes": int(bytes_drained),
+        "mem_active_us": mem_active_us,
+        "achieved_GBs": (bytes_drained / mem_active_us * 1e-3) if mem_active_us > 0 else 0.0,
+        "critical_path_us": _critical_path_us(dag, dur),
+    })
+    return stats
+
+
+def run_serial(dag, platform, bw, *, price_compute=True, stats=None):
     """SINGLE-ACCELERATOR execution (no cross-op pipeline): each op occupies the one
     accelerator for max(compute, memory) — intra-op double-buffering only — and the
     token latency is their sum. This is the FAITHFUL all-AIPU (AllCim) decode model. The
@@ -55,6 +93,7 @@ def run_serial(dag, platform, bw, *, price_compute=True):
         raise ValueError("M3: DRAM memory traffic present but SharedBandwidth eff_BW <= 0 "
                          "(degenerate bandwidth would stall the simulation)")
     total = 0.0
+    unit_busy, dur, bytes_drained, mem_us = {}, {}, 0, 0.0
     for n in dag.nodes:
         c = float(platform.compute_us(n)) if price_compute else 0.0
         # only DRAM-domain bytes hit the 24.2 GB/s wall; cpu_cache bytes are already inside
@@ -62,18 +101,29 @@ def run_serial(dag, platform, bw, *, price_compute=True):
         # WATCH (#67): 24.2 was fit on WEIGHT bytes only; KV/attn/embedding stream through this same
         # pool -> latent double-count. Resolve the weight-only-vs-all-traffic basis (number-changing, not
         # in the 2.4 hardening scope).
-        m = bw.stream_us(n.bytes_streamed, 1) if (n.bytes_streamed > 0 and n.mem_domain != "cpu_cache") else 0.0
+        dram = n.bytes_streamed > 0 and n.mem_domain != "cpu_cache"
+        m = bw.stream_us(n.bytes_streamed, 1) if dram else 0.0
         total += max(c, m)
+        if stats is not None:
+            unit_busy[n.unit] = unit_busy.get(n.unit, 0.0) + c
+            dur[n.id] = max(c, m)
+            if dram:
+                bytes_drained += n.bytes_streamed
+                mem_us += m
+    if stats is not None:
+        _fill_stats(stats, dag, total, unit_busy, dur, bytes_drained, mem_us)
     return total
 
 
 def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compute=True,
-            pipeline=True):
+            pipeline=True, stats=None):
     """Return the token latency (microseconds) to execute the whole DAG.
     `price_compute=False` zeroes every op's compute term (memory-only ablation).
     `pipeline=False` runs the SINGLE-ACCELERATOR serial model (run_serial) — no cross-op
     overlap, matching the measured all-AIPU silicon; `pipeline=True` (default) uses the
-    fluid concurrent event loop (cross-op overlap), a SIMULATED forward-looking mode."""
+    fluid concurrent event loop (cross-op overlap), a SIMULATED forward-looking mode.
+    `stats` (a dict, optional) is filled with per-unit busy us, sync/merge counts, the
+    bandwidth-time integral (achieved GB/s) and the critical path (ADR-0009)."""
     # fail-loud preconditions (#56): never return a plausible latency for an invalid run
     if not dag.is_acyclic():
         raise ValueError("M3: cyclic DAG — a dependency cycle cannot be scheduled")
@@ -84,8 +134,9 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
         raise ValueError("M3: DRAM memory traffic present but SharedBandwidth eff_BW <= 0 "
                          "(degenerate bandwidth would stall the simulation)")
     if not pipeline:
-        return run_serial(dag, platform, bw, price_compute=price_compute)
+        return run_serial(dag, platform, bw, price_compute=price_compute, stats=stats)
     n_total = len(dag.nodes)
+    unit_busy, dur, bytes_drained, mem_active_us = {}, {}, 0.0, 0.0   # stats accumulators
     indeg = {n.id: len(n.deps) for n in dag.nodes}
     unit_free = {}                       # unit clock -> next-free time (compute serialization)
     pending = {nid for nid, d in indeg.items() if d == 0}   # deps satisfied, not yet dispatched
@@ -133,6 +184,9 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
                     ct = compute_us(node)
                     unit_free[u] = clock + ct
                     compute_done_at[nid] = clock + ct
+                    unit_busy[node.unit] = unit_busy.get(node.unit, 0.0) + ct
+                    dur[nid] = max(ct, bw.stream_us(node.bytes_streamed, 1)
+                                   if (node.bytes_streamed > 0 and node.mem_domain != "cpu_cache") else 0.0)
                     # only DRAM-domain bytes contend on the shared channel; cpu_cache bytes
                     # are priced inside compute_us (m4_cpu) and don't drag the DRAM pool.
                     # WATCH (#67): same weight-only-vs-all-traffic double-count as run_serial above.
@@ -175,7 +229,9 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
         clock += nxt
         if active_mem:
             drained = nxt * rate_bytes_per_us()
+            mem_active_us += nxt
             for nid in list(active_mem):
+                bytes_drained += min(drained, active_mem[nid])
                 active_mem[nid] -= drained
                 if active_mem[nid] <= _BYTE_EPS:
                     del active_mem[nid]
@@ -186,4 +242,6 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
     if len(done) != n_total:
         raise RuntimeError(f"M3: incomplete simulation — {n_total - len(done)} of {n_total} "
                            f"nodes never completed")
+    if stats is not None:
+        _fill_stats(stats, dag, last, unit_busy, dur, bytes_drained, mem_active_us)
     return last

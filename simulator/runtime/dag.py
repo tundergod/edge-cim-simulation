@@ -12,10 +12,11 @@ from dataclasses import dataclass, field
 from simulator.models.engine import Workload
 
 # op categories M5 emits (from the Phase-0.2 9-class categorizer) + 'convert'
-# (precision-boundary cast, inserted by M6 in Wave 2.2).
+# (precision-boundary cast, inserted by M6 in Wave 2.2) + 'merge' (the gather /
+# reduction node a tiled op's sub-nodes feed, inserted by tiling.split_node; ADR-0009).
 CATEGORIES = (
     "matmul", "attention", "norm", "rope", "ffn", "softmax",
-    "residual", "embedding", "sampling", "kv_cache", "convert",
+    "residual", "embedding", "sampling", "kv_cache", "convert", "merge",
 )
 
 
@@ -42,6 +43,8 @@ class OpNode:
     pricing_group: int | None = None                # composite-pricing group (2.2b R2)
     mem_domain: str | None = None                   # 'dram'|'cpu_cache'|'none' (residency, set by scheduler)
     out_elems: int = 0                              # element count of the produced value (conversion-byte source, 2.2b)
+    tile: dict | None = None                        # tiling provenance (ADR-0009): {"of": original id, "dim", "part"|"merge", ...};
+                                                    # None for an untiled op. Ignored by pricing.
 
 
 class Dag:
@@ -51,6 +54,7 @@ class Dag:
 
     def __init__(self, nodes):
         self.nodes = list(nodes)
+        self.plans = {}          # original node id -> chosen tiling plan (filled by a tiling scheduler, ADR-0009)
         self._by_id = {n.id: n for n in self.nodes}
         if len(self._by_id) != len(self.nodes):
             raise ValueError("duplicate OpNode id in DAG")

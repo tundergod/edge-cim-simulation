@@ -17,7 +17,7 @@ sys.path.insert(0, str(_ROOT / "tools" / "trace_export"))
 import op_profile  # noqa: E402
 
 from simulator.runtime.workload import build_token_dag  # noqa: E402
-from simulator.runtime.scheduler import SCHEDULERS  # noqa: E402
+from simulator.runtime.scheduler import SCHEDULERS, plans_summary  # noqa: E402
 from simulator.runtime.platform import Platform  # noqa: E402
 from simulator.runtime.events import run_dag  # noqa: E402
 
@@ -55,8 +55,8 @@ def run(cfg):
     if cfg.scheduler not in _SCHEDULERS:
         raise ValueError(f"unknown scheduler '{cfg.scheduler}' (have {sorted(_SCHEDULERS)})")
     sched = _SCHEDULERS[cfg.scheduler]
-    def assign(dag):                              # annotator: places units/domains (+ conversions)
-        return sched.assign(dag, cfg)
+    def assign(dag):                              # annotator: places units/domains (+ conversions / tiling)
+        return sched.assign(dag, cfg, platform=plat)
 
     # Topology validity + the topology x memory_spec contract are enforced in cfg.validate()
     # (called above) — Wave 2.3 wires cim_topo_card/alpha/edge. Heavy engine backends remain
@@ -102,18 +102,23 @@ def run(cfg):
     kv_hi = max(1, min(cfg.context, P + D))
     kv_lo = max(1, min(P, kv_hi))
     kv_pts = sorted({kv_lo, (kv_lo + kv_hi) // 2, kv_hi})
-    tok_us = [run_dag(assign(build_token_dag(cfg.model, "decode", k, _model_obj=model_obj)),
-                      plat, plat.bw, concurrency=concurrency, contention=contention,
-                      price_compute=price_compute, pipeline=pipeline) for k in kv_pts]
+    mid = kv_pts[len(kv_pts) // 2]
+    tok_us, dec, dec_stats = [], None, {}
+    for k in kv_pts:
+        d = assign(build_token_dag(cfg.model, "decode", k, _model_obj=model_obj))
+        st = dec_stats if k == mid else None            # engine stats at the middle kv point (ADR-0009)
+        tok_us.append(run_dag(d, plat, plat.bw, concurrency=concurrency, contention=contention,
+                              price_compute=price_compute, pipeline=pipeline, stats=st))
+        if k == mid:
+            dec = d
     t_dec_us = sum(tok_us) / len(tok_us)
     tok_s = 1e6 / t_dec_us if t_dec_us > 0 else 0.0
     total_generation_s = D * t_dec_us / 1e6
-    dec = assign(build_token_dag(cfg.model, "decode", kv_pts[len(kv_pts) // 2], _model_obj=model_obj))
 
     # prefill: one forward at P (TTFT reported only, not gated)
-    pre = assign(build_token_dag(cfg.model, "prefill", cfg.prefill_len, _model_obj=model_obj))
+    pre, pre_stats = assign(build_token_dag(cfg.model, "prefill", cfg.prefill_len, _model_obj=model_obj)), {}
     t_pre_us = run_dag(pre, plat, plat.bw, concurrency=concurrency, contention=contention,
-                       price_compute=price_compute, pipeline=pipeline)
+                       price_compute=price_compute, pipeline=pipeline, stats=pre_stats)
     # per-call transport floor (alpha host-MMIO 911 us) is a TTFT artifact, amortized to ~0 over
     # decode tokens -> added to the prefill/TTFT path ONLY (D11; decode tok/s stays bandwidth-bound).
     t_pre_us += plat.per_call_floor_us
@@ -144,4 +149,21 @@ def run(cfg):
         "op_provenance": _op_provenance(dec, plat, plat.bw),
         "conversion_count_per_decode_token": len(convs),               # int8<->fp16 casts (0 for AllCim)
         "conversion_bytes_per_decode_token": sum(n.bytes_streamed for n in convs),
+        # ADR-0009 heterogeneous-execution statistics (engine stats at the middle decode kv point +
+        # the prefill forward). All SIMULATED for the non-AllCim schedulers.
+        "prefill_tok_s": round(cfg.prefill_len / (t_pre_us / 1e6), 4) if t_pre_us > 0 else 0.0,
+        "unit_utilisation": dec_stats["unit_utilisation"],
+        "prefill_unit_utilisation": pre_stats["unit_utilisation"],
+        "sync_count_per_decode_token": dec_stats["n_sync"],
+        "sync_us_per_decode_token": round(dec_stats["sync_us"], 3),
+        "merge_count_per_decode_token": dec_stats["n_merge"],
+        "prefill_sync_count": pre_stats["n_sync"],
+        "prefill_sync_us": round(pre_stats["sync_us"], 3),
+        "prefill_merge_count": pre_stats["n_merge"],
+        "achieved_decode_bandwidth_GBs": round(dec_stats["achieved_GBs"], 3),
+        "achieved_prefill_bandwidth_GBs": round(pre_stats["achieved_GBs"], 3),
+        "decode_critical_path_us": round(dec_stats["critical_path_us"], 3),
+        "prefill_critical_path_us": round(pre_stats["critical_path_us"], 3),
+        "sync_mode": cfg.sync_mode,
+        "plans_summary": {"decode": plans_summary(dec), "prefill": plans_summary(pre)},
     }

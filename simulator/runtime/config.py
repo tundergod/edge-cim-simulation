@@ -25,7 +25,7 @@ from simulator.specs.loader import load_spec
 _KNOWN_TOP = {"workload", "platform", "scheduler", "tunables", "ablations", "sweep", "_doc"}
 _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine"}
-_KNOWN_SCHED = {"policy", "precision_boundary_placement"}
+_KNOWN_SCHED = {"policy", "precision_boundary_placement", "sync_mode", "sync_us_override", "partition_grid"}
 _KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor", "pipeline"}
 _KNOWN_ABL = {"concurrency_off", "contention_off", "compute_off"}
 
@@ -47,7 +47,8 @@ _TOPO_MEMORY = {"cim_topo_card": "mem_lpddr4x", "cim_topo_edge": "mem_lpddr5", "
 # user-input contract reject an unknown/garbage scheduler at construction instead of silently
 # provenance-labelling it as a real "simulated heterogeneous placement". Keep in sync with
 # simulator/runtime/scheduler.py SCHEDULERS.
-_KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero"})
+_KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero", "gpu_only", "npu_only", "heteroinfer", "tiled_hetero"})
+_SYNC_MODES = ("fast", "clfinish", "none")   # mirror of tiling.SYNC_US (config cannot import tiling, layering)
 
 
 def _reject_unknown(d, known, where):
@@ -83,6 +84,10 @@ class SimConfig:
     engine: dict = field(default_factory=_default_engine)
     scheduler: str = "all_cim"
     precision_boundary_placement: str = "consumer"   # which unit pays a conversion op (2.2b): consumer|producer
+    sync_mode: str = "fast"                    # ADR-0009 cross-unit sync cost: fast (HeteroInfer predictable-wait
+                                               # + polling: 10 us decode / 30 us prefill) | clfinish (400 us) | none (0)
+    sync_us_override: float | None = None      # explicit per-boundary sync cost (us); wins over sync_mode
+    partition_grid: int = 8                    # ADR-0009 solver ratio grid (fractions in multiples of 1/partition_grid)
     knee_GBs: float | None = None
     interconnect_efficiency: float = 1.0
     concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; not wired on the 2.1
@@ -124,6 +129,12 @@ class SimConfig:
         if self.precision_boundary_placement not in ("consumer", "producer"):
             raise ValueError(f"SimConfig: precision_boundary_placement must be 'consumer' or "
                              f"'producer', got {self.precision_boundary_placement!r}")
+        if self.sync_mode not in _SYNC_MODES:
+            raise ValueError(f"SimConfig: sync_mode must be one of {_SYNC_MODES}, got {self.sync_mode!r}")
+        if self.sync_us_override is not None and self.sync_us_override < 0:
+            raise ValueError(f"SimConfig: sync_us_override must be >= 0, got {self.sync_us_override!r}")
+        if not isinstance(self.partition_grid, int) or self.partition_grid < 2:
+            raise ValueError(f"SimConfig: partition_grid must be an int >= 2, got {self.partition_grid!r}")
         if self.concurrency_overlap_factor != 1.0:
             raise ValueError(
                 f"SimConfig: concurrency_overlap_factor is RESERVED for Wave 2.2 cross-unit overlap "
@@ -208,6 +219,9 @@ class SimConfig:
             scheduler="all_cim" if _sched_pol is None else _sched_pol,
             precision_boundary_placement=(sched.get("precision_boundary_placement", "consumer")
                                           if isinstance(sched, dict) else "consumer"),
+            sync_mode=(sched.get("sync_mode", "fast") if isinstance(sched, dict) else "fast"),
+            sync_us_override=(sched.get("sync_us_override") if isinstance(sched, dict) else None),
+            partition_grid=(sched.get("partition_grid", 8) if isinstance(sched, dict) else 8),
             knee_GBs=tun.get("knee_GBs"),
             interconnect_efficiency=tun.get("interconnect_efficiency", 1.0),
             concurrency_overlap_factor=tun.get("concurrency_overlap_factor", 1.0),
@@ -255,6 +269,9 @@ class SimConfig:
         if self.scheduler != "all_cim":
             p.append(f"simulated: '{self.scheduler}' heterogeneous placement (only AllCim is "
                      f"silicon-gated; no concurrent-unit silicon — Aetina out for repair, #52)")
+        if self.sync_mode != "fast" or self.sync_us_override is not None:
+            p.append(f"simulated: sync_mode={self.sync_mode!r} sync_us_override={self.sync_us_override!r} "
+                     f"(cross-unit sync cost; literature-anchored, no heterogeneous-sync silicon)")
         for u, e in self.engine.items():
             if e not in _SILICON_BACKENDS:
                 p.append(f"simulated: {u} engine='{e}' (non-silicon backend)")

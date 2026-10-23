@@ -21,3 +21,4 @@ Each ADR records **one** significant design decision: `context` (problem + force
 | [0005](0005-energy-model.md) | Energy = spec-based + opportunistic anchor |
 | [0006](0006-validation-bridging-extrapolation.md) | Validation contract + L4 bridging + extrapolation |
 | [0007](0007-op-inventory-extraction.md) | Op inventory = PyTorch runtime tracer |
+| [0009](0009-op-tiling-and-hetero-schedulers.md) | Op tiling (N/M/K/heads/kv/rows + merge nodes), per-boundary sync model, per-op partition solver, gpu_only/npu_only/heteroinfer/tiled_hetero schedulers |
