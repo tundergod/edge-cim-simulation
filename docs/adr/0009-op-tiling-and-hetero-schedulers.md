@@ -67,3 +67,18 @@ Common tail (`_finish`): `precision.insert_conversions` (consumer pays, as `cim_
 - **Memory headroom comes from the knee.** With the default `knee_GBs == eff_BW` a split of a memory-bound decode matvec gains nothing and the solver keeps it single-unit; HeteroInfer-style decode gains need the multi-stream knee (SoC profile / `tunables.knee_GBs`).
 - **Residency refinement.** `_residency` now keeps `cpu_cache` only for the calibrated CPU-support categories (+ scale/mask, convert); AllCim / CimHetero placements are unaffected (they never put matmul/bmm/merge on the CPU).
 - **Conversions.** The int8↔fp16 rule (ADR-0004) is applied unchanged at GPU boundaries; an NPU sub-node fed by a GPU op gets a consumer-side convert, which also carries that boundary's sync.
+
+## Addendum (2026-10-23): `scheduler.host`
+
+`SimConfig.host` (config key `scheduler.host`, values `gpu | npu | cim | auto`, default unset = the
+previous behaviour: GPU if enabled else the first enabled unit) selects the graph-owning unit of
+`tiled_hetero` (merge nodes land on it; a non-host single placement pays the hand-back sync).
+`HeteroInferScheduler` keeps its constructor `host="gpu"` (the constructor value wins over the config).
+`auto` runs the complete per-op solve once per candidate host (every enabled compute unit) on a deep
+copy of the DAG and keeps the plan with the lowest **estimated token critical path = Σ per-op solver
+estimates `T_est_us`** (the per-token DAG is a chain, so the solver's own objective summed over the
+ops is its critical-path estimate; the engine's pipelined time is NOT consulted — the estimate can
+disagree with the engine, see `host_candidates_est_us`). The decision is per DAG (each decode kv
+sample point and the prefill forward choose independently). The chosen host is recorded as
+`dag.host` (runner: `host`, `prefill_host`, `host_candidates_est_us`); a re-assign reuses it
+(idempotent). Single-unit baselines record their unit as `host`.

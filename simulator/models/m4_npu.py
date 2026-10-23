@@ -78,6 +78,15 @@ class NpuModel(UnitEngine):
         # Phase 1.6 third engine: engine='scalesim' (SCALE-Sim v2, same drop-in contract).
         self.scalesim = _scalesim_table() if engine == "scalesim" else {}
 
+    def scale_compute(self, s):
+        """Scalable axis (ADR-0008): multiply the NPU COMPUTE throughput (TOPS) by `s` > 0. The
+        weight-streaming bandwidth and the dispatch floor are untouched (a decode GEMV stays
+        memory-bound). EXTRAPOLATED: no silicon at any s != 1."""
+        if s <= 0:
+            raise ValueError(f"npu_scale must be > 0, got {s!r}")
+        self.tops *= float(s)
+        return self
+
     def _pad(self, x):
         """Pad a dim UP to the borrowed systolic quantum (Fig3 staircase source)."""
         return self.sd * max(1, math.ceil(x / self.sd))
@@ -195,6 +204,11 @@ class NpuStaircaseModel(NpuModel):
         self.k_ref = float(fit["k_ref"])
         self.wbpp = float(fit["weight_bytes_per_param"])
         self.order_pen = float(spec.get("order_penalty_max", _ORDER_SHAPE_MAX))
+
+    def scale_compute(self, s):
+        super().scale_compute(s)
+        self.tops_eff *= float(s)          # the fitted effective TOPS is this model's compute term
+        return self
 
     def _k_penalty(self, K):
         return max(1.0, (K / self.k_ref) ** self.k_exp)

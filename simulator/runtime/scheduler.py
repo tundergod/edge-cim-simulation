@@ -20,6 +20,7 @@ record the per-op decision in `dag.plans`.
 """
 from __future__ import annotations
 
+import copy
 from abc import ABC, abstractmethod
 
 from simulator.runtime import tiling
@@ -179,7 +180,9 @@ class SingleUnitScheduler(Scheduler):
                                  f"map it explicitly, do not silently place.")
             dag.plans[n.id] = {"category": n.category, "strategy": f"{n.unit}_fixed", "dim": None,
                                "parts": [(n.unit, 1.0)]}
-        return _finish(dag, cfg, _sync_us(cfg, phase))
+        out = _finish(dag, cfg, _sync_us(cfg, phase))
+        out.host = self.unit
+        return out
 
 
 class TiledHeteroScheduler(Scheduler):
@@ -193,7 +196,14 @@ class TiledHeteroScheduler(Scheduler):
     exactly HeteroInferScheduler (same code path). Decisions are made in topological order
     (producers placed first, so boundary syncs are known); ratios are static per op.
     `align` = {unit: (quantum, min)} on the split axis (default NPU (32, 32) — the
-    systolic tile; no silicon for a larger NPU minimum sub-tensor)."""
+    systolic tile; no silicon for a larger NPU minimum sub-tensor).
+    `host` (constructor, else `cfg.host`): the graph-owning unit — a non-host single placement
+    pays the hand-back sync and merges land on it. None = gpu if enabled else the first enabled
+    unit; 'auto' = run the whole per-op solve once per candidate host (every enabled unit) on a
+    copy of the DAG and keep the plan with the lowest estimated token critical path (= the sum
+    of the per-op solver estimates T_est, which is the critical path of the per-token chain the
+    solver optimises; the engine's pipelined time is not consulted). The chosen host is recorded
+    as `dag.host` (+ `dag.host_candidates` = {unit: estimate us}); a re-assign reuses it."""
     pipeline = True
     required_units = ("cpu",)
 
@@ -231,12 +241,14 @@ class TiledHeteroScheduler(Scheduler):
                              f"allow_cim={self.allow_cim}, allow_cpu_compute={self.allow_cpu_compute})")
         return tuple(enabled)
 
-    def _host(self, units):
-        if self.host is not None:
-            if self.host not in units:
-                raise ValueError(f"{self.name}: host unit {self.host!r} not in enabled units {units}")
-            return self.host
-        return "gpu" if "gpu" in units else units[0]
+    def _host(self, units, cfg=None):
+        """Resolved host: constructor `host` wins, else `cfg.host` (gpu|npu|cim|auto), else default."""
+        host = self.host if self.host is not None else getattr(cfg, "host", None)
+        if host is None:
+            return "gpu" if "gpu" in units else units[0]
+        if host != "auto" and host not in units:
+            raise ValueError(f"{self.name}: host unit {host!r} not in enabled units {units}")
+        return host
 
     def _ctx(self, platform, cfg, dag, units, host, phase, rows):
         if platform is None:
@@ -258,9 +270,24 @@ class TiledHeteroScheduler(Scheduler):
                              allow_chunking=True)
 
     def assign(self, dag, cfg=None, *, platform=None):
-        phase, rows = _phase_and_rows(dag)
         units = self._units(cfg)
-        host = self._host(units)
+        host = self._host(units, cfg)
+        if host != "auto":
+            return self._assign_host(dag, cfg, platform, units, host)
+        prev = getattr(dag, "host", None)
+        if prev in units:                         # idempotent re-assign: keep the host already chosen
+            return self._assign_host(dag, cfg, platform, units, prev)
+        best, est = None, {}
+        for h in units:
+            out = self._assign_host(copy.deepcopy(dag), cfg, platform, units, h)
+            est[h] = out.host_est_us
+            if best is None or out.host_est_us < best.host_est_us - 1e-9:
+                best = out
+        best.host_candidates = est
+        return best
+
+    def _assign_host(self, dag, cfg, platform, units, host):
+        phase, rows = _phase_and_rows(dag)
         ctx = self._ctx(platform, cfg, dag, units, host, phase, rows)
         consumed = set()
         for nid in tiling._topo(dag, [n.id for n in dag.nodes]):
@@ -302,7 +329,10 @@ class TiledHeteroScheduler(Scheduler):
             else:
                 dag = tiling.split_node(dag, nid, best.dim, best.plan, merge_unit=host,
                                         sync_us=ctx.sync_us, align=ctx.align, rows=rows)
-        return _finish(dag, cfg, ctx.sync_us)
+        out = _finish(dag, cfg, ctx.sync_us)
+        out.host = host
+        out.host_est_us = sum(float(p.get("T_est_us", 0.0)) for p in out.plans.values())
+        return out
 
 
 class HeteroInferScheduler(TiledHeteroScheduler):

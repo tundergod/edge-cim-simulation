@@ -73,7 +73,8 @@ def run(cfg):
                          f"(e.g. cim_hetero needs the GPU for attention).")
     plat = Platform(cfg.model, memory_spec=cfg.resolved_memory_spec(), topology=cfg.topology,
                     knee_GBs=cfg.knee_GBs, interconnect_efficiency=cfg.interconnect_efficiency,
-                    bw_efficiency=cfg.bw_efficiency, soc_profile=cfg.soc_profile)
+                    bw_efficiency=cfg.bw_efficiency, soc_profile=cfg.soc_profile,
+                    cim_n_cores=cfg.cim_n_cores, npu_scale=cfg.npu_scale)
     model_obj = op_profile.Model(cfg.model)
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off
@@ -166,4 +167,13 @@ def run(cfg):
         "prefill_critical_path_us": round(pre_stats["critical_path_us"], 3),
         "sync_mode": cfg.sync_mode,
         "plans_summary": {"decode": plans_summary(dec), "prefill": plans_summary(pre)},
+        # scalable / flexible axes actually used (knobs may be resolved from the profile or chosen by the
+        # scheduler, so the config value alone is not enough to label a run)
+        "host": getattr(dec, "host", None),                        # graph-owning unit chosen for decode
+        "prefill_host": getattr(pre, "host", None),
+        "host_candidates_est_us": getattr(dec, "host_candidates", None),   # host=auto: {unit: est us}
+        "cim_n_cores": plat.cim_n_cores,
+        "npu_scale": plat.npu_scale,
+        "knee_GBs": plat.bw.knee,
+        "soc_profile": cfg.soc_profile,
     }

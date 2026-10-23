@@ -69,7 +69,10 @@ class Platform:
     selects a whole SoC (ADR-0008)."""
 
     def __init__(self, model, *, memory_spec="mem_lpddr4x", topology=None, knee_GBs=None,
-                 interconnect_efficiency=1.0, bw_efficiency=None, soc_profile=None):
+                 interconnect_efficiency=1.0, bw_efficiency=None, soc_profile=None,
+                 cim_n_cores=None, npu_scale=1.0):
+        """`cim_n_cores` / `npu_scale` are the ADR-0008 scalable axes (None / 1.0 = the profile's own
+        geometry; anything else is EXTRAPOLATED and flagged by SimConfig)."""
         self.model = model
         self.profile_name = soc_profile
         self.profile = None
@@ -142,13 +145,14 @@ class Platform:
                 knee_GBs = float(mem["knee_GBs"])
         self.bw = SharedBandwidth(eff, knee_GBs=knee_GBs,
                                   interconnect_efficiency=interconnect_efficiency)
-        self._build_units(cim_params)
+        self._build_units(cim_params, cim_n_cores, npu_scale)
         self.energy = EnergyModel()
 
     # ---- unit construction -----------------------------------------------------------------
-    def _build_units(self, cim_params):
+    def _build_units(self, cim_params, cim_n_cores=None, npu_scale=1.0):
         """Legacy (no profile): the Phase-2.5 calibrated core EXACTLY as before (cim/cpu/gpu-attn)
-        + rk3588_cim unit params for the NEW combos. Profile: everything from the profile."""
+        + rk3588_cim unit params for the NEW combos. Profile: everything from the profile.
+        `cim_n_cores` overrides the CIM core count on either path; `npu_scale` multiplies the NPU TOPS."""
         legacy = self.profile is None
         src = load_soc_profile(_LEGACY_UNITS_PROFILE) if legacy else self.profile
         units = src["units"]
@@ -156,7 +160,9 @@ class Platform:
         self.launch_us = {u: float(units[u]["elementwise_launch_us"]) for u in ("gpu", "npu")}
         self.default_dtype = {u: units[u].get("default_dtype") for u in units}
         # CIM: tile params from the topology; n_cores = the profile's scalable axis (None = params default)
-        self.cim = CimTileModel(params=cim_params, n_cores=None if legacy else int(units["cim"]["n_cores"]))
+        n_cores = (None if legacy else int(units["cim"]["n_cores"])) if cim_n_cores is None else int(cim_n_cores)
+        self.cim = CimTileModel(params=cim_params, n_cores=n_cores)
+        self.cim_n_cores = int(self.cim.n_cores)
         attn_model = "memory_bound_zero" if legacy else units["cim"]["attention_model"]
         if attn_model == "alpha_floor_fit":
             self.cim_attn = CimAttentionModel(self.cim)
@@ -192,6 +198,9 @@ class Platform:
             self.npu = NpuStaircaseModel(nspec, engine=units["npu"].get("engine", "analytic"))
         else:
             raise ValueError(f"unknown npu.model {nm!r} (analytic_systolic | staircase_anchor)")
+        self.npu_scale = float(npu_scale)
+        if self.npu_scale != 1.0:
+            self.npu.scale_compute(self.npu_scale)
 
     @property
     def mem_domains(self):

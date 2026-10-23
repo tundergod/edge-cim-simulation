@@ -25,8 +25,9 @@ from simulator.specs.loader import load_spec
 _KNOWN_TOP = {"workload", "platform", "scheduler", "tunables", "ablations", "sweep", "_doc"}
 _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine",
-               "soc_profile"}
-_KNOWN_SCHED = {"policy", "precision_boundary_placement", "sync_mode", "sync_us_override", "partition_grid"}
+               "soc_profile", "cim_n_cores", "npu_scale"}
+_KNOWN_SCHED = {"policy", "precision_boundary_placement", "sync_mode", "sync_us_override", "partition_grid",
+                "host"}
 _KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor", "pipeline"}
 _KNOWN_ABL = {"concurrency_off", "contention_off", "compute_off"}
 
@@ -50,6 +51,8 @@ _TOPO_MEMORY = {"cim_topo_card": "mem_lpddr4x", "cim_topo_edge": "mem_lpddr5", "
 # simulator/runtime/scheduler.py SCHEDULERS.
 _KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero", "gpu_only", "npu_only", "cim_only", "heteroinfer", "tiled_hetero"})
 _SYNC_MODES = ("fast", "clfinish", "none")   # mirror of tiling.SYNC_US (config cannot import tiling, layering)
+_HOSTS = ("gpu", "npu", "cim", "auto")        # scheduler.host for tiled_hetero (None = scheduler default = gpu)
+_CAL_CIM_N_CORES = 4                           # the Metis geometry the M1 CIM tile fit is calibrated at
 
 # ADR-0008 SoC profiles (simulator/specs/soc_<name>.json). A profile fixes the CIM topology (its
 # units.cim.topology) and supplies the memory wall; `topology` may be omitted (resolved from the
@@ -101,6 +104,13 @@ class SimConfig:
                                                # + polling: 10 us decode / 30 us prefill) | clfinish (400 us) | none (0)
     sync_us_override: float | None = None      # explicit per-boundary sync cost (us); wins over sync_mode
     partition_grid: int = 8                    # ADR-0009 solver ratio grid (fractions in multiples of 1/partition_grid)
+    host: str | None = None                    # tiled_hetero host (graph-owning) unit: gpu|npu|cim|auto (None =
+                                               # scheduler default: gpu if enabled else the first enabled unit);
+                                               # 'auto' = solve once per candidate host, keep the lowest estimate
+    cim_n_cores: int | None = None             # scalable axis: override of the profile's units.cim.n_cores
+                                               # (None = profile / M1 default 4; any other value is EXTRAPOLATED)
+    npu_scale: float = 1.0                     # scalable axis: multiplier on the NPU compute throughput (TOPS);
+                                               # != 1 is EXTRAPOLATED (no silicon)
     knee_GBs: float | None = None
     interconnect_efficiency: float = 1.0
     concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; not wired on the 2.1
@@ -148,6 +158,13 @@ class SimConfig:
             raise ValueError(f"SimConfig: sync_us_override must be >= 0, got {self.sync_us_override!r}")
         if not isinstance(self.partition_grid, int) or self.partition_grid < 2:
             raise ValueError(f"SimConfig: partition_grid must be an int >= 2, got {self.partition_grid!r}")
+        if self.host is not None and self.host not in _HOSTS:
+            raise ValueError(f"SimConfig: scheduler.host must be one of {_HOSTS} (or omitted), got {self.host!r}")
+        if self.cim_n_cores is not None and (isinstance(self.cim_n_cores, bool)
+                                             or not isinstance(self.cim_n_cores, int) or self.cim_n_cores < 1):
+            raise ValueError(f"SimConfig: platform.cim_n_cores must be an int >= 1, got {self.cim_n_cores!r}")
+        if not isinstance(self.npu_scale, (int, float)) or isinstance(self.npu_scale, bool) or self.npu_scale <= 0:
+            raise ValueError(f"SimConfig: platform.npu_scale must be a number > 0, got {self.npu_scale!r}")
         if self.concurrency_overlap_factor != 1.0:
             raise ValueError(
                 f"SimConfig: concurrency_overlap_factor is RESERVED for Wave 2.2 cross-unit overlap "
@@ -245,6 +262,8 @@ class SimConfig:
             memory_capacity_GB=plat.get("memory_capacity_GB", 16),
             bw_efficiency=plat.get("bw_efficiency"),
             soc_profile=_prof,
+            cim_n_cores=plat.get("cim_n_cores"),
+            npu_scale=plat.get("npu_scale", 1.0),
             units=_default_units() if u is None else u,
             engine=_default_engine() if eng is None else eng,
             scheduler="all_cim" if _sched_pol is None else _sched_pol,
@@ -253,6 +272,7 @@ class SimConfig:
             sync_mode=(sched.get("sync_mode", "fast") if isinstance(sched, dict) else "fast"),
             sync_us_override=(sched.get("sync_us_override") if isinstance(sched, dict) else None),
             partition_grid=(sched.get("partition_grid", 8) if isinstance(sched, dict) else 8),
+            host=(sched.get("host") if isinstance(sched, dict) else None),
             knee_GBs=tun.get("knee_GBs"),
             interconnect_efficiency=tun.get("interconnect_efficiency", 1.0),
             concurrency_overlap_factor=tun.get("concurrency_overlap_factor", 1.0),
@@ -290,6 +310,17 @@ class SimConfig:
                      + "; memory wall = the profile's single_stream_eff_BW/knee (overrides the topology's)")
         if self.bw_efficiency is not None:
             p.append(f"simulated: bw_efficiency override = {self.bw_efficiency}")
+        # scalable axes (ADR-0008 "n_cores = scalable axis"): the M1 CIM fit is calibrated at the Metis
+        # 4-core geometry and the NPU models at their anchored TOPS; any other value is off-anchor.
+        if self.cim_n_cores is not None:
+            _default_cores = (load_spec(f"soc_{self.soc_profile}")["units"]["cim"]["n_cores"]
+                              if self.soc_profile is not None else _CAL_CIM_N_CORES)
+            if self.cim_n_cores != _default_cores:
+                p.append(f"extrapolated: cim_n_cores override = {self.cim_n_cores} (M1 CIM tile fit calibrated "
+                         f"at n_cores={_default_cores}; other core counts scale the tile width, no silicon)")
+        if self.npu_scale != 1.0:
+            p.append(f"extrapolated: npu_scale = {self.npu_scale} (NPU compute throughput multiplier; "
+                     f"no silicon at that scale)")
         # knee_GBs / interconnect_efficiency are forward-looking sweep knobs that DO alter the decode
         # bandwidth wall (they feed SharedBandwidth) but have no concurrent-unit silicon (#52) -> a
         # non-default value is off-anchor and must be flagged, else a swept result reads as calibrated.

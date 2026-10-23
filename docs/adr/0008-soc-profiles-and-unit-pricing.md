@@ -149,3 +149,19 @@ M = 1): QK^T = 8.952 + 0.001706·kv µs, S·V = 8.999 + 0.000809·kv µs per bmm
    subtype (scale/mask, no `hd` in `wl.extra`) still raises `NotImplementedError` (the pre-existing
    fail-loud guard, test-pinned); P1 prices it as an elementwise floor. Solvers should route
    scale/mask to the CPU on P2 or check the subtype.
+
+## Addendum (2026-10-23): scalable axes `platform.cim_n_cores` / `platform.npu_scale`
+
+* `platform.cim_n_cores` (int ≥ 1, default unset = the profile's `units.cim.n_cores`, legacy path = the
+  M1 params default 4) overrides the CIM core count → `CimTileModel(n_cores=)`. Any value other than
+  the profile's is provenance-flagged `extrapolated`. What it changes in the M1 model: the pass width
+  `W = n_cores × 512` of the M=1 single-tile fit (a shape with both dims ≤ W is priced by the G_eff
+  tiling fit, otherwise by the multi-tile residency-cliff model, which does NOT depend on `n_cores`),
+  and the prefill tile area `K·N / W²` (so a prefill GEMM scales as 1/n_cores² — an optimistic
+  extrapolation of the 2048×2048 tile fit).
+* `platform.npu_scale` (float > 0, default 1.0) multiplies the NPU COMPUTE throughput only
+  (`NpuModel.scale_compute`: `tops` for the RKNPU2 analytic model, `tops_eff` for the sd8gen3
+  staircase); the weight-streaming bandwidth and dispatch floor are untouched, so a memory-bound
+  decode GEMV barely moves while a prefill GEMM scales. Flagged `extrapolated` when ≠ 1.
+* `runner.run` echoes the values actually used: `host`, `prefill_host`, `host_candidates_est_us`,
+  `cim_n_cores`, `npu_scale`, `knee_GBs` (profile or `tunables.knee_GBs`), `soc_profile`.
