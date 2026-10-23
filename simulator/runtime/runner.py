@@ -73,7 +73,7 @@ def run(cfg):
                          f"(e.g. cim_hetero needs the GPU for attention).")
     plat = Platform(cfg.model, memory_spec=cfg.resolved_memory_spec(), topology=cfg.topology,
                     knee_GBs=cfg.knee_GBs, interconnect_efficiency=cfg.interconnect_efficiency,
-                    bw_efficiency=cfg.bw_efficiency)
+                    bw_efficiency=cfg.bw_efficiency, soc_profile=cfg.soc_profile)
     model_obj = op_profile.Model(cfg.model)
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off

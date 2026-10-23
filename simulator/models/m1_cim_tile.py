@@ -152,3 +152,41 @@ class CimTileModel:
 
     def n_tiles(self, N):
         return math.ceil(N / self.width)
+
+
+_ATTN_PARAMS = Path(__file__).parent / "params" / "m1_cim_attention.json"
+
+
+class CimAttentionModel:
+    """CIM decode-attention latency from the MEASURED Metis Alpha `attn_floor` points
+    (measurements/aetina/metis_alpha_matmul.json by_group.attn_floor: single-head QK^T [1x128]x[128xkv]
+    and S.V [1xkv]x[kvx128] dev_lat_us at kv = 129/513/1025, hd = 128, Llama-3.1-8B), fit as
+    a + b*kv per bmm (tools/analysis/fit_hetero_anchors.py -> params/m1_cim_attention.json).
+
+    The measured basis is a tiny per-call compute FLOOR (~9 us per bmm: the AIPU's standalone-model
+    call cost, far above the G_eff single-tile law for such shapes) that grows weakly with kv.
+    Composite per head = (qk_a + sv_a) + (qk_b + sv_b) * kv; heads are SERIAL calls (ASSUMPTION — Alpha
+    measured one head per model). EXTRAPOLATED when: hd != 128, kv > 1025, or M > 1 (prefill rows:
+    per bmm = max(floor fit, the M1 prefill-tile law dev_lat_us(M, K, N)) — no prefill attention
+    silicon). NB the L4 Card anchor passes with CIM attention priced at ZERO compute (the compiled
+    axllm graph shows no per-call floor), so this floor is the Alpha standalone-call basis, and it is
+    enabled only through a SoC profile (`attention_model: alpha_floor_fit`), never on the legacy path."""
+
+    def __init__(self, tile: "CimTileModel", params=None):
+        p = params if params is not None else json.loads(_ATTN_PARAMS.read_text())
+        self.tile = tile
+        self.qk_a, self.qk_b = float(p["qk_a_us"]), float(p["qk_b_us_per_kv"])
+        self.sv_a, self.sv_b = float(p["sv_a_us"]), float(p["sv_b_us_per_kv"])
+        self.hd_basis = int(p.get("hd_basis", 128))
+        self.kv_max = int(max(p.get("kv_fit", [1025])))
+
+    def composite_us(self, kv, heads=1, hd=128, M=1):
+        """QK^T + S.V latency (us) for `heads` serial heads. Returns (latency_us, extrapolated)."""
+        kv, heads, M = max(1, int(kv)), max(1, int(heads)), max(1, int(M))
+        qk = self.qk_a + self.qk_b * kv
+        sv = self.sv_a + self.sv_b * kv
+        extrap = (hd != self.hd_basis) or (kv > self.kv_max) or (M > 1)
+        if M > 1:   # prefill rows: the per-call floor still applies; the tile law may exceed it
+            qk = max(qk, self.tile.dev_lat_us(M, hd, kv))
+            sv = max(sv, self.tile.dev_lat_us(M, kv, hd))
+        return (qk + sv) * heads, extrap

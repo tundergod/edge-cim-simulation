@@ -153,3 +153,91 @@ class NpuModel(UnitEngine):
                 prov += ("; engine='scalesim' requested but this shape was skipped as cycle-sim-"
                          "intractable -> ANALYTIC fallback (documented)")
         return {"latency_us": float(lat), "bound": bound, "provenance": prov}
+
+
+# ---------------------------------------------------------------------------------------
+# HeteroInfer-ANCHORED staircase variant (SoC profile sd8gen3_cim, ADR-0008). Coexists with the
+# RKNPU2 analytic/onnxim/scalesim NpuModel above (P2 keeps that path untouched).
+# ---------------------------------------------------------------------------------------
+_ORDERS = ("weight_stationary", "activation_stationary")
+
+
+class NpuStaircaseModel(NpuModel):
+    """Hexagon-like (8 Gen 3) systolic NPU, FITTED to HeteroInfer's published anchors (SOSP'25
+    Table 3 + Fig.3; docs: heteroinfer-design-reference.md §2.2/§3b). `borrowed` throughout —
+    none of it is our silicon. Spec = npu_hexagon_sd8gen3 (needs the `anchor_fit` block written by
+    tools/analysis/fit_hetero_anchors.py; residuals in validation/reports/hetero/anchor_fit.json).
+
+    Model (weight [N_out=N, K_in=K], activation rows M; latency us):
+        steps  = ceil(M / 32)                              # Fig.3 STAIRCASE: one 32-row tile per step
+        g(K)   = max(1, (K / k_ref) ** k_penalty_exp)      # NPU-3: a large contraction dim hurts (~linear)
+        t      = floor_us + g(K) * [ K*N*wbpp / bw_GBs  +  steps * 2*32*K*N / tops_eff ] * order
+      weight-load term (memory, the bw ~43 GB/s the fit recovers matches the paper's per-unit
+      40-45 GB/s) + per-step streamed-activation term at the EFFECTIVE TOPS (7.3 vs 34 peak; the paper
+      says "up to 10 TFLOPS in actual"). `order` = 1 for the paper's optimal weight-stationary form,
+      `order_penalty_max` (6x, Fig.4) when wl.extra["order"] == "activation_stationary" — the flag a
+      scheduler toggles to explore the reversed operand order.
+    Attention (act x act, no weight stall): floor + max(heads*steps*2*32*pad(hd)*pad(kv)*2 / tops_eff,
+      2*bytes_bmm / bw) — EXTRAPOLATED (no attention anchor in the paper).
+    Elementwise support ops are priced by the Platform at the unit's launch floor (bytes metered by M3).
+    """
+
+    def __init__(self, spec, engine="analytic"):
+        super().__init__(spec, engine)
+        if engine != "analytic":
+            raise ValueError(f"NpuStaircaseModel is analytic-only (the onnxim/scalesim tables are "
+                             f"RKNPU2-approx, not sd8gen3); got engine={engine!r}")
+        fit = spec["anchor_fit"]
+        self.floor_us = float(fit["floor_us"])
+        self.bw_w = float(fit["bw_GBs"])
+        self.tops_eff = float(fit["tops_eff"])
+        self.k_exp = float(fit["k_penalty_exp"])
+        self.k_ref = float(fit["k_ref"])
+        self.wbpp = float(fit["weight_bytes_per_param"])
+        self.order_pen = float(spec.get("order_penalty_max", _ORDER_SHAPE_MAX))
+
+    def _k_penalty(self, K):
+        return max(1.0, (K / self.k_ref) ** self.k_exp)
+
+    def _order_factor(self, order):
+        if order not in _ORDERS:
+            raise ValueError(f"NPU wl.extra['order'] must be one of {_ORDERS}, got {order!r}")
+        return self.order_pen if order == "activation_stationary" else 1.0
+
+    def _gemm_us(self, M, K, N, dtype, order="weight_stationary"):
+        steps = max(1, math.ceil(M / self.sd))
+        g = self._k_penalty(K)
+        load_us = K * N * self.wbpp / (self.bw_w * 1e3)
+        stream_us = steps * 2.0 * self.sd * K * N / (self.tops_eff * 1e12) * 1e6
+        lat = self.floor_us + g * (load_us + stream_us) * self._order_factor(order)
+        return lat, ("memory" if load_us >= stream_us else "compute")
+
+    def _attn_us(self, M, kv, heads, hd, nbytes_bmm):
+        steps = max(1, math.ceil(M / self.sd))
+        per_head = self._pad(hd) * self._pad(kv) * 2            # QK^T + S.V padded tiles
+        comp_us = heads * steps * 2.0 * self.sd * per_head / (self.tops_eff * 1e12) * 1e6
+        if not nbytes_bmm:
+            nbytes_bmm = (M * hd + hd * kv + M * kv) * heads * 2
+        mem_us = 2.0 * nbytes_bmm / (self.bw_w * 1e3)
+        return self.floor_us + max(comp_us, mem_us), ("compute" if comp_us >= mem_us else "memory")
+
+    def predict(self, wl: Workload) -> dict:
+        if wl.op in ("attn_bmm", "attention"):
+            hd = wl.extra.get("hd", wl.K or 128)
+            lat, bound = self._attn_us(max(1, wl.M), max(1, wl.kv), max(1, wl.heads), hd, wl.nbytes)
+            prov = ("extrapolated: NPU attention act x act on the Table-3-anchored staircase model "
+                    "(no attention anchor in HeteroInfer; padded to %dx%d, %s-bound; borrowed sd8gen3)"
+                    % (self.sd, self.sd, bound))
+        else:
+            if wl.K <= 0 or wl.N <= 0:
+                raise ValueError(f"NpuStaircaseModel GEMM needs K,N > 0 (got K={wl.K}, N={wl.N})")
+            order = wl.extra.get("order", "weight_stationary")
+            lat, bound = self._gemm_us(max(1, wl.M), wl.K, wl.N, wl.dtype, order)
+            prov = ("borrowed: NPU 32-row staircase (steps=%d) fitted to HeteroInfer Table 3/Fig 3 "
+                    "(floor=%.0f us, weight bw=%.1f GB/s, %.2f TOPS eff, K-penalty (K/%d)^%.2f, order=%s%s; "
+                    "max anchor residual %.1f%%; %s-bound; no silicon of ours)"
+                    % (max(1, math.ceil(max(1, wl.M) / self.sd)), self.floor_us, self.bw_w, self.tops_eff,
+                       int(self.k_ref), self.k_exp, order,
+                       (" x%g Fig.4 penalty" % self.order_pen) if order == "activation_stationary" else "",
+                       100 * float(self.spec["anchor_fit"].get("max_abs_rel_residual", 0.0)), bound))
+        return {"latency_us": float(lat), "bound": bound, "provenance": prov}

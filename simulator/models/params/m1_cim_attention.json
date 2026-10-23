@@ -1,0 +1,52 @@
+{
+ "_doc": "CIM decode-attention per-bmm floor fit a + b*kv (us) on the MEASURED Metis Alpha attn_floor points (single head, hd=128, M=1; fit_hetero_anchors.py). qkT: [1x128]x[128xkv]; sv: [1xkv]x[kvx128]. Composite per head = (qk_a+sv_a) + (qk_b+sv_b)*kv. [measured basis]",
+ "source": "measurements/aetina/metis_alpha_matmul.json by_group.attn_floor dev_lat_us",
+ "hd_basis": 128,
+ "points": [
+  {
+   "family": "qkT",
+   "kv": 129,
+   "dev_lat_us": 9.086,
+   "fit_us": 9.172
+  },
+  {
+   "family": "qkT",
+   "kv": 513,
+   "dev_lat_us": 9.979,
+   "fit_us": 9.828
+  },
+  {
+   "family": "qkT",
+   "kv": 1025,
+   "dev_lat_us": 10.636,
+   "fit_us": 10.701
+  },
+  {
+   "family": "sv",
+   "kv": 129,
+   "dev_lat_us": 9.049,
+   "fit_us": 9.103
+  },
+  {
+   "family": "sv",
+   "kv": 513,
+   "dev_lat_us": 9.509,
+   "fit_us": 9.414
+  },
+  {
+   "family": "sv",
+   "kv": 1025,
+   "dev_lat_us": 9.788,
+   "fit_us": 9.828
+  }
+ ],
+ "kv_fit": [
+  129,
+  513,
+  1025
+ ],
+ "qk_a_us": 8.9524,
+ "qk_b_us_per_kv": 0.0017061,
+ "sv_a_us": 8.9991,
+ "sv_b_us_per_kv": 0.0008089
+}
