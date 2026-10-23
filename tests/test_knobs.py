@@ -138,21 +138,34 @@ def _snap(dag):
 
 
 def test_host_auto_picks_lowest_estimate_and_is_idempotent():
+    """host=auto = the round-2 PORTFOLIO: one solver plan per candidate host + every single-unit
+    plan, ranked by the engine; `host_candidates` is keyed by plan source."""
     plat = AnalyticFakePlatform()
     sched = SCHEDULERS["tiled_hetero"]
     auto = sched.assign(build_token_dag(MODEL, "decode", 512), Cfg(host="auto"), platform=plat)
-    est = auto.host_candidates                     # {unit: {est_us, engine_us}}; ranked by engine_us
-    assert set(est) == {"gpu", "npu", "cim"} and all(v["est_us"] > 0 and v["engine_us"] > 0 for v in est.values())
-    assert auto.host == min(est, key=lambda h: (est[h]["engine_us"], est[h]["est_us"]))
-    # == the explicit-host run of the chosen host (same decisions, same estimate)
-    fixed = sched.assign(build_token_dag(MODEL, "decode", 512), Cfg(host=auto.host), platform=plat)
-    assert _snap(fixed) == _snap(auto) and fixed.host_est_us == pytest.approx(auto.host_est_us)
-    for h, e in est.items():                      # every candidate estimate is reproducible
-        other = sched.assign(build_token_dag(MODEL, "decode", 512), Cfg(host=h), platform=plat)
-        assert other.host_est_us == pytest.approx(e["est_us"])
-    # idempotent: a re-assign keeps the chosen host and changes nothing
+    est = auto.host_candidates                     # {plan_source: {est_us, engine_us}}; ranked by engine_us
+    assert set(est) == {f"solver:{u}" for u in ("gpu", "npu", "cim")} | {f"single:{u}" for u in ("gpu", "npu", "cim")}
+    assert all(v["engine_us"] > 0 for v in est.values())
+    assert all(est[f"solver:{u}"]["est_us"] > 0 and est[f"single:{u}"]["est_us"] is None for u in ("gpu", "npu", "cim"))
+    chosen = min(est, key=lambda k: (est[k]["engine_us"], est[k]["est_us"] if est[k]["est_us"] is not None else float("inf")))
+    assert auto.plan_source == chosen and auto.host == chosen.split(":")[1]
+    # the engine-best solver host is refined (deferred/neighbours passes) only if it improves; the record says so
+    kind, unit = auto.plan_source.split(":")
+    if kind == "solver":
+        assert auto.plan_pass in ("greedy", "deferred", "neighbours")
+        # == the explicit-host run of the chosen host (same decisions: the registered scheduler refines both ways)
+        fixed = sched.assign(build_token_dag(MODEL, "decode", 512), Cfg(host=unit), platform=plat)
+        assert _snap(fixed) == _snap(auto) and fixed.host_est_us == pytest.approx(auto.host_est_us)
+    else:
+        single = SCHEDULERS[f"{unit}_only"].assign(build_token_dag(MODEL, "decode", 512), Cfg(), platform=plat)
+        assert _snap(single) == _snap(auto) and auto.plan_pass is None
+    for k, e in est.items():                      # every greedy solver-candidate estimate is reproducible
+        if k.startswith("solver:") and "greedy_engine_us" not in e:
+            other = TiledHeteroScheduler().assign(build_token_dag(MODEL, "decode", 512), Cfg(host=k.split(":")[1]), platform=plat)
+            assert other.host_est_us == pytest.approx(e["est_us"])
+    # idempotent: a re-assign keeps the chosen plan and changes nothing
     again = sched.assign(auto, Cfg(host="auto"), platform=plat)
-    assert again.host == auto.host and _snap(again) == _snap(auto)
+    assert again.host == auto.host and again.plan_source == auto.plan_source and _snap(again) == _snap(auto)
     # the input DAG is not mutated by the candidate solves (deep copies)
     fresh = build_token_dag(MODEL, "decode", 512)
     before = _snap(fresh)
@@ -170,12 +183,15 @@ def test_tiled_hetero_constructor_host_still_wins():
 def test_runner_echoes_knobs_actually_used():
     r = run(_cfg(scheduler={"host": "auto"}, platform={"cim_n_cores": 2, "npu_scale": 0.5}, tunables={"knee_GBs": 50.0}))
     assert r["host"] in ("gpu", "npu", "cim") and r["prefill_host"] in ("gpu", "npu", "cim")
-    assert set(r["host_candidates_est_us"]) == {"gpu", "npu", "cim"}
+    assert set(r["host_candidates_est_us"]) == {f"{k}:{u}" for k in ("solver", "single") for u in ("gpu", "npu", "cim")}
+    assert r["plan_source"] in r["host_candidates_est_us"] and r["plan_source"].endswith(r["host"])
+    assert r["prefill_plan_source"].split(":")[0] in ("solver", "single")
     assert r["cim_n_cores"] == 2 and r["npu_scale"] == 0.5 and r["knee_GBs"] == 50.0 and r["soc_profile"] == "sd8gen3_cim"
     assert r["tok_s"] > 0 and r["prefill_tok_s"] > 0
     r = run(_cfg())
     assert r["host"] == "gpu" and r["host_candidates_est_us"] is None and r["cim_n_cores"] == 4
-    assert r["npu_scale"] == 1.0 and r["knee_GBs"] == 60.0
+    assert r["plan_source"] == "solver:gpu" and r["plan_pass"] in ("greedy", "deferred", "neighbours")
+    assert r["npu_scale"] == 1.0 and r["knee_GBs"] == 60.0 and r["cim_weight_bytes_per_param"] == 1.0
     # legacy AllCim path: knobs absent, echo = defaults, no new provenance
     r = run(SimConfig.from_dict({"workload": {"model": MODEL, "context": 1024}}))
     assert r["host"] is None and r["cim_n_cores"] == 4 and r["npu_scale"] == 1.0 and r["soc_profile"] is None
@@ -184,25 +200,29 @@ def test_runner_echoes_knobs_actually_used():
 
 # ---- cpu_gemv_efficiency (sensitivity knob on the CPU GEMV kernel-efficiency assumption) --------
 def test_cpu_gemv_efficiency_override_and_provenance():
+    from simulator.specs.loader import load_spec
+    g = load_spec("soc_sd8gen3_cim")["units"]["cpu"]["gemm"]
+    eff0, floor = g["gemv_efficiency"], g["kernel_floor_us"]           # the fit_cpu_gemv.py values (round 2)
     base = Platform(MODEL, soc_profile="sd8gen3_cim")
-    assert base.cpu_gemv_efficiency == pytest.approx(0.217) and base.cpu_gemm.eff == pytest.approx(0.5)
+    assert base.cpu_gemv_efficiency == pytest.approx(eff0) and base.cpu_gemm.eff == pytest.approx(0.5)
     lo = Platform(MODEL, soc_profile="sd8gen3_cim", cpu_gemv_efficiency=0.1)
     hi = Platform(MODEL, soc_profile="sd8gen3_cim", cpu_gemv_efficiency=1.0)
     dec = _mm(1, 2048, 2048, "cpu")
-    # M=1 kernel time scales as 1/efficiency; an override above the GEMM efficiency lifts both to it
-    assert lo.compute_us(dec) == pytest.approx(base.compute_us(dec) * 0.217 / 0.1, rel=1e-6)
-    assert hi.compute_us(dec) == pytest.approx(base.compute_us(dec) * 0.217, rel=1e-6)
+    # M=1 kernel time = floor + work/efficiency: the work term scales as 1/efficiency; an override above the
+    # GEMM efficiency lifts both to it
+    assert lo.compute_us(dec) - floor == pytest.approx((base.compute_us(dec) - floor) * eff0 / 0.1, rel=1e-6)
+    assert hi.compute_us(dec) - floor == pytest.approx((base.compute_us(dec) - floor) * eff0, rel=1e-6)
     assert hi.cpu_gemm.eff == pytest.approx(1.0) and lo.cpu_gemm.eff == pytest.approx(0.5)
     pre = _mm(256, 2048, 2048, "cpu")
     assert lo.compute_us(pre) > base.compute_us(pre) > hi.compute_us(pre)
     cfg = _cfg(platform={"cpu_gemv_efficiency": 0.5})
     assert any("cpu_gemv_efficiency override = 0.5" in p for p in cfg.provenance)
-    assert not any("cpu_gemv_efficiency" in p for p in _cfg(platform={"cpu_gemv_efficiency": 0.217}).provenance)
+    assert not any("cpu_gemv_efficiency" in p for p in _cfg(platform={"cpu_gemv_efficiency": eff0}).provenance)
     for bad in (0, -0.1, 1.5, "0.5", True):
         with pytest.raises(ValueError):
             _cfg(platform={"cpu_gemv_efficiency": bad})
     r = run(_cfg(platform={"cpu_gemv_efficiency": 0.1}, scheduler={"allow_cpu_compute": True}))
     assert r["cpu_gemv_efficiency"] == pytest.approx(0.1) and r["cpu_gemm_efficiency"] == pytest.approx(0.5)
-    assert r["allow_cpu_compute"] is True
+    assert r["allow_cpu_compute"] is True and r["cpu_kernel_floor_us"] == floor
     r = run(_cfg())
-    assert r["cpu_gemv_efficiency"] == pytest.approx(0.217) and r["allow_cpu_compute"] is None
+    assert r["cpu_gemv_efficiency"] == pytest.approx(eff0) and r["allow_cpu_compute"] is None

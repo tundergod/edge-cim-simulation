@@ -75,7 +75,8 @@ def run(cfg):
                     knee_GBs=cfg.knee_GBs, interconnect_efficiency=cfg.interconnect_efficiency,
                     bw_efficiency=cfg.bw_efficiency, soc_profile=cfg.soc_profile,
                     cim_n_cores=cfg.cim_n_cores, npu_scale=cfg.npu_scale,
-                    cpu_gemv_efficiency=cfg.cpu_gemv_efficiency)
+                    cpu_gemv_efficiency=cfg.cpu_gemv_efficiency,
+                    cim_weight_bytes_per_param=cfg.cim_weight_bytes_per_param)
     model_obj = op_profile.Model(cfg.model)
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off
@@ -174,11 +175,20 @@ def run(cfg):
         # scheduler, so the config value alone is not enough to label a run)
         "host": getattr(dec, "host", None),                        # graph-owning unit chosen for decode
         "prefill_host": getattr(pre, "host", None),
-        "host_candidates_est_us": getattr(dec, "host_candidates", None),   # host=auto: {unit: {est_us, engine_us}}; chosen by engine_us
+        "host_candidates_est_us": getattr(dec, "host_candidates", None),   # host=auto: {plan_source: {est_us, engine_us}}; chosen by engine_us
+        # round-2: where the plan came from — "solver:<host>" (tiled per-op solve, host = graph owner) or
+        # "single:<unit>" (the single-unit baseline placement won the host=auto portfolio); single-unit
+        # baselines report "single:<unit>", heteroinfer "solver:gpu", legacy schedulers None
+        "plan_source": getattr(dec, "plan_source", None),
+        "prefill_plan_source": getattr(pre, "plan_source", None),
+        "plan_pass": getattr(dec, "plan_pass", None),              # greedy | deferred | neighbours (solver plans)
+        "prefill_plan_pass": getattr(pre, "plan_pass", None),
         "cim_n_cores": plat.cim_n_cores,
+        "cim_weight_bytes_per_param": plat.cim_weight_bytes_per_param,   # streamed CIM weight bytes/param used
         "npu_scale": plat.npu_scale,
         "cpu_gemv_efficiency": plat.cpu_gemv_efficiency,       # CPU M=1 GEMV kernel efficiency actually used
         "cpu_gemm_efficiency": plat.cpu_gemm.eff,
+        "cpu_kernel_floor_us": plat.cpu_kernel_floor_us,       # per-kernel CPU floor (profile path; 0 legacy)
         "allow_cpu_compute": cfg.allow_cpu_compute,            # config value (None = scheduler default)
         "knee_GBs": plat.bw.knee,
         "soc_profile": cfg.soc_profile,

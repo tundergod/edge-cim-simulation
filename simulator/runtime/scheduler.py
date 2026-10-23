@@ -134,7 +134,7 @@ def _sync_us(cfg, phase):
                                   getattr(cfg, "sync_us_override", None))
 
 
-_ELEMENTWISE_FLOOR_UNITS = ("gpu", "npu")
+_ELEMENTWISE_FLOOR_UNITS = ("gpu", "npu", "cpu")   # cpu: round-2 revision (profile-path kernel floor)
 
 
 def _is_elementwise(n):
@@ -143,13 +143,15 @@ def _is_elementwise(n):
 
 
 def tag_fused_chains(dag):
-    """ADR-0009 rev F4 — fused elementwise kernel chains. An elementwise node on gpu/npu is a
+    """ADR-0009 rev F4 — fused elementwise kernel chains. An elementwise node on gpu/npu/cpu is a
     FOLLOWER (`wl.extra['fused_head'] = False`, 0 launch floor) when it has exactly one
     dependency, that producer is an elementwise node on the same unit, and the producer feeds
     nothing else (a single-dependency chain = what a kernel fuser emits as one kernel); every
     other elementwise node is a HEAD (`fused_head = True`, pays the unit's launch floor).
     `fused_group` = the head's id (reporting only). Recomputed from scratch -> idempotent;
-    non-elementwise / other-unit nodes carry no tag. Returns the number of chains."""
+    non-elementwise / other-unit nodes carry no tag. Returns the number of chains. The CPU tag
+    only matters on a SoC-profile path with `units.cpu.gemm.kernel_floor_us` > 0 (round-2
+    revision); the legacy schedulers never call this, so the L4 path is untouched."""
     heads = 0
     for n in dag.nodes:
         ex = n.wl.extra
@@ -244,7 +246,16 @@ class SingleUnitScheduler(Scheduler):
                                "parts": [(n.unit, 1.0)]}
         out = _finish(dag, cfg, _sync_us(cfg, phase), platform)
         out.host = self.unit
+        out.plan_source = f"single:{self.unit}"
         return out
+
+
+def single_support_unit(unit, platform):
+    """The support-op unit of a single-unit plan on `unit`: the unit itself when it can run the
+    support ops, else the CPU (the CIM cannot run norm/rope/swiglu/softmax/residual) — exactly
+    what gpu_only / npu_only / cpu_only / cim_only do."""
+    sup = getattr(platform, "supports", None)
+    return unit if (sup is None or all(sup(unit, c) for c in _SUPPORT)) else "cpu"
 
 
 class TiledHeteroScheduler(Scheduler):
@@ -266,18 +277,32 @@ class TiledHeteroScheduler(Scheduler):
     kernel-time model to the search.
     `host` (constructor, else `cfg.host`): the graph-owning unit — a non-host single placement
     pays the hand-back sync and merges land on it. None = gpu if enabled else the first enabled
-    unit; 'auto' = run the whole per-op solve once per candidate host (every enabled unit) on a
-    copy of the DAG and keep the plan with the lowest estimated token critical path (= the sum
-    of the per-op solver estimates T_est, which is the critical path of the per-token chain the
-    solver optimises; the engine's pipelined time is not consulted). The chosen host is recorded
-    as `dag.host` (+ `dag.host_candidates` = {unit: estimate us}); a re-assign reuses it."""
+    unit; 'auto' = a PORTFOLIO (round-2 revision): the whole per-op solve once per candidate host
+    (every enabled unit) PLUS the single-unit plans (every enabled compute unit as the sole compute
+    unit, support ops on it or on the CPU when it cannot run them = exactly the gpu_only / npu_only /
+    cim_only / cpu_only placements), every candidate timed by the EVENT ENGINE, the overall best
+    kept. So "tiled_hetero >= the best single-unit baseline" holds BY CONSTRUCTION (same cfg):
+    the portfolio contains the baselines. Recorded: `dag.host`, `dag.plan_source` in
+    {"solver:<host>", "single:<unit>"}, `dag.plan_pass` (greedy | deferred | neighbours, solver
+    plans only), `dag.host_candidates` = {plan_source: {est_us, engine_us}}.
+    `refine` (round-2 revision; True for the registered 'tiled_hetero', False by default and for
+    heteroinfer, which stays the paper's per-op solver): after the per-op greedy pass (hand-back
+    sync charged on every non-host single placement), re-solve every op with the hand-back
+    charged ONCE per boundary at its consumer (`SolverContext.handback = "deferred"`: a chain of
+    ops each cheapest on the NPU becomes one NPU run with one sync-in/out pair instead of
+    staying on the host), then once more given the units of its producers AND consumers from
+    that pass ("neighbours": undoes an isolated off-host move), and keep whichever of the three
+    plans the engine times fastest (ties -> the earlier pass; deterministic). Re-assigning a DAG
+    this scheduler already planned only re-applies the common tail (idempotent)."""
     pipeline = True
     required_units = ("cpu",)
 
     def __init__(self, *, name="tiled_hetero", units=None, allow_cim=True, allow_cpu_compute=False,
                  support_unit=None, matmul_dims=("N", "M", "K"), split_attention=True,
-                 split_support=True, align=None, std_lengths=STD_LENGTHS, host=None, grid=None):
+                 split_support=True, align=None, std_lengths=STD_LENGTHS, host=None, grid=None,
+                 refine=False):
         self.name = name
+        self.refine = bool(refine)
         self.units = units                      # None -> cfg.units (enabled accelerators)
         self.allow_cim = allow_cim
         self.allow_cpu_compute = allow_cpu_compute
@@ -325,7 +350,7 @@ class TiledHeteroScheduler(Scheduler):
             raise ValueError(f"{self.name}: host unit {host!r} not in enabled units {units}")
         return host
 
-    def _ctx(self, platform, cfg, dag, units, host, phase, rows):
+    def _ctx(self, platform, cfg, dag, units, host, phase, rows, handback="always", hints=None):
         if platform is None:
             raise ValueError(f"{self.name}: assign() needs platform= (pricing contract: "
                              f"price/compute_us/supports)")
@@ -342,39 +367,135 @@ class TiledHeteroScheduler(Scheduler):
         dims = {"matmul": self.matmul_dims,
                 "attention": ("heads", "kv") if self.split_attention else (),
                 **{c: (("rows",) if self.split_support else ()) for c in _SUPPORT}}
+        # fixed consumers for the deferred/neighbours hand-back rule (round-2): mem nodes, sampling,
+        # and the pinned support/attention block (`support_unit`)
+        fixed = {}
+        for n in dag.nodes:
+            if n.category in _FIXED_MEM:
+                fixed[n.id] = "mem"
+            elif n.category == "sampling":
+                fixed[n.id] = "cpu"
+            elif self.support_unit is not None and (n.category in _SUPPORT or n.category == "attention"):
+                fixed[n.id] = self.support_unit
         return SolverContext(platform=platform, units=units, host=host, sync_us=_sync_us(cfg, phase),
                              grid=int(self.grid or getattr(cfg, "partition_grid", 8)),
                              std_lengths=self.std_lengths, align=align, rows=rows, dims=dims,
-                             allow_chunking=True)
+                             allow_chunking=True, handback=handback, fixed_units=fixed, hints=dict(hints or {}))
+
+    # ---- engine ranking of candidate plans ----------------------------------------------
+    @staticmethod
+    def _engine_us(dag, platform, cfg):
+        """Token latency of a finished plan under the EVENT ENGINE (the runner's ablation flags
+        honoured); a platform without a bandwidth model (bare fakes) falls back to the solver's
+        own estimate."""
+        from simulator.runtime.events import run_dag          # deferred: events is a leaf module
+        bw = getattr(platform, "bw", None)
+        if bw is None:
+            return float(getattr(dag, "host_est_us", 0.0))
+        return float(run_dag(dag, platform, bw,
+                             concurrency=not getattr(cfg, "concurrency_off", False),
+                             contention=not getattr(cfg, "contention_off", False),
+                             price_compute=not getattr(cfg, "compute_off", False)))
+
+    @staticmethod
+    def _hints(dag):
+        """{original op id: unit} of a solved plan (a split -> its merge unit = the host) for the
+        'neighbours' hand-back rule."""
+        out = {}
+        for nid, p in dag.plans.items():
+            parts = p.get("parts") or []
+            out[nid] = parts[0][0] if (p.get("dim") is None and parts) else dag.host
+        return out
+
+    def _solve_host(self, dag, cfg, platform, units, host, refine):
+        """The per-op greedy plan for `host` (+ the two refinement passes when `refine`), the
+        engine-fastest kept; ties -> the earlier pass. Returns (plan, engine_us)."""
+        base = self._assign_host(copy.deepcopy(dag), cfg, platform, units, host)
+        base.plan_pass = "greedy"
+        base_us = self._engine_us(base, platform, cfg)
+        return self._refine(dag, cfg, platform, units, base, base_us) if refine else (base, base_us)
+
+    def _refine(self, dag, cfg, platform, units, base, base_us):
+        """Round-2 refinement of a greedy plan `base` (engine time `base_us`) for its host: the
+        'deferred' pass, then the 'neighbours' pass seeded with the deferred units; the engine
+        picks. Returns (plan, engine_us); `plan.greedy_engine_us` records the greedy time."""
+        host = base.host
+        best, best_us = base, base_us
+        p2 = self._assign_host(copy.deepcopy(dag), cfg, platform, units, host, handback="deferred")
+        p2.plan_pass = "deferred"
+        p3 = self._assign_host(copy.deepcopy(dag), cfg, platform, units, host, handback="neighbours",
+                               hints=self._hints(p2))
+        p3.plan_pass = "neighbours"
+        for cand in (p2, p3):
+            t = self._engine_us(cand, platform, cfg)
+            if t < best_us - 1e-9:
+                best, best_us = cand, t
+        best.greedy_engine_us = base_us
+        return best, best_us
+
+    def _single_plan(self, dag, cfg, platform, unit):
+        """The single-unit plan on `unit` (support ops on it, or on the CPU when it cannot run them)
+        = the gpu_only / npu_only / cim_only / cpu_only placement under this cfg."""
+        out = SingleUnitScheduler(unit, support_unit=single_support_unit(unit, platform)).assign(
+            copy.deepcopy(dag), cfg, platform=platform)
+        out.host_est_us = None
+        out.plan_pass = None
+        return out
 
     def assign(self, dag, cfg=None, *, platform=None):
         units = self._units(cfg)
         host = self._host(units, cfg)
+        if getattr(dag, "planned_by", None) == self.name:
+            # idempotent re-assign: the plan (solver or single) is kept, only the common tail is
+            # re-applied (conversions / unit bytes / residency / fusion tags / sync: all idempotent)
+            keep = {k: getattr(dag, k) for k in ("host", "plan_source", "plan_pass", "host_candidates", "host_est_us",
+                                                 "greedy_engine_us") if hasattr(dag, k)}
+            phase, _ = _phase_and_rows(dag)
+            out = _finish(dag, cfg, _sync_us(cfg, phase), platform)
+            for k, v in keep.items():
+                setattr(out, k, v)
+            out.planned_by = self.name
+            return out
         if host != "auto":
-            return self._assign_host(dag, cfg, platform, units, host)
-        prev = getattr(dag, "host", None)
-        if prev in units:                         # idempotent re-assign: keep the host already chosen
-            return self._assign_host(dag, cfg, platform, units, prev)
-        # host=auto: solve once per candidate host, then let the EVENT ENGINE (not the solver's
-        # serial estimate) rank the candidates: the estimates tie within <0.1% while the engine
-        # (cross-op overlap, fair-share bandwidth) separates them by several % (matrix v0 anomaly 5).
-        # `host_candidates` keeps both numbers per host for reporting. Tie-break: solver estimate.
-        from simulator.runtime.events import run_dag          # deferred: events is a leaf module
-        best, best_key, est = None, None, {}
+            out, _ = self._solve_host(dag, cfg, platform, units, host, self.refine)
+            out.plan_source = f"solver:{host}"
+            out.planned_by = self.name
+            return out
+        # host=auto (round-2 portfolio): the per-op solve once per candidate host + every single-unit
+        # plan, all timed by the EVENT ENGINE (not the solver's serial estimate: the estimates tie
+        # within <0.1% while the engine separates them by several %, matrix v0 anomaly 5; and the
+        # per-op greedy never recovers an all-one-unit pipeline, matrix v1 anomaly 2). The refinement
+        # passes run on the engine-best solver host only (cost: 2 extra solves, not 2 x |units|).
+        # `host_candidates` keeps the numbers per candidate for reporting. Ties -> first found
+        # (solver hosts in unit order, then singles) -> deterministic.
+        cands = []                                          # (key, plan)
+        est = {}
         for h in units:
-            out = self._assign_host(copy.deepcopy(dag), cfg, platform, units, h)
-            bw = getattr(platform, "bw", None)
-            eng = float(run_dag(out, platform, bw)) if bw is not None else float(out.host_est_us)
-            est[h] = {"est_us": float(out.host_est_us), "engine_us": eng}
-            key = (eng, float(out.host_est_us))
-            if best is None or key < best_key:
-                best, best_key = out, key
+            out, eng = self._solve_host(dag, cfg, platform, units, h, refine=False)
+            out.plan_source = f"solver:{h}"
+            est[out.plan_source] = {"est_us": float(out.host_est_us), "engine_us": eng}
+            cands.append(((eng, float(out.host_est_us)), out))
+        if self.refine:
+            i = min(range(len(cands)), key=lambda j: cands[j][0])
+            (eng, _), base = cands[i]
+            out, eng2 = self._refine(dag, cfg, platform, units, base, eng)
+            out.plan_source = base.plan_source
+            est[out.plan_source] = {"est_us": float(out.host_est_us), "engine_us": eng2,
+                                    "greedy_engine_us": eng, "pass": out.plan_pass}
+            cands[i] = ((eng2, float(out.host_est_us)), out)
+        for u in units:
+            out = self._single_plan(dag, cfg, platform, u)
+            eng = self._engine_us(out, platform, cfg)
+            est[out.plan_source] = {"est_us": None, "engine_us": eng}
+            cands.append(((eng, float("inf")), out))
+        best = min(cands, key=lambda c: c[0])[1]            # min is stable: ties -> first found
         best.host_candidates = est
+        best.planned_by = self.name
         return best
 
-    def _assign_host(self, dag, cfg, platform, units, host):
+    def _assign_host(self, dag, cfg, platform, units, host, handback="always", hints=None):
         phase, rows = _phase_and_rows(dag)
-        ctx = self._ctx(platform, cfg, dag, units, host, phase, rows)
+        ctx = self._ctx(platform, cfg, dag, units, host, phase, rows, handback=handback, hints=hints)
         consumed = set()
         for nid in tiling._topo(dag, [n.id for n in dag.nodes]):
             if nid in consumed or nid not in dag._by_id:
@@ -439,7 +560,8 @@ class HeteroInferScheduler(TiledHeteroScheduler):
 SCHEDULERS = {"all_cim": AllCimScheduler(), "cim_hetero": CimHeteroScheduler(),
               "gpu_only": SingleUnitScheduler("gpu"), "npu_only": SingleUnitScheduler("npu"),
               "cim_only": SingleUnitScheduler("cim", support_unit="cpu"),
-              "heteroinfer": HeteroInferScheduler(), "tiled_hetero": TiledHeteroScheduler()}
+              "cpu_only": SingleUnitScheduler("cpu"),      # round-2: the llama.cpp-style all-CPU baseline (SIMULATED)
+              "heteroinfer": HeteroInferScheduler(), "tiled_hetero": TiledHeteroScheduler(refine=True)}
 
 
 def plans_summary(dag):

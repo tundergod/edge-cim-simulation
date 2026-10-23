@@ -230,3 +230,54 @@ Regression tests: `tests/test_hetero_fixes.py` (one per fix), `tests/test_hetero
   (97 µs); it is excluded from the search unless `allow_cpu_compute=True`, as in the paper (§4).
 * **F8** — the profile `sync_us` blocks are removed; `tiling.SYNC_US` is the one table
   (`Platform.sync_us` mirrors it). **Known gap 7 closed** (F14); gap 6 closed (F4, ADR-0009).
+
+## Revisions 2026-10-23 round 2 (after matrix v1; branch `hetero`)
+
+Fix for matrix-v1 anomaly 1 (`cim-mobile-soc/experiments/RESULTS_v1.md`): a CPU-only decode BEAT the
+GPU-only decode (1B 30.9 vs 21.3 tok/s, 8B 6.55 vs 5.21) — the inverse of HeteroInfer Fig.12 (llama.cpp
+on the CPU is ~1.33 × slower than MNN on the GPU end to end: InternLM-1.8B 19.38 / 14.20 s, Llama-7B
+63.39 / 48.76 s) — because `CpuGemmModel` had no per-kernel floor and its `gemv_efficiency` 0.217 was
+anchored per op ("a GEMV = 1.33 × its W4 pool time") while the GPU carries its fitted 60 µs GEMV floor
+and 20 µs elementwise floors and the pool overlaps the CPU bytes. Plus two sensitivity hooks. Regression
+tests: `tests/test_hetero_round2.py` (G1/G3). The legacy path (no profile: AllCim / CimHetero) is
+byte-identical (floor 0, knob ignored; `validate_e2e_l4.py` unchanged, snapshot tests green).
+
+* **R2-A — per-kernel CPU floor** `units.cpu.gemm.kernel_floor_us` (`CpuGemmModel(kernel_floor_us=)`,
+  `Platform.cpu_kernel_floor_us`; profile path only, legacy 0): the multi-thread fork/join + dispatch
+  cost of a 4-core NEON kernel — an ASSUMPTION (no CPU kernel-launch measurement), placed in the same
+  "tens of µs" band as the GPU/NPU launch floors. Charged once per GEMM/GEMV kernel, twice per attention
+  composite (QK^T + S·V), and once per FUSED elementwise chain head on the CPU (the ADR-0009 rev F4 rule;
+  `tag_fused_chains` now tags CPU nodes; `sampling` = control plane, no floor) on top of the calibrated
+  m4_cpu per-op cost (whose `overhead_op` is the single-thread numpy kernel's own fixed cost).
+* **R2-B — END-TO-END refit** (`tools/analysis/fit_cpu_gemv.py` → the profile + `validation/reports/
+  hetero/cpu_gemv_fit.json`): `(kernel_floor_us, gemv_efficiency)` chosen so that the SIMULATED
+  `cpu_only` decode tok/s = `gpu_only` / 1.33 on BOTH llama-3.2-1b (InternLM-1.8B proxy) and
+  llama-3.1-8b (Llama-7B proxy) at ctx 1024 / prefill 256 / decode 128 through the real Platform +
+  scheduler + engine (the runner's kv sampling). Floor on the 10–30 µs grid, efficiency by bisection to
+  the minimax point (both deviations monotone in it):
+
+  | floor µs | gemv_eff | dev 1B | dev 8B |
+  |---|---|---|---|
+  | 10 | 0.1094 | +8.8 % | −8.8 % |
+  | 20 | 0.1181 | +5.9 % | −5.9 % |
+  | **30** | **0.1280** | **+3.1 %** | **−3.0 %** |
+
+  Chosen: floor 30 µs (the top of the band: a larger floor would fit better, which says the model's
+  per-kernel overhead share is at least this large), `gemv_efficiency 0.217 → 0.128`. Runner check on
+  the written profile: 1B gpu_only 21.31 / cpu_only 16.52 = **1.290**, 8B 5.213 / 3.800 = **1.372**
+  (target 1.33 ± 10 %; the paper's two ratios are 1.365 and 1.300 — our size trend runs the other way,
+  within the band). The same values are mirrored into `soc_rk3588_cim.json` (same `cpu_rk3588` A76
+  proxy). CPU weight bytes stay 0.5 B/param (llama.cpp Q4), the CPU single-stream cap 43 GB/s.
+  **Honesty: the CPU GEMM model is SIMULATED — anchored only on Fig.12's end-to-end ratio, two
+  published seconds; no CPU GEMM or kernel-launch silicon. Any claim that rests on the CPU as a compute
+  unit must be validated on silicon.** The `cpu_gemv_efficiency` config knob keeps overriding the
+  fitted efficiency (floor unchanged); `runner` echoes `cpu_kernel_floor_us`.
+* **R2-C — `platform.cim_weight_bytes_per_param`** (`Platform(cim_weight_bytes_per_param=)`, needs a
+  profile; number in (0, 4]; provenance-flagged `simulated` when it differs from the profile's 1.0):
+  streamed CIM weight bytes per parameter. 1.0 = the INT8 crossbar weights streamed as stored (the
+  Metis basis); 0.5 = W4 storage with on-load unpack into the INT8 array — a DESIGN OPTION with no
+  silicon, the knob that decides H2 (matrix v1: the CIM's INT8 bytes vs the GPU/CPU's W4). Bytes only;
+  the CIM compute law is untouched. Runner echoes `cim_weight_bytes_per_param` (and, as before,
+  `cim_n_cores`).
+* **R2-D — `price_table.py --cim-n-cores N`** prices the table at another CIM core count (named in the
+  output and the file suffix `_cim<N>c`; EXTRAPOLATED).

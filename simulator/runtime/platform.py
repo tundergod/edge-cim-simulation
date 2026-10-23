@@ -78,10 +78,13 @@ class Platform:
 
     def __init__(self, model, *, memory_spec="mem_lpddr4x", topology=None, knee_GBs=None,
                  interconnect_efficiency=1.0, bw_efficiency=None, soc_profile=None,
-                 cim_n_cores=None, npu_scale=1.0, cpu_gemv_efficiency=None):
+                 cim_n_cores=None, npu_scale=1.0, cpu_gemv_efficiency=None, cim_weight_bytes_per_param=None):
         """`cim_n_cores` / `npu_scale` are the ADR-0008 scalable axes (None / 1.0 = the profile's own
         geometry); `cpu_gemv_efficiency` overrides the profile's CPU M=1 GEMV efficiency (None = profile;
-        geometry; anything else is EXTRAPOLATED and flagged by SimConfig)."""
+        geometry; anything else is EXTRAPOLATED and flagged by SimConfig); `cim_weight_bytes_per_param`
+        overrides the profile's `units.cim.weight_bytes_per_param` (None = profile; 1.0 = INT8 crossbar
+        weights streamed as stored; 0.5 = W4 storage unpacked into the INT8 array on load — a DESIGN
+        OPTION with no silicon, flagged by SimConfig; legacy path: ignored, 1.0 everywhere)."""
         self.model = model
         self.profile_name = soc_profile
         self.profile = None
@@ -162,6 +165,13 @@ class Platform:
         self.bw = SharedBandwidth(eff, knee_GBs=knee_GBs,
                                   interconnect_efficiency=interconnect_efficiency, unit_caps=unit_caps)
         self._build_units(cim_params, cim_n_cores, npu_scale, cpu_gemv_efficiency)
+        self.cim_weight_bytes_per_param = self.weight_bytes_per_param["cim"]
+        if cim_weight_bytes_per_param is not None and self.profile is not None:
+            if not (0 < float(cim_weight_bytes_per_param) <= 4):
+                raise ValueError(f"Platform: cim_weight_bytes_per_param must be in (0, 4], got "
+                                 f"{cim_weight_bytes_per_param!r}")
+            self.weight_bytes_per_param["cim"] = float(cim_weight_bytes_per_param)
+            self.cim_weight_bytes_per_param = float(cim_weight_bytes_per_param)
         self.energy = EnergyModel()
 
     # ---- unit construction -----------------------------------------------------------------
@@ -199,10 +209,15 @@ class Platform:
         self.cpu = CpuModel(cpu_spec)
         g = units["cpu"]["gemm"]
         gemv_eff = g.get("gemv_efficiency", g["efficiency"]) if cpu_gemv_efficiency is None else float(cpu_gemv_efficiency)
-        # an override above the GEMM efficiency lifts the GEMM efficiency to it (eff(M) must be monotone in M)
+        # an override above the GEMM efficiency lifts the GEMM efficiency to it (eff(M) must be monotone in M).
+        # Round-2 revision: the per-kernel CPU floor (`gemm.kernel_floor_us`, fork/join + dispatch of a
+        # multi-thread kernel; an assumption fitted end-to-end by fit_cpu_gemv.py) is a PROFILE-path
+        # parameter; the legacy path keeps 0 (its calibrated support-op numerics are the L4 gate).
+        self.cpu_kernel_floor_us = 0.0 if legacy else float(g.get("kernel_floor_us", 0.0))
         self.cpu_gemm = CpuGemmModel(cpu_spec, cores=g["cores"], cluster=g["cluster"],
                                      efficiency=max(float(g["efficiency"]), gemv_eff),
-                                     gemv_efficiency=gemv_eff, m_half=g.get("m_half", 0.0))
+                                     gemv_efficiency=gemv_eff, m_half=g.get("m_half", 0.0),
+                                     kernel_floor_us=self.cpu_kernel_floor_us)
         self.cpu_gemv_efficiency = self.cpu_gemm.gemv_eff
         # GPU: 'mali_fit' = Phase-1 micro-benchmark attention (MaliGpuModel, unchanged) + the Mali
         # roofline_fit for GEMM (shape trend only); 'anchor_roofline' = the HeteroInfer-anchored model
@@ -351,7 +366,21 @@ class Platform:
         wl2 = Workload(op=("softmax" if op.startswith("softmax") else op), kv=(wl.kv or 0),
                        extra={"model": self.model, "dtype": "fp32"})
         r = self.cpu.predict(wl2)
-        return {"latency_us": r["latency_us"], "compute_provenance": r["provenance"], "source_model": "m4_cpu"}
+        lat, prov = r["latency_us"], r["provenance"]
+        # Round-2 revision: on the profile path a CPU elementwise op ALSO pays the per-kernel floor once
+        # per fused chain head (the ADR-0009 rev F4 rule the gpu/npu floors follow; `fused_head` is tagged
+        # by a scheduler's _finish, untagged = head). The calibrated per-op overhead_op is the single-thread
+        # numpy kernel's own fixed cost; the floor is the multi-thread dispatch on top (assumption). The
+        # legacy path (floor 0) is byte-identical. `sampling` is the control-plane op: no floor.
+        if self.cpu_kernel_floor_us > 0 and cat != "sampling":
+            head = bool(wl.extra.get("fused_head", True)) if wl.extra else True
+            if head:
+                lat += self.cpu_kernel_floor_us
+                prov += (f"; + CPU kernel floor {self.cpu_kernel_floor_us:g} us (fused chain head: fork/join + "
+                         f"dispatch; profile assumption, fit_cpu_gemv.py)")
+            else:
+                prov += "; fused follower: no CPU kernel floor"
+        return {"latency_us": lat, "compute_provenance": prov, "source_model": "m4_cpu"}
 
     def _elementwise(self, u, cat, node):
         """gpu/npu elementwise COMPUTE = the unit's launch floor (profile `elementwise_launch_us`),

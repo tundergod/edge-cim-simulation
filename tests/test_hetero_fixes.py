@@ -336,13 +336,18 @@ def test_f15_single_unit_baselines_do_not_exceed_the_wall():
 
 # ---- CPU GEMV kernel time is distinct from the pool time (F4 second half) -----------------------
 def test_cpu_gemv_kernel_time_distinct_from_pool():
+    """Round 2: the per-op anchor 'GEMV = 1.33x its W4 pool time' is gone — the kernel time is
+    floor + work/eff with (floor, eff) fitted END-TO-END (fit_cpu_gemv.py, tests/test_hetero_round2.py);
+    a decode GEMV is now DEARER than its W4 pool time (the CPU is kernel-bound, as HeteroInfer Fig.12
+    implies), and the compute term stays independent of the pool wall."""
     plat = Platform(MODEL, soc_profile=PROFILE)
-    g = plat.cpu_gemm
-    assert g.efficiency(1) == pytest.approx(0.217) and g.efficiency(10_000) == pytest.approx(0.5, abs=1e-3)
+    g, spec = plat.cpu_gemm, load_spec(f"soc_{PROFILE}")["units"]["cpu"]["gemm"]
+    assert g.efficiency(1) == pytest.approx(spec["gemv_efficiency"]) and g.efficiency(10_000) == pytest.approx(0.5, abs=3e-3)
+    assert g.kernel_floor_us == spec["kernel_floor_us"] == plat.cpu_kernel_floor_us and 10.0 <= g.kernel_floor_us <= 30.0
     t = plat.compute_us(_mm("cpu", 1, 4096, 4096))
     pool_w4 = 4096 * 4096 * 0.5 / (43.0 * 1e3)
-    assert t == pytest.approx(1.33 * pool_w4, rel=0.03)      # the Fig.12 llama.cpp/MNN decode ratio anchor
-    assert plat.price(_mm("cpu", 1, 4096, 4096))["bound"] == "compute" if "bound" in plat.price(_mm("cpu", 1, 4096, 4096)) else True
+    work = 2 * 4096 * 4096 / (g.peak_ops_s("int8") * g.efficiency(1)) * 1e6
+    assert t == pytest.approx(g.kernel_floor_us + work) and 1.33 * pool_w4 < t < 4 * pool_w4
     assert SCHEDULERS["tiled_hetero"].allow_cpu_compute is False      # same unit set as gpu_only/npu_only
 
 

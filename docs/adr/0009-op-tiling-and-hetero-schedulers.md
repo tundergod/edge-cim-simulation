@@ -126,3 +126,79 @@ sample point and the prefill forward choose independently). The chosen host is r
 * **Still open:** the solver's per-op estimate has no cross-op overlap (−15 % vs the engine); fusion is
   decided after solving; `host=auto` compares Σ T_est (ADR-0008 addendum) which now includes the fixed
   delays consistently.
+
+## Revisions 2026-10-23 round 2 (after matrix v1; branch `hetero`)
+
+Fixes for the matrix-v1 anomalies 2, 3 and 5 (`cim-mobile-soc/experiments/RESULTS_v1.md`: `cim_only`
+prefill beating `tiled_hetero + cim` in 10 configs, `ours (no CIM) ≥ ours + CIM` in 17, non-monotone
+sweeps) — all symptoms of the per-op greedy solver never recovering a whole-DAG single-unit pipeline
+and of its pessimistic hand-back accounting. Anomaly 1 (the CPU) is ADR-0008 round 2. Regression
+tests: `tests/test_hetero_round2.py` (G2 cases); `tests/test_knobs.py` updated for the new candidate
+record. Everything below stays SIMULATED; the legacy path is byte-identical (`validate_e2e_l4.py`
+unchanged, snapshot tests green).
+
+* **R2-1 — `host=auto` is a PORTFOLIO.** `TiledHeteroScheduler.assign` with `host=auto` now evaluates,
+  through the EVENT ENGINE (the runner's ablation flags honoured), (a) the per-op solver plan once per
+  candidate host (every enabled compute unit, as before) and (b) every single-unit plan — each enabled
+  compute unit as the sole compute unit, support ops on it, or on the CPU when it cannot run them
+  (`scheduler.single_support_unit`) — i.e. exactly the `gpu_only` / `npu_only` / `cim_only` /
+  `cpu_only` placements under the same cfg (the CPU single plan exists only with `allow_cpu_compute`,
+  which is what puts the CPU in the unit set). The overall fastest plan is kept (ties → first found:
+  solver hosts in unit order, then singles → deterministic). **Consequence, stated explicitly: "ours ≥
+  the best single-unit baseline" now holds BY CONSTRUCTION** for every DAG the runner times (each
+  decode kv point and the prefill forward choose independently, so it holds for the averaged decode
+  tok/s and for prefill tok/s alike). It is a property of the search, not a finding; the finding is
+  *by how much* the solver plan beats the portfolio's single-unit members, which `plan_source` makes
+  visible.
+* **R2-2 — `plan_source` surfaced.** `dag.plan_source ∈ {"solver:<host>", "single:<unit>"}`,
+  `dag.plan_pass ∈ {greedy, deferred, neighbours}` (solver plans), `dag.host_candidates = {plan_source:
+  {est_us, engine_us[, greedy_engine_us, pass]}}` (keyed by plan source now, `est_us = None` for a
+  single plan). Runner metrics: `plan_source`, `prefill_plan_source`, `plan_pass`, `prefill_plan_pass`;
+  single-unit baselines report `single:<unit>`, `heteroinfer` `solver:gpu`, the legacy schedulers
+  `None`. `host_candidates_est_us` keeps its key (shape changed).
+* **R2-3 — solver refinement passes (`refine=True`).** After the per-op greedy pass (hand-back sync
+  charged on every non-host single placement = the paper's `T_NPU^all + T_sync`, `SolverContext.handback
+  = "always"`), the same DAG is re-solved twice from scratch: (i) **deferred** — every cross-unit boundary
+  is priced ONCE, at its consumer: a non-host placement whose consumers the solver will still decide
+  pays no hand-back now (the consumer pays its own `sync_in` later, with the producer's unit known); a
+  FIXED consumer (mem / sampling / a pinned support block) or a terminal block keeps the hand-back; (ii)
+  **neighbours** — as (i) but an already-decided consumer (the deferred pass's unit per op; a split → its
+  merge unit = host) also charges the hand-back when it sits elsewhere, undoing an isolated off-host
+  move. The engine times the three plans and the fastest is kept (ties → the earlier pass;
+  `greedy_engine_us` recorded). Test: three chained matmuls each 12.5 µs cheaper on the NPU with a 10 µs
+  sync — the greedy keeps all three on the GPU host (npu = 10 + 12.5 + 10 > 25 per op), the refined plan
+  is one NPU run with ONE sync-in/out pair (2 syncs on the entry/exit converts, engine 57.5 vs 75 µs).
+  Why not a strict fixed-neighbour local search: from the all-host plan no single op can move (its
+  neighbours are on the host), so that search cannot leave the greedy's local minimum — deferred
+  charging is what forms the run. The registered `tiled_hetero` has `refine=True`; the constructor
+  default is `False` so `TiledHeteroScheduler(...)` restricted to HeteroInfer's search space still
+  reduces to `heteroinfer` by construction, and `heteroinfer` itself stays the paper's per-op solver
+  (no refinement). With `host=auto` the refinement runs on the engine-best solver host only (cost: 2
+  extra solves, not 2 × |units|).
+* **R2-4 — idempotency.** A DAG this scheduler already planned (`dag.planned_by == name`) is not
+  re-solved on re-assign: only the common tail (`_finish`: conversions, unit bytes, residency, fusion
+  tags, sync) is re-applied, which is idempotent; `host`, `plan_source`, `plan_pass`, `host_candidates`
+  are kept. (Before, untouched nodes were re-decided "deterministically"; with the refinement passes that
+  would not reproduce a refined plan.)
+* **R2-5 — `cpu_only`** (`SingleUnitScheduler("cpu")`, `required_units = ("cpu",)`): the llama.cpp-style
+  all-CPU baseline, SIMULATED; and `tag_fused_chains` now tags CPU elementwise nodes too, which only
+  matters on a profile with `units.cpu.gemm.kernel_floor_us > 0` (ADR-0008 round 2).
+* **Cost.** `host=auto`: |units| greedy solves + 2 refinement solves + |units| single plans, every
+  candidate run through the engine (llama-3.1-8b, 4 units, cim on: ≈ 1.6 × the v1 time).
+* **Still open.** The per-op estimate still has no cross-op overlap (the engine, not the estimate,
+  ranks the portfolio); the refinement is a two-pass local improvement with no optimality claim;
+  sweeps may remain non-monotone where portfolio members swap (the portfolio guarantees ≥ every member,
+  not monotonicity in a knob); fusion is tagged after solving; the solver prices a split's consumer
+  boundary at the merge (host), not per sub-node.
+* **Measured effect (sd8gen3_cim, ctx 1024 / prefill 256 / decode 128, sync fast; decode tok/s / prefill
+  tok/s, matrix v1 → round 2; `tiled_hetero` = host auto + allow_cpu_compute; includes the ADR-0008
+  round-2 CPU refit):** 1B gpu_only 21.31/300 → same, npu_only 15.76/1419 → same, cim_only 16.97/4071 →
+  14.87/3590 (its CPU support ops now pay the kernel floor), cpu_only — → 16.52/105, heteroinfer
+  26.74/1369 → same, tiled (cim off) 43.60/1594 → 36.46/1569 (`solver:gpu` / prefill `solver:npu`), tiled
+  (cim on) 47.30/4420 → 42.66/4090 (`solver:npu` / prefill `solver:cpu`); 8B gpu_only 5.21/52, npu_only
+  2.28/197, heteroinfer 6.67/236 unchanged, cim_only 3.80/1004 → 3.58/944, cpu_only — → 3.80/17.6, tiled
+  (cim off) 10.82/275 → 9.62/271 (`solver:gpu` / `solver:cpu`), tiled (cim on) 10.79/1059 → 10.11/1011
+  (`solver:gpu` / `solver:cpu`). At these two configs `ours + CIM > ours (no CIM)` in decode (anomaly 3)
+  and `ours + CIM ≥ cim_only` in prefill (anomaly 2) now hold; every winning plan is a solver plan, so the
+  portfolio's single-unit members did not win here — the guarantee is what matters for the sweeps.
+  Decode CPU utilisation of "ours" 0.60–0.76 → 0.53–0.70.

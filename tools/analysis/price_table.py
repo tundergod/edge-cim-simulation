@@ -10,8 +10,9 @@ tiny launch-floor compute is NOT its cost. Attention rows are the QK^T+S.V COMPO
 Honesty: the profile's own tags apply (sd8gen3_cim = borrowed HeteroInfer numbers; rk3588_cim =
 RK3588-measured units on the simulated edge topology); each unit's provenance string is in the JSON.
 
-Writes validation/reports/hetero/price_table_<profile>.json
-Run:   ./.venv/bin/python tools/analysis/price_table.py --profile sd8gen3_cim    (from the repo root)
+Writes validation/reports/hetero/price_table_<profile>[_cim<n>c].json
+Run:   ./.venv/bin/python tools/analysis/price_table.py --profile sd8gen3_cim [--cim-n-cores 8]   (from the repo root)
+       (--cim-n-cores = the ADR-0008 scalable axis; a non-profile count is EXTRAPOLATED and named in the output)
 """
 import argparse
 import json
@@ -48,11 +49,13 @@ def _label(n):
     return f"{n.category} [{wl.extra.get('aten', wl.op)}]" + (f" kv={wl.kv}" if wl.kv else "")
 
 
-def table(profile, models=MODELS):
-    plat = Platform(models[0], soc_profile=profile)
+def table(profile, models=MODELS, cim_n_cores=None):
+    """`cim_n_cores` = the ADR-0008 scalable axis (None = the profile's own count; other values are
+    EXTRAPOLATED, the table says which count it was priced at)."""
+    plat = Platform(models[0], soc_profile=profile, cim_n_cores=cim_n_cores)
     rows = []
     for model in models:
-        plat = Platform(model, soc_profile=profile)
+        plat = Platform(model, soc_profile=profile, cim_n_cores=cim_n_cores)
         for phase, L in PHASES:
             seen = set()
             for n in build_token_dag(model, phase, L).nodes:
@@ -79,11 +82,13 @@ def table(profile, models=MODELS):
                                        "source_model": r["source_model"], "provenance": r["compute_provenance"]}
                 rows.append(row)
     return {"profile": profile, "eff_BW_GBs": plat.bw.eff_BW, "knee_GBs": plat.bw.knee,
-            "sync_us": plat.sync_us, "honesty": plat.profile["honesty"], "rows": rows}
+            "sync_us": plat.sync_us, "cim_n_cores": plat.cim_n_cores,
+            "cim_n_cores_is_profile_default": cim_n_cores is None, "honesty": plat.profile["honesty"], "rows": rows}
 
 
 def print_table(t):
-    print(f"== soc_profile={t['profile']}  eff_BW={t['eff_BW_GBs']} GB/s  knee={t['knee_GBs']}  sync={t['sync_us']}")
+    print(f"== soc_profile={t['profile']}  eff_BW={t['eff_BW_GBs']} GB/s  knee={t['knee_GBs']}  sync={t['sync_us']}  "
+          f"cim_n_cores={t['cim_n_cores']}{'' if t['cim_n_cores_is_profile_default'] else ' (override, EXTRAPOLATED)'}")
     print(f"   {t['honesty']}")
     hdr = f"{'op':56} {'bytes':>11} {'mem_us':>9} | " + " ".join(f"{u:>10}" for u in UNITS)
     cur = None
@@ -103,11 +108,16 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--profile", choices=SOC_PROFILES, default="sd8gen3_cim")
     ap.add_argument("--models", nargs="*", default=list(MODELS))
+    ap.add_argument("--cim-n-cores", type=int, default=None,
+                    help="CIM core count (scalable axis; default = the profile's; other values EXTRAPOLATED)")
     a = ap.parse_args()
-    t = table(a.profile, a.models)
+    if a.cim_n_cores is not None and a.cim_n_cores < 1:
+        ap.error("--cim-n-cores must be >= 1")
+    t = table(a.profile, a.models, cim_n_cores=a.cim_n_cores)
     print_table(t)
     OUT.mkdir(parents=True, exist_ok=True)
-    p = OUT / f"price_table_{a.profile}.json"
+    suffix = "" if a.cim_n_cores is None else f"_cim{a.cim_n_cores}c"
+    p = OUT / f"price_table_{a.profile}{suffix}.json"
     p.write_text(json.dumps(t, indent=1) + "\n")
     print(f"\nwrote {p}")
     return 0

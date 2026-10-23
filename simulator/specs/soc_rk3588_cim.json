@@ -1,7 +1,7 @@
 {
-  "_doc": "SoC PROFILE P2 = the RK3588-MEASURED units of this repo (Mali-G610 micro-benchmark + roofline, A76 support-op fits, RKNPU2 analytic systolic) + the Metis-calibrated CIM tile on the integrated `cim_topo_edge` topology (mem_lpddr5 x NoC). Selected by SimConfig.platform.soc_profile / Platform(soc_profile=). Same precedence rules as soc_sd8gen3_cim (profile fixes the CIM topology; memory.single_stream_eff_BW_GBs overrides the topology's resolved eff_BW — here it EQUALS it by construction, test-pinned; knee from the profile unless tunables.knee_GBs). The Mali GEMM is the KNOWN-UNOPTIMISED self-written OpenCL kernel: shape trend only, not an absolute (gpu_mali_g610 roofline_fit). The NPU has NO silicon (#13): analytic systolic, borrowed constants; engine 'scalesim' is selectable but its cached table is compute-only (no memory roofline) and covers 8 M=1 probe shapes -> seam vs analytic, so analytic is the default.",
+  "_doc": "SoC PROFILE P2 = the RK3588-MEASURED units of this repo (Mali-G610 micro-benchmark + roofline, A76 support-op fits, RKNPU2 analytic systolic) + the Metis-calibrated CIM tile on the integrated `cim_topo_edge` topology (mem_lpddr5 x NoC). Selected by SimConfig.platform.soc_profile / Platform(soc_profile=). Same precedence rules as soc_sd8gen3_cim (profile fixes the CIM topology; memory.single_stream_eff_BW_GBs overrides the topology's resolved eff_BW \u2014 here it EQUALS it by construction, test-pinned; knee from the profile unless tunables.knee_GBs). The Mali GEMM is the KNOWN-UNOPTIMISED self-written OpenCL kernel: shape trend only, not an absolute (gpu_mali_g610 roofline_fit). The NPU has NO silicon (#13): analytic systolic, borrowed constants; engine 'scalesim' is selectable but its cached table is compute-only (no memory roofline) and covers 8 M=1 probe shapes -> seam vs analytic, so analytic is the default.",
   "profile": "rk3588_cim",
-  "honesty": "simulated: soc_profile 'rk3588_cim' — RK3588-measured Mali/A76 units (Mali GEMM = unoptimised kernel, shape trend only), RKNPU2 analytic (no silicon, #13), Metis CIM on the simulated edge topology (LPDDR5 x NoC assumption); knee = the Card 4c/1c ratio applied to the edge wall (not measured)",
+  "honesty": "simulated: soc_profile 'rk3588_cim' \u2014 RK3588-measured Mali/A76 units (Mali GEMM = unoptimised kernel, shape trend only), RKNPU2 analytic (no silicon, #13), Metis CIM on the simulated edge topology (LPDDR5 x NoC assumption); knee = the Card 4c/1c ratio applied to the edge wall (not measured)",
   "units": {
     "gpu": {
       "spec": "gpu_mali_g610",
@@ -29,8 +29,9 @@
         "cores": 4,
         "cluster": "a76",
         "efficiency": 0.5,
-        "gemv_efficiency": 0.217,
-        "m_half": 32
+        "gemv_efficiency": 0.128,
+        "m_half": 32,
+        "kernel_floor_us": 30.0
       },
       "stream_eff": 1.0,
       "min_split_rows": 1,
@@ -63,7 +64,8 @@
     "sync_us": "removed (ADR-0009 rev F8): the one sync table is tiling.SYNC_US (HeteroInfer presets, not RK3588-measured)",
     "units.npu.stream_eff": "0.67 = npu_rknpu2 bw_GBs.eff_low 20.1 / the edge wall 29.97: the borrowed Fig.5 59% per-unit band applied to the RK3588 wall (was the NpuModel's internal memory ceiling before rev F2) [simulated]",
     "units.*.weight_bytes_per_param": "1.0 everywhere = op_profile INT8 bytes (the Metis scope; no W4 kernels measured on the RK3588) [measured scope]",
-    "units.cpu.gemm.gemv_efficiency": "same 0.217 / m_half 32 as sd8gen3_cim (A76 proxy, no CPU GEMV measurement) [assumption]",
-    "units.npu.min_split_rows": "32 = the systolic quantum (no silicon for a larger NPU minimum sub-tensor) [assumption]"
+    "units.cpu.gemm.gemv_efficiency": "0.128 of NEON int8 peak at M=1, FITTED END-TO-END with kernel_floor_us by tools/analysis/fit_cpu_gemv.py: simulated cpu_only decode tok/s = gpu_only / 1.33 on llama-3.2-1b (InternLM-1.8B proxy) and llama-3.1-8b (Llama-7B proxy), ctx 1024 / prefill 256 / decode 128 (HeteroInfer Fig.12 llama.cpp/MNN decode 19.38/14.20 s, 63.39/48.76 s) [assumption anchored on published end-to-end only, no CPU GEMM silicon]; m_half 32 = one register-blocked row tile [assumption] (mirrored from sd8gen3_cim: same cpu_rk3588 A76 proxy)",
+    "units.npu.min_split_rows": "32 = the systolic quantum (no silicon for a larger NPU minimum sub-tensor) [assumption]",
+    "units.cpu.gemm.kernel_floor_us": "30.0 us per CPU kernel (GEMM/GEMV, x2 per attention composite, once per fused elementwise chain head on the CPU; multi-thread fork/join + dispatch) [assumption: the same 'tens of us' band as the GPU/NPU launch floors; value chosen on a 10-30 us grid by the end-to-end fit above] (mirrored from sd8gen3_cim: same cpu_rk3588 A76 proxy)"
   }
 }

@@ -71,6 +71,22 @@ class SolverContext:
     merge_unit: str | None = None          # None = host
     allow_chunking: bool = True
     n_candidates: int = 0                  # filled by solve()
+    # Round-2 revision (ADR-0009 "Revisions 2026-10-23 round 2"): how a NON-HOST single placement is
+    # charged for the hand-back boundary to its consumers.
+    #   "always"     the per-op greedy rule (HeteroInfer T_NPU^all + T_sync): every non-host single
+    #                placement pays one hand-back sync, whatever its consumers do.
+    #   "deferred"   each cross-unit boundary is priced ONCE, at its consumer: a consumer the solver
+    #                will still decide pays its own sync_in later (so a chain of same-unit ops forms
+    #                one run with one sync-in/out pair); a FIXED consumer (`fixed_units`: mem / sampling
+    #                / a pinned support block) charges the hand-back now iff it sits elsewhere; a
+    #                block with no consumer keeps the hand-back (the paper's rule).
+    #   "neighbours" as "deferred", but an already-decided consumer (`hints` = the previous pass's
+    #                unit per original op id; a split -> its merge unit = host) also charges the
+    #                hand-back when it sits elsewhere: the clean-up pass that undoes an isolated
+    #                off-host move the deferred pass made.
+    handback: str = "always"
+    fixed_units: dict = field(default_factory=dict)
+    hints: dict = field(default_factory=dict)
 
 
 def _supports(ctx, unit, chain_nodes):
@@ -143,12 +159,34 @@ def _boundary_in(dag, chain, unit):
     return False
 
 
+def _charges_handback(ctx, dag, chain, unit):
+    """Whether a non-host single placement of `chain` on `unit` pays the hand-back sync now
+    (see SolverContext.handback)."""
+    if ctx.handback == "always":
+        return True
+    if ctx.handback not in ("deferred", "neighbours"):
+        raise ValueError(f"solver: unknown handback mode {ctx.handback!r} (always | deferred | neighbours)")
+    block = set(chain)
+    consumers = [s for c in chain for s in dag.successors(c) if s not in block]
+    if not consumers:
+        return True                                   # terminal block: T_u^all + T_sync (paper rule)
+    for s in consumers:
+        hu = ctx.fixed_units.get(s)
+        if hu is None and ctx.handback == "neighbours":
+            hu = ctx.hints.get(s)
+        if hu is None:
+            continue                                  # decided later: the boundary is priced at the consumer
+        if hu not in (unit, "mem"):
+            return True
+    return False
+
+
 def _estimate_single(ctx, dag, chain, unit):
     t = ctx.sync_us if _boundary_in(dag, chain, unit) else 0.0
     for cid in chain:
         tmpl = tiling._copy(dag[cid], unit=unit, pricing_group=dag[cid].pricing_group)
         t += _node_us(ctx, tmpl)
-    if unit != ctx.host:
+    if unit != ctx.host and _charges_handback(ctx, dag, chain, unit):
         t += ctx.sync_us
     return t
 

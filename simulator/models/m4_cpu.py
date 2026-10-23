@@ -193,20 +193,30 @@ class CpuModel(UnitEngine):
 
 
 class CpuGemmModel(UnitEngine):
-    """CPU GEMM/GEMV KERNEL-TIME model — SIMULATED (assumption), no CPU GEMM silicon (ADR-0008, rev F2).
+    """CPU GEMM/GEMV KERNEL-TIME model — SIMULATED (assumption), no CPU GEMM silicon (ADR-0008, rev F2;
+    per-kernel floor + end-to-end refit in the 2026-10-23 round-2 revision).
 
         peak_ops_s  = cores * freq * ipc * 2 * (neon_width_bits / bits_per_elem)   # MAC = 2 ops
         eff(M)      = gemv_efficiency + (efficiency - gemv_efficiency) * (M-1) / (M-1 + m_half)
-        latency_us  = 2*M*K*N / (peak_ops_s * eff(M))
+        latency_us  = kernel_floor_us + 2*M*K*N / (peak_ops_s * eff(M))            # one kernel
+        attention   = 2*kernel_floor_us + FLOPs / (peak_ops_s * efficiency)        # QK^T + S.V = two kernels
 
     Peak from the cpu_rk3588 spec (A76 NEON 128-bit: int8 SDOT 16 MAC/instr, fp16 FMLA 8, fp32 4;
     ipc, freq from the cluster) — `measured-spec` structure. `efficiency` (fraction of NEON peak a
     tuned register-blocked GEMM reaches) is an ASSUMPTION (0.5; tuned NEON int8 kernels reach
-    ~0.5-0.7). `gemv_efficiency` is the M=1 matvec efficiency (no register reuse: every weight is
-    loaded once, so the kernel is load/decode-bound far below the MAC peak): P1 sets 0.217 so that
-    a decode GEMV costs 1.33x the W4 pool time, the HeteroInfer Fig.12 llama.cpp(CPU)/MNN(GPU)
-    decode ratio (19.38/14.20 s InternLM-1.8B; 63.39/48.76 Llama-7B) — an ASSUMPTION anchored on
-    the paper's end-to-end numbers, not a kernel measurement. `m_half` (rows at which eff is
+    ~0.5-0.7). `kernel_floor_us` (profile `units.cpu.gemm.kernel_floor_us`; default 0 = the
+    pre-revision model = the legacy path) is the per-kernel multi-thread fork/join + dispatch cost
+    of a 4-core NEON kernel — an ASSUMPTION (no CPU kernel-launch measurement). The Platform charges
+    the same floor once per FUSED elementwise chain head on the CPU (ADR-0009 rev F4 rule), profile
+    path only. `gemv_efficiency` is the M=1 matvec efficiency (no register reuse: every weight is
+    loaded once, so the kernel is load/decode-bound far below the MAC peak). P1's gemv_efficiency
+    and kernel floor are FITTED END-TO-END (tools/analysis/fit_cpu_gemv.py): the simulated `cpu_only`
+    decode tok/s on sd8gen3_cim = `gpu_only` / 1.33 for both llama-3.2-1b (proxy for InternLM-1.8B)
+    and llama-3.1-8b (proxy for Llama-7B) — the HeteroInfer Fig.12 llama.cpp(CPU)/MNN(GPU) decode
+    ratio (19.38/14.20 s; 63.39/48.76 s). An ASSUMPTION anchored on the paper's two end-to-end
+    numbers only, never a kernel measurement (the pre-revision per-op anchor "a GEMV = 1.33x its
+    W4 pool time" with no floor let a CPU-only decode BEAT the GPU end to end, matrix v1 anomaly
+    1 — the model is SIMULATED and must be validated on silicon before any claim). `m_half` (rows at which eff is
     halfway from GEMV to GEMM efficiency; 32 = one register-blocked row tile, assumption) bridges
     M=1 to the GEMM regime. The DRAM bytes (weights + activations) are NOT priced here: the shared
     pool meters them (engine max(compute, bytes/BW)), so a CPU GEMV is physically distinct from
@@ -217,8 +227,11 @@ class CpuGemmModel(UnitEngine):
     _BITS = {"int8": 8, "fp16": 16, "fp32": 32}
 
     def __init__(self, spec, engine="analytic", *, cores=4, cluster="a76", efficiency=0.5,
-                 gemv_efficiency=None, m_half=32.0):
+                 gemv_efficiency=None, m_half=32.0, kernel_floor_us=0.0):
         super().__init__(spec, engine)
+        if kernel_floor_us < 0:
+            raise ValueError(f"CpuGemmModel kernel_floor_us must be >= 0, got {kernel_floor_us!r}")
+        self.kernel_floor_us = float(kernel_floor_us)
         if not (0 < efficiency <= 1):
             raise ValueError(f"CpuGemmModel efficiency must be in (0, 1], got {efficiency!r}")
         gemv_efficiency = efficiency if gemv_efficiency is None else gemv_efficiency
@@ -242,15 +255,17 @@ class CpuGemmModel(UnitEngine):
         return self.gemv_eff + (self.eff - self.gemv_eff) * (M - 1) / (M - 1 + self.m_half)
 
     def gemm_us(self, M, K, N, dtype):
-        return 2.0 * M * K * N / (self.peak_ops_s(dtype) * self.efficiency(M)) * 1e6, "compute"
+        """One GEMM/GEMV kernel: the per-kernel floor + the MACs at eff(M)."""
+        return self.kernel_floor_us + 2.0 * M * K * N / (self.peak_ops_s(dtype) * self.efficiency(M)) * 1e6, "compute"
 
     def predict(self, wl: Workload) -> dict:
         dtype = wl.dtype if wl.dtype in self._BITS else "fp16"
         if wl.op in ("attention", "attn_bmm"):
             hd = wl.extra.get("hd", wl.K or 128)
             M, kv, heads = max(1, wl.M), max(1, wl.kv), max(1, wl.heads)
-            lat = 2.0 * 2.0 * heads * M * hd * kv / (self.peak_ops_s(dtype) * self.eff) * 1e6
-            bound, what = "compute", "attention QK^T+S.V composite (EXTRAPOLATED)"
+            lat = (2.0 * self.kernel_floor_us
+                   + 2.0 * 2.0 * heads * M * hd * kv / (self.peak_ops_s(dtype) * self.eff) * 1e6)
+            bound, what = "compute", "attention QK^T+S.V composite, two kernels (EXTRAPOLATED)"
         else:
             if wl.K <= 0 or wl.N <= 0:
                 raise ValueError(f"CpuGemmModel GEMM needs K,N > 0 (got K={wl.K}, N={wl.N})")
@@ -258,6 +273,7 @@ class CpuGemmModel(UnitEngine):
             what = "GEMM" if wl.M > 1 else "GEMV"
         prov = (f"simulated: CPU {what} kernel time, {self.cores}x {self.cluster} NEON {dtype} peak "
                 f"{self.peak_ops_s(dtype) / 1e9:.0f} GOPS x efficiency {self.efficiency(max(1, wl.M)):.3f} "
-                f"(gemv {self.gemv_eff:g} -> gemm {self.eff:g}, ASSUMPTION); DRAM bytes metered by the shared "
-                f"pool; no CPU GEMM silicon")
+                f"(gemv {self.gemv_eff:g} -> gemm {self.eff:g}) + kernel floor {self.kernel_floor_us:g} us per "
+                f"kernel (fork/join + dispatch); ASSUMPTIONS fitted end-to-end to the HeteroInfer Fig.12 CPU/GPU "
+                f"decode ratio (fit_cpu_gemv.py); DRAM bytes metered by the shared pool; no CPU GEMM silicon")
         return {"latency_us": float(lat), "bound": bound, "provenance": prov}

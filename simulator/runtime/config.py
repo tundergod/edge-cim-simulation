@@ -25,7 +25,7 @@ from simulator.specs.loader import load_spec
 _KNOWN_TOP = {"workload", "platform", "scheduler", "tunables", "ablations", "sweep", "_doc"}
 _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine",
-               "soc_profile", "cim_n_cores", "npu_scale", "cpu_gemv_efficiency"}
+               "soc_profile", "cim_n_cores", "npu_scale", "cpu_gemv_efficiency", "cim_weight_bytes_per_param"}
 _KNOWN_SCHED = {"policy", "precision_boundary_placement", "sync_mode", "sync_us_override", "partition_grid",
                 "host", "allow_cpu_compute"}
 _KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor", "pipeline"}
@@ -49,7 +49,8 @@ _TOPO_MEMORY = {"cim_topo_card": "mem_lpddr4x", "cim_topo_edge": "mem_lpddr5", "
 # user-input contract reject an unknown/garbage scheduler at construction instead of silently
 # provenance-labelling it as a real "simulated heterogeneous placement". Keep in sync with
 # simulator/runtime/scheduler.py SCHEDULERS.
-_KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero", "gpu_only", "npu_only", "cim_only", "heteroinfer", "tiled_hetero"})
+_KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero", "gpu_only", "npu_only", "cim_only", "cpu_only",
+                               "heteroinfer", "tiled_hetero"})
 _SYNC_MODES = ("fast", "clfinish", "none")   # mirror of tiling.SYNC_US (config cannot import tiling, layering)
 _HOSTS = ("gpu", "npu", "cim", "auto")        # scheduler.host for tiled_hetero (None = scheduler default = gpu)
 _CAL_CIM_N_CORES = 4                           # the Metis geometry the M1 CIM tile fit is calibrated at
@@ -118,6 +119,11 @@ class SimConfig:
                                                # peak) overriding the profile's units.cpu.gemm.gemv_efficiency (P1
                                                # 0.217 = HeteroInfer Fig.12 ratio, an ASSUMPTION); a value above the
                                                # GEMM efficiency lifts both to it. Flagged `simulated` when overridden.
+    cim_weight_bytes_per_param: float | None = None   # sensitivity knob (round-2): streamed CIM weight bytes per
+                                               # parameter overriding the profile's units.cim.weight_bytes_per_param
+                                               # (1.0 = INT8 crossbar weights as stored; 0.5 = W4 storage unpacked
+                                               # into the INT8 array on load — a DESIGN OPTION, no silicon). Needs a
+                                               # soc_profile; flagged `simulated` when it differs from the profile.
     knee_GBs: float | None = None
     interconnect_efficiency: float = 1.0
     concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; not wired on the 2.1
@@ -177,6 +183,14 @@ class SimConfig:
                 or not (0 < self.cpu_gemv_efficiency <= 1)):
             raise ValueError(f"SimConfig: platform.cpu_gemv_efficiency must be a number in (0, 1], "
                              f"got {self.cpu_gemv_efficiency!r}")
+        if self.cim_weight_bytes_per_param is not None:
+            v = self.cim_weight_bytes_per_param
+            if not isinstance(v, (int, float)) or isinstance(v, bool) or not (0 < v <= 4):
+                raise ValueError(f"SimConfig: platform.cim_weight_bytes_per_param must be a number in (0, 4], "
+                                 f"got {v!r}")
+            if self.soc_profile is None:
+                raise ValueError("SimConfig: platform.cim_weight_bytes_per_param needs a soc_profile (the legacy "
+                                 "path meters op_profile's INT8 bytes on every unit, byte-identical L4)")
         if self.concurrency_overlap_factor != 1.0:
             raise ValueError(
                 f"SimConfig: concurrency_overlap_factor is RESERVED for Wave 2.2 cross-unit overlap "
@@ -277,6 +291,7 @@ class SimConfig:
             cim_n_cores=plat.get("cim_n_cores"),
             npu_scale=plat.get("npu_scale", 1.0),
             cpu_gemv_efficiency=plat.get("cpu_gemv_efficiency"),
+            cim_weight_bytes_per_param=plat.get("cim_weight_bytes_per_param"),
             units=_default_units() if u is None else u,
             engine=_default_engine() if eng is None else eng,
             scheduler="all_cim" if _sched_pol is None else _sched_pol,
@@ -343,6 +358,13 @@ class SimConfig:
                 p.append(f"simulated: cpu_gemv_efficiency override = {self.cpu_gemv_efficiency} (CPU M=1 GEMV kernel "
                          f"efficiency; profile value {_default_eff} is itself an assumption anchored on HeteroInfer "
                          f"Fig.12, no CPU GEMM silicon)")
+        if self.cim_weight_bytes_per_param is not None and self.soc_profile is not None:
+            _default_w = float(load_spec(f"soc_{self.soc_profile}")["units"]["cim"].get("weight_bytes_per_param", 1.0))
+            if float(self.cim_weight_bytes_per_param) != _default_w:
+                p.append(f"simulated: cim_weight_bytes_per_param override = {self.cim_weight_bytes_per_param} "
+                         f"(streamed CIM weight bytes per parameter; profile {_default_w} = INT8 crossbar weights as "
+                         f"stored; 0.5 = W4 storage unpacked into the INT8 array on load, a design option with no "
+                         f"silicon)")
         # knee_GBs / interconnect_efficiency are forward-looking sweep knobs that DO alter the decode
         # bandwidth wall (they feed SharedBandwidth) but have no concurrent-unit silicon (#52) -> a
         # non-default value is off-anchor and must be flagged, else a swept result reads as calibrated.
