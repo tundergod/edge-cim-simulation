@@ -180,3 +180,29 @@ def test_runner_echoes_knobs_actually_used():
     r = run(SimConfig.from_dict({"workload": {"model": MODEL, "context": 1024}}))
     assert r["host"] is None and r["cim_n_cores"] == 4 and r["npu_scale"] == 1.0 and r["soc_profile"] is None
     assert r["knee_GBs"] == r["memory_eff_BW_GBs"] and r["calibrated_anchor"] is True
+
+
+# ---- cpu_gemv_efficiency (sensitivity knob on the CPU GEMV kernel-efficiency assumption) --------
+def test_cpu_gemv_efficiency_override_and_provenance():
+    base = Platform(MODEL, soc_profile="sd8gen3_cim")
+    assert base.cpu_gemv_efficiency == pytest.approx(0.217) and base.cpu_gemm.eff == pytest.approx(0.5)
+    lo = Platform(MODEL, soc_profile="sd8gen3_cim", cpu_gemv_efficiency=0.1)
+    hi = Platform(MODEL, soc_profile="sd8gen3_cim", cpu_gemv_efficiency=1.0)
+    dec = _mm(1, 2048, 2048, "cpu")
+    # M=1 kernel time scales as 1/efficiency; an override above the GEMM efficiency lifts both to it
+    assert lo.compute_us(dec) == pytest.approx(base.compute_us(dec) * 0.217 / 0.1, rel=1e-6)
+    assert hi.compute_us(dec) == pytest.approx(base.compute_us(dec) * 0.217, rel=1e-6)
+    assert hi.cpu_gemm.eff == pytest.approx(1.0) and lo.cpu_gemm.eff == pytest.approx(0.5)
+    pre = _mm(256, 2048, 2048, "cpu")
+    assert lo.compute_us(pre) > base.compute_us(pre) > hi.compute_us(pre)
+    cfg = _cfg(platform={"cpu_gemv_efficiency": 0.5})
+    assert any("cpu_gemv_efficiency override = 0.5" in p for p in cfg.provenance)
+    assert not any("cpu_gemv_efficiency" in p for p in _cfg(platform={"cpu_gemv_efficiency": 0.217}).provenance)
+    for bad in (0, -0.1, 1.5, "0.5", True):
+        with pytest.raises(ValueError):
+            _cfg(platform={"cpu_gemv_efficiency": bad})
+    r = run(_cfg(platform={"cpu_gemv_efficiency": 0.1}, scheduler={"allow_cpu_compute": True}))
+    assert r["cpu_gemv_efficiency"] == pytest.approx(0.1) and r["cpu_gemm_efficiency"] == pytest.approx(0.5)
+    assert r["allow_cpu_compute"] is True
+    r = run(_cfg())
+    assert r["cpu_gemv_efficiency"] == pytest.approx(0.217) and r["allow_cpu_compute"] is None

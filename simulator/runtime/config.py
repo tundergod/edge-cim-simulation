@@ -25,7 +25,7 @@ from simulator.specs.loader import load_spec
 _KNOWN_TOP = {"workload", "platform", "scheduler", "tunables", "ablations", "sweep", "_doc"}
 _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine",
-               "soc_profile", "cim_n_cores", "npu_scale"}
+               "soc_profile", "cim_n_cores", "npu_scale", "cpu_gemv_efficiency"}
 _KNOWN_SCHED = {"policy", "precision_boundary_placement", "sync_mode", "sync_us_override", "partition_grid",
                 "host", "allow_cpu_compute"}
 _KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor", "pipeline"}
@@ -114,6 +114,10 @@ class SimConfig:
                                                # (None = profile / M1 default 4; any other value is EXTRAPOLATED)
     npu_scale: float = 1.0                     # scalable axis: multiplier on the NPU compute throughput (TOPS);
                                                # != 1 is EXTRAPOLATED (no silicon)
+    cpu_gemv_efficiency: float | None = None   # sensitivity knob: CPU M=1 GEMV kernel efficiency (fraction of NEON
+                                               # peak) overriding the profile's units.cpu.gemm.gemv_efficiency (P1
+                                               # 0.217 = HeteroInfer Fig.12 ratio, an ASSUMPTION); a value above the
+                                               # GEMM efficiency lifts both to it. Flagged `simulated` when overridden.
     knee_GBs: float | None = None
     interconnect_efficiency: float = 1.0
     concurrency_overlap_factor: float = 1.0   # RESERVED for Wave 2.2 cross-unit overlap; not wired on the 2.1
@@ -168,6 +172,11 @@ class SimConfig:
             raise ValueError(f"SimConfig: platform.cim_n_cores must be an int >= 1, got {self.cim_n_cores!r}")
         if not isinstance(self.npu_scale, (int, float)) or isinstance(self.npu_scale, bool) or self.npu_scale <= 0:
             raise ValueError(f"SimConfig: platform.npu_scale must be a number > 0, got {self.npu_scale!r}")
+        if self.cpu_gemv_efficiency is not None and (
+                not isinstance(self.cpu_gemv_efficiency, (int, float)) or isinstance(self.cpu_gemv_efficiency, bool)
+                or not (0 < self.cpu_gemv_efficiency <= 1)):
+            raise ValueError(f"SimConfig: platform.cpu_gemv_efficiency must be a number in (0, 1], "
+                             f"got {self.cpu_gemv_efficiency!r}")
         if self.concurrency_overlap_factor != 1.0:
             raise ValueError(
                 f"SimConfig: concurrency_overlap_factor is RESERVED for Wave 2.2 cross-unit overlap "
@@ -267,6 +276,7 @@ class SimConfig:
             soc_profile=_prof,
             cim_n_cores=plat.get("cim_n_cores"),
             npu_scale=plat.get("npu_scale", 1.0),
+            cpu_gemv_efficiency=plat.get("cpu_gemv_efficiency"),
             units=_default_units() if u is None else u,
             engine=_default_engine() if eng is None else eng,
             scheduler="all_cim" if _sched_pol is None else _sched_pol,
@@ -325,6 +335,14 @@ class SimConfig:
         if self.npu_scale != 1.0:
             p.append(f"extrapolated: npu_scale = {self.npu_scale} (NPU compute throughput multiplier; "
                      f"no silicon at that scale)")
+        if self.cpu_gemv_efficiency is not None:
+            _g = (load_spec(f"soc_{self.soc_profile}") if self.soc_profile is not None
+                  else load_spec("soc_rk3588_cim"))["units"]["cpu"]["gemm"]
+            _default_eff = _g.get("gemv_efficiency", _g["efficiency"])
+            if self.cpu_gemv_efficiency != _default_eff:
+                p.append(f"simulated: cpu_gemv_efficiency override = {self.cpu_gemv_efficiency} (CPU M=1 GEMV kernel "
+                         f"efficiency; profile value {_default_eff} is itself an assumption anchored on HeteroInfer "
+                         f"Fig.12, no CPU GEMM silicon)")
         # knee_GBs / interconnect_efficiency are forward-looking sweep knobs that DO alter the decode
         # bandwidth wall (they feed SharedBandwidth) but have no concurrent-unit silicon (#52) -> a
         # non-default value is off-anchor and must be flagged, else a swept result reads as calibrated.

@@ -78,8 +78,9 @@ class Platform:
 
     def __init__(self, model, *, memory_spec="mem_lpddr4x", topology=None, knee_GBs=None,
                  interconnect_efficiency=1.0, bw_efficiency=None, soc_profile=None,
-                 cim_n_cores=None, npu_scale=1.0):
+                 cim_n_cores=None, npu_scale=1.0, cpu_gemv_efficiency=None):
         """`cim_n_cores` / `npu_scale` are the ADR-0008 scalable axes (None / 1.0 = the profile's own
+        geometry); `cpu_gemv_efficiency` overrides the profile's CPU M=1 GEMV efficiency (None = profile;
         geometry; anything else is EXTRAPOLATED and flagged by SimConfig)."""
         self.model = model
         self.profile_name = soc_profile
@@ -160,11 +161,11 @@ class Platform:
             unit_caps["mem"] = eff
         self.bw = SharedBandwidth(eff, knee_GBs=knee_GBs,
                                   interconnect_efficiency=interconnect_efficiency, unit_caps=unit_caps)
-        self._build_units(cim_params, cim_n_cores, npu_scale)
+        self._build_units(cim_params, cim_n_cores, npu_scale, cpu_gemv_efficiency)
         self.energy = EnergyModel()
 
     # ---- unit construction -----------------------------------------------------------------
-    def _build_units(self, cim_params, cim_n_cores=None, npu_scale=1.0):
+    def _build_units(self, cim_params, cim_n_cores=None, npu_scale=1.0, cpu_gemv_efficiency=None):
         """Legacy (no profile): the Phase-2.5 calibrated core EXACTLY as before (cim/cpu/gpu-attn)
         + rk3588_cim unit params for the NEW combos. Profile: everything from the profile.
         `cim_n_cores` overrides the CIM core count on either path; `npu_scale` multiplies the NPU TOPS."""
@@ -197,9 +198,12 @@ class Platform:
         cpu_spec = load_spec("cpu_rk3588" if legacy else units["cpu"]["spec"])
         self.cpu = CpuModel(cpu_spec)
         g = units["cpu"]["gemm"]
-        self.cpu_gemm = CpuGemmModel(cpu_spec, cores=g["cores"], cluster=g["cluster"], efficiency=g["efficiency"],
-                                     gemv_efficiency=g.get("gemv_efficiency", g["efficiency"]),
-                                     m_half=g.get("m_half", 0.0))
+        gemv_eff = g.get("gemv_efficiency", g["efficiency"]) if cpu_gemv_efficiency is None else float(cpu_gemv_efficiency)
+        # an override above the GEMM efficiency lifts the GEMM efficiency to it (eff(M) must be monotone in M)
+        self.cpu_gemm = CpuGemmModel(cpu_spec, cores=g["cores"], cluster=g["cluster"],
+                                     efficiency=max(float(g["efficiency"]), gemv_eff),
+                                     gemv_efficiency=gemv_eff, m_half=g.get("m_half", 0.0))
+        self.cpu_gemv_efficiency = self.cpu_gemm.gemv_eff
         # GPU: 'mali_fit' = Phase-1 micro-benchmark attention (MaliGpuModel, unchanged) + the Mali
         # roofline_fit for GEMM (shape trend only); 'anchor_roofline' = the HeteroInfer-anchored model
         gm = units["gpu"]["model"]

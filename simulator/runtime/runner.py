@@ -74,7 +74,8 @@ def run(cfg):
     plat = Platform(cfg.model, memory_spec=cfg.resolved_memory_spec(), topology=cfg.topology,
                     knee_GBs=cfg.knee_GBs, interconnect_efficiency=cfg.interconnect_efficiency,
                     bw_efficiency=cfg.bw_efficiency, soc_profile=cfg.soc_profile,
-                    cim_n_cores=cfg.cim_n_cores, npu_scale=cfg.npu_scale)
+                    cim_n_cores=cfg.cim_n_cores, npu_scale=cfg.npu_scale,
+                    cpu_gemv_efficiency=cfg.cpu_gemv_efficiency)
     model_obj = op_profile.Model(cfg.model)
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off
@@ -176,6 +177,9 @@ def run(cfg):
         "host_candidates_est_us": getattr(dec, "host_candidates", None),   # host=auto: {unit: {est_us, engine_us}}; chosen by engine_us
         "cim_n_cores": plat.cim_n_cores,
         "npu_scale": plat.npu_scale,
+        "cpu_gemv_efficiency": plat.cpu_gemv_efficiency,       # CPU M=1 GEMV kernel efficiency actually used
+        "cpu_gemm_efficiency": plat.cpu_gemm.eff,
+        "allow_cpu_compute": cfg.allow_cpu_compute,            # config value (None = scheduler default)
         "knee_GBs": plat.bw.knee,
         "soc_profile": cfg.soc_profile,
     }
