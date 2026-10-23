@@ -1,0 +1,221 @@
+{
+ "module": "hetero_anchor_fit",
+ "honesty": "GPU/NPU: borrowed (HeteroInfer SOSP'25 published anchors, no silicon of ours); CIM attention: measured Alpha attn_floor basis",
+ "tolerance": 0.15,
+ "gpu_sd8gen3": {
+  "params": {
+   "gemm_floor_us": 320.022,
+   "bw_GBs": 31.5241,
+   "c_max_tflops": 1.1303,
+   "m_half": 104.1233,
+   "weight_bytes_per_param": 0.5,
+   "objective": "minimax |rel err| over anchors",
+   "max_abs_rel_residual": 0.147,
+   "all_within_15pct": true
+  },
+  "residuals": [
+   {
+    "N_out": 4096,
+    "K_in": 4096,
+    "M": 1,
+    "latency_us": 511,
+    "pred_us": 586.1,
+    "rel_err": 0.147
+   },
+   {
+    "N_out": 4096,
+    "K_in": 4096,
+    "M": 128,
+    "latency_us": 7306,
+    "pred_us": 7210.9,
+    "rel_err": -0.013
+   },
+   {
+    "N_out": 4096,
+    "K_in": 4096,
+    "M": 256,
+    "latency_us": 10841,
+    "pred_us": 11010.8,
+    "rel_err": 0.0157
+   },
+   {
+    "N_out": 4096,
+    "K_in": 14336,
+    "M": 1,
+    "latency_us": 1467,
+    "pred_us": 1251.4,
+    "rel_err": -0.147
+   },
+   {
+    "N_out": 4096,
+    "K_in": 14336,
+    "M": 256,
+    "latency_us": 35231,
+    "pred_us": 37737.6,
+    "rel_err": 0.0711
+   },
+   {
+    "N_out": 28672,
+    "K_in": 4096,
+    "M": 1,
+    "latency_us": 1903,
+    "pred_us": 2182.7,
+    "rel_err": 0.147
+   }
+  ]
+ },
+ "npu_sd8gen3": {
+  "params": {
+   "floor_us": 58.6396,
+   "bw_GBs": 42.7622,
+   "tops_eff": 7.3208,
+   "k_penalty_exp": 1.0639,
+   "k_ref": 4096,
+   "weight_bytes_per_param": 1.0,
+   "objective": "minimax |rel err| over anchors",
+   "max_abs_rel_residual": 0.1378,
+   "all_within_15pct": true
+  },
+  "residuals": [
+   {
+    "N_out": 4096,
+    "K_in": 4096,
+    "M": 1,
+    "latency_us": 693,
+    "pred_us": 597.6,
+    "rel_err": -0.1376
+   },
+   {
+    "N_out": 4096,
+    "K_in": 4096,
+    "M": 128,
+    "latency_us": 912,
+    "pred_us": 1037.7,
+    "rel_err": 0.1378
+   },
+   {
+    "N_out": 4096,
+    "K_in": 4096,
+    "M": 256,
+    "latency_us": 1884,
+    "pred_us": 1624.3,
+    "rel_err": -0.1378
+   },
+   {
+    "N_out": 4096,
+    "K_in": 14336,
+    "M": 1,
+    "latency_us": 6506,
+    "pred_us": 7211.8,
+    "rel_err": 0.1085
+   },
+   {
+    "N_out": 4096,
+    "K_in": 14336,
+    "M": 256,
+    "latency_us": 23445,
+    "pred_us": 20836.9,
+    "rel_err": -0.1112
+   },
+   {
+    "N_out": 28672,
+    "K_in": 4096,
+    "M": 1,
+    "latency_us": 3886,
+    "pred_us": 3831.7,
+    "rel_err": -0.014
+   }
+  ],
+  "fig3_crosscheck_not_fitted": [
+   {
+    "steps": 1,
+    "fig3_us": 6900,
+    "pred_us": 7211.8,
+    "rel_err": 0.0452
+   },
+   {
+    "steps": 2,
+    "fig3_us": 8700,
+    "pred_us": 9158.2,
+    "rel_err": 0.0527
+   },
+   {
+    "steps": 3,
+    "fig3_us": 10900,
+    "pred_us": 11104.7,
+    "rel_err": 0.0188
+   },
+   {
+    "steps": 4,
+    "fig3_us": 14000,
+    "pred_us": 13051.1,
+    "rel_err": -0.0678
+   },
+   {
+    "steps": 5,
+    "fig3_us": 16000,
+    "pred_us": 14997.6,
+    "rel_err": -0.0627
+   },
+   {
+    "steps": 6,
+    "fig3_us": 18000,
+    "pred_us": 16944.0,
+    "rel_err": -0.0587
+   }
+  ]
+ },
+ "cim_attention_alpha": {
+  "_doc": "CIM decode-attention per-bmm floor fit a + b*kv (us) on the MEASURED Metis Alpha attn_floor points (single head, hd=128, M=1; fit_hetero_anchors.py). qkT: [1x128]x[128xkv]; sv: [1xkv]x[kvx128]. Composite per head = (qk_a+sv_a) + (qk_b+sv_b)*kv. [measured basis]",
+  "source": "measurements/aetina/metis_alpha_matmul.json by_group.attn_floor dev_lat_us",
+  "hd_basis": 128,
+  "points": [
+   {
+    "family": "qkT",
+    "kv": 129,
+    "dev_lat_us": 9.086,
+    "fit_us": 9.172
+   },
+   {
+    "family": "qkT",
+    "kv": 513,
+    "dev_lat_us": 9.979,
+    "fit_us": 9.828
+   },
+   {
+    "family": "qkT",
+    "kv": 1025,
+    "dev_lat_us": 10.636,
+    "fit_us": 10.701
+   },
+   {
+    "family": "sv",
+    "kv": 129,
+    "dev_lat_us": 9.049,
+    "fit_us": 9.103
+   },
+   {
+    "family": "sv",
+    "kv": 513,
+    "dev_lat_us": 9.509,
+    "fit_us": 9.414
+   },
+   {
+    "family": "sv",
+    "kv": 1025,
+    "dev_lat_us": 9.788,
+    "fit_us": 9.828
+   }
+  ],
+  "kv_fit": [
+   129,
+   513,
+   1025
+  ],
+  "qk_a_us": 8.9524,
+  "qk_b_us_per_kv": 0.0017061,
+  "sv_a_us": 8.9991,
+  "sv_b_us_per_kv": 0.0008089
+ },
+ "pass_all": true
+}

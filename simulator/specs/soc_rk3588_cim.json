@@ -1,0 +1,54 @@
+{
+  "_doc": "SoC PROFILE P2 = the RK3588-MEASURED units of this repo (Mali-G610 micro-benchmark + roofline, A76 support-op fits, RKNPU2 analytic systolic) + the Metis-calibrated CIM tile on the integrated `cim_topo_edge` topology (mem_lpddr5 x NoC). Selected by SimConfig.platform.soc_profile / Platform(soc_profile=). Same precedence rules as soc_sd8gen3_cim (profile fixes the CIM topology; memory.single_stream_eff_BW_GBs overrides the topology's resolved eff_BW \u2014 here it EQUALS it by construction, test-pinned; knee from the profile unless tunables.knee_GBs). The Mali GEMM is the KNOWN-UNOPTIMISED self-written OpenCL kernel: shape trend only, not an absolute (gpu_mali_g610 roofline_fit). The NPU has NO silicon (#13): analytic systolic, borrowed constants; engine 'scalesim' is selectable but its cached table is compute-only (no memory roofline) and covers 8 M=1 probe shapes -> seam vs analytic, so analytic is the default.",
+  "profile": "rk3588_cim",
+  "honesty": "simulated: soc_profile 'rk3588_cim' \u2014 RK3588-measured Mali/A76 units (Mali GEMM = unoptimised kernel, shape trend only), RKNPU2 analytic (no silicon, #13), Metis CIM on the simulated edge topology (LPDDR5 x NoC assumption); knee = the Card 4c/1c ratio applied to the edge wall (not measured)",
+  "units": {
+    "gpu": {
+      "spec": "gpu_mali_g610",
+      "model": "mali_fit",
+      "default_dtype": "fp16",
+      "elementwise_launch_us": 13.9
+    },
+    "npu": {
+      "spec": "npu_rknpu2",
+      "model": "analytic_systolic",
+      "engine": "analytic",
+      "default_dtype": "int8",
+      "elementwise_launch_us": 2.0
+    },
+    "cpu": {
+      "spec": "cpu_rk3588",
+      "default_dtype": "fp32",
+      "gemm": {
+        "cores": 4,
+        "cluster": "a76",
+        "efficiency": 0.5
+      }
+    },
+    "cim": {
+      "topology": "cim_topo_edge",
+      "n_cores": 4,
+      "default_dtype": "int8",
+      "attention_model": "alpha_floor_fit"
+    }
+  },
+  "memory": {
+    "single_stream_eff_BW_GBs": 29.97,
+    "knee_GBs": 33.03,
+    "peak_GBs": 51.2
+  },
+  "sync_us": {
+    "fast": 30.0,
+    "clfinish": 400.0
+  },
+  "provenance": {
+    "units.gpu": "gpu_mali_g610: attention = m4_gpu.json attn_bmm fit (mali_matmul.json attn group, f16) [measured]; GEMM = roofline_fit (FP16 shape-trend, unoptimised kernel, NOT an absolute) [measured-but-unoptimised]; elementwise_launch_us 13.9 = half the measured attn_bmm composite intercept 27.742 us (two kernels) [derived from measured]",
+    "units.npu": "npu_rknpu2 analytic systolic roofline, borrowed 32x32 + datasheet 6 TOPS [simulated, no silicon #13]; elementwise_launch_us 2.0 = the analytic dispatch floor [assumption]",
+    "units.cpu": "cpu_rk3588 A76 support-op instruction-count roofline calibrated to fp32 cpu_ops.json [measured]; gemm efficiency 0.5 [assumption]",
+    "units.cim": "Metis M1 tile (m1_cim.json) through cim_topo_edge [calibrated compute, simulated topology]; attention = Alpha attn_floor fit [measured basis]",
+    "memory.single_stream_eff_BW_GBs": "= cim_topo_edge resolved wall: mem_lpddr5 eff 33.3 x noc_efficiency 0.9 = 29.97 [simulated] (test-pinned equal to MemoryModel(cim_topo_edge))",
+    "memory.knee_GBs": "29.97 x 1.102 (the Card-measured 4c/1c mean, validation/reports/phase2/contention.json) = 33.03 [simulated: ratio measured on the Card's LPDDR4x, applied to the edge wall]",
+    "memory.peak_GBs": "mem_lpddr5 peak 6400 MT/s x 64-bit [assumption]",
+    "sync_us": "HeteroInfer \u00a74.3/\u00a73.1 presets (fast ~30 us, clFinish ~400 us) [borrowed, not RK3588-measured]"
+  }
+}

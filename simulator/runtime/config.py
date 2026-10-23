@@ -24,7 +24,8 @@ from simulator.specs.loader import load_spec
 
 _KNOWN_TOP = {"workload", "platform", "scheduler", "tunables", "ablations", "sweep", "_doc"}
 _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
-_KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine"}
+_KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine",
+               "soc_profile"}
 _KNOWN_SCHED = {"policy", "precision_boundary_placement"}
 _KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor", "pipeline"}
 _KNOWN_ABL = {"concurrency_off", "contention_off", "compute_off"}
@@ -48,6 +49,17 @@ _TOPO_MEMORY = {"cim_topo_card": "mem_lpddr4x", "cim_topo_edge": "mem_lpddr5", "
 # provenance-labelling it as a real "simulated heterogeneous placement". Keep in sync with
 # simulator/runtime/scheduler.py SCHEDULERS.
 _KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero"})
+
+# ADR-0008 SoC profiles (simulator/specs/soc_<name>.json). A profile fixes the CIM topology (its
+# units.cim.topology) and supplies the memory wall; `topology` may be omitted (resolved from the
+# profile) or must equal it. Keep in sync with simulator/runtime/platform.py SOC_PROFILES.
+_VALID_SOC_PROFILES = frozenset({"sd8gen3_cim", "rk3588_cim"})
+
+
+def _profile_topology(name):
+    if name not in _VALID_SOC_PROFILES:
+        raise ValueError(f"SimConfig: unknown soc_profile {name!r} (wired: {sorted(_VALID_SOC_PROFILES)})")
+    return load_spec(f"soc_{name}")["units"]["cim"]["topology"]
 
 
 def _reject_unknown(d, known, where):
@@ -79,6 +91,7 @@ class SimConfig:
     topology: str = _CAL_TOPOLOGY
     memory_capacity_GB: int = 16
     bw_efficiency: float | None = None
+    soc_profile: str | None = None      # ADR-0008: 'sd8gen3_cim' | 'rk3588_cim' (None = legacy unit set)
     units: dict = field(default_factory=_default_units)
     engine: dict = field(default_factory=_default_engine)
     scheduler: str = "all_cim"
@@ -153,6 +166,19 @@ class SimConfig:
             raise ValueError(
                 f"SimConfig: knee_GBs is the saturation knee and must be > 0, "
                 f"got {self.knee_GBs!r}. (Mirrors the SharedBandwidth guard, resources.py.)")
+        # ADR-0008 soc_profile contract: a known profile; its CIM topology is the only valid `topology`
+        # (the profile is the single SoC source); bw_efficiency (card-only peak scaling) is rejected.
+        if self.soc_profile is not None:
+            ptopo = _profile_topology(self.soc_profile)
+            if self.topology != ptopo:
+                raise ValueError(
+                    f"SimConfig: soc_profile {self.soc_profile!r} fixes the CIM topology to {ptopo!r} "
+                    f"but got topology {self.topology!r}; omit platform.topology (resolved from the "
+                    f"profile) or set it to the profile's own.")
+            if self.bw_efficiency is not None:
+                raise ValueError(
+                    f"SimConfig: bw_efficiency cannot combine with soc_profile {self.soc_profile!r} "
+                    f"(the profile's memory block is the single bandwidth source).")
         if self.bw_efficiency is not None and self.topology != _CAL_TOPOLOGY:
             raise ValueError(
                 f"SimConfig: bw_efficiency is a card-only peak-scaling knob; topology "
@@ -195,14 +221,19 @@ class SimConfig:
             raise ValueError("SimConfig: workload.model is required")
         # None (omitted/null) -> default; any explicit value (incl. "" garbage) reaches validate().
         _sched_pol = sched.get("policy") if isinstance(sched, dict) else sched
+        # ADR-0008: an omitted topology is resolved from the soc_profile (an explicit one is checked
+        # against it in validate()); the profile name itself is validated there too.
+        _prof = plat.get("soc_profile")
+        _topo = plat.get("topology", _profile_topology(_prof) if _prof is not None else _CAL_TOPOLOGY)
         cfg = SimConfig(
             model=wl["model"], task=wl.get("task"),
             prefill_len=wl.get("prefill_len", 256), decode_len=wl.get("decode_len", 512),
             context=wl.get("context", 1024), batch=wl.get("batch", 1),
             memory_spec=plat.get("memory_spec"),   # None sentinel -> resolved per topology
-            topology=plat.get("topology", _CAL_TOPOLOGY),
+            topology=_topo,
             memory_capacity_GB=plat.get("memory_capacity_GB", 16),
             bw_efficiency=plat.get("bw_efficiency"),
+            soc_profile=_prof,
             units=_default_units() if u is None else u,
             engine=_default_engine() if eng is None else eng,
             scheduler="all_cim" if _sched_pol is None else _sched_pol,
@@ -238,6 +269,11 @@ class SimConfig:
         rms = self.resolved_memory_spec()
         if rms is not None and rms != _CAL_MEMORY:
             p.append(f"simulated: memory_spec '{rms}' (not the measured {_CAL_MEMORY} anchor)")
+        if self.soc_profile is not None:
+            # the profile's own honesty line (borrowed for sd8gen3_cim, simulated for rk3588_cim) + the
+            # fact that its memory block overrides the topology-resolved wall (ADR-0008 precedence).
+            p.append(load_spec(f"soc_{self.soc_profile}")["honesty"]
+                     + "; memory wall = the profile's single_stream_eff_BW/knee (overrides the topology's)")
         if self.bw_efficiency is not None:
             p.append(f"simulated: bw_efficiency override = {self.bw_efficiency}")
         # knee_GBs / interconnect_efficiency are forward-looking sweep knobs that DO alter the decode

@@ -21,3 +21,4 @@ Each ADR records **one** significant design decision: `context` (problem + force
 | [0005](0005-energy-model.md) | Energy = spec-based + opportunistic anchor |
 | [0006](0006-validation-bridging-extrapolation.md) | Validation contract + L4 bridging + extrapolation |
 | [0007](0007-op-inventory-extraction.md) | Op inventory = PyTorch runtime tracer |
+| [0008](0008-soc-profiles-and-unit-pricing.md) | SoC profiles (sd8gen3_cim / rk3588_cim) + heterogeneous unit x op pricing contract |
