@@ -3,7 +3,8 @@
 (a) supports() matrix == the contract (cim/gpu/npu/cpu/mem x dag.CATEGORIES + 'merge');
 (b) every supported combo returns latency_us >= 0 + a provenance string on a representative node,
     for the legacy platform and BOTH profiles; every unsupported combo raises NotImplementedError;
-(c) 'merge' = wl.extra['fixed_us'] on ANY unit; fixed_us is ADDITIVE on every other category (0 default);
+(c) 'merge' = wl.extra['fixed_us'] on ANY unit; fixed_us is returned as its OWN field (a serial pre-op
+    delay, ADR-0009 rev F1) on every category, latency_us stays the compute term (0 default);
 (d) attention composite rule on gpu/npu/cim/cpu: priced once on the rep, members 0, ungrouped bmm raises,
     priced from the node's own heads/kv (a head- or kv-split sub-node prices by its own shape);
 (e) pricing depends only on (unit, category, wl, pricing_group): ids and unknown extras are ignored;
@@ -104,17 +105,19 @@ def test_merge_and_fixed_us_hook():
     for pname, plat in _plats().items():
         for u in UNITS:
             assert plat.price(_node("merge", u, fixed_us=37.5)) == {
-                "latency_us": 37.5, "source_model": "merge",
-                "compute_provenance": "fixed-cost merge/sync (set by scheduler)"}
-            assert plat.price(_node("merge", u))["latency_us"] == 0.0        # default 0
+                "latency_us": 0.0, "fixed_us": 37.5, "source_model": "merge",
+                "compute_provenance": "fixed-cost merge/sync (set by scheduler; serial pre-op delay)"}
+            assert plat.price(_node("merge", u))["fixed_us"] == 0.0           # default 0
+            assert plat.fixed_us(_node("merge", u, fixed_us=5.0)) == 5.0
         for u, cat in (("cim", "matmul"), ("gpu", "matmul"), ("npu", "matmul"), ("cpu", "matmul"),
                        ("gpu", "attention"), ("cpu", "norm"), ("mem", "kv_cache"), ("gpu", "convert")):
-            base = plat.price(_node(cat, u))["latency_us"]
+            base = plat.price(_node(cat, u))
+            assert base["fixed_us"] == 0.0
             n = _node(cat, u)
             n.wl.extra["fixed_us"] = 12.25
             r = plat.price(n)
-            assert r["latency_us"] == pytest.approx(base + 12.25), (pname, u, cat)
-            assert "fixed_us" in r["compute_provenance"]
+            assert r["latency_us"] == pytest.approx(base["latency_us"]) and r["fixed_us"] == 12.25, (pname, u, cat)
+            assert "fixed_us" in r["compute_provenance"] and plat.compute_us(n) == r["latency_us"]
 
 
 # ---- (d) ---------------------------------------------------------------------------------------
@@ -135,14 +138,14 @@ def test_attention_composite_rule_all_units_and_split_shapes():
             ungrouped = _node("attention", u, pricing_group=None)
             with pytest.raises(NotImplementedError):
                 plat.price(ungrouped)
-    # non-bmm attention (scale/mask): cpu -> 0 everywhere (legacy); gpu raises on the Mali path only
+    # non-bmm attention (scale/mask): cpu -> 0 everywhere (legacy); gpu = the elementwise launch floor on
+    # BOTH GPU models (rev F14; the Mali path used to raise)
     scale = OpNode(id=1, category="attention", unit="cpu",
                    wl=Workload(op="attention", extra={"aten": "aten.mul.Tensor", "category": "attention"}))
     assert Platform(MODEL).price(scale)["latency_us"] == 0.0
     scale.unit = "gpu"
-    with pytest.raises(NotImplementedError):
-        Platform(MODEL).price(scale)
-    assert Platform(MODEL, soc_profile="sd8gen3_cim").price(scale)["latency_us"] >= 0.0
+    for pname, plat in _plats().items():
+        assert plat.price(scale)["source_model"] == "elementwise_floor", pname
 
 
 # ---- (e) ---------------------------------------------------------------------------------------

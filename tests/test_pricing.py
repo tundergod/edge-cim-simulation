@@ -60,18 +60,22 @@ def test_scale_mask_softmax_not_priced_as_bmm():
         assert plat.price(n)["source_model"] != "m4_gpu"
 
 
-def test_ungrouped_or_nonbmm_gpu_attention_fails_loud():
+def test_ungrouped_gpu_attention_fails_loud_and_scale_mask_is_a_launch_floor():
     plat = Platform("llama-3.2-1b")
     scale = OpNode(id=0, category="attention", unit="gpu",
                    wl=Workload(op="attention", extra={"aten": "aten.mul.Tensor"}))
     bmm_nogroup = OpNode(id=1, category="attention", unit="gpu", pricing_group=None,
                          wl=Workload(op="attention", kv=512, heads=32, K=64, extra={"hd": 64}))
-    for bad in (scale, bmm_nogroup):
-        try:
-            plat.price(bad)
-        except NotImplementedError:
-            continue
-        raise AssertionError(f"GPU attention {bad.wl.extra} not fail-loud")
+    try:
+        plat.price(bmm_nogroup)
+    except NotImplementedError:
+        pass
+    else:
+        raise AssertionError("ungrouped GPU attention bmm not fail-loud")
+    # ADR-0008 rev F14: scale/mask on the Mali path = the elementwise launch floor (was a raise that made
+    # every rk3588_cim run with a GPU in the unit set fail); CimHetero routes scale/mask to the CPU.
+    r = plat.price(scale)
+    assert r["source_model"] == "elementwise_floor" and r["latency_us"] == plat.launch_us["gpu"]
 
 
 if __name__ == "__main__":

@@ -165,3 +165,68 @@ M = 1): QK^T = 8.952 + 0.001706·kv µs, S·V = 8.999 + 0.000809·kv µs per bmm
   decode GEMV barely moves while a prefill GEMM scales. Flagged `extrapolated` when ≠ 1.
 * `runner.run` echoes the values actually used: `host`, `prefill_host`, `host_candidates_est_us`,
   `cim_n_cores`, `npu_scale`, `knee_GBs` (profile or `tunables.knee_GBs`), `soc_profile`.
+
+## Revisions 2026-10-23 (independent review, fixes F1–F15; branch `hetero-fixes`)
+
+Every change below is gated behind a SoC profile or the ADR-0009 schedulers; the legacy path
+(`soc_profile` unset, AllCim / CimHetero) is byte-identical (`validate_e2e_l4.py` output unchanged,
+`test_legacy_pricing_identical_to_main_snapshot`, `test_l4_tok_s_unchanged_without_profile`).
+Regression tests: `tests/test_hetero_fixes.py` (one per fix), `tests/test_hetero_schedulers.py` (F9).
+
+* **F1 — `price()` returns `fixed_us` as its own field.** `{latency_us: compute only, fixed_us, ...}`;
+  a `merge` node is `latency_us 0, fixed_us = sync`. The engine (`run_dag` AND `run_serial`) and the
+  solver charge it as a SERIAL pre-op delay: node = fixed + max(compute, memory) (unit busy, nothing
+  streams during the delay). Before, the engine folded it into compute and hid it under max() while
+  the solver added it outside (heteroinfer 1B decode: 2496 of 3050 charged µs visible); now charged ==
+  visible. `Platform.compute_us` stays compute-only; `Platform.fixed_us(node)` added.
+* **F2 — one memory model.** Every unit model is now a KERNEL-TIME model; the DRAM bytes of every unit
+  are metered by the shared pool alone, with a per-unit single-stream cap `units.<u>.stream_eff` ×
+  eff_BW (P1: 1.0 everywhere = HeteroInfer Fig.5 "each unit alone ~40–45"; P2 npu 0.67 = the old
+  NpuModel 20 GB/s band / 29.97) and the knee across units (F10). Removed: the GPU anchor model's
+  `0.5·K·N/bw` term and attention `bytes/bw` term, `NpuModel._gemm_us` memory ceiling and the staircase
+  attention memory term, `CpuGemmModel` memory term. KEPT, relabelled: the NPU staircase `K·N/bw_GBs`
+  term is the array weight-load pass (kernel side; the three [·,·] M=1/128/256 anchors need a
+  steps-independent K·N term), so an NPU GEMV part never runs faster than its own array fill — the
+  paper's "NPU-1 stage performance → GPU primary in decode". The P2 Mali `GpuRooflineModel` keeps its
+  1.26 GB/s "BW" (a kernel-rate fit of the unoptimised kernel, not a DRAM term). The fit script now
+  predicts an anchor as `max(kernel, K·N·wbpp/43 GB/s)`; every Table-3 anchor is kernel-bound under
+  that rule, so the NPU parameters are unchanged (floor 58.6, 42.76, 7.32 TOPS, p 1.064).
+* **F3 — GPU GEMV refit.** New form `gemv_floor + K·(N + n_half)/rate` (occupancy: N outputs = N
+  work-items), GEMM regime keeps its own floor: gemv_floor 60.0 µs (bounded to the §4.3 "tens of µs"
+  band), rate 73.4 Gparam/s, n_half 3505, gemm_floor 402 µs, C_max 1.174 TFLOPS, M_half 110.6. Max
+  anchor residual 5.3 % (was 14.7 % at the band edge): 511→484, 7306→7225, 10841→10885, 1467→1544,
+  35231→37092, 1903→1855. Small-shape plausibility: 2048×512 M=1 = 172 µs (was 337). Provenance flags
+  `N_out < 4096` as EXTRAPOLATED (the occupancy term is anchored only at 4096 and 28672). Table 3
+  through the REAL platform + solver (profile `units.npu.min_split_rows = 1024`, §4.4 constraint (2),
+  value unstated by the paper): [4096,4096] M=1 → 1:1; [28672,4096] → GPU 0.75 (paper 3:1);
+  [4096,14336] M=1 → GPU-only; [4096,4096] M=128 → NPU-only; [4096,14336] M=256 → NPU 0.625 (paper
+  0.6). E2E sanity (not fitted): heteroinfer Llama-3.1-8B decode 6.67 tok/s vs the paper's 14.01 — the
+  simulator still streams INT8 NPU/CIM weights and keeps the int8↔fp16 converts (ADR-0004); the GPU
+  streams W4 (F13). On the 1B shapes (N ≤ 2048, below every anchor) the solver stays NPU-leaning
+  (q/o proj npu 0.75 / gpu 0.25) — an extrapolation of the occupancy term, flagged.
+* **F6 — `cim.attention_heads_mode ∈ {serial, batched}`** (`CimAttentionModel(heads_mode=)`): serial
+  = (floor + b·kv) × heads (measured Alpha basis, default); batched = floor once per bmm + work ×
+  heads (a compiled multi-head graph; no silicon). A sensitivity axis, not a calibrated fact.
+* **F12 — physical `cim_n_cores` on the profile path** (`CimTileModel(scale_mode="physical")`, s =
+  n/4): single-tile decode throughput s·G_eff(N/s, K), prefill tile throughput ∝ s (latency 1/n, was
+  1/n²), multi-tile knee × s (resident capacity), resident slope / s, DRAM-spill floor kept as the
+  array's measured ingest rate (n-independent kernel time; the pool meters the bytes). s = 1 ==
+  legacy numerics; the legacy path keeps `scale_mode="legacy"`. **Conflicts by design with the knob
+  addendum above** (`test_knobs.py::test_cim_n_cores_override_changes_tile_width_and_latency` now
+  asserts 1/n and t8 < t4).
+* **F13 — `units.<u>.weight_bytes_per_param`** (P1 gpu 0.5 W4A16, npu 1.0, cim 1.0, cpu 0.5; P2 all
+  1.0; legacy 1.0 = op_profile INT8 bytes): a scheduler's `_finish` rescales every matmul node's weight
+  bytes to its unit from the remembered INT8 basis `wl.extra["bytes_int8"]` (idempotent; tiling
+  derives sub-node bytes from the basis), and the solver's `_dram_bytes` applies the same rule. The
+  int8↔fp16 converts remain (ADR-0004). 8B heteroinfer decode 5.71 → 6.67 tok/s.
+* **F14 — Mali non-bmm attention** (scale/mask) is priced as the elementwise launch floor on both GPU
+  models (was `NotImplementedError`, which failed every rk3588_cim run with a GPU in the unit set).
+  CimHetero routes scale/mask to the CPU, so the L4-era numerics never reached that branch (snapshot
+  test unchanged).
+* **CPU GEMM** (`CpuGemmModel`): kernel time only, `eff(M) = gemv_eff + (eff − gemv_eff)(M−1)/(M−1+m_half)`
+  with P1 `gemv_efficiency 0.217` (a decode GEMV = 1.33 × its W4 pool time = HeteroInfer Fig.12
+  llama.cpp/MNN decode ratio; assumption anchored on the paper's end-to-end), `m_half 32` (assumption).
+  Consequence: with `cpu 0.5 B/param` a CPU GEMV (65 µs for 2048²) can beat the CIM's INT8 pool time
+  (97 µs); it is excluded from the search unless `allow_cpu_compute=True`, as in the paper (§4).
+* **F8** — the profile `sync_us` blocks are removed; `tiling.SYNC_US` is the one table
+  (`Platform.sync_us` mirrors it). **Known gap 7 closed** (F14); gap 6 closed (F4, ADR-0009).

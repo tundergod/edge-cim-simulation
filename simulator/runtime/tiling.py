@@ -28,10 +28,17 @@ no merge node).
 Sync model: every cross-unit boundary (producer unit != consumer unit, 'mem' excluded)
 costs one `sync_us` — carried by the merge node (`wl.extra["fixed_us"]`) for a gather, or
 by the consumer node's `wl.extra["fixed_us"]` otherwise (`apply_sync`). Copy cost is 0
-(UMA zero-copy, HeteroInfer §4.3). SYNC_US: fast = HeteroInfer predictable-wait + flag
-polling ("a few microseconds" decode; + "tens of microseconds" GPU submission delay in
-prefill) -> 10 / 30 us [LIT, HeteroInfer §4.3]; clfinish = the 400 us clFinish
-baseline [LIT, §3.1]; none = 0 (ideal). All SIMULATED: no heterogeneous-sync silicon.
+(UMA zero-copy, HeteroInfer §4.3). SYNC_US — the ONE sync table (ADR-0009 rev F8; the SoC
+profiles carry no sync block, Platform.sync_us mirrors this): fast = HeteroInfer
+predictable-wait + flag polling ("a few microseconds" decode; + "tens of microseconds" GPU
+submission delay in prefill) -> 10 / 30 us [LIT, HeteroInfer §4.3]; clfinish = the 400 us
+clFinish baseline [LIT, §3.1]; none = 0 (ideal). All SIMULATED: no heterogeneous-sync silicon.
+The engine and the solver charge `fixed_us` as a SERIAL pre-op delay (rev F1).
+
+Per-unit weight bytes (ADR-0008 rev F13): a matmul node's `bytes_streamed` is op_profile's INT8
+count until a scheduler's `_finish` rescales the weight part to the assigned unit's
+`weight_bytes_per_param`; the INT8 basis is remembered in `wl.extra["bytes_int8"]` so the
+rescale is idempotent and sub-node byte shares are always derived from the INT8 basis.
 """
 from __future__ import annotations
 
@@ -104,9 +111,27 @@ def _int_shares(total, fracs):
     return shares
 
 
+def base_bytes(node):
+    """The node's INT8 (op_profile) byte count: `wl.extra['bytes_int8']` when a scheduler has
+    rescaled `bytes_streamed` to a unit's weight bytes (rev F13), else bytes_streamed itself."""
+    if node.wl.extra and "bytes_int8" in node.wl.extra:
+        return int(node.wl.extra["bytes_int8"])
+    return node.bytes_streamed
+
+
+def unit_bytes(node, wbpp):
+    """`bytes_streamed` of a matmul node on a unit streaming `wbpp` bytes per weight parameter:
+    the INT8 basis with the K*N weight part rescaled (activation bytes unchanged). Non-matmul
+    nodes: the INT8 basis."""
+    b = base_bytes(node)
+    if node.category != "matmul":
+        return b
+    return int(round(b + node.wl.K * node.wl.N * (float(wbpp) - 1.0)))
+
+
 def _bpe(node, elems):
-    """Bytes per element implied by the node's byte count (op_profile counts 1 B/element)."""
-    return node.bytes_streamed / elems if elems > 0 else 0.0
+    """Bytes per element implied by the node's INT8 byte count (op_profile counts 1 B/element)."""
+    return base_bytes(node) / elems if elems > 0 else 0.0
 
 
 def _copy(node, *, wl=None, bytes_streamed=None, out_elems=None, unit=None, tile=None,
@@ -122,7 +147,10 @@ def _copy(node, *, wl=None, bytes_streamed=None, out_elems=None, unit=None, tile
 
 
 def _attn_M(node):
-    """Query length of an attention bmm (wl.M is not set by wl_from_row): from out_elems."""
+    """Query length (rows) of an attention bmm, derived from `out_elems` (QK^T out = H*M*kv,
+    S.V out = H*M*hd) so a kv-split chunk's partial output still yields the block's M. NB
+    `wl_from_row` DOES set wl.M = Sq for bmms (decode 1, prefill P) and the unit models price
+    wl.M; this helper is the out_elems-consistent value tiling uses for byte/FLOP bookkeeping."""
     wl = node.wl
     hd = wl.extra["hd"]
     role = "qk" if node.pricing_group == node.id else "sv"     # holds for originals and part copies
@@ -208,7 +236,9 @@ def _matmul_part(node, dim, size):
     else:
         raise ValueError(f"matmul cannot be split on {dim!r}")
     wl = replace(node.wl, M=M_, K=K_, N=N_, extra=dict(node.wl.extra))
-    return _copy(node, wl=wl, bytes_streamed=round((M_ * K_ + K_ * N_ + M_ * N_) * bpe), out_elems=out)
+    b = round((M_ * K_ + K_ * N_ + M_ * N_) * bpe)
+    wl.extra["bytes_int8"] = int(b)             # the part's own INT8 basis (rev F13)
+    return _copy(node, wl=wl, bytes_streamed=b, out_elems=out)
 
 
 def _attn_bmm_part(node, dim, size, frac, bshare):
@@ -310,7 +340,7 @@ def tile_parts(dag, nid, dim, plan, *, align=None, rows=None):
         members = []
         for cid in chain:
             c = dag[cid]
-            bshare = _int_shares(c.bytes_streamed, eff)[i]
+            bshare = _int_shares(base_bytes(c), eff)[i]
             tile = {"of": nid, "dim": dim, "part": i, "n": k, "frac": f, "src": cid}
             if c.category == "matmul":
                 p = _matmul_part(c, dim, s)
@@ -326,8 +356,8 @@ def tile_parts(dag, nid, dim, plan, *, align=None, rows=None):
                 p.pricing_group = chain[0]
             members.append(p)
         parts.append(members)
-    orig_bytes = sum(dag[c].bytes_streamed for c in chain)
-    part_bytes = sum(m.bytes_streamed for ms in parts for m in ms)
+    orig_bytes = sum(base_bytes(dag[c]) for c in chain)
+    part_bytes = sum(base_bytes(m) for ms in parts for m in ms)
     return TilePlan(nid=nid, dim=dim, chain=chain, units=units, sizes=sizes, parts=parts,
                     merge_bytes=_merge_bytes(dag, chain, dim, k),
                     replicated_bytes=part_bytes - orig_bytes)

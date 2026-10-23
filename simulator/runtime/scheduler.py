@@ -67,7 +67,12 @@ class Scheduler(ABC):
 
 
 class AllCimScheduler(Scheduler):
-    """All-CIM baseline (the L4-gated all-AIPU INT8 placement)."""
+    """All-CIM baseline (the L4-gated all-AIPU INT8 placement). LEGACY SERIAL, NO SYNC CHARGED:
+    it runs under the single-accelerator serial engine (pipeline=False) and never calls
+    `apply_sync`, although every matmul->support edge is a cim<->cpu boundary (~305 per decode
+    token on Llama-3.2-1B). It is the measured-silicon anchor, NOT a fair baseline for the
+    heterogeneous schedulers — compare those against `cim_only` (same placement, syncs charged,
+    pipelined engine); the runner labels its sync_mode "n/a-legacy"."""
     name = "all_cim"
     pipeline = False
     required_units = ("cim", "cpu")
@@ -129,19 +134,76 @@ def _sync_us(cfg, phase):
                                   getattr(cfg, "sync_us_override", None))
 
 
-def _finish(dag, cfg, sync_us):
+_ELEMENTWISE_FLOOR_UNITS = ("gpu", "npu")
+
+
+def _is_elementwise(n):
+    """Categories the gpu/npu price at the launch floor (support ops + non-bmm attention)."""
+    return n.category in _SUPPORT or (n.category == "attention" and "hd" not in n.wl.extra)
+
+
+def tag_fused_chains(dag):
+    """ADR-0009 rev F4 — fused elementwise kernel chains. An elementwise node on gpu/npu is a
+    FOLLOWER (`wl.extra['fused_head'] = False`, 0 launch floor) when it has exactly one
+    dependency, that producer is an elementwise node on the same unit, and the producer feeds
+    nothing else (a single-dependency chain = what a kernel fuser emits as one kernel); every
+    other elementwise node is a HEAD (`fused_head = True`, pays the unit's launch floor).
+    `fused_group` = the head's id (reporting only). Recomputed from scratch -> idempotent;
+    non-elementwise / other-unit nodes carry no tag. Returns the number of chains."""
+    heads = 0
+    for n in dag.nodes:
+        ex = n.wl.extra
+        if not (_is_elementwise(n) and n.unit in _ELEMENTWISE_FLOOR_UNITS):
+            ex.pop("fused_head", None); ex.pop("fused_group", None)
+            continue
+        follower = False
+        if len(n.deps) == 1:
+            d = dag[n.deps[0]]
+            follower = (_is_elementwise(d) and d.unit == n.unit and dag.successors(d.id) == [n.id]
+                        and d.wl.extra.get("fused_group") is not None)
+        if follower:
+            ex["fused_head"] = False
+            ex["fused_group"] = dag[n.deps[0]].wl.extra["fused_group"]
+        else:
+            ex["fused_head"] = True
+            ex["fused_group"] = n.id
+            heads += 1
+    return heads
+
+
+def apply_unit_bytes(dag, platform):
+    """ADR-0008 rev F13 — rescale every matmul node's `bytes_streamed` to its unit's
+    `weight_bytes_per_param` (weight part only; activation bytes unchanged) from the remembered
+    INT8 basis (`wl.extra['bytes_int8']`), so the engine meters exactly what the solver priced.
+    A platform without the table (legacy / fakes) is a no-op. Idempotent."""
+    wbpp = getattr(platform, "weight_bytes_per_param", None)
+    if not wbpp:
+        return dag
+    for n in dag.nodes:
+        if n.category != "matmul":
+            continue
+        n.wl.extra.setdefault("bytes_int8", n.bytes_streamed)
+        n.bytes_streamed = tiling.unit_bytes(n, wbpp.get(n.unit, 1.0))
+    return dag
+
+
+def _finish(dag, cfg, sync_us, platform=None):
     """Common tail of every ADR-0009 scheduler: precision conversions (consumer pays by default,
-    as cim_hetero), residency, per-boundary sync charging. Idempotent."""
+    as cim_hetero), per-unit weight bytes (F13), residency, fused elementwise chains (F4),
+    per-boundary sync charging. Idempotent. The DAG order is topological (build_token_dag /
+    split_node preserve it), which tag_fused_chains relies on."""
     from simulator.runtime.precision import insert_conversions   # deferred: avoids import cycle
     placement = getattr(cfg, "precision_boundary_placement", "consumer") if cfg else "consumer"
     plans = dag.plans
     dag = insert_conversions(dag, placement=placement)
     dag.plans = plans
+    apply_unit_bytes(dag, platform)
     for n in dag.nodes:
         if n.category == "merge" and n.bytes_streamed > 0:
             n.mem_domain = "dram"
         else:
             n.mem_domain = _residency(n)
+    tag_fused_chains(dag)
     tiling.apply_sync(dag, sync_us)
     return dag
 
@@ -180,7 +242,7 @@ class SingleUnitScheduler(Scheduler):
                                  f"map it explicitly, do not silently place.")
             dag.plans[n.id] = {"category": n.category, "strategy": f"{n.unit}_fixed", "dim": None,
                                "parts": [(n.unit, 1.0)]}
-        out = _finish(dag, cfg, _sync_us(cfg, phase))
+        out = _finish(dag, cfg, _sync_us(cfg, phase), platform)
         out.host = self.unit
         return out
 
@@ -195,8 +257,13 @@ class TiledHeteroScheduler(Scheduler):
     support_unit='gpu', matmul_dims=('N',) and no attention/support splitting this is
     exactly HeteroInferScheduler (same code path). Decisions are made in topological order
     (producers placed first, so boundary syncs are known); ratios are static per op.
-    `align` = {unit: (quantum, min)} on the split axis (default NPU (32, 32) — the
-    systolic tile; no silicon for a larger NPU minimum sub-tensor).
+    `align` = {unit: (quantum, min)} on the split axis; default = the systolic quantum
+    (tiling.DEFAULT_ALIGN, NPU 32) with the platform's per-unit `min_split_rows` (the SoC
+    profile's minimum sub-tensor rule, HeteroInfer §4.4 constraint (2); rev F3) as the minimum.
+    `allow_cpu_compute` default False = the SAME unit set the gpu_only / npu_only baselines
+    use (CPU = control plane + sampling, HeteroInfer §4; cim_only's CPU support placement is
+    forced by the CIM's op coverage, not a choice); True adds the CPU GEMM/attention/support
+    kernel-time model to the search.
     `host` (constructor, else `cfg.host`): the graph-owning unit — a non-host single placement
     pays the hand-back sync and merges land on it. None = gpu if enabled else the first enabled
     unit; 'auto' = run the whole per-op solve once per candidate host (every enabled unit) on a
@@ -255,6 +322,9 @@ class TiledHeteroScheduler(Scheduler):
             raise ValueError(f"{self.name}: assign() needs platform= (pricing contract: "
                              f"price/compute_us/supports)")
         align = dict(self.align)
+        for u, rows in (getattr(platform, "min_split_rows", None) or {}).items():   # profile minimum (F3)
+            if u not in align:
+                align[u] = (tiling.DEFAULT_ALIGN.get(u, (1, 1))[0], max(1, int(rows)))
         model = getattr(cfg, "model", None)
         if model is not None and "heads" not in align:
             from simulator.runtime.workload import op_profile   # deferred: workload sets up the tools path
@@ -329,7 +399,7 @@ class TiledHeteroScheduler(Scheduler):
             else:
                 dag = tiling.split_node(dag, nid, best.dim, best.plan, merge_unit=host,
                                         sync_us=ctx.sync_us, align=ctx.align, rows=rows)
-        out = _finish(dag, cfg, ctx.sync_us)
+        out = _finish(dag, cfg, ctx.sync_us, platform)
         out.host = host
         out.host_est_us = sum(float(p.get("T_est_us", 0.0)) for p in out.plans.values())
         return out

@@ -100,13 +100,14 @@
     "cores": "single logical NPU (the paper never splits it) [assumption]"
   },
   "anchor_fit": {
-    "_doc": "32-row staircase minimax fit of `anchors` (fit_hetero_anchors.py): floor + (K/k_ref)^p * (K*N/bw + ceil(M/32)*2*32*K*N/tops_eff). [borrowed, fitted]",
+    "_doc": "32-row staircase KERNEL-TIME minimax fit of `anchors` under pred = max(kernel, K*N/43 GB/s) (fit_hetero_anchors.py, ADR-0008 rev F2): floor + (K/k_ref)^p * (K*N/bw + ceil(M/32)*2*32*K*N/tops_eff); bw_GBs = the array weight-load pass (kernel side), DRAM bytes pool-metered. [borrowed, fitted]",
     "floor_us": 58.6396,
     "bw_GBs": 42.7622,
     "tops_eff": 7.3208,
     "k_penalty_exp": 1.0639,
     "k_ref": 4096,
     "weight_bytes_per_param": 1.0,
+    "pool_GBs": 43.0,
     "objective": "minimax |rel err| over anchors",
     "max_abs_rel_residual": 0.1378,
     "all_within_15pct": true

@@ -193,60 +193,71 @@ class CpuModel(UnitEngine):
 
 
 class CpuGemmModel(UnitEngine):
-    """CPU GEMM/GEMV roofline — SIMULATED (assumption), no CPU GEMM silicon (ADR-0008).
+    """CPU GEMM/GEMV KERNEL-TIME model — SIMULATED (assumption), no CPU GEMM silicon (ADR-0008, rev F2).
 
-        peak_ops_s = cores * freq * ipc * 2 * (neon_width_bits / bits_per_elem)   # MAC = 2 ops
-        compute_us = 2*M*K*N / (peak_ops_s * efficiency)
-        memory_us  = (K*N*w_bytes + (M*K + M*N)*act_bytes) / stream_BW_GBs        # weights + activations from DRAM
-        latency    = max(compute_us, memory_us)
+        peak_ops_s  = cores * freq * ipc * 2 * (neon_width_bits / bits_per_elem)   # MAC = 2 ops
+        eff(M)      = gemv_efficiency + (efficiency - gemv_efficiency) * (M-1) / (M-1 + m_half)
+        latency_us  = 2*M*K*N / (peak_ops_s * eff(M))
 
     Peak from the cpu_rk3588 spec (A76 NEON 128-bit: int8 SDOT 16 MAC/instr, fp16 FMLA 8, fp32 4;
-    ipc, freq from the cluster) — `measured-spec` structure, but `efficiency` (fraction of NEON peak
-    a tuned GEMM kernel reaches) is an ASSUMPTION (0.5 default; tuned NEON int8 kernels reach ~0.5-0.7)
-    and `stream_BW_GBs` is the SoC profile's single-stream effective DRAM bandwidth (weights do NOT
-    fit the caches). The calibrated m4_cpu eta_c (0.15, numpy support ops) is deliberately NOT
-    reused: it describes numpy elementwise kernels, not a GEMM. Attention on the CPU (act x act,
-    QK^T + S.V composite over heads) uses the same roofline — EXTRAPOLATED."""
+    ipc, freq from the cluster) — `measured-spec` structure. `efficiency` (fraction of NEON peak a
+    tuned register-blocked GEMM reaches) is an ASSUMPTION (0.5; tuned NEON int8 kernels reach
+    ~0.5-0.7). `gemv_efficiency` is the M=1 matvec efficiency (no register reuse: every weight is
+    loaded once, so the kernel is load/decode-bound far below the MAC peak): P1 sets 0.217 so that
+    a decode GEMV costs 1.33x the W4 pool time, the HeteroInfer Fig.12 llama.cpp(CPU)/MNN(GPU)
+    decode ratio (19.38/14.20 s InternLM-1.8B; 63.39/48.76 Llama-7B) — an ASSUMPTION anchored on
+    the paper's end-to-end numbers, not a kernel measurement. `m_half` (rows at which eff is
+    halfway from GEMV to GEMM efficiency; 32 = one register-blocked row tile, assumption) bridges
+    M=1 to the GEMM regime. The DRAM bytes (weights + activations) are NOT priced here: the shared
+    pool meters them (engine max(compute, bytes/BW)), so a CPU GEMV is physically distinct from
+    the pool time only through this compute term. The calibrated m4_cpu eta_c (0.15, numpy
+    support ops) is deliberately NOT reused. Attention on the CPU (act x act, QK^T + S.V composite
+    over heads) uses the same kernel-time law at the GEMM efficiency — EXTRAPOLATED."""
 
     _BITS = {"int8": 8, "fp16": 16, "fp32": 32}
 
     def __init__(self, spec, engine="analytic", *, cores=4, cluster="a76", efficiency=0.5,
-                 stream_BW_GBs=None):
+                 gemv_efficiency=None, m_half=32.0):
         super().__init__(spec, engine)
-        if stream_BW_GBs is None or stream_BW_GBs <= 0:
-            raise ValueError(f"CpuGemmModel needs stream_BW_GBs > 0 (got {stream_BW_GBs!r})")
         if not (0 < efficiency <= 1):
             raise ValueError(f"CpuGemmModel efficiency must be in (0, 1], got {efficiency!r}")
-        self.cores, self.cluster, self.eff, self.bw = int(cores), cluster, float(efficiency), float(stream_BW_GBs)
+        gemv_efficiency = efficiency if gemv_efficiency is None else gemv_efficiency
+        if not (0 < gemv_efficiency <= efficiency):
+            raise ValueError(f"CpuGemmModel gemv_efficiency must be in (0, efficiency={efficiency}], "
+                             f"got {gemv_efficiency!r}")
+        if m_half < 0:
+            raise ValueError(f"CpuGemmModel m_half must be >= 0, got {m_half!r}")
+        self.cores, self.cluster, self.eff = int(cores), cluster, float(efficiency)
+        self.gemv_eff, self.m_half = float(gemv_efficiency), float(m_half)
 
     def peak_ops_s(self, dtype):
         cl = self.spec["clusters"][self.cluster]
         lanes = self.spec["neon"]["width_bits"] // self._BITS[dtype]
         return self.cores * cl["freq_ghz"] * 1e9 * cl["ipc"] * 2 * lanes
 
+    def efficiency(self, M):
+        """Fraction of NEON peak at M activation rows: gemv_eff at M=1 -> eff for large M."""
+        if M <= 1 or self.m_half == 0:
+            return self.gemv_eff if M <= 1 else self.eff
+        return self.gemv_eff + (self.eff - self.gemv_eff) * (M - 1) / (M - 1 + self.m_half)
+
     def gemm_us(self, M, K, N, dtype):
-        bpe = self._BITS[dtype] // 8
-        comp = 2.0 * M * K * N / (self.peak_ops_s(dtype) * self.eff) * 1e6
-        act_b = 2 if dtype != "fp32" else 4
-        mem = (K * N * bpe + (M * K + M * N) * act_b) / (self.bw * 1e3)
-        return max(comp, mem), ("compute" if comp >= mem else "memory")
+        return 2.0 * M * K * N / (self.peak_ops_s(dtype) * self.efficiency(M)) * 1e6, "compute"
 
     def predict(self, wl: Workload) -> dict:
         dtype = wl.dtype if wl.dtype in self._BITS else "fp16"
         if wl.op in ("attention", "attn_bmm"):
             hd = wl.extra.get("hd", wl.K or 128)
             M, kv, heads = max(1, wl.M), max(1, wl.kv), max(1, wl.heads)
-            comp = 2.0 * 2.0 * heads * M * hd * kv / (self.peak_ops_s(dtype) * self.eff) * 1e6
-            nb = wl.nbytes or (M * hd + hd * kv + M * kv) * heads * 2
-            mem = 2.0 * nb / (self.bw * 1e3)
-            lat, bound = max(comp, mem), ("compute" if comp >= mem else "memory")
-            what = "attention QK^T+S.V composite (EXTRAPOLATED)"
+            lat = 2.0 * 2.0 * heads * M * hd * kv / (self.peak_ops_s(dtype) * self.eff) * 1e6
+            bound, what = "compute", "attention QK^T+S.V composite (EXTRAPOLATED)"
         else:
             if wl.K <= 0 or wl.N <= 0:
                 raise ValueError(f"CpuGemmModel GEMM needs K,N > 0 (got K={wl.K}, N={wl.N})")
             lat, bound = self.gemm_us(max(1, wl.M), wl.K, wl.N, dtype)
-            what = "GEMM"
-        prov = (f"simulated: CPU {what} roofline, {self.cores}x {self.cluster} NEON {dtype} peak "
-                f"{self.peak_ops_s(dtype) / 1e9:.0f} GOPS x efficiency {self.eff} (ASSUMPTION) vs bytes / "
-                f"{self.bw:.1f} GB/s single-stream; {bound}-bound; no CPU GEMM silicon")
+            what = "GEMM" if wl.M > 1 else "GEMV"
+        prov = (f"simulated: CPU {what} kernel time, {self.cores}x {self.cluster} NEON {dtype} peak "
+                f"{self.peak_ops_s(dtype) / 1e9:.0f} GOPS x efficiency {self.efficiency(max(1, wl.M)):.3f} "
+                f"(gemv {self.gemv_eff:g} -> gemm {self.eff:g}, ASSUMPTION); DRAM bytes metered by the shared "
+                f"pool; no CPU GEMM silicon")
         return {"latency_us": float(lat), "bound": bound, "provenance": prov}

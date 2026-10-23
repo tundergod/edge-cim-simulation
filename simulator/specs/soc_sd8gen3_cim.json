@@ -1,15 +1,51 @@
 {
-  "_doc": "SoC PROFILE P1 = Snapdragon-8-Gen-3-like SoC calibrated to HeteroInfer's PUBLISHED numbers (SOSP'25; cim-mobile-soc/docs/heteroinfer-design-reference.md) + an SRAM-CIM unit (the Metis-calibrated M1 tile transplanted onto the integrated `cim_topo_edge` topology). Selected by SimConfig.platform.soc_profile / Platform(soc_profile=). A profile declares per-unit models/specs, the shared-memory model (single-stream eff BW + aggregate knee, GB/s), sync-cost presets, default dtypes and honesty. PRECEDENCE: the profile fixes the CIM topology (config `topology` must be omitted or equal) and OVERRIDES the topology's resolved eff_BW with memory.single_stream_eff_BW_GBs; knee_GBs from the profile unless the config sets tunables.knee_GBs (sensitivity knob, provenance-flagged); bw_efficiency is rejected. Honesty: GPU/NPU/memory = BORROWED (published numbers, no silicon of ours); CPU = the RK3588 A76 fits as a LABELLED PROXY (no 8 Gen 3 CPU data); CIM = Metis-calibrated compute on an ASSUMED edge topology (simulated).",
+  "_doc": "SoC PROFILE P1 = Snapdragon-8-Gen-3-like SoC calibrated to HeteroInfer's PUBLISHED numbers (SOSP'25; cim-mobile-soc/docs/heteroinfer-design-reference.md) + an SRAM-CIM unit (the Metis-calibrated M1 tile transplanted onto the integrated `cim_topo_edge` topology). Selected by SimConfig.platform.soc_profile / Platform(soc_profile=). A profile declares per-unit models/specs, the shared-memory model (single-stream eff BW + aggregate knee, GB/s), default dtypes and honesty. Per-unit F2/F3/F13 parameters: `stream_eff` (single-stream cap = eff_BW x stream_eff, default 1.0), `min_split_rows` (minimum sub-tensor rows on a split axis, HeteroInfer §4.4 constraint (2)), `weight_bytes_per_param` (streamed weight bytes per parameter: the quantization each unit's kernel actually streams). Sync costs live in ONE table, simulator/runtime/tiling.py SYNC_US (F8). PRECEDENCE: the profile fixes the CIM topology (config `topology` must be omitted or equal) and OVERRIDES the topology's resolved eff_BW with memory.single_stream_eff_BW_GBs; knee_GBs from the profile unless the config sets tunables.knee_GBs (sensitivity knob, provenance-flagged); bw_efficiency is rejected. Honesty: GPU/NPU/memory = BORROWED (published numbers, no silicon of ours); CPU = the RK3588 A76 fits as a LABELLED PROXY (no 8 Gen 3 CPU data); CIM = Metis-calibrated compute on an ASSUMED edge topology (simulated).",
   "profile": "sd8gen3_cim",
   "honesty": "borrowed: soc_profile 'sd8gen3_cim' — GPU/NPU/memory fitted to HeteroInfer (SOSP'25) Table 3 / Fig.3 / §3.3 published numbers, CPU = RK3588 A76 proxy, CIM = Metis M1 tile on the simulated edge topology; NO silicon of ours",
   "units": {
-    "gpu": {"spec": "gpu_adreno750_sd8gen3", "model": "anchor_roofline", "default_dtype": "fp16",
-            "elementwise_launch_us": 20.0},
-    "npu": {"spec": "npu_hexagon_sd8gen3", "model": "staircase_anchor", "engine": "analytic", "default_dtype": "fp16",
-            "elementwise_launch_us": 20.0},
-    "cpu": {"spec": "cpu_rk3588", "default_dtype": "fp32",
-            "gemm": {"cores": 4, "cluster": "a76", "efficiency": 0.5}},
-    "cim": {"topology": "cim_topo_edge", "n_cores": 4, "default_dtype": "int8", "attention_model": "alpha_floor_fit"}
+    "gpu": {
+      "spec": "gpu_adreno750_sd8gen3",
+      "model": "anchor_roofline",
+      "default_dtype": "fp16",
+      "elementwise_launch_us": 20.0,
+      "stream_eff": 1.0,
+      "min_split_rows": 1,
+      "weight_bytes_per_param": 0.5
+    },
+    "npu": {
+      "spec": "npu_hexagon_sd8gen3",
+      "model": "staircase_anchor",
+      "engine": "analytic",
+      "default_dtype": "fp16",
+      "elementwise_launch_us": 20.0,
+      "stream_eff": 1.0,
+      "min_split_rows": 1024,
+      "weight_bytes_per_param": 1.0
+    },
+    "cpu": {
+      "spec": "cpu_rk3588",
+      "default_dtype": "fp32",
+      "gemm": {
+        "cores": 4,
+        "cluster": "a76",
+        "efficiency": 0.5,
+        "gemv_efficiency": 0.217,
+        "m_half": 32
+      },
+      "stream_eff": 1.0,
+      "min_split_rows": 1,
+      "weight_bytes_per_param": 0.5
+    },
+    "cim": {
+      "topology": "cim_topo_edge",
+      "n_cores": 4,
+      "default_dtype": "int8",
+      "attention_model": "alpha_floor_fit",
+      "stream_eff": 1.0,
+      "min_split_rows": 1,
+      "weight_bytes_per_param": 1.0,
+      "attention_heads_mode": "serial"
+    }
   },
   "memory": {
     "single_stream_eff_BW_GBs": 43.0,
@@ -17,9 +53,8 @@
     "peak_GBs": 68.0,
     "practical_max_GBs": 61.9
   },
-  "sync_us": {"fast": 30.0, "clfinish": 400.0},
   "provenance": {
-    "units.gpu": "HeteroInfer Tab.3/Fig.1 anchored roofline (m4_gpu_anchor.py) [borrowed]; elementwise_launch_us = §4.3 'tens of us' submission overhead [assumption]",
+    "units.gpu": "HeteroInfer Tab.3/Fig.1 anchored kernel-time model (DRAM bytes pool-metered, rev F2/F3) (m4_gpu_anchor.py) [borrowed]; elementwise_launch_us = §4.3 'tens of us' submission overhead, charged once per FUSED elementwise chain (rev F4) [assumption]",
     "units.npu": "HeteroInfer Tab.3/Fig.3/Fig.4 anchored staircase (NpuStaircaseModel) [borrowed]; elementwise_launch_us [assumption, same as gpu]",
     "units.cpu": "cpu_rk3588 A76 support-op fits (cpu_ops.json) used as a labelled PROXY for the 8 Gen 3 CPU [measured on RK3588, proxy here]; gemm efficiency 0.5 [assumption]; default_dtype fp32 = the calibrated m4_cpu path",
     "units.cim": "Metis M1 tile (m1_cim.json, Alpha 13 pt + Card) through cim_topo_edge (shared LPDDR, no per-call floor) [calibrated compute, simulated topology]; n_cores = scalable axis (4 = the calibrated geometry; other values extrapolated); attention = Alpha attn_floor fit [measured basis, extrapolated use]",
@@ -27,7 +62,11 @@
     "memory.knee_GBs": "HeteroInfer §3.3/§5.4: GPU+NPU concurrent ~60 GB/s (59.5 measured = 96% of the 61.9 practical max) [borrowed]",
     "memory.peak_GBs": "HeteroInfer §3.3: 68 GB/s theoretical [borrowed]",
     "memory.practical_max_GBs": "HeteroInfer Fig.5: 61.9 GB/s max achievable [borrowed]",
-    "sync_us.fast": "HeteroInfer §4.3: a few us flag-polling + tens of us GPU submission delay; 30 = a value inside that band [borrowed, assumption]",
-    "sync_us.clfinish": "HeteroInfer §3.1: clFinish fixed latency ~400 us [borrowed]"
+    "sync_us": "removed (ADR-0009 rev F8): the one sync table is tiling.SYNC_US (fast 10 us decode / 30 us prefill, clFinish 400 us; HeteroInfer §4.3 / §3.1)",
+    "units.*.stream_eff": "HeteroInfer §3.3 Fig.5: every unit alone pulls ~40-45 GB/s = the profile's 43 -> 1.0 for all [borrowed]",
+    "units.npu.min_split_rows": "HeteroInfer §4.4 profiler constraint (2) 'NPU stage-performance minimum sub-tensor sizes', value unstated; 1024 output rows reproduces the Table 3 'no partition' rows under linear sub-shape scaling [assumption, sensitivity axis]",
+    "units.*.weight_bytes_per_param": "gpu 0.5 = W4A16 (HeteroInfer §5.1); npu 1.0 = INT per-unit decode (§5.1 fn.1, the staircase fit's effective basis); cim 1.0 = Metis INT8 crossbar; cpu 0.5 = W4A16 like the GPU (llama.cpp basis, assumption) [borrowed/assumption]",
+    "units.cpu.gemm.gemv_efficiency": "0.217 of NEON int8 peak at M=1 so a CPU decode GEMV costs 1.33x its W4 pool time = HeteroInfer Fig.12 llama.cpp/MNN decode ratio (19.38/14.20 s, 63.39/48.76 s) [assumption anchored on published end-to-end]; m_half 32 = one register-blocked row tile [assumption]",
+    "units.cim.attention_heads_mode": "serial = the measured Alpha basis (one head per model call); 'batched' = one call floor per bmm, heads inside the tile (no silicon) [sensitivity axis, ADR-0008 rev F6]"
   }
 }

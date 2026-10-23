@@ -116,11 +116,8 @@ def test_gpu_attention_only_prices_bmm():
     assert p["latency_us"] > 0 and p["source_model"] == "m4_gpu"
     scale = OpNode(id=1, category="attention", unit="gpu",
                    wl=Workload(op="attention", kv=0, extra={"aten": "aten.mul.Tensor", "category": "attention"}))
-    try:
-        plat.price(scale)
-    except NotImplementedError:
-        return
-    raise AssertionError("non-bmm GPU attention (scale/mask) was priced as a bmm, not fail-loud")
+    r = plat.price(scale)                       # rev F14: an elementwise launch floor, never the bmm fit
+    assert r["source_model"] == "elementwise_floor" and r["source_model"] != "m4_gpu"
 
 
 def test_platform_rejects_unknown_unit():

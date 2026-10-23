@@ -1,19 +1,21 @@
 """ADR-0009 — per-op partition solver (simulator/runtime/solver.py).
 
-Table 3 reproduction (HeteroInfer, 8 Gen 3 [LIT]): with the GPU/NPU anchor latencies scaled
-linearly in N for sub-shapes, a 1/8 ratio grid, the fast-sync costs and a minimum
-sub-tensor size of 1024 output rows per unit, the solver reproduces the paper's decisions
-(ratio tolerance: one grid step). HONESTY: the minimum sub-tensor size is HeteroInfer §4.4
-profiler constraint (2) ("NPU stage-performance minimum sub-tensor sizes"), whose value the
-paper does not state; 1024 is a test choice. Under PURE linear scaling with no minimum, the
-[4096,14336] M=1 case prefers a 7:1 weight-centric split (saves ~130 us of 1467) and the
-[4096,4096] M=128 case is within 2 us of a 1:7 split — i.e. two of the paper's "no partition"
-rows are NOT reproduced by linear scaling alone (see ADR-0009 limitations).
+Table 3 reproduction (HeteroInfer, 8 Gen 3 [LIT]) with the FAKE linear platform: the GPU/NPU
+anchor latencies scaled linearly in N for sub-shapes, a 1/8 ratio grid, the fast-sync costs and
+the ADOPTED minimum sub-tensor rule — the sd8gen3_cim profile's `units.npu.min_split_rows` (1024
+output rows on the NPU part only; HeteroInfer §4.4 profiler constraint (2) "NPU stage-performance
+minimum sub-tensor sizes", value unstated by the paper -> a profile parameter, ADR-0009 rev F3).
+Under pure linear scaling the GPU has no floor, so the [4096,4096] M=128 row lands within one grid
+step of NPU-only (a 1:7 split, 29 us better than NPU-only + 2 syncs) rather than exactly NPU-only;
+the authoritative reproduction through the REAL Platform(sd8gen3_cim) models (GEMM floor, occupancy
+term) is tests/test_hetero_fixes.py::test_table3_decisions_through_real_platform.
 
     .venv/bin/pytest tests/test_solver.py
 """
 import sys
 from pathlib import Path
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
@@ -24,8 +26,10 @@ from simulator.runtime.solver import SolverContext, solve, candidates  # noqa: E
 from simulator.runtime.scheduler import HeteroInferScheduler  # noqa: E402
 from fake_platform import Table3FakePlatform, AnalyticFakePlatform  # noqa: E402
 
-MIN_ROWS = 1024
-ALIGN = {"npu": (32, MIN_ROWS), "gpu": (1, MIN_ROWS)}
+from simulator.specs.loader import load_spec  # noqa: E402
+
+NPU_MIN_ROWS = int(load_spec("soc_sd8gen3_cim")["units"]["npu"]["min_split_rows"])   # the adopted rule (1024)
+ALIGN = {"npu": (32, NPU_MIN_ROWS)}
 
 
 def _dag(M, K, N):
@@ -47,21 +51,22 @@ def _gpu_frac(c):
 
 
 TABLE3_CASES = [
-    # (M, K, N, n_full, expected strategy, expected GPU fraction)       Table 3 row
-    (1, 4096, 4096, 4096, "weight_centric", 0.5),                         # [4096,4096] x [4096,1]   1:1
-    (1, 4096, 28672, 28672, "weight_centric", 0.75),                      # [28672,4096] x [4096,1]  3:1
-    (1, 14336, 4096, 4096, "gpu_only", 1.0),                              # [4096,14336] x [14336,1] GPU-only
-    (128, 4096, 4096, 4096, "npu_only", 0.0),                             # [4096,4096] x [4096,128] NPU-only
-    (256, 14336, 4096, 4096, "weight_centric", 0.4),                      # [4096,14336] x [14336,256] 2:3
+    # (M, K, N, n_full, expected strategies, expected GPU fraction)      Table 3 row
+    (1, 4096, 4096, 4096, {"weight_centric"}, 0.5),                       # [4096,4096] x [4096,1]   1:1
+    (1, 4096, 28672, 28672, {"weight_centric"}, 0.75),                    # [28672,4096] x [4096,1]  3:1
+    (1, 14336, 4096, 4096, {"gpu_only"}, 1.0),                            # [4096,14336] x [14336,1] GPU-only
+    (128, 4096, 4096, 4096, {"npu_only", "weight_centric"}, 0.0),         # [4096,4096] x [4096,128] NPU-only
+                                                                          # (linear fake: within one grid step)
+    (256, 14336, 4096, 4096, {"weight_centric"}, 0.4),                    # [4096,14336] x [14336,256] 2:3
 ]
 
 
 def test_table3_decisions_reproduced():
-    for M, K, N, n_full, strategy, gfrac in TABLE3_CASES:
+    for M, K, N, n_full, strategies, gfrac in TABLE3_CASES:
         plat = Table3FakePlatform(n_full=n_full)
         best, n = solve(_ctx(plat, M), _dag(M, K, N), 1)
         assert n > 1
-        assert best.strategy == strategy, (M, K, N, best)
+        assert best.strategy in strategies, (M, K, N, best)
         assert abs(_gpu_frac(best) - gfrac) <= 1 / 8 + 1e-9, (M, K, N, best)
 
 
@@ -71,10 +76,10 @@ def test_table3_through_the_heteroinfer_scheduler():
     class Cfg:
         model = None; units = {"gpu": True, "npu": True, "cim": False, "cpu": True}
         sync_mode = "fast"; sync_us_override = None; partition_grid = 8; precision_boundary_placement = "consumer"
-    for M, K, N, n_full, strategy, gfrac in TABLE3_CASES:
+    for M, K, N, n_full, strategies, gfrac in TABLE3_CASES:
         dag = sched.assign(_dag(M, K, N), Cfg(), platform=Table3FakePlatform(n_full=n_full))
         p = dag.plans[1]
-        assert p["strategy"] == strategy and abs(sum(f for u, f in p["parts"] if u == "gpu") - gfrac) <= 1 / 8 + 1e-9
+        assert p["strategy"] in strategies and abs(sum(f for u, f in p["parts"] if u == "gpu") - gfrac) <= 1 / 8 + 1e-9
         if p["dim"] is not None:                                     # a split: sub-nodes + merge on the GPU host
             assert dag[p["merge_id"]].unit == "gpu" and dag[p["merge_id"]].wl.extra["fixed_us"] == (30.0 if M > 1 else 10.0)
             assert dag.is_acyclic()
@@ -87,6 +92,24 @@ def test_linear_scaling_alone_does_not_give_gpu_only():
     ctx.align = {"npu": (32, 32)}
     best, _ = solve(ctx, _dag(1, 14336, 4096), 1)
     assert best.strategy == "weight_centric" and _gpu_frac(best) == 0.875
+
+
+def test_split_estimate_sums_parts_on_the_same_unit():
+    # rev F7: an activation-centric plan runs its standard chunks SERIALLY on the NPU, so the
+    # estimate is sync + t(chunk1) + t(chunk2) on the NPU vs the GPU remainder — not max over parts.
+    from simulator.runtime.solver import _estimate_split, _node_us
+    from simulator.runtime import tiling
+    plat = AnalyticFakePlatform(rates={"gpu": 1.0e6, "npu": 8.0e6}, bw_GBs=1e6, knee_GBs=1e6)
+    ctx = SolverContext(platform=plat, units=("gpu", "npu"), host="gpu", sync_us=30.0, grid=8,
+                        align={"npu": (32, 32)}, rows=300, dims={"matmul": ("N",)})
+    dag = _dag(300, 2048, 2048)
+    plan = [("npu", 128 / 300), ("npu", 128 / 300), ("gpu", 44 / 300)]
+    tp = tiling.tile_parts(dag, 1, "M", plan, align=ctx.align, rows=300)
+    t_npu = [_node_us(ctx, m) for members in tp.parts[:2] for m in members]
+    t_gpu = sum(_node_us(ctx, m) for m in tp.parts[2])
+    expect = max(30.0 + sum(t_npu), t_gpu) + 30.0          # sync-in once on the NPU, + the merge sync
+    assert _estimate_split(ctx, dag, tp) == pytest.approx(expect)
+    assert sum(t_npu) > max(t_npu)                           # the old max-over-parts would under-estimate
 
 
 def test_activation_centric_candidates_and_static_npu():

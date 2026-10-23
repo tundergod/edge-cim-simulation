@@ -6,7 +6,8 @@ AnalyticFakePlatform  — simple MAC-rate costs per unit (NPU pads M to 32; opti
 Table3FakePlatform    — the HeteroInfer Table 3 anchor latencies (8 Gen 3, [LIT]) for the
                         GPU/NPU, scaled LINEARLY in N for sub-shapes; any other (K, M) is a
                         KeyError (the solver must only ask for shapes the test intends).
-Both honour `wl.extra["fixed_us"]` as an additive overhead and price `merge` as fixed_us.
+Both return `wl.extra["fixed_us"]` as the separate `fixed_us` field of price() (the ADR-0009
+rev F1 contract: a serial pre-op delay, latency_us = compute only) and price `merge` at 0 compute.
 """
 from __future__ import annotations
 
@@ -52,24 +53,25 @@ class AnalyticFakePlatform:
         w, u, cat = node.wl, node.unit, node.category
         fixed = float(w.extra.get("fixed_us", 0.0))
         if cat in ("merge", "convert") or u == "mem":
-            lat = fixed
+            lat = 0.0
         elif cat == "matmul":
             M = w.M
             if u == "npu":
                 if self.static_npu and M not in STD:
                     lat = float("inf")              # no pre-built NPU graph for this length
                 else:
-                    lat = fixed + _pad32(M) * w.K * w.N / self.rates[u] + self.npu_fixed_us
+                    lat = _pad32(M) * w.K * w.N / self.rates[u] + self.npu_fixed_us
             else:
-                lat = fixed + M * w.K * w.N / self.rates[u]
+                lat = M * w.K * w.N / self.rates[u]
         elif cat == "attention" and "hd" in w.extra:
             if node.pricing_group is not None and node.pricing_group != node.id:
-                lat = fixed                          # grouped member: priced on the rep
+                lat = 0.0                            # grouped member: priced on the rep
             else:
-                lat = fixed + 2 * w.heads * tiling._attn_M(node) * w.extra["hd"] * w.kv / self.rates[u]
+                lat = 2 * w.heads * tiling._attn_M(node) * w.extra["hd"] * w.kv / self.rates[u]
         else:
-            lat = fixed + self.launch_us + w.nbytes / self.byte_rates.get(u, 1e4)
-        return {"latency_us": lat, "compute_provenance": f"fake analytic ({u}/{cat})", "source_model": "fake"}
+            lat = self.launch_us + w.nbytes / self.byte_rates.get(u, 1e4)
+        return {"latency_us": lat, "fixed_us": fixed, "compute_provenance": f"fake analytic ({u}/{cat})",
+                "source_model": "fake"}
 
 
 # HeteroInfer Table 3 (8 Gen 3; us) keyed (unit, K, M) -> (N_anchor, latency). [LIT]
@@ -107,8 +109,8 @@ class Table3FakePlatform:
         w, u, cat = node.wl, node.unit, node.category
         fixed = float(w.extra.get("fixed_us", 0.0))
         if cat != "matmul":
-            return {"latency_us": fixed, "compute_provenance": "fake", "source_model": "fake"}
+            return {"latency_us": 0.0, "fixed_us": fixed, "compute_provenance": "fake", "source_model": "fake"}
         key = (u, w.K, w.M) if self.n_full == 4096 else (u, w.K, w.M, self.n_full)
         n_anchor, lat = TABLE3[key]
-        return {"latency_us": fixed + lat * w.N / n_anchor,
+        return {"latency_us": lat * w.N / n_anchor, "fixed_us": fixed,
                 "compute_provenance": "HeteroInfer Tab.3 anchor, linear in N [LIT]", "source_model": "fake_tab3"}

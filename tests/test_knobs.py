@@ -82,18 +82,19 @@ def test_cim_n_cores_override_changes_tile_width_and_latency():
     p1 = Platform(MODEL, soc_profile="sd8gen3_cim", cim_n_cores=1)
     assert (p4.cim_n_cores, p8.cim_n_cores, p1.cim_n_cores) == (4, 8, 1)
     assert p8.cim.width == 8 * p4.cim.core_width and p1.cim.width == p4.cim.core_width
-    # decode (M=1): the core count sets the pass width W = n_cores*512 (single-tile fit when both dims
-    # <= W, else the multi-tile cliff model, which does NOT depend on n_cores) -> n=1 (W=512) prices a
-    # K=1024 GEMV through the cliff model, n=4 / n=8 through the single-tile fit (identical: one pass).
+    # PROFILE path = physical scaling (ADR-0008 rev F12): decode (M=1) single-tile throughput is
+    # s x G_eff(N/s, K) -> more cores are faster (sub-linearly: per-core fill), fewer cores slower
     n = _mm(1, 1024, 2048, "cim")
     t4, t8, t1 = (p.compute_us(n) for p in (p4, p8, p1))
-    assert t8 == pytest.approx(t4) and t1 != pytest.approx(t4)
-    # prefill (M>1): tile area K*N/W^2 x (a + b*M) -> the per-GEMM latency scales as 1/n_cores^2
+    assert t8 < t4 < t1 and t8 > t4 / 2
+    # prefill (M>1): tile throughput proportional to cores -> the per-GEMM latency scales as 1/n_cores
     m = _mm(128, 2048, 2048, "cim")
     u4, u8, u1 = (p.compute_us(m) for p in (p4, p8, p1))
-    assert u8 == pytest.approx(u4 / 4) and u1 == pytest.approx(u4 * 16)
-    # legacy (no profile) path: default untouched, override honoured
+    assert u8 == pytest.approx(u4 / 2) and u1 == pytest.approx(u4 * 4)
+    # legacy (no profile) path: default untouched, override honoured, legacy numerics (W only)
     assert Platform(MODEL).cim_n_cores == 4 and Platform(MODEL, cim_n_cores=2).cim.width == 2 * p4.cim.core_width
+    assert Platform(MODEL).cim.scale_mode == "legacy" and Platform(MODEL, cim_n_cores=8).compute_us(m) == pytest.approx(
+        Platform(MODEL).compute_us(m) / 4)
 
 
 def test_npu_scale_multiplies_compute_throughput_only():

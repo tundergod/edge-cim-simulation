@@ -2,7 +2,14 @@
 channel (Phase 2.1; heterogeneous unit pricing + SoC profiles in ADR-0008). `price(node)`
 prices an op's COMPUTE on its assigned unit; the op's MEMORY traffic (node.bytes_streamed)
 is metered separately by the M3 engine through the SharedBandwidth. The engine takes
-max(compute, memory) per node.
+fixed + max(compute, memory) per node, where `fixed` (price()['fixed_us']) is a scheduler-
+attached serial pre-op delay (sync / launch; ADR-0009 revision F1).
+
+KERNEL-TIME MODELS, ONE MEMORY MODEL (ADR-0008 revision F2): every unit model prices the time
+its kernel needs once its operands are available (launch/dispatch floors, array fill, dequant,
+MAC throughput). The DRAM bytes of EVERY unit are metered by the shared pool alone (per-unit
+single-stream cap `units.<u>.stream_eff` x eff_BW, aggregate knee), never inside a unit model,
+so a split op's parts gain the multi-stream headroom exactly as HeteroInfer §3.3 describes.
 
 Calibrated core is FIXED here, not in the user config (D12): the per-unit timing
 equations (CimTileModel/CpuModel/MaliGpuModel params) and the mem_lpddr4x 24.2
@@ -35,6 +42,7 @@ from simulator.models.m4_gpu_roofline import GpuRooflineModel
 from simulator.models.m4_npu import NpuModel, NpuStaircaseModel
 from simulator.models.m7_energy import EnergyModel
 from simulator.runtime.resources import SharedBandwidth
+from simulator.runtime.tiling import SYNC_US
 
 # op category -> the calibrated CPU support-op name (m4_cpu overhead_op_us keys)
 _CPU_OP = {"norm": "rmsnorm", "rope": "rope_apply", "ffn": "swiglu",
@@ -143,8 +151,15 @@ class Platform:
             eff = float(mem["single_stream_eff_BW_GBs"])
             if knee_GBs is None:
                 knee_GBs = float(mem["knee_GBs"])
+        unit_caps = None
+        if self.profile is not None:
+            # F10/F15: per-unit single-stream caps (profile `stream_eff`, default 1.0) incl. 'mem'
+            # (a memory-only op's stream is attributed to its consuming unit by the engine)
+            units = self.profile["units"]
+            unit_caps = {u: eff * float(units[u].get("stream_eff", 1.0)) for u in units}
+            unit_caps["mem"] = eff
         self.bw = SharedBandwidth(eff, knee_GBs=knee_GBs,
-                                  interconnect_efficiency=interconnect_efficiency)
+                                  interconnect_efficiency=interconnect_efficiency, unit_caps=unit_caps)
         self._build_units(cim_params, cim_n_cores, npu_scale)
         self.energy = EnergyModel()
 
@@ -156,26 +171,35 @@ class Platform:
         legacy = self.profile is None
         src = load_soc_profile(_LEGACY_UNITS_PROFILE) if legacy else self.profile
         units = src["units"]
-        self.sync_us = dict(src["sync_us"])
+        self.sync_us = {m: dict(v) for m, v in SYNC_US.items()}   # F8: tiling.SYNC_US is the ONE sync table
         self.launch_us = {u: float(units[u]["elementwise_launch_us"]) for u in ("gpu", "npu")}
         self.default_dtype = {u: units[u].get("default_dtype") for u in units}
-        # CIM: tile params from the topology; n_cores = the profile's scalable axis (None = params default)
+        # F3: minimum sub-tensor rows per unit on a split axis (HeteroInfer §4.4 constraint (2); the
+        # paper states no value -> a profile parameter). F13: streamed weight bytes per parameter per
+        # unit (P1 gpu = W4A16 0.5 B; legacy = 1.0 everywhere = op_profile's INT8 bytes, byte-identical).
+        self.min_split_rows = {u: int(units[u].get("min_split_rows", 1)) for u in units}
+        self.weight_bytes_per_param = ({u: 1.0 for u in units} if legacy else
+                                       {u: float(units[u].get("weight_bytes_per_param", 1.0)) for u in units})
+        # CIM: tile params from the topology; n_cores = the profile's scalable axis (None = params default);
+        # F12: a profile scales the tile PHYSICALLY with n_cores (legacy numerics untouched)
         n_cores = (None if legacy else int(units["cim"]["n_cores"])) if cim_n_cores is None else int(cim_n_cores)
-        self.cim = CimTileModel(params=cim_params, n_cores=n_cores)
+        self.cim = CimTileModel(params=cim_params, n_cores=n_cores, scale_mode="legacy" if legacy else "physical")
         self.cim_n_cores = int(self.cim.n_cores)
         attn_model = "memory_bound_zero" if legacy else units["cim"]["attention_model"]
+        self.cim_heads_mode = "serial" if legacy else units["cim"].get("attention_heads_mode", "serial")
         if attn_model == "alpha_floor_fit":
-            self.cim_attn = CimAttentionModel(self.cim)
+            self.cim_attn = CimAttentionModel(self.cim, heads_mode=self.cim_heads_mode)
         elif attn_model == "memory_bound_zero":
             self.cim_attn = None
         else:
             raise ValueError(f"unknown cim.attention_model {attn_model!r} (alpha_floor_fit | memory_bound_zero)")
-        # CPU: the calibrated support-op roofline (fixed spec on the legacy path) + the GEMM roofline
+        # CPU: the calibrated support-op roofline (fixed spec on the legacy path) + the GEMM kernel model
         cpu_spec = load_spec("cpu_rk3588" if legacy else units["cpu"]["spec"])
         self.cpu = CpuModel(cpu_spec)
         g = units["cpu"]["gemm"]
-        self.cpu_gemm = CpuGemmModel(cpu_spec, cores=g["cores"], cluster=g["cluster"],
-                                     efficiency=g["efficiency"], stream_BW_GBs=self.bw.eff_BW)
+        self.cpu_gemm = CpuGemmModel(cpu_spec, cores=g["cores"], cluster=g["cluster"], efficiency=g["efficiency"],
+                                     gemv_efficiency=g.get("gemv_efficiency", g["efficiency"]),
+                                     m_half=g.get("m_half", 0.0))
         # GPU: 'mali_fit' = Phase-1 micro-benchmark attention (MaliGpuModel, unchanged) + the Mali
         # roofline_fit for GEMM (shape trend only); 'anchor_roofline' = the HeteroInfer-anchored model
         gm = units["gpu"]["model"]
@@ -221,32 +245,37 @@ class Platform:
 
     def price(self, node):
         """Price one op's COMPUTE on its assigned unit (#55 per-op provenance). Returns
-        {latency_us, compute_provenance, source_model} — which Phase-1 unit model produced
-        the latency and a human-readable provenance string. latency_us=0.0 = no compute model
-        (pure-memory op; cost is its bytes_streamed via the engine). NB the final compute-vs-
-        memory BOUND is the M3 engine's max(compute, dram_memory) decision, not this method's.
+        {latency_us, fixed_us, compute_provenance, source_model} — which Phase-1 unit model
+        produced the latency and a human-readable provenance string. latency_us=0.0 = no compute
+        model (pure-memory op; cost is its bytes_streamed via the engine). NB the final compute-vs-
+        memory BOUND is the M3 engine's fixed + max(compute, dram_memory) decision, not this method's.
 
         Decided ONLY from node.unit / node.category / node.wl / node.pricing_group (never ids).
-        `wl.extra['fixed_us']` (default 0) is the whole cost of a 'merge' node and an ADDITIVE
-        term for any other category (scheduler-attached launch/sync overhead). Unsupported
-        (unit, category) combos raise NotImplementedError (supports() is the oracle)."""
+        `fixed_us` = `wl.extra['fixed_us']` (default 0): the scheduler-attached sync / launch
+        overhead, returned as its OWN field (ADR-0009 revision F1) — a serial pre-op delay the
+        engine and the solver charge OUTSIDE the compute/memory overlap. It is the whole cost of a
+        'merge' node (latency_us 0). Unsupported (unit, category) combos raise NotImplementedError
+        (supports() is the oracle)."""
         u, cat, wl = node.unit, node.category, node.wl
         if u not in _SUPPORTED:
             raise ValueError(f"M3 platform: unknown/unpriced unit {u!r} (valid: {sorted(_SUPPORTED)})")
         fixed = float(wl.extra.get("fixed_us", 0.0)) if wl.extra else 0.0
         if cat == "merge":
-            return {"latency_us": fixed, "source_model": "merge",
-                    "compute_provenance": "fixed-cost merge/sync (set by scheduler)"}
+            return {"latency_us": 0.0, "fixed_us": fixed, "source_model": "merge",
+                    "compute_provenance": "fixed-cost merge/sync (set by scheduler; serial pre-op delay)"}
         if cat not in _SUPPORTED[u]:
             raise NotImplementedError(
                 f"M3 platform: no pricing for category {cat!r} on unit {u!r} "
                 f"(supported on {u}: {sorted(_SUPPORTED[u])}); Platform.supports() is the oracle.")
-        r = self._price_core(u, cat, node)
+        r = dict(self._price_core(u, cat, node))
+        r["fixed_us"] = fixed
         if fixed:
-            r = dict(r)
-            r["latency_us"] = float(r["latency_us"]) + fixed
-            r["compute_provenance"] += f"; + fixed_us={fixed:g} (scheduler-attached launch/sync overhead)"
+            r["compute_provenance"] += f"; fixed_us={fixed:g} (scheduler-attached sync/launch, serial pre-op delay)"
         return r
+
+    def fixed_us(self, node):
+        """The serial pre-op delay (us) of one node (= price()['fixed_us'])."""
+        return self.price(node)["fixed_us"]
 
     def _price_core(self, u, cat, node):
         wl = node.wl
@@ -288,8 +317,9 @@ class Platform:
                 return {"latency_us": 0.0, "source_model": "m1_cim_attention",
                         "compute_provenance": "CIM attention grouped (composite priced on the QK^T rep)"}
             lat, extrap = self.cim_attn.composite_us(wl.kv or 1, heads=wl.heads, hd=wl.extra["hd"], M=wl.M)
-            prov = ("CIM attention QK^T+S·V composite = Alpha attn_floor fit a+b*kv per bmm x heads "
-                    "(measured basis: single head, hd=128, kv<=1025, M=1; heads serial = assumption)")
+            prov = ("CIM attention QK^T+S·V composite = Alpha attn_floor fit a+b*kv per bmm, heads "
+                    f"{self.cim_heads_mode} (measured basis: single head, hd=128, kv<=1025, M=1; "
+                    "attention_heads_mode = profile sensitivity axis, 'serial' = measured-basis default)")
             if extrap:
                 prov += "; EXTRAPOLATED (hd/kv/M outside the measured basis)"
             return {"latency_us": float(lat), "source_model": "m1_cim_attention", "compute_provenance": prov}
@@ -319,31 +349,41 @@ class Platform:
         r = self.cpu.predict(wl2)
         return {"latency_us": r["latency_us"], "compute_provenance": r["provenance"], "source_model": "m4_cpu"}
 
-    def _elementwise(self, u, cat):
-        lat = self.launch_us[u]
+    def _elementwise(self, u, cat, node):
+        """gpu/npu elementwise COMPUTE = the unit's launch floor (profile `elementwise_launch_us`),
+        charged ONCE PER FUSED KERNEL CHAIN (ADR-0009 revision F4): a scheduler's `_finish` tags
+        each elementwise node `wl.extra['fused_head']` (True = chain head pays the floor, False =
+        follower of a single-dependency chain on the same unit, 0 compute). Untagged = head (every
+        node pays, the pre-F4 rule). Data movement = bytes_streamed metered by the M3 pool."""
+        head = bool(node.wl.extra.get("fused_head", True)) if node.wl.extra else True
+        lat = self.launch_us[u] if head else 0.0
         return {"latency_us": float(lat), "source_model": "elementwise_floor",
-                "compute_provenance": (f"simulated: {u} elementwise '{cat}' = per-kernel launch floor "
-                                       f"{lat:g} us (profile assumption, no {u} elementwise silicon); "
-                                       f"data movement = bytes_streamed metered by the M3 pool")}
+                "compute_provenance": (f"simulated: {u} elementwise '{cat}' = per-fused-kernel launch floor "
+                                       f"{self.launch_us[u]:g} us ({'chain head' if head else 'fused follower, 0'}; "
+                                       f"profile assumption, no {u} elementwise silicon); data movement = "
+                                       f"bytes_streamed metered by the M3 pool")}
 
     def _price_gpu(self, cat, node):
         wl = node.wl
         if cat == "attention":
             if "hd" not in wl.extra:   # the bmm branch of wl_from_row sets 'hd'; scale/mask don't
-                if self.gpu_model == "mali_fit":
-                    raise NotImplementedError(
-                        f"GPU pricing for non-bmm attention subtype (op={wl.extra.get('aten', '?')}): "
-                        f"attn_bmm_us models the QK^T/S·V bmm ONLY (scale/mask go to CPU support).")
-                return self._elementwise("gpu", "attention-scale/mask")
+                # F14: scale/mask on EITHER GPU model = an elementwise launch floor (the Mali attn fit
+                # models the bmm pair only; CimHetero routes scale/mask to the CPU, so its L4-era
+                # numerics never reach this branch)
+                return self._elementwise("gpu", "attention-scale/mask", node)
             # R2 group-aware composite: attn_bmm_us is the COMBINED QK^T+S·V cost, so price it
             # ONCE per pricing_group — on the rep (pricing_group == id); grouped members return 0.
             if not self._is_rep(node, "gpu"):
                 return {"latency_us": 0.0, "source_model": "m4_gpu",
                         "compute_provenance": "GPU attention grouped (composite priced on the QK^T rep)"}
             if self.gpu_model == "mali_fit":
-                lat = self.gpu.attn_bmm_us(wl.kv or 1, heads=wl.heads, layers=1)
+                # F5: the per-row Mali fit x query rows M on the profile path; the legacy (no profile)
+                # path keeps M = 1 (the Phase-2.5 cim_hetero numerics, byte-identical)
+                M = max(1, int(wl.M)) if self.profile is not None else 1
+                lat = self.gpu.attn_bmm_us(wl.kv or 1, heads=wl.heads, layers=1, M=M)
                 return {"latency_us": float(lat), "source_model": "m4_gpu",
-                        "compute_provenance": "Mali GPU attn_bmm composite QK^T+S·V (group rep, priced once)"}
+                        "compute_provenance": f"Mali GPU attn_bmm composite QK^T+S·V x M={M} query rows "
+                                              "(group rep, priced once)"}
             r = self.gpu.predict(wl)
             return {"latency_us": r["latency_us"], "source_model": "m4_gpu_anchor",
                     "compute_provenance": r["provenance"] + " (group rep, priced once)"}
@@ -354,13 +394,13 @@ class Platform:
             return {"latency_us": r["latency_us"], "source_model": "m4_gpu_roofline",
                     "compute_provenance": "Mali GEMM KNOWN-UNOPTIMISED kernel (shape trend only, NOT an absolute): "
                                           + r["provenance"]}
-        return self._elementwise("gpu", cat)   # norm/rope/ffn/softmax/residual
+        return self._elementwise("gpu", cat, node)   # norm/rope/ffn/softmax/residual
 
     def _price_npu(self, cat, node):
         wl = node.wl
         if cat == "attention":
             if "hd" not in wl.extra:
-                return self._elementwise("npu", "attention-scale/mask")
+                return self._elementwise("npu", "attention-scale/mask", node)
             if not self._is_rep(node, "npu"):
                 return {"latency_us": 0.0, "source_model": "m4_npu",
                         "compute_provenance": "NPU attention grouped (composite priced on the QK^T rep)"}
@@ -370,11 +410,12 @@ class Platform:
         if cat == "matmul":
             r = self.npu.predict(wl)
             return {"latency_us": r["latency_us"], "source_model": "m4_npu", "compute_provenance": r["provenance"]}
-        return self._elementwise("npu", cat)
+        return self._elementwise("npu", cat, node)
 
     def compute_us(self, node):
-        """Compute latency (us) of one op on its assigned unit. 0.0 = no compute model
-        (pure-memory op; cost is its bytes_streamed via the engine). Delegates to price()."""
+        """COMPUTE latency (us) of one op on its assigned unit, EXCLUDING the serial `fixed_us`
+        delay (see fixed_us()). 0.0 = no compute model (pure-memory op; cost is its
+        bytes_streamed via the engine). Delegates to price()."""
         return self.price(node)["latency_us"]
 
     def energy_J(self, node, compute_us):

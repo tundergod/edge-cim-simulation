@@ -1,12 +1,13 @@
 """ADR-0009 — heterogeneous schedulers (gpu_only / npu_only / heteroinfer / tiled_hetero) +
 the config/runner wiring. Unit-level tests use the FakePlatform (tests/fake_platform.py);
-the end-to-end runner tests use a TEMPORARY SHIM over the real Platform (below) because
-main's Platform still raises for npu / gpu-matmul pricing ("npu pricing is Wave 2.2") —
-worker A's pricing replaces the shim on merge. The shim lives ONLY in this test file.
+the end-to-end runner tests (rev F9) go through the REAL Platform(soc_profile="sd8gen3_cim")
+on llama-3.2-1b (decode kv = 512 = the runner's middle kv point, prefill 256) and check the
+physical invariants: utilisation <= 1 per unit, achieved bandwidth <= the knee, single-unit
+baselines at the single-stream wall in decode, every plan strategy in the scheduler's allowed
+set, and the solver's own estimate within 20% of the engine.
 
     .venv/bin/pytest tests/test_hetero_schedulers.py
 """
-import contextlib
 import sys
 from pathlib import Path
 
@@ -18,8 +19,8 @@ from simulator.runtime.scheduler import (  # noqa: E402
     SCHEDULERS, Scheduler, SingleUnitScheduler, HeteroInferScheduler, TiledHeteroScheduler, plans_summary,
 )
 from simulator.runtime.config import SimConfig, _KNOWN_SCHEDULERS  # noqa: E402
-from simulator.runtime.platform import Platform  # noqa: E402
 from simulator.runtime import runner as runner_mod  # noqa: E402
+from simulator.runtime import solver as solver_mod  # noqa: E402
 from simulator.runtime import tiling  # noqa: E402
 from fake_platform import AnalyticFakePlatform  # noqa: E402
 
@@ -198,95 +199,99 @@ def test_config_sync_and_grid_fields():
 
 
 # --------------------------------------------------------------------------------------------
-# TEMPORARY SHIM (runner e2e only): analytic npu / gpu-matmul / gpu-support / cpu-matmul pricing
-# + supports(). Replaced by worker A's per-unit pricing + SoC profiles on merge. NOT silicon.
+# End-to-end through the real Platform(sd8gen3_cim) (rev F9; the pre-ADR-0008 shim is gone).
 # --------------------------------------------------------------------------------------------
-class _ShimPlatform(Platform):
-    _MAC_US = {"gpu": 0.5e6, "npu": 2.0e6, "cpu": 0.05e6}       # MAC/us: ~1 TFLOPS GPU plateau, NPU 4x, CPU NEON
-
-    def supports(self, unit, cat):
-        if cat in ("merge", "convert"):
-            return True
-        if unit == "mem":
-            return cat in ("embedding", "kv_cache")
-        if unit == "cim":
-            return cat in ("matmul", "attention")
-        return cat in ("matmul", "attention", "sampling") + _SUPPORT
-
-    def price(self, node):
-        w, u, cat = node.wl, node.unit, node.category
-        fixed = float(w.extra.get("fixed_us", 0.0))
-        def out(lat, prov):
-            return {"latency_us": fixed + lat, "compute_provenance": f"TEMP SHIM {prov}", "source_model": "shim"}
-        if cat == "merge":
-            return out(0.0, "merge = fixed_us")
-        if u == "cim" or (u == "cpu" and cat in _SUPPORT) or (u == "gpu" and cat == "attention" and "hd" in w.extra):
-            p = dict(super().price(node))
-            p["latency_us"] += fixed
-            return p
-        if cat == "matmul":
-            M = -(-w.M // 32) * 32 if u == "npu" else w.M
-            return out(M * w.K * w.N / self._MAC_US[u] + (50.0 if u == "npu" else 0.0), f"{u} matmul roofline")
-        if cat == "attention" and "hd" in w.extra:
-            if node.pricing_group != node.id:
-                return out(0.0, "grouped attention member")
-            return out(2 * w.heads * tiling._attn_M(node) * w.extra["hd"] * w.kv / self._MAC_US.get(u, 0.5e6), f"{u} bmm")
-        if cat == "convert":
-            return out(0.0, "convert (memory-bound)")
-        return out(5.0 + w.nbytes / 2e4, f"{u} elementwise (bytes/20 GB/s + launch)")
+PROFILE = "sd8gen3_cim"
+ALLOWED = {   # every plan strategy a scheduler may record (decode + prefill)
+    "gpu_only": {"gpu_fixed", "mem_fixed", "cpu_fixed"},
+    "npu_only": {"npu_fixed", "mem_fixed", "cpu_fixed"},
+    "cim_only": {"cim_fixed", "cpu_fixed", "mem_fixed"},
+    "heteroinfer": {"gpu_fixed", "mem_fixed", "cpu_fixed", "gpu_only", "npu_only", "weight_centric",
+                    "activation_centric", "hybrid"},
+    "tiled_hetero": {"mem_fixed", "cpu_fixed", "gpu_only", "npu_only", "cim_only", "weight_centric",
+                     "activation_centric", "hybrid", "token_split", "k_split", "head_split", "kv_split", "row_split"},
+}
 
 
-@contextlib.contextmanager
-def _shimmed():
-    orig = runner_mod.Platform
-    runner_mod.Platform = _ShimPlatform
-    try:
-        yield
-    finally:
-        runner_mod.Platform = orig
-
-
-def _run(policy, **sched):
-    # knee_GBs=48: multi-unit bandwidth headroom (HeteroInfer §3.3: one unit ~40-45 GB/s, GPU+NPU
-    # ~60 GB/s). With the default knee == eff_BW a split decode matvec gains nothing, so the
-    # solver (correctly) keeps every decode matmul on the GPU and no sync is ever charged.
-    cfg = SimConfig.from_dict({"workload": {"model": MODEL, "context": 1024, "prefill_len": 256},
-                               "platform": {"units": {"cim": True, "gpu": True, "npu": True, "cpu": True}},
-                               "tunables": {"knee_GBs": 48.0},
+def _run(policy, model=MODEL, **sched):
+    """context 1024 / prefill 256 / decode 512 -> kv points {256, 512, 768}: engine stats at kv=512."""
+    cfg = SimConfig.from_dict({"workload": {"model": model, "context": 1024, "prefill_len": 256, "decode_len": 512},
+                               "platform": {"soc_profile": PROFILE,
+                                            "units": {"cim": True, "gpu": True, "npu": True, "cpu": True}},
                                "scheduler": {"policy": policy, **sched}})
-    with _shimmed():
-        return runner_mod.run(cfg)
+    return cfg, runner_mod.run(cfg)
 
 
-def test_runner_end_to_end_all_hetero_schedulers_with_shim():
-    for policy in ("gpu_only", "npu_only", "heteroinfer", "tiled_hetero"):
-        r = _run(policy)
+def _estimate_token_us(dag, plat, sync_us):
+    """The solver's own estimate of the per-token chain: sum of the recorded T_est over the solved
+    ops + the engine rule (fixed + max(compute, bytes/BW)) for every node no plan estimated
+    (pinned support ops, mem nodes, converts)."""
+    ctx = solver_mod.SolverContext(platform=plat, units=("gpu",), host="gpu", sync_us=sync_us)
+    solved = {k: v for k, v in dag.plans.items() if "T_est_us" in v}
+    covered = set()
+    for v in solved.values():
+        covered.update(v.get("block", [])); covered.update(v.get("sub_ids", []))
+        if v.get("merge_id") is not None:
+            covered.add(v["merge_id"])
+    est = sum(v["T_est_us"] for v in solved.values())
+    for n in dag.nodes:
+        if n.id not in covered and n.category != "merge":
+            est += solver_mod._node_us(ctx, tiling._copy(n, unit=n.unit, pricing_group=n.pricing_group))
+    return est
+
+
+def test_runner_end_to_end_all_hetero_schedulers_real_platform():
+    from simulator.runtime.platform import Platform
+    from simulator.runtime.events import run_dag
+    results = {}
+    for policy in ("gpu_only", "npu_only", "cim_only", "heteroinfer", "tiled_hetero"):
+        cfg, r = _run(policy)
+        results[policy] = r
         assert r["tok_s"] > 0 and r["prefill_tok_s"] > 0 and r["ttft_s_reported_not_gated"] > 0
-        assert r["calibrated_anchor"] is False and any("simulated" in p for p in r["provenance"])
-        assert set(r["plans_summary"]) == {"decode", "prefill"} and r["plans_summary"]["decode"]
-        assert 0 <= r["achieved_decode_bandwidth_GBs"] <= 48.0 + 1e-6
-        assert 0 < r["decode_critical_path_us"] and 0 < r["prefill_critical_path_us"]
+        assert r["calibrated_anchor"] is False and any("borrowed" in p for p in r["provenance"])
+        assert r["kv_eval_points"] == [256, 512, 768] and r["soc_profile"] == PROFILE
+        for phase in ("decode", "prefill"):
+            assert set(r["plans_summary"][phase]) <= ALLOWED[policy], (policy, phase, r["plans_summary"][phase])
+        for key in ("unit_utilisation", "prefill_unit_utilisation"):
+            for u, util in r[key].items():
+                assert 0.0 <= util <= 1.0 + 1e-9, (policy, key, u, util)
+        assert 0 < r["achieved_decode_bandwidth_GBs"] <= 60.0 + 1e-6            # the knee (per-unit caps + water-fill)
+        assert 0 < r["achieved_prefill_bandwidth_GBs"] <= 60.0 + 1e-6
+        assert 0 < r["decode_critical_path_us"] <= r["decode_token_us"] + 1e-6
         assert r["sync_mode"] == "fast"
-        for u, util in r["unit_utilisation"].items():
-            assert 0.0 <= util <= 1.0 + 1e-9, (policy, u, util)
         if policy in ("gpu_only", "npu_only"):
             assert r["sync_count_per_decode_token"] == 0 and r["merge_count_per_decode_token"] == 0
+            # a single unit streams at the single-stream wall (its own cap; mem streams attributed to it, F15)
+            assert abs(r["achieved_decode_bandwidth_GBs"] - 43.0) <= 0.43, (policy, r["achieved_decode_bandwidth_GBs"])
+        elif policy == "cim_only":
+            assert r["sync_count_per_decode_token"] > 0 and r["merge_count_per_decode_token"] == 0
+            assert abs(r["achieved_decode_bandwidth_GBs"] - 43.0) <= 0.43
         else:
             assert r["sync_count_per_decode_token"] > 0 and r["sync_us_per_decode_token"] > 0
-    # existing metric keys unchanged (AllCim path untouched; shim not involved in CIM pricing)
+            assert r["merge_count_per_decode_token"] > 0
+        # solver estimate vs engine on the decode DAG at kv = 512 (the same DAG the runner timed)
+        plat = Platform(MODEL, soc_profile=PROFILE)
+        dag = SCHEDULERS[policy].assign(build_token_dag(MODEL, "decode", 512), cfg, platform=plat)
+        t_engine = run_dag(dag, plat, plat.bw)
+        est = _estimate_token_us(dag, plat, tiling.resolve_sync_us("fast", "decode"))
+        assert abs(est / t_engine - 1) <= 0.20, (policy, est, t_engine)
+    # heteroinfer must beat both single-engine baselines in decode (the paper's premise), tiled beats heteroinfer
+    assert results["heteroinfer"]["tok_s"] > max(results["gpu_only"]["tok_s"], results["npu_only"]["tok_s"])
+    assert results["tiled_hetero"]["tok_s"] >= results["heteroinfer"]["tok_s"]
+    # legacy AllCim path: metric keys unchanged, no sync, labelled as the legacy serial baseline (rev F11)
     r_all = runner_mod.run(SimConfig.from_dict({"workload": {"model": MODEL, "context": 1024}}))
     assert r_all["sync_count_per_decode_token"] == 0 and r_all["plans_summary"] == {"decode": {}, "prefill": {}}
-    assert r_all["calibrated_anchor"] is True
+    assert r_all["calibrated_anchor"] is True and r_all["sync_mode"] == "n/a-legacy"
 
 
 def test_runner_rejects_missing_required_units():
     cfg = SimConfig.from_dict({"workload": {"model": MODEL}, "scheduler": {"policy": "heteroinfer"},
-                               "platform": {"units": {"cim": True, "gpu": True, "npu": False, "cpu": True}}})
-    with _shimmed():
-        try:
-            runner_mod.run(cfg)
-        except ValueError:
-            return
+                               "platform": {"soc_profile": PROFILE,
+                                            "units": {"cim": True, "gpu": True, "npu": False, "cpu": True}}})
+    try:
+        runner_mod.run(cfg)
+    except ValueError:
+        return
     raise AssertionError("heteroinfer with npu disabled not rejected")
 
 

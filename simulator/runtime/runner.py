@@ -165,7 +165,9 @@ def run(cfg):
         "achieved_prefill_bandwidth_GBs": round(pre_stats["achieved_GBs"], 3),
         "decode_critical_path_us": round(dec_stats["critical_path_us"], 3),
         "prefill_critical_path_us": round(pre_stats["critical_path_us"], 3),
-        "sync_mode": cfg.sync_mode,
+        # all_cim / cim_hetero are the legacy placements: no sync is ever charged on their boundaries
+        # (all_cim is also serial) -> never compare them as a fair baseline to the ADR-0009 family
+        "sync_mode": cfg.sync_mode if sched.pipeline and cfg.scheduler != "cim_hetero" else "n/a-legacy",
         "plans_summary": {"decode": plans_summary(dec), "prefill": plans_summary(pre)},
         # scalable / flexible axes actually used (knobs may be resolved from the profile or chosen by the
         # scheduler, so the config value alone is not enough to label a run)

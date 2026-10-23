@@ -25,6 +25,16 @@ calibrated models, no data exactly at the seam (cf. the decode<->prefill seam) �
 
 The 911 us per-call host<->device DMA floor is M2's, not M1's. The compute ceiling
 (~52 TOPS/core) is NOT modeled: decode never approaches it (issue #16).
+
+n_cores SCALING (ADR-0008 revision F12). `scale_mode="legacy"` (default, the L4 path) keeps the
+Phase-1.5 numerics exactly: n_cores only widens the pass W = n_cores*512 (prefill area K*N/W^2
+-> 1/n^2, the multi-tile cliff independent of n). `scale_mode="physical"` (SoC profiles) scales
+the calibrated 4-core fit by s = n_cores / n_cal with explicit physics: compute throughput
+proportional to cores (single-tile: s x G_eff(N/s, K) — the output columns are spread over the
+cores, each at the per-core fill law; prefill tile throughput x s -> latency 1/n; resident slope
+b/s), SRAM residency proportional to cores (multi-tile knee x s), and the DRAM-spill floor kept
+as the array's measured ingest rate (n-independent kernel time; the shared pool meters the DRAM
+bytes themselves, F2). At s = 1 physical == legacy by construction. No silicon at s != 1.
 """
 import json
 import math
@@ -34,10 +44,17 @@ _PARAMS = Path(__file__).parent / "params" / "m1_cim.json"
 CORE_WIDTH = 512  # per-core D-IMC crossbar output width (ISSCC 2024)
 
 
+_SCALE_MODES = ("legacy", "physical")
+
+
 class CimTileModel:
-    def __init__(self, params=None, n_cores=None):
+    def __init__(self, params=None, n_cores=None, scale_mode="legacy"):
         p = params if params is not None else json.loads(_PARAMS.read_text())
         self.n_cores = n_cores if n_cores is not None else p.get("n_cores", 4)
+        self.n_cal = p.get("n_cores", 4)             # the core count the fit is calibrated at (Metis 4)
+        if scale_mode not in _SCALE_MODES:
+            raise ValueError(f"CimTileModel scale_mode must be one of {_SCALE_MODES}, got {scale_mode!r}")
+        self.scale_mode = scale_mode
         self.core_width = p.get("core_width", CORE_WIDTH)
         # 2D effective-throughput closed form: G = Gmax * N/(N+Na) * K/(K+Kb)  (GOP/s)
         self.Gmax = p["G_eff_Gmax_gops"]
@@ -64,6 +81,16 @@ class CimTileModel:
     @property
     def width(self):
         return self.n_cores * self.core_width   # effective combined output width (2048 at n=4)
+
+    @property
+    def core_scale(self):
+        """s = n_cores / calibrated cores (1.0 in legacy mode, where n_cores only widens the pass)."""
+        return (self.n_cores / self.n_cal) if self.scale_mode == "physical" else 1.0
+
+    @property
+    def mt_knee(self):
+        """Resident-weight capacity (K*N elements) at this core count: the calibrated knee x s."""
+        return None if self.mt_knee_kn is None else self.mt_knee_kn * self.core_scale
 
     def g_eff(self, N, K):
         """Effective INT8 throughput (GOP/s) vs output width N and input depth K (2D fill)."""
@@ -99,6 +126,10 @@ class CimTileModel:
         if self.prefill_a_us is None:
             raise ValueError("prefill (M>1) latency needs the M-amortization fit; "
                              "run tools/analysis/fit_cim_prefill.py")
+        if self.scale_mode == "physical":
+            # F12: tile throughput proportional to cores -> the calibrated-tile area / s (1/n scaling)
+            W = self.n_cal * self.core_width
+            return (K * N) / (W * W) / self.core_scale * (self.prefill_a_us + self.prefill_b_us * M)
         W = self.width   # canonical tile edge (= n_cores*512 = 2048); native_max_kn = W*W
         area = (K * N) / (W * W)   # fractional tile area (not ceil): no padded-tile over-charge
         return area * (self.prefill_a_us + self.prefill_b_us * M)
@@ -109,10 +140,13 @@ class CimTileModel:
         multi-tile (some dim > W) this is the TILE-SUM — replaced by the cliff model, kept as the
         fallback + the old-vs-new baseline for fit_cim_multitile."""
         W = self.width
+        s = self.core_scale
         lat, rem = 0.0, N
         while rem > 0:
             n = min(W, rem)
-            lat += 2.0 * K * n / (self.g_eff(n, K) * 1e9) * 1e6
+            # physical mode: the n output columns spread over s x the calibrated cores, each at the
+            # per-core fill law -> throughput s * G_eff(n/s, K) (= G_eff(n, K) at s = 1)
+            lat += 2.0 * K * n / (s * self.g_eff(n / s, K) * 1e9) * 1e6
             rem -= n
         return lat
 
@@ -123,15 +157,22 @@ class CimTileModel:
             return self._decode_lat_us(K, N)
         return self._decode_multitile_lat_us(K, N)
 
+    def spills(self, K, N):
+        """True iff an M=1 multi-tile weight set (K*N) exceeds the resident capacity at this core
+        count (physical mode: knee x s). Single-tile shapes never spill."""
+        if (K <= self.width and N <= self.width) or self.mt_knee_kn is None:
+            return False
+        return K * N > self.mt_knee
+
     def _decode_multitile_lat_us(self, K, N):
         """Native multi-tile M=1 latency (us), Card-calibrated (Phase 1.5). Resident (K*N <= knee):
         weights fit SRAM -> latency affine in K*N. Spill (K*N > knee): weights stream from DRAM ->
         memory-bound floor throughput. K*N > native_envelope_kn is floor-extrapolated (memory-bound
         linear, low risk; is_extrapolated flags it)."""
         kn = K * N
-        if kn <= self.mt_knee_kn:
-            return self.mt_resident_a_us + self.mt_resident_b_us * kn
-        return 2.0 * kn / (self.mt_floor_gops * 1e9) * 1e6
+        if kn <= self.mt_knee:
+            return self.mt_resident_a_us + self.mt_resident_b_us / self.core_scale * kn
+        return 2.0 * kn / (self.mt_floor_gops * 1e9) * 1e6     # spill: array ingest rate (n-independent)
 
     def is_extrapolated(self, K, N):
         """True if (K,N) is beyond the natively measured M=1/K*N envelope ONLY. Single-tile (both dims
@@ -172,21 +213,33 @@ class CimAttentionModel:
     axllm graph shows no per-call floor), so this floor is the Alpha standalone-call basis, and it is
     enabled only through a SoC profile (`attention_model: alpha_floor_fit`), never on the legacy path."""
 
-    def __init__(self, tile: "CimTileModel", params=None):
+    HEADS_MODES = ("serial", "batched")
+
+    def __init__(self, tile: "CimTileModel", params=None, heads_mode="serial"):
         p = params if params is not None else json.loads(_ATTN_PARAMS.read_text())
+        if heads_mode not in self.HEADS_MODES:
+            raise ValueError(f"CimAttentionModel heads_mode must be one of {self.HEADS_MODES}, got {heads_mode!r}")
         self.tile = tile
+        self.heads_mode = heads_mode
         self.qk_a, self.qk_b = float(p["qk_a_us"]), float(p["qk_b_us_per_kv"])
         self.sv_a, self.sv_b = float(p["sv_a_us"]), float(p["sv_b_us_per_kv"])
         self.hd_basis = int(p.get("hd_basis", 128))
         self.kv_max = int(max(p.get("kv_fit", [1025])))
 
     def composite_us(self, kv, heads=1, hd=128, M=1):
-        """QK^T + S.V latency (us) for `heads` serial heads. Returns (latency_us, extrapolated)."""
+        """QK^T + S.V latency (us) over `heads` heads. Returns (latency_us, extrapolated).
+        heads_mode (ADR-0008 revision F6, a profile sensitivity axis `cim.attention_heads_mode`):
+          'serial'  = one standalone call per head per bmm: (floor_a + b*kv) x heads — the measured
+                      basis (Alpha ran one head per model), the pessimistic default;
+          'batched' = one call per bmm with the heads batched inside the tile: floor_a paid ONCE per
+                      bmm, the kv-proportional work (b*kv, or the M1 tile law for M>1) x heads —
+                      what a compiled multi-head graph would do (no silicon for it)."""
         kv, heads, M = max(1, int(kv)), max(1, int(heads)), max(1, int(M))
-        qk = self.qk_a + self.qk_b * kv
-        sv = self.sv_a + self.sv_b * kv
+        qk_w, sv_w = self.qk_b * kv, self.sv_b * kv            # per-head kv-proportional work
         extrap = (hd != self.hd_basis) or (kv > self.kv_max) or (M > 1)
         if M > 1:   # prefill rows: the per-call floor still applies; the tile law may exceed it
-            qk = max(qk, self.tile.dev_lat_us(M, hd, kv))
-            sv = max(sv, self.tile.dev_lat_us(M, kv, hd))
-        return (qk + sv) * heads, extrap
+            qk_w = max(qk_w, self.tile.dev_lat_us(M, hd, kv) - self.qk_a)
+            sv_w = max(sv_w, self.tile.dev_lat_us(M, kv, hd) - self.sv_a)
+        if self.heads_mode == "serial":
+            return (self.qk_a + qk_w + self.sv_a + sv_w) * heads, extrap
+        return self.qk_a + self.sv_a + (qk_w + sv_w) * heads, extrap

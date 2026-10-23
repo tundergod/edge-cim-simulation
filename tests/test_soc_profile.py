@@ -46,8 +46,11 @@ def test_profile_specs_well_formed():
         for u in ("gpu", "npu", "cpu", "cim"):
             assert u in s["units"] and s["units"][u]["default_dtype"]
         assert s["memory"]["single_stream_eff_BW_GBs"] > 0 and s["memory"]["knee_GBs"] >= s["memory"]["single_stream_eff_BW_GBs"]
-        assert set(s["sync_us"]) == {"fast", "clfinish"} and s["sync_us"]["clfinish"] == 400.0
+        assert "sync_us" not in s                      # rev F8: tiling.SYNC_US is the one sync table
         assert s["units"]["cim"]["topology"] in ("cim_topo_edge", "cim_topo_card", "cim_topo_alpha")
+        for u in ("gpu", "npu", "cpu", "cim"):           # rev F2/F3/F13 per-unit parameters
+            assert 0 < s["units"][u]["stream_eff"] <= 1.0 and s["units"][u]["min_split_rows"] >= 1
+            assert s["units"][u]["weight_bytes_per_param"] in (0.5, 1.0)
 
 
 def test_rk3588_profile_memory_matches_edge_topology_and_contention_ratio():
@@ -99,9 +102,17 @@ def test_platform_profile_memory_units_and_precedence():
     assert p1.bw.eff_BW == 43.0 and p1.bw.knee == 60.0 and p1.per_call_floor_us == 0.0
     assert isinstance(p1.gpu, GpuAnchorRooflineModel) and isinstance(p1.npu, NpuStaircaseModel)
     assert p1.cim_attn is not None and p1.cim.n_cores == 4
-    assert p1.sync_us == {"fast": 30.0, "clfinish": 400.0}
+    from simulator.runtime import tiling
+    assert p1.sync_us == tiling.SYNC_US and p1.sync_us["fast"] == {"decode": 10.0, "prefill": 30.0}
+    assert p1.bw.unit_caps == {"gpu": 43.0, "npu": 43.0, "cpu": 43.0, "cim": 43.0, "mem": 43.0}
+    assert p1.weight_bytes_per_param == {"gpu": 0.5, "npu": 1.0, "cpu": 0.5, "cim": 1.0}
+    assert p1.min_split_rows["npu"] == 1024 and p1.cim.scale_mode == "physical"
     p2 = Platform("llama-3.2-1b", soc_profile="rk3588_cim")
     assert p2.bw.eff_BW == 29.97 and p2.bw.knee == pytest.approx(33.03)
+    assert p2.bw.unit_cap("npu") == pytest.approx(29.97 * 0.67) and p2.bw.unit_cap("gpu") == 29.97
+    legacy = Platform("llama-3.2-1b")
+    assert legacy.bw.unit_caps is None and legacy.weight_bytes_per_param == {u: 1.0 for u in ("gpu", "npu", "cpu", "cim")}
+    assert legacy.cim.scale_mode == "legacy" and legacy.sync_us == tiling.SYNC_US
     assert isinstance(p2.gpu, MaliGpuModel) and type(p2.npu) is NpuModel
     # explicit knee (sensitivity knob) wins over the profile knee; conflicts are rejected
     assert Platform("llama-3.2-1b", soc_profile="sd8gen3_cim", knee_GBs=50.0).bw.knee == 50.0
@@ -130,13 +141,26 @@ def _mm(unit, N, K, M, **extra):
 
 
 def test_p1_table3_anchors_within_tolerance():
+    """Anchors under the runtime's rule (rev F2): pred = max(kernel, K*N*wbpp / 43 GB/s). The residual
+    is reported per unit so a refit that drifts shows up, and the GPU fit (rev F3) must beat the band
+    by a margin (max residual <= 0.06, was 0.147 at the band edge)."""
     plat = Platform("llama-3.1-8b", soc_profile="sd8gen3_cim")
+    worst = {"gpu": 0.0, "npu": 0.0}
     for unit, N, K, M, t, tol in ANCHORS:
         r = plat.price(_mm(unit, N, K, M))
-        assert abs(r["latency_us"] / t - 1) <= tol, (unit, N, K, M, t, r["latency_us"])
+        pred = max(r["latency_us"], K * N * plat.weight_bytes_per_param[unit] / (plat.bw.eff_BW * 1e3))
+        resid = abs(pred / t - 1)
+        worst[unit] = max(worst[unit], resid)
+        assert resid <= tol, (unit, N, K, M, t, pred)
         assert "borrowed" in r["compute_provenance"]
+    print(f"P1 anchor max residual: gpu {worst['gpu']:.3f} npu {worst['npu']:.3f}")
+    assert worst["gpu"] <= 0.06 and worst["npu"] <= TOL
     rep = json.loads((ROOT / "validation/reports/hetero/anchor_fit.json").read_text())
-    assert rep["pass_all"]
+    assert rep["pass_all"] and rep["gpu_sd8gen3"]["params"]["max_abs_rel_residual"] == pytest.approx(worst["gpu"], abs=1e-3)
+    # small-shape plausibility (rev F3): a 1 MB (INT8) matvec is a launch + its work, not a 300 us constant
+    small = plat.price(_mm("gpu", 512, 2048, 1))["latency_us"]
+    assert plat.gpu.gemv_floor_us <= 60.0 and small <= 0.5 * plat.price(_mm("gpu", 4096, 4096, 1))["latency_us"]
+    assert small < 200.0, small
 
 
 def test_p1_npu_staircase_and_order_flag():

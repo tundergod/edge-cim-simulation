@@ -3,14 +3,16 @@
 For one op (or attention block) the solver enumerates every feasible strategy and picks
 the one minimising the estimated critical path:
 
-    single-unit u:   T = sync_in(u) + sum_chain max(compute, bytes/BW) + [sync_out if u != host]
-    split (k parts): T = max( max_i [sync_in(u_i) + T_i],  sum_i bytes_i / BW_agg(k) )
+    single-unit u:   T = sync_in(u) + sum_chain [fixed + max(compute, bytes/BW)] + [sync_out if u != host]
+    split (k parts): T = max( max_u [sync_in(u) + sum_{parts on u} T_part],  sum_i bytes_i / BW_agg(k) )
                          + sync_merge + merge_bytes/BW + [sync if merge_unit != host]
 
 which is HeteroInfer's  T_total = min(max(T_GPU^p1, T_NPU^p2) + T_sync + T_copy, T_GPU^all,
 T_NPU^all + T_sync + T_copy)  with: T_copy = 0 (UMA), T_sync charged per cross-unit
-boundary exactly as the engine charges it (tiling.apply_sync), and the shared-bandwidth
-knee (resources.SharedBandwidth) bounding the parts' aggregate streaming. Strategies:
+boundary exactly as the engine charges it (tiling.apply_sync; a serial pre-op `fixed` delay,
+ADR-0009 rev F1), parts on the SAME unit summed (serial on one unit, rev F7), the per-unit
+weight bytes the engine will meter (rev F13) and the shared-bandwidth knee
+(resources.SharedBandwidth) bounding the parts' aggregate streaming. Strategies:
 
 | strategy            | dim   | parts                                                     |
 |---------------------|-------|-----------------------------------------------------------|
@@ -79,19 +81,41 @@ def _supports(ctx, unit, chain_nodes):
     return all(sup(unit, n.category) for n in chain_nodes)
 
 
-def _dram_bytes(node):
-    """Bytes the engine meters on the shared DRAM pool (cpu_cache-resident bytes are priced
-    inside the CPU model, not here — the same R7 rule the engine applies)."""
-    return node.bytes_streamed if tiling._residency(node) == "dram" else 0
+def _dram_bytes(ctx, node):
+    """Bytes the engine will meter on the shared DRAM pool for `node` on its unit: the INT8 basis
+    with the weight part at the unit's `weight_bytes_per_param` (rev F13; a platform without
+    the table = 1.0 everywhere); cpu_cache-resident bytes are priced inside the CPU model, not
+    here — the same R7 rule the engine applies."""
+    if tiling._residency(node) != "dram":
+        return 0
+    wbpp = getattr(ctx.platform, "weight_bytes_per_param", None) or {}
+    return tiling.unit_bytes(node, wbpp.get(node.unit, 1.0))
+
+
+def _clean(node):
+    """A candidate template never carries a previous assignment's sync (`fixed_us`/`sync_us`,
+    re-added explicitly by the estimate) or fusion tag (`fused_head`: the solver prices every
+    elementwise node as a chain head, pessimistic) — keeps a re-assign idempotent. A scheduler-
+    attached per-op overhead (`op_fixed_us`) is kept as the node's fixed term."""
+    ex = node.wl.extra
+    if ex:
+        for k in ("fixed_us", "sync_us", "fused_head", "fused_group"):
+            ex.pop(k, None)
+        if ex.get("op_fixed_us"):
+            ex["fixed_us"] = float(ex["op_fixed_us"])
+    return node
 
 
 def _node_us(ctx, node):
-    """Engine-consistent per-node cost: max(compute, dram bytes at the single-stream rate)."""
-    c = float(ctx.platform.compute_us(node))
+    """Engine-consistent per-node cost: fixed + max(compute, dram bytes at the single-stream rate)
+    (`fixed` = the serial pre-op delay the pricing contract returns, rev F1)."""
+    node = _clean(node)
+    pr = ctx.platform.price(node)
+    c, fixed = float(pr["latency_us"]), float(pr.get("fixed_us", 0.0))
     bw = ctx.platform.bw
-    b = _dram_bytes(node)
+    b = _dram_bytes(ctx, node)
     m = b / (bw.eff_BW * 1e3) if (b > 0 and bw.eff_BW > 0) else 0.0
-    return max(c, m)
+    return fixed + max(c, m)
 
 
 def _producer_unit(dag, d):
@@ -130,19 +154,22 @@ def _estimate_single(ctx, dag, chain, unit):
 
 
 def _estimate_split(ctx, dag, tp):
+    """Split estimate: parts on the SAME unit run serially (summed per unit, rev F7 — an
+    activation-centric plan puts several standard chunks on the NPU), units run concurrently
+    (max over units), the aggregate streaming is bounded by the knee at k = #distinct units."""
     bw = ctx.platform.bw
-    per_part, total_bytes = [], 0
+    per_unit, total_bytes = {}, 0
     for u, members in zip(tp.units, tp.parts):
-        t = ctx.sync_us if _boundary_in(dag, tp.chain, u) else 0.0
+        if u not in per_unit:
+            per_unit[u] = ctx.sync_us if _boundary_in(dag, tp.chain, u) else 0.0
         for m in members:
-            t += _node_us(ctx, m)
-            total_bytes += _dram_bytes(m)
-        per_part.append(t)
-    k = len(tp.units)
+            per_unit[u] += _node_us(ctx, m)
+            total_bytes += _dram_bytes(ctx, m)
+    k = len(per_unit)
     agg = bw.aggregate_GBs(k) * 1e3
     t_agg = total_bytes / agg if agg > 0 else 0.0
     merge_unit = ctx.merge_unit or ctx.host
-    t = max(max(per_part), t_agg) + ctx.sync_us
+    t = max(max(per_unit.values()), t_agg) + ctx.sync_us
     if tp.merge_bytes > 0 and bw.eff_BW > 0:
         t += tp.merge_bytes / (bw.eff_BW * 1e3)
     if merge_unit != ctx.host:

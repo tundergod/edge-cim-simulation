@@ -82,3 +82,47 @@ disagree with the engine, see `host_candidates_est_us`). The decision is per DAG
 sample point and the prefill forward choose independently). The chosen host is recorded as
 `dag.host` (runner: `host`, `prefill_host`, `host_candidates_est_us`); a re-assign reuses it
 (idempotent). Single-unit baselines record their unit as `host`.
+
+## Revisions 2026-10-23 (independent review, fixes F1–F15; branch `hetero-fixes`)
+
+* **F1 — sync is a serial pre-op delay** in both engines and the solver: `_node_us = fixed +
+  max(compute, bytes/BW)` with `fixed` from `price()["fixed_us"]`; a candidate template is cleaned of
+  any previous assignment's `fixed_us`/`sync_us`/fusion tags (`solver._clean`), so a re-assign is
+  idempotent and the explicit `sync_in`/hand-back/merge terms are charged exactly once.
+* **F4 — launch floor per fused kernel chain.** `_finish` runs `scheduler.tag_fused_chains`: an
+  elementwise node on gpu/npu with exactly one dependency whose producer is an elementwise node on the
+  same unit feeding nothing else is a FOLLOWER (`wl.extra["fused_head"] = False`, 0 floor); every other
+  one is a HEAD and pays the profile's `elementwise_launch_us` once. Measured on the llama-3.2-1b
+  fixture DAG: 309 heads of 476 elementwise nodes per decode token (joins and fan-outs — residual adds,
+  rope on q and k — stay heads). The solver prices every candidate elementwise node as a head
+  (pessimistic, decided before fusion is known). `allow_cpu_compute=False` (default) is the same unit
+  set the gpu_only/npu_only baselines use (CPU = control plane + sampling, HeteroInfer §4).
+* **F7 — `_estimate_split` sums the parts on one unit** (serial) before taking the max over units
+  (an activation-centric plan runs its standard chunks sequentially on the NPU); the knee's k = the
+  number of distinct units.
+* **F9 — end-to-end tests through the real `Platform("sd8gen3_cim")`** replace the pre-ADR-0008 shim:
+  per-unit utilisation ≤ 1, achieved bandwidth ≤ knee, single-unit baselines at 43.0 ± 1 % in decode,
+  plan strategies within each scheduler's allowed set, Σ solver T_est within 20 % of the engine
+  (measured −15 % on heteroinfer/tiled_hetero: the per-op estimate ignores cross-op overlap).
+* **F10/F15 — per-unit stream caps.** `SharedBandwidth(unit_caps=)` (profiles only): a unit's streams
+  share min(n·eff_BW, cap_u), units are water-filled under the knee (`share()`); two streams on one unit
+  → 43 GB/s, one on each of two units → 60. A `mem` node's stream (embedding gather, KV append) is
+  attributed to the compute unit that consumes — else produces — its value (`events._stream_owner`),
+  so gpu_only / npu_only / cim_only decode report exactly 43.0 GB/s (were 43.1–44.4). Legacy (no
+  profile): the uniform fair-share, byte-identical.
+* **F3 — minimum sub-tensor rule** `units.<u>.min_split_rows` → `SolverContext.align[u] = (quantum,
+  min)` unless the scheduler constructor overrides `align`; `tests/test_solver.py` uses the profile's
+  NPU 1024 (no GPU minimum; under the linear fake the [4096,4096] M=128 row lands one grid step from
+  NPU-only — the real-platform test is authoritative).
+* **F11** — `all_cim` is labelled "legacy serial, no sync charged" (docstring; runner `sync_mode:
+  "n/a-legacy"` for all_cim and cim_hetero); `_attn_M` docstring corrected (wl.M IS set by
+  `wl_from_row`; the helper is the out_elems-consistent value for tiling).
+* **Measured effect (sd8gen3_cim, prefill 256 / ctx 1024 / decode 128, tok/s before → after):**
+  1B gpu_only 14.5→21.3, npu_only 14.9→15.8, cim_only 17.2→17.0, heteroinfer 21.7→26.7, tiled_hetero
+  (cim off) 21.9→29.1, (cim on) 28.3→36.9; 8B gpu_only 4.38→5.21, npu_only 2.24→2.28, cim_only
+  3.81→3.80, heteroinfer 5.71→6.67, tiled (cim off) 5.90→7.31, (cim on) 6.26→8.57. Achieved decode
+  bandwidth: baselines 43.0, heteroinfer ~51–52, tiled ~52–55 (knee 60: the Table-3 kernels are
+  kernel-bound at 17–30 GB/s-equivalent, so a split cannot fill the knee).
+* **Still open:** the solver's per-op estimate has no cross-op overlap (−15 % vs the engine); fusion is
+  decided after solving; `host=auto` compares Σ T_est (ADR-0008 addendum) which now includes the fixed
+  delays consistently.

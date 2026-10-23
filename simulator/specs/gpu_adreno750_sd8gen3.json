@@ -67,14 +67,17 @@
     "calibration_dtype": "HeteroInfer \u00a75.1 W4A16 [borrowed]"
   },
   "anchor_fit": {
-    "_doc": "2-regime roofline minimax fit of `anchors` (fit_hetero_anchors.py). GEMV: floor + 0.5*K*N/bw; GEMM: floor + 2MKN/(C_max*M/(M+M_half)); M>1 = min(M*GEMV, GEMM). [borrowed, fitted]",
-    "gemm_floor_us": 320.022,
-    "bw_GBs": 31.5241,
-    "c_max_tflops": 1.1303,
-    "m_half": 104.1233,
+    "_doc": "2-regime KERNEL-TIME minimax fit of `anchors` under pred = max(kernel, 0.5*K*N/43 GB/s) (fit_hetero_anchors.py, ADR-0008 rev F2/F3). GEMV: gemv_floor + K*(N+n_half)/rate; GEMM: gemm_floor + 2MKN/(C_max*M/(M+M_half)); M>1 = min(M*GEMV, GEMM); gemv_floor <= 60 us (\u00a74.3 launch band). [borrowed, fitted]",
+    "gemv_floor_us": 59.9997,
+    "gemv_rate_gparams_s": 73.4118,
+    "n_half": 3504.506,
+    "gemm_floor_us": 402.4284,
+    "c_max_tflops": 1.1736,
+    "m_half": 110.641,
     "weight_bytes_per_param": 0.5,
+    "pool_GBs": 43.0,
     "objective": "minimax |rel err| over anchors",
-    "max_abs_rel_residual": 0.147,
+    "max_abs_rel_residual": 0.0528,
     "all_within_15pct": true
   }
 }
