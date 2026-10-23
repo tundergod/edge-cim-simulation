@@ -297,16 +297,24 @@ class TiledHeteroScheduler(Scheduler):
         else:
             flags = getattr(cfg, "units", None) or {"gpu": True, "npu": True, "cim": True, "cpu": True}
             enabled = [u for u in ("gpu", "npu", "cim") if flags.get(u)]
-            if self.allow_cpu_compute and flags.get("cpu", True):
+            if self._allow_cpu(cfg) and flags.get("cpu", True):
                 enabled.append("cpu")
         if not self.allow_cim:
             enabled = [u for u in enabled if u != "cim"]
-        if not self.allow_cpu_compute:
+        if not self._allow_cpu(cfg):
             enabled = [u for u in enabled if u != "cpu"]
         if not enabled:
             raise ValueError(f"{self.name}: no compute unit enabled (units={getattr(cfg, 'units', None)}, "
                              f"allow_cim={self.allow_cim}, allow_cpu_compute={self.allow_cpu_compute})")
         return tuple(enabled)
+
+    def _allow_cpu(self, cfg=None):
+        """CPU as a compute unit: a config `scheduler.allow_cpu_compute` (True/False) overrides the
+        constructor default; HeteroInferScheduler pins the constructor value (CPU control-plane only)."""
+        if self.host is not None and self.name == "heteroinfer":
+            return self.allow_cpu_compute
+        c = getattr(cfg, "allow_cpu_compute", None)
+        return self.allow_cpu_compute if c is None else bool(c)
 
     def _host(self, units, cfg=None):
         """Resolved host: constructor `host` wins, else `cfg.host` (gpu|npu|cim|auto), else default."""

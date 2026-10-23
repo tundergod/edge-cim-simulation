@@ -27,7 +27,7 @@ _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine",
                "soc_profile", "cim_n_cores", "npu_scale"}
 _KNOWN_SCHED = {"policy", "precision_boundary_placement", "sync_mode", "sync_us_override", "partition_grid",
-                "host"}
+                "host", "allow_cpu_compute"}
 _KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor", "pipeline"}
 _KNOWN_ABL = {"concurrency_off", "contention_off", "compute_off"}
 
@@ -107,6 +107,9 @@ class SimConfig:
     host: str | None = None                    # tiled_hetero host (graph-owning) unit: gpu|npu|cim|auto (None =
                                                # scheduler default: gpu if enabled else the first enabled unit);
                                                # 'auto' = solve once per candidate host, keep the lowest estimate
+    allow_cpu_compute: bool | None = None      # tiled_hetero: let the solver place matmul/attention/support on the
+                                               # CPU (None = scheduler default False = HeteroInfer's unit set;
+                                               # True = "ours" with the CPU as a 4th/5th compute unit; SIMULATED)
     cim_n_cores: int | None = None             # scalable axis: override of the profile's units.cim.n_cores
                                                # (None = profile / M1 default 4; any other value is EXTRAPOLATED)
     npu_scale: float = 1.0                     # scalable axis: multiplier on the NPU compute throughput (TOPS);
@@ -273,6 +276,7 @@ class SimConfig:
             sync_us_override=(sched.get("sync_us_override") if isinstance(sched, dict) else None),
             partition_grid=(sched.get("partition_grid", 8) if isinstance(sched, dict) else 8),
             host=(sched.get("host") if isinstance(sched, dict) else None),
+            allow_cpu_compute=(sched.get("allow_cpu_compute") if isinstance(sched, dict) else None),
             knee_GBs=tun.get("knee_GBs"),
             interconnect_efficiency=tun.get("interconnect_efficiency", 1.0),
             concurrency_overlap_factor=tun.get("concurrency_overlap_factor", 1.0),
