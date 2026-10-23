@@ -173,6 +173,10 @@ sample_strategy: {cold_starts: 3, iterations_per_run: 300, budget_seconds: 30}
 
 ⚠ **Aetina 送修中（2026-06-12）** — `measurements/aetina/` 凍結於現有快取，Phase 2 不可遠端重擷。修復回來後流程（也是並發 BW knee 量測入口，可把競爭模型從 sim-anchored 翻成 silicon-anchored）：`ssh aetina 'cd ~/repo/characterization/aetina && ./run_metis_matmul.py' && rsync …`。
 
+## Phase 3（2026-10-23）— 異質 tiled 排程（heterogeneous tiled scheduling）🔶
+
+> **狀態：** 進行中（branch `hetero`）。研究問題：CPU+GPU+NPU+SRAM-CIM 的行動 SoC 把**每一個** LLM op 的 tile 切到任一單元（不只 HeteroInfer 的 linear layer），在真實的跨單元 sync 成本與共享記憶體牆下是否得利。落地：`platform.soc_profile`（ADR-0008：P1 `sd8gen3_cim` = Snapdragon-8-Gen-3-like，GPU/NPU/記憶體 **borrowed** 自 HeteroInfer SOSP'25 公開數字 + Metis CIM；P2 `rk3588_cim` = 本 repo 量測單元 + Metis CIM）、`Platform.price()` 對每個 unit×op 定價；op tiling + 求解器 + 排程器家族 `gpu_only` / `npu_only` / `cim_only` / `cpu_only` / `heteroinfer` / `tiled_hetero`（ADR-0009）；兩輪修訂（F1–F15 獨立審查修正；round 2：CPU kernel floor + 端到端 refit 到 Fig.12 CPU/GPU 比值、`host=auto` 組合式搜尋（含所有單一單元方案，依事件引擎排序，故「ours ≥ 最佳單一單元 baseline」由構造保證）、求解器 refinement、`plan_source`、`cim_weight_bytes_per_param`）。**全部 SIMULATED**：沒有異質執行的 silicon，P1 全為借用數字，CPU GEMM 模型只錨在一個公開的端到端比值上；L4 legacy 路徑逐位元不變。決策與誠實標註見 `docs/adr/0008-soc-profiles-and-unit-pricing.md`、`docs/adr/0009-op-tiling-and-hetero-schedulers.md`（各含「Revisions 2026-10-23」與「round 2」節）；實驗矩陣與結果在 `cim-mobile-soc/experiments/`。
+
 ## 開放風險
 
 1. ✅ **已解 — NeuroSim 整合成本**：M1 改用 Metis Alpha 量測 + lookup fallback；NeuroSim 降為選用「模型形式」交叉檢查（Metis 是 digital SRAM-CIM ≠ analog RRAM）。

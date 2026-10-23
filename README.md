@@ -36,6 +36,9 @@ Out of scope: training, MoE/sparse, FP32, multi-batch — see [OVERALL.md](OVERA
 - **Phase 1.1–1.3** ✅ per-component modelling + validation (CIM, memory, CPU, GPU, NPU), plus
   Ramulator2 / ONNXim / ScaleSim heavy-sim drop-ins behind a frozen `engine=` interface. (1.4–1.6b
   are *reinforcement* folded into their parent sub-phase, not new phases.)
+- **Phase 3 (2026-10-23)** 🔶 **heterogeneous tiled scheduling** on SoC profiles (ADR-0008/0009 + revisions): any op tile on
+  any of CPU / GPU / NPU / SRAM-CIM, HeteroInfer-anchored P1 profile, single-unit + HeteroInfer baselines; **all SIMULATED**
+  (no heterogeneous silicon; P1 is borrowed from published numbers). See `docs/adr/0008-*.md`, `0009-*.md`.
 - **Phase 2.1–2.5** ✅ the integrated **per-token event-driven simulator** (`simulator/runtime/`):
   - **2.1** — M5 workload op-DAG + M3 event engine + AllCim scheduler; decode reproduces the L4
     silicon anchor within 15% (1B 10.7% / 3B 6.5% / 8B 3.1%) from independent per-op pricing, and a
@@ -107,7 +110,15 @@ cfg.provenance        # ["simulated: topology 'cim_topo_edge' ...", "simulated: 
 | --- | --- | --- |
 | `workload.model` | `llama-3.2-1b` / `llama-3.2-3b` / `llama-3.1-8b` / `qwen2.5-7b` | `qwen2.5-14b` is extrapolation-only (labelled, never validated) |
 | `platform.topology` | `cim_topo_card` (L4 anchor, on-card LPDDR4x) / `cim_topo_alpha` (host PCIe, no on-card DRAM — counterfactual) / `cim_topo_edge` (integrated SoC LPDDR5×NoC — simulated) | single bandwidth source; `memory_spec` is a consistency tag |
-| `scheduler.policy` | `all_cim` (silicon-gated) / `cim_hetero` (CIM-INT8 × GPU-FP16, simulated) | |
+| `scheduler.policy` | `all_cim` (silicon-gated) / `cim_hetero` (CIM-INT8 × GPU-FP16, simulated) / **Phase 3 (ADR-0009, all SIMULATED, need a `soc_profile` for P1):** `gpu_only` / `npu_only` / `cim_only` / `cpu_only` (single-engine baselines, syncs charged) / `heteroinfer` (faithful HeteroInfer §4) / `tiled_hetero` (every op tiled across the enabled units) | `all_cim` is the only silicon anchor; `all_cim`/`cim_hetero` charge no sync (`sync_mode: n/a-legacy`) and are not fair baselines for the Phase-3 family — compare against `cim_only` |
+| `platform.soc_profile` | unset (legacy Metis unit set) / `sd8gen3_cim` (P1: **borrowed** HeteroInfer numbers + CIM) / `rk3588_cim` (P2: RK3588-measured units + CIM, simulated edge) | fixes the CIM topology and the memory wall (43 GB/s single stream, 60 knee on P1); rejects `bw_efficiency`; never a calibrated anchor |
+| `scheduler.host` | `gpu` / `npu` / `cim` / `auto` (tiled_hetero) | graph-owning unit (merges land on it, a non-host single placement pays the hand-back sync); `auto` = the portfolio (per-host solver plans + every single-unit plan, engine-ranked) → `plan_source` says which won (`solver:<host>` / `single:<unit>`) |
+| `scheduler.allow_cpu_compute` | false (default = HeteroInfer's unit set, CPU control-plane only) / true ("ours": CPU as a compute unit) | the CPU GEMM kernel model is SIMULATED (no silicon; fitted end-to-end to one published ratio) — the largest lever in matrix v1 rests on it |
+| `scheduler.sync_mode`, `sync_us_override`, `partition_grid` | `fast` (10 µs decode / 30 prefill, HeteroInfer §4.3) / `clfinish` (400) / `none`; an explicit µs; ratio grid (default 8) | per-boundary sync is a SERIAL pre-op delay (F1); literature-anchored, no hetero-sync silicon |
+| `platform.cim_n_cores` | int ≥ 1 (profile default 4 = the Metis geometry) | scalable axis: tile width + prefill throughput ∝ n (F12); other counts EXTRAPOLATED |
+| `platform.npu_scale` | float > 0 (default 1.0) | multiplies NPU compute throughput only; ≠ 1 EXTRAPOLATED |
+| `platform.cpu_gemv_efficiency` | (0, 1] (profile value 0.128 after the round-2 fit) | sensitivity knob on the CPU M=1 kernel efficiency (an ASSUMPTION); above the GEMM efficiency lifts both |
+| `platform.cim_weight_bytes_per_param` | (0, 4] (profile 1.0 = INT8 crossbar weights as stored; 0.5 = W4 storage unpacked on load) | a DESIGN OPTION with no silicon; bytes only; decides the CIM-vs-W4 competitors question (matrix v1 H2) |
 | `platform.memory_capacity_GB`, `platform.bw_efficiency`, `tunables.*` | forward-looking sweep knobs | any off-anchor value is auto-tagged in `cfg.provenance` |
 | topology spec `cim_compute_params` | a repo-relative params path | the **CIM compute-engine swap surface**; a non-Metis geometry is tagged `simulated` |
 
@@ -144,7 +155,8 @@ CLAUDE.md  CONTEXT.md  OVERALL.md  README.md  LOG.md  requirements.phase0.txt
 docs/              papers/ plans/ adr/ agents/ figures/ report/(phase1-site) + *-findings.md  voyager-sdk.md
 simulator/
   ├── runtime/     the Phase-2 per-token simulator: config (SimConfig) · workload/dag (M5 op-DAG) ·
-  │                scheduler (M6: AllCim / CimHetero) · precision · resources/events (M3 engine) ·
+  │                scheduler (M6: AllCim / CimHetero + Phase-3 gpu/npu/cim/cpu_only · heteroinfer · tiled_hetero) ·
+  │                tiling · solver (ADR-0009) · precision · resources/events (M3 engine) ·
   │                platform (per-op pricing) · runner · configs/(example JSON)
   ├── models/      M1/M2/M4/M7 unit timing+energy models + engine.py (frozen predict interface) + params/
   ├── specs/       swappable hardware json — memory / cpu / gpu / npu / sram + the cim_topo_* topologies
@@ -154,7 +166,7 @@ measurements/      silicon measurements + op inventory/profile (aetina/  metis_c
 traces/            per-token op×shape streams (per model, workload)  ·  fixture/ (the committed DAG source)
 validation/        contracts/(m*.yaml acceptance criteria)  reports/(phase*)  validate_*.py
 tools/             analysis/ (fits)  plotting/ (one script per figure)  report/  trace_export/  onnxim/  ramulator2/
-tests/             pytest (160)
+tests/             pytest (249; Phase-3 hetero tests included)
 ```
 
 ## Honesty discipline
