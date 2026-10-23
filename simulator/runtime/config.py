@@ -48,7 +48,7 @@ _TOPO_MEMORY = {"cim_topo_card": "mem_lpddr4x", "cim_topo_edge": "mem_lpddr5", "
 # user-input contract reject an unknown/garbage scheduler at construction instead of silently
 # provenance-labelling it as a real "simulated heterogeneous placement". Keep in sync with
 # simulator/runtime/scheduler.py SCHEDULERS.
-_KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero", "gpu_only", "npu_only", "heteroinfer", "tiled_hetero"})
+_KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero", "gpu_only", "npu_only", "cim_only", "heteroinfer", "tiled_hetero"})
 _SYNC_MODES = ("fast", "clfinish", "none")   # mirror of tiling.SYNC_US (config cannot import tiling, layering)
 
 # ADR-0008 SoC profiles (simulator/specs/soc_<name>.json). A profile fixes the CIM topology (its

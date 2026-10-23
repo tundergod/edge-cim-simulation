@@ -146,14 +146,19 @@ def _finish(dag, cfg, sync_us):
 
 
 class SingleUnitScheduler(Scheduler):
-    """Single-engine baseline (SIMULATED): matmul + attention + support on `unit`;
-    embedding / kv_cache through memory; sampling on the CPU; no cross-unit syncs."""
+    """Single-engine baseline (SIMULATED): matmul + attention on `unit`; support ops on
+    `support_unit` (default = the same unit -> no cross-unit syncs; for a CIM engine, which
+    cannot run norm/rope/swiglu/softmax/residual, the support ops go to `support_unit` and
+    every CIM<->support boundary pays the same per-boundary sync as the heterogeneous
+    schedulers -- the FAIR single-engine CIM baseline, unlike the legacy serial `all_cim`);
+    embedding / kv_cache through memory; sampling on the CPU."""
     pipeline = True
 
-    def __init__(self, unit):
+    def __init__(self, unit, support_unit=None, name=None):
         self.unit = unit
-        self.name = f"{unit}_only"
-        self.required_units = (unit, "cpu")
+        self.support_unit = support_unit or unit
+        self.name = name or f"{unit}_only"
+        self.required_units = tuple(dict.fromkeys((unit, self.support_unit, "cpu")))
 
     def assign(self, dag, cfg=None, *, platform=None):
         phase, _ = _phase_and_rows(dag)
@@ -164,8 +169,11 @@ class SingleUnitScheduler(Scheduler):
                 n.unit = "mem"
             elif n.category == "sampling":
                 n.unit = "cpu"
-            elif n.category in ("matmul", "attention") or n.category in _SUPPORT:
+            elif n.category == "matmul" or (n.category == "attention" and tiling.is_attention_rep(n)
+                                             or (n.category == "attention" and "hd" in n.wl.extra)):
                 n.unit = self.unit
+            elif n.category in _SUPPORT or n.category == "attention":   # scale/mask = support
+                n.unit = self.support_unit
             else:
                 raise ValueError(f"{self.name}: no unit mapping for category {n.category!r}; "
                                  f"map it explicitly, do not silently place.")
@@ -314,6 +322,7 @@ class HeteroInferScheduler(TiledHeteroScheduler):
 
 SCHEDULERS = {"all_cim": AllCimScheduler(), "cim_hetero": CimHeteroScheduler(),
               "gpu_only": SingleUnitScheduler("gpu"), "npu_only": SingleUnitScheduler("npu"),
+              "cim_only": SingleUnitScheduler("cim", support_unit="cpu"),
               "heteroinfer": HeteroInferScheduler(), "tiled_hetero": TiledHeteroScheduler()}
 
 

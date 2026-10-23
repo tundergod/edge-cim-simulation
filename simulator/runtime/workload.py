@@ -73,7 +73,11 @@ def wl_from_row(row, model, *, attn_role=None):
         return Workload(op="matmul", M=M, K=K, N=N, dtype="int8", nbytes=nbytes)
     if cat == "attention" and op == "aten.bmm.default":   # QK^T / S·V (the real attention GEMM)
         kv, heads, hd = _attn_kv_heads(row, attn_role)
-        return Workload(op="attention", kv=kv, heads=heads, K=hd, dtype="fp16",
+        # M = query rows Sq (in_shapes[0] = [H, Sq, *]): 1 in decode, prefill_len in prefill. The
+        # legacy Mali attn fit ignores M (per-row cost x heads); the SoC-profile GPU/NPU/CPU/CIM
+        # attention models (ADR-0008) and head/kv tiling (ADR-0009) price the real query length.
+        Sq = int(row["in_shapes"][0][1]) if row["in_shapes"] and len(row["in_shapes"][0]) >= 2 else 1
+        return Workload(op="attention", M=Sq, kv=kv, heads=heads, K=hd, dtype="fp16",
                         nbytes=nbytes, extra={"hd": hd})
     if cat == "kv_cache":                                 # DynamicCache append (memory movement)
         return Workload(op="kv_append", nbytes=nbytes, dtype="int8")
