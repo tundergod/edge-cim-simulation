@@ -25,9 +25,11 @@ from simulator.specs.loader import load_spec
 _KNOWN_TOP = {"workload", "platform", "scheduler", "tunables", "ablations", "sweep", "_doc"}
 _KNOWN_WL = {"model", "task", "prefill_len", "decode_len", "context", "batch"}
 _KNOWN_PLAT = {"memory_spec", "topology", "memory_capacity_GB", "bw_efficiency", "units", "engine",
-               "soc_profile", "cim_n_cores", "npu_scale", "cpu_gemv_efficiency", "cim_weight_bytes_per_param"}
+               "soc_profile", "cim_n_cores", "npu_scale", "cpu_gemv_efficiency", "cim_weight_bytes_per_param",
+               "cim_weight_budget_frac"}
 _KNOWN_SCHED = {"policy", "precision_boundary_placement", "sync_mode", "sync_us_override", "partition_grid",
-                "host", "allow_cpu_compute"}
+                "host", "allow_cpu_compute", "prefill_chunks"}
+_PREFILL_CHUNKS = (1, 2, 4, 8)                 # scheduler.prefill_chunks candidates (or "auto" = portfolio over them)
 _KNOWN_TUN = {"knee_GBs", "interconnect_efficiency", "concurrency_overlap_factor", "pipeline"}
 _KNOWN_ABL = {"concurrency_off", "contention_off", "compute_off"}
 
@@ -111,6 +113,13 @@ class SimConfig:
     allow_cpu_compute: bool | None = None      # tiled_hetero: let the solver place matmul/attention/support on the
                                                # CPU (None = scheduler default False = HeteroInfer's unit set;
                                                # True = "ours" with the CPU as a 4th/5th compute unit; SIMULATED)
+    prefill_chunks: int | str = 1              # ADR-0009 cooperation revision C2: prefill token-chunk pipelining —
+                                               # the prefill forward is built as C chunk sub-DAGs of P/C rows (causal
+                                               # attention over the chunks already done) so the event engine overlaps
+                                               # chunk c+1's GEMMs with chunk c's attention/support ops; 1 (default) =
+                                               # the one-forward DAG as before; 2/4/8; "auto" = engine-ranked portfolio
+                                               # over {1, 2, 4, 8}. SIMULATED (HeteroInfer §4.2.2 activation-centric
+                                               # across the whole layer; no silicon). Decode untouched.
     cim_n_cores: int | None = None             # scalable axis: override of the profile's units.cim.n_cores
                                                # (None = profile / M1 default 4; any other value is EXTRAPOLATED)
     npu_scale: float = 1.0                     # scalable axis: multiplier on the NPU compute throughput (TOPS);
@@ -119,6 +128,11 @@ class SimConfig:
                                                # peak) overriding the profile's units.cpu.gemm.gemv_efficiency (P1
                                                # 0.217 = HeteroInfer Fig.12 ratio, an ASSUMPTION); a value above the
                                                # GEMM efficiency lifts both to it. Flagged `simulated` when overridden.
+    cim_weight_budget_frac: float | None = None   # ADR-0009 cooperation revision C1: override of the profile's
+                                               # units.cim.weight_budget_frac = the share of the CIM resident capacity
+                                               # (knee x n_cores/4 weight elements) the capacity-aware weight split may
+                                               # pin (None = profile, 1.0; 0 disables the capacity_split candidate).
+                                               # Needs a soc_profile; flagged `simulated` when it differs from the profile.
     cim_weight_bytes_per_param: float | None = None   # sensitivity knob (round-2): streamed CIM weight bytes per
                                                # parameter overriding the profile's units.cim.weight_bytes_per_param
                                                # (1.0 = INT8 crossbar weights as stored; 0.5 = W4 storage unpacked
@@ -173,6 +187,10 @@ class SimConfig:
             raise ValueError(f"SimConfig: partition_grid must be an int >= 2, got {self.partition_grid!r}")
         if self.host is not None and self.host not in _HOSTS:
             raise ValueError(f"SimConfig: scheduler.host must be one of {_HOSTS} (or omitted), got {self.host!r}")
+        pc = self.prefill_chunks
+        if not (pc == "auto" or (isinstance(pc, int) and not isinstance(pc, bool) and pc in _PREFILL_CHUNKS)):
+            raise ValueError(f"SimConfig: scheduler.prefill_chunks must be one of {_PREFILL_CHUNKS} or 'auto', "
+                             f"got {pc!r}")
         if self.cim_n_cores is not None and (isinstance(self.cim_n_cores, bool)
                                              or not isinstance(self.cim_n_cores, int) or self.cim_n_cores < 1):
             raise ValueError(f"SimConfig: platform.cim_n_cores must be an int >= 1, got {self.cim_n_cores!r}")
@@ -191,6 +209,13 @@ class SimConfig:
             if self.soc_profile is None:
                 raise ValueError("SimConfig: platform.cim_weight_bytes_per_param needs a soc_profile (the legacy "
                                  "path meters op_profile's INT8 bytes on every unit, byte-identical L4)")
+        if self.cim_weight_budget_frac is not None:
+            v = self.cim_weight_budget_frac
+            if not isinstance(v, (int, float)) or isinstance(v, bool) or not (0 <= v <= 1):
+                raise ValueError(f"SimConfig: platform.cim_weight_budget_frac must be a number in [0, 1], got {v!r}")
+            if self.soc_profile is None:
+                raise ValueError("SimConfig: platform.cim_weight_budget_frac needs a soc_profile (the legacy path has "
+                                 "no CIM residency model)")
         if self.concurrency_overlap_factor != 1.0:
             raise ValueError(
                 f"SimConfig: concurrency_overlap_factor is RESERVED for Wave 2.2 cross-unit overlap "
@@ -292,6 +317,7 @@ class SimConfig:
             npu_scale=plat.get("npu_scale", 1.0),
             cpu_gemv_efficiency=plat.get("cpu_gemv_efficiency"),
             cim_weight_bytes_per_param=plat.get("cim_weight_bytes_per_param"),
+            cim_weight_budget_frac=plat.get("cim_weight_budget_frac"),
             units=_default_units() if u is None else u,
             engine=_default_engine() if eng is None else eng,
             scheduler="all_cim" if _sched_pol is None else _sched_pol,
@@ -302,6 +328,7 @@ class SimConfig:
             partition_grid=(sched.get("partition_grid", 8) if isinstance(sched, dict) else 8),
             host=(sched.get("host") if isinstance(sched, dict) else None),
             allow_cpu_compute=(sched.get("allow_cpu_compute") if isinstance(sched, dict) else None),
+            prefill_chunks=(sched.get("prefill_chunks", 1) if isinstance(sched, dict) else 1),
             knee_GBs=tun.get("knee_GBs"),
             interconnect_efficiency=tun.get("interconnect_efficiency", 1.0),
             concurrency_overlap_factor=tun.get("concurrency_overlap_factor", 1.0),
@@ -358,6 +385,12 @@ class SimConfig:
                 p.append(f"simulated: cpu_gemv_efficiency override = {self.cpu_gemv_efficiency} (CPU M=1 GEMV kernel "
                          f"efficiency; profile value {_default_eff} is itself an assumption anchored on HeteroInfer "
                          f"Fig.12, no CPU GEMM silicon)")
+        if self.cim_weight_budget_frac is not None and self.soc_profile is not None:
+            _default_b = float(load_spec(f"soc_{self.soc_profile}")["units"]["cim"].get("weight_budget_frac", 1.0))
+            if float(self.cim_weight_budget_frac) != _default_b:
+                p.append(f"simulated: cim_weight_budget_frac override = {self.cim_weight_budget_frac} (share of the CIM "
+                         f"resident capacity the capacity-aware weight split may pin; profile {_default_b}; ADR-0009 "
+                         f"cooperation revision C1, no silicon)")
         if self.cim_weight_bytes_per_param is not None and self.soc_profile is not None:
             _default_w = float(load_spec(f"soc_{self.soc_profile}")["units"]["cim"].get("weight_bytes_per_param", 1.0))
             if float(self.cim_weight_bytes_per_param) != _default_w:
@@ -380,6 +413,10 @@ class SimConfig:
         if self.scheduler != "all_cim":
             p.append(f"simulated: '{self.scheduler}' heterogeneous placement (only AllCim is "
                      f"silicon-gated; no concurrent-unit silicon — Aetina out for repair, #52)")
+        if self.prefill_chunks != 1:
+            p.append(f"simulated: prefill_chunks = {self.prefill_chunks!r} (prefill token-chunk pipelining across "
+                     f"units, HeteroInfer §4.2.2 activation-centric applied to the whole layer; the C=1 forward "
+                     f"prices dense attention while a chunked one prices block-causal attention; no silicon)")
         if self.sync_mode != "fast" or self.sync_us_override is not None:
             p.append(f"simulated: sync_mode={self.sync_mode!r} sync_us_override={self.sync_us_override!r} "
                      f"(cross-unit sync cost; literature-anchored, no heterogeneous-sync silicon)")

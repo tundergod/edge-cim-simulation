@@ -47,7 +47,8 @@
       "weight_bytes_per_param": 1.0,
       "attention_heads_mode": "serial",
       "program_BW_GBs": 43.0,
-      "residency_policy": "pin_first"
+      "residency_policy": "pin_first",
+      "weight_budget_frac": 1.0
     }
   },
   "memory": {
@@ -72,6 +73,7 @@
     "units.cpu.gemm.gemv_efficiency": "0.128 of NEON int8 peak at M=1, FITTED END-TO-END with kernel_floor_us by tools/analysis/fit_cpu_gemv.py: simulated cpu_only decode tok/s = gpu_only / 1.33 on llama-3.2-1b (InternLM-1.8B proxy) and llama-3.1-8b (Llama-7B proxy), ctx 1024 / prefill 256 / decode 128 (HeteroInfer Fig.12 llama.cpp/MNN decode 19.38/14.20 s, 63.39/48.76 s) [assumption anchored on published end-to-end only, no CPU GEMM silicon]; m_half 32 = one register-blocked row tile [assumption]",
     "units.cim.program_BW_GBs": "43.0 = the CIM unit's single-stream DRAM cap (memory.single_stream_eff_BW_GBs x units.cim.stream_eff): the array write bandwidth at which weights BEYOND the resident capacity (K*N > knee x n_cores/4) are re-programmed from the shared pool per use, latency = max(resident compute, bytes_not_resident / program_BW_GBs); equal to the stream cap => re-programming is DRAM-stream-bound; a lower value models a slow array-write path. The Card's ~70 GOP/s spill floor is a Metis AIPU artifact and is NOT used on the profile path [assumption, no silicon; ADR-0008 rev R3 2026-10-26]",
     "units.cim.residency_policy": "pin_first = the first knee x n_cores/4 weight elements stay pinned across tokens, only the remainder is re-programmed per use; 'none' = nothing pinned, a beyond-capacity weight set is re-programmed whole per use [assumption, sensitivity axis; ADR-0008 rev R3]",
+    "units.cim.weight_budget_frac": "1.0 = the whole resident capacity (knee x n_cores/4 weight elements) is the budget the capacity-aware weight split (ADR-0009 cooperation revision C1, 2026-10-26) may pin: decode = one global budget per token DAG allocated by saving density (pinned parts stream no weight bytes), prefill = a per-op cap (the CIM part is written once per forward); < 1 reserves the rest (e.g. for KV, later work) [assumption, sensitivity axis; no silicon]",
     "units.cim.attention_heads_mode": "serial = the measured Alpha basis (one head per model call); 'batched' = one call floor per bmm, heads inside the tile (no silicon) [sensitivity axis, ADR-0008 rev F6]",
     "units.cpu.gemm.kernel_floor_us": "30.0 us per CPU kernel (GEMM/GEMV, x2 per attention composite, once per fused elementwise chain head on the CPU; multi-thread fork/join + dispatch) [assumption: the same 'tens of us' band as the GPU/NPU launch floors; value chosen on a 10-30 us grid by the end-to-end fit above]"
   }

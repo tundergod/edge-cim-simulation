@@ -178,15 +178,36 @@ def apply_unit_bytes(dag, platform):
     `weight_bytes_per_param` (weight part only; activation bytes unchanged) from the remembered
     INT8 basis (`wl.extra['bytes_int8']`), so the engine meters exactly what the solver priced.
     A platform without the table (legacy / fakes) is a no-op. Idempotent."""
-    wbpp = getattr(platform, "weight_bytes_per_param", None)
-    if not wbpp:
-        return dag
+    wbpp = getattr(platform, "weight_bytes_per_param", None) or {}
     for n in dag.nodes:
-        if n.category != "matmul":
-            continue
+        if n.category != "matmul" or not (wbpp or n.wl.extra.get("cim_resident") or n.wl.extra.get("chunk_weights_shared")):
+            continue                      # no table (legacy / fakes): only a resident / shared-weight part is rescaled (C1/C2)
         n.wl.extra.setdefault("bytes_int8", n.bytes_streamed)
         n.bytes_streamed = tiling.unit_bytes(n, wbpp.get(n.unit, 1.0))
     return dag
+
+
+def _allocate_cim_budget(requests, budget, align):
+    """Cooperation revision C1, decode pass 2: allocate the global residency `budget` (weight
+    elements) to the pass-1 `requests` ({nid: {saving_us, K, N_cim, elems}}) in decreasing saving
+    density (saving / elems; ties -> lower id); an op gets its full request when it fits the
+    remainder, else the aligned-down columns the remainder affords; ops with no positive saving
+    get nothing. Returns {nid: N_cim}."""
+    q = max(1, int(align))
+    order = sorted((nid for nid, r in requests.items() if r["saving_us"] > 0 and r["elems"] > 0),
+                   key=lambda nid: (-requests[nid]["saving_us"] / requests[nid]["elems"], nid))
+    alloc, rem = {}, float(budget)
+    for nid in order:
+        r = requests[nid]
+        if r["elems"] <= rem:
+            alloc[nid] = r["N_cim"]
+            rem -= r["elems"]
+        else:
+            n = (int(rem // r["K"]) // q) * q
+            if n > 0:
+                alloc[nid] = n
+                rem -= n * r["K"]
+    return alloc
 
 
 def _finish(dag, cfg, sync_us, platform=None):
@@ -350,10 +371,22 @@ class TiledHeteroScheduler(Scheduler):
             raise ValueError(f"{self.name}: host unit {host!r} not in enabled units {units}")
         return host
 
-    def _ctx(self, platform, cfg, dag, units, host, phase, rows, handback="always", hints=None):
+    @staticmethod
+    def _cim_budget(platform, units):
+        """(budget_elems, align) of the capacity-aware weight split (C1): the platform's
+        `cim_weight_budget_elems` (profile path: knee x s x units.cim.weight_budget_frac) and the
+        CIM column quantum `cim_align_cols` (the core width); (None, 1) when the CIM is not in the
+        unit set or the platform has no residency model (legacy / fakes) -> no capacity candidates."""
+        b = getattr(platform, "cim_weight_budget_elems", None)
+        if "cim" not in units or not b or b <= 0:
+            return None, 1
+        return float(b), max(1, int(getattr(platform, "cim_align_cols", 1)))
+
+    def _ctx(self, platform, cfg, dag, units, host, phase, rows, handback="always", hints=None, cim_alloc=None):
         if platform is None:
             raise ValueError(f"{self.name}: assign() needs platform= (pricing contract: "
                              f"price/compute_us/supports)")
+        budget, cim_align = self._cim_budget(platform, units)
         align = dict(self.align)
         for u, rows in (getattr(platform, "min_split_rows", None) or {}).items():   # profile minimum (F3)
             if u not in align:
@@ -380,7 +413,9 @@ class TiledHeteroScheduler(Scheduler):
         return SolverContext(platform=platform, units=units, host=host, sync_us=_sync_us(cfg, phase),
                              grid=int(self.grid or getattr(cfg, "partition_grid", 8)),
                              std_lengths=self.std_lengths, align=align, rows=rows, dims=dims,
-                             allow_chunking=True, handback=handback, fixed_units=fixed, hints=dict(hints or {}))
+                             allow_chunking=True, handback=handback, fixed_units=fixed, hints=dict(hints or {}),
+                             cim_cap_elems=budget, cim_align=cim_align, cim_resident=(phase == "decode"),
+                             cim_alloc=cim_alloc)
 
     # ---- engine ranking of candidate plans ----------------------------------------------
     @staticmethod
@@ -421,10 +456,11 @@ class TiledHeteroScheduler(Scheduler):
         picks. Returns (plan, engine_us); `plan.greedy_engine_us` records the greedy time."""
         host = base.host
         best, best_us = base, base_us
-        p2 = self._assign_host(copy.deepcopy(dag), cfg, platform, units, host, handback="deferred")
+        alloc = getattr(base, "cim_alloc", None)      # C1: the greedy pass's residency allocation is reused
+        p2 = self._assign_host(copy.deepcopy(dag), cfg, platform, units, host, handback="deferred", cim_alloc=alloc)
         p2.plan_pass = "deferred"
         p3 = self._assign_host(copy.deepcopy(dag), cfg, platform, units, host, handback="neighbours",
-                               hints=self._hints(p2))
+                               hints=self._hints(p2), cim_alloc=alloc)
         p3.plan_pass = "neighbours"
         for cand in (p2, p3):
             t = self._engine_us(cand, platform, cfg)
@@ -449,7 +485,8 @@ class TiledHeteroScheduler(Scheduler):
             # idempotent re-assign: the plan (solver or single) is kept, only the common tail is
             # re-applied (conversions / unit bytes / residency / fusion tags / sync: all idempotent)
             keep = {k: getattr(dag, k) for k in ("host", "plan_source", "plan_pass", "host_candidates", "host_est_us",
-                                                 "greedy_engine_us") if hasattr(dag, k)}
+                                                 "greedy_engine_us", "cim_budget_elems", "cim_budget_used", "cim_alloc",
+                                                 "prefill_chunks", "chunk_candidates") if hasattr(dag, k)}
             phase, _ = _phase_and_rows(dag)
             out = _finish(dag, cfg, _sync_us(cfg, phase), platform)
             for k, v in keep.items():
@@ -493,9 +530,43 @@ class TiledHeteroScheduler(Scheduler):
         best.planned_by = self.name
         return best
 
-    def _assign_host(self, dag, cfg, platform, units, host, handback="always", hints=None):
+    def _assign_host(self, dag, cfg, platform, units, host, handback="always", hints=None, cim_alloc=None):
         phase, rows = _phase_and_rows(dag)
-        ctx = self._ctx(platform, cfg, dag, units, host, phase, rows, handback=handback, hints=hints)
+        ctx = self._ctx(platform, cfg, dag, units, host, phase, rows, handback=handback, hints=hints,
+                        cim_alloc=cim_alloc)
+        if ctx.cim_resident and ctx.cim_cap_elems is not None and cim_alloc is None:
+            # C1 decode pass 1: every matmul may request up to the cap; its saving from pinning is
+            # recorded; the global budget is then allocated by saving density and pass 2 (below) runs
+            # with the allocation. Pass 1 runs on a copy; the plan it produces is discarded.
+            p1 = self._ctx(platform, cfg, dag, units, host, phase, rows, handback=handback, hints=hints)
+            self._solve_dag(copy.deepcopy(dag), p1, host, rows)
+            cim_alloc = _allocate_cim_budget(p1.cim_requests, p1.cim_cap_elems, p1.cim_align)
+            if cim_alloc:
+                # the per-op estimate has no cross-op overlap, so a pinned plan can lose under the engine:
+                # time the pinned plan against the same solve with nothing pinned and keep the faster
+                # (ties -> unpinned = the pre-C1 plan) -> "with C1 >= without C1" per host, by construction
+                pinned = self._assign_host(copy.deepcopy(dag), cfg, platform, units, host, handback=handback,
+                                           hints=hints, cim_alloc=cim_alloc)
+                plain = self._assign_host(dag, cfg, platform, units, host, handback=handback, hints=hints, cim_alloc={})
+                t_pin, t_plain = self._engine_us(pinned, platform, cfg), self._engine_us(plain, platform, cfg)
+                out = pinned if t_pin < t_plain - 1e-9 else plain
+                out.cim_pin_engine_us = {"pinned": t_pin, "unpinned": t_plain}
+                return out
+            cim_alloc = {}
+            ctx.cim_alloc = cim_alloc
+        out = self._solve_dag(dag, ctx, host, rows)
+        out = _finish(out, cfg, ctx.sync_us, platform)
+        out.host = host
+        out.host_est_us = sum(float(p.get("T_est_us", 0.0)) for p in out.plans.values())
+        if ctx.cim_cap_elems is not None:
+            out.cim_budget_elems = ctx.cim_cap_elems
+            out.cim_alloc = cim_alloc                          # decode: {nid: N_cim}; prefill: None (per-op cap)
+            out.cim_budget_used = sum(int(p.get("cim_resident_elems", 0)) for p in out.plans.values())
+        return out
+
+    def _solve_dag(self, dag, ctx, host, rows):
+        """The per-op solve over `dag` in topological order under `ctx` (units set in place, splits
+        rewrite the DAG); returns the solved Dag (before `_finish`)."""
         consumed = set()
         for nid in tiling._topo(dag, [n.id for n in dag.nodes]):
             if nid in consumed or nid not in dag._by_id:
@@ -530,16 +601,21 @@ class TiledHeteroScheduler(Scheduler):
             dag.plans[nid] = {"category": n.category, "strategy": best.strategy, "dim": best.dim,
                               "parts": list(best.plan), "T_est_us": best.T_est, "n_candidates": ncand,
                               "block": chain}
+            if n.category == "matmul" and ctx.cim_cap_elems is not None:
+                # C1: the CIM-held weight elements of a capacity split (resident in decode = pinned across
+                # tokens, charged against the DAG budget; prefill = written once per forward, not pinned)
+                dag.plans[nid]["cim_resident_elems"] = best.cim_elems if best.resident else 0
+                dag.plans[nid]["cim_split_elems"] = best.cim_elems
             if best.dim is None:
                 for cid in chain:
                     dag[cid].unit = best.plan[0][0]
+                    if best.resident:
+                        dag[cid].wl.extra["cim_resident"] = True
             else:
                 dag = tiling.split_node(dag, nid, best.dim, best.plan, merge_unit=host,
-                                        sync_us=ctx.sync_us, align=ctx.align, rows=rows)
-        out = _finish(dag, cfg, ctx.sync_us, platform)
-        out.host = host
-        out.host_est_us = sum(float(p.get("T_est_us", 0.0)) for p in out.plans.values())
-        return out
+                                        sync_us=ctx.sync_us, align=ctx.align, rows=rows,
+                                        resident=((0,) if best.resident else ()))
+        return dag
 
 
 class HeteroInferScheduler(TiledHeteroScheduler):

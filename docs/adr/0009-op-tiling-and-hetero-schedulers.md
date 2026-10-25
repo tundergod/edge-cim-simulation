@@ -202,3 +202,103 @@ unchanged, snapshot tests green).
   and `ours + CIM ≥ cim_only` in prefill (anomaly 2) now hold; every winning plan is a solver plan, so the
   portfolio's single-unit members did not win here — the guarantee is what matters for the sweeps.
   Decode CPU utilisation of "ours" 0.60–0.76 → 0.53–0.70.
+
+## Revisions 2026-10-26 (cooperation; branch `hetero`)
+
+User request after matrix v3 (`cim-mobile-soc/experiments/RESULTS_v3.md`): in prefill "ours + CIM" equals
+`cim_only` (the portfolio picks the all-CIM plan; GPU/NPU utilisation 0.1–0.3) and in decode the CIM is a
+bytes stream that re-programs every beyond-capacity GEMV (ADR-0008 R3). Two mechanisms so the GPU/NPU work
+while the CIM works. Both SIMULATED (no silicon); the legacy path is byte-identical (`validate_e2e_l4.py`
+unchanged, snapshot tests green); `heteroinfer` unchanged (no CIM in its unit set, `prefill_chunks` default
+1). Regression tests: `tests/test_cooperation.py`.
+
+* **C1 — capacity-aware weight split** (`solver._capacity_candidates`, strategy `capacity_split`, dim N).
+  For a matmul with the CIM in the unit set the CIM takes the output columns that FIT its residency budget,
+  `N_cim = min(N, floor(budget / K))` aligned DOWN to the CIM core width (512; the combined 2048-wide tile
+  would zero out every K = 4096 op at the 8.16 M knee), and the remainder `N − N_cim` goes to one other unit
+  or to the ratio grid over the other units (host last), priced/merged like any N-split (`tile_parts` sizes
+  the CIM part exactly). The CIM part is within capacity, so the M1 model prices it by the resident law with
+  no R3 program term. Budget = `Platform.cim_weight_budget_elems` = knee × s (the R3 resident capacity) ×
+  the profile parameter `units.cim.weight_budget_frac` (default 1.0; overridable per run by
+  `platform.cim_weight_budget_frac`, provenance-flagged; later work may reserve part for KV; 0 disables the
+  candidate = the pre-C1 solver); None on the legacy path and on fakes without the attribute → no candidate.
+  - **Decode**: the weights are pinned ACROSS tokens — ONE global budget per token DAG. Two passes per
+    host (`TiledHeteroScheduler._assign_host`): pass 1 solves the DAG with every matmul allowed to request
+    up to the cap and records, per op, `saving = T_best_regular − T_best_capacity` (`SolverContext.cim_requests`;
+    `T_best_regular` = the best NON-capacity candidate, which may itself be a plain CIM placement — a
+    deviation from the brief's "without CIM", chosen so the density measures the marginal value of the
+    pin); pass 2 allocates the budget by decreasing saving density (`scheduler._allocate_cim_budget`: full
+    request when it fits the remainder, else the aligned-down columns the remainder affords; ties → lower
+    id; no positive saving → nothing) and re-solves with each op offered exactly its allocation (absent →
+    no capacity candidate: the normal candidates). An op that fits entirely is offered as a RESIDENT
+    single placement besides the plain `cim_only`. The CIM part is tagged `wl.extra["cim_resident"]`:
+    `tiling.unit_bytes` streams NO weight bytes for it (only the activation rows), in the solver's estimate
+    and in the engine alike (`apply_unit_bytes`). The refinement passes reuse the greedy pass's allocation.
+    The per-op estimate has no cross-op overlap, so a pinned plan can lose under the engine: the pass-2
+    plan is timed against the same solve with nothing pinned and the faster is kept (ties → unpinned = the
+    pre-C1 plan; `dag.cim_pin_engine_us`), so "with C1 ≥ without C1" holds per host by construction.
+    Recorded: `dag.plans[nid]["cim_resident_elems"]` (and `cim_split_elems`), `dag.cim_budget_elems`,
+    `dag.cim_budget_used`, `dag.cim_alloc`; runner `cim_weight_budget_elems`, `cim_budget_used_decode`,
+    `cim_resident_matmuls_decode`. The one-time pin write (K·N_cim bytes once per generation) is NOT
+    charged in the per-token latency (amortised over the decode tokens). Honesty: the plain CIM candidates
+    keep R3's per-op `pin_first` assumption (every op pretends its first knee × s elements are pinned while
+    still streaming all its weights); only the capacity split is budget-consistent — the two coexist in
+    one plan, the engine picks.
+  - **Prefill**: the budget is per op (an op may use up to cap); the CIM part's weights are written once
+    per forward (its DRAM bytes metered by the pool, the R3 program term 0 since the part fits); never
+    tagged resident. An op that fits entirely adds nothing (= `cim_only`).
+  - Cost: two extra solves + one engine run per host in decode (pass 1 + the unpinned comparison). Measured effect (sd8gen3_cim, 4 cores, host auto,
+    ctx 1024 / prefill 256 / decode 128): the budget is 8.16 M elements = 0.7 % of llama-3.2-1b's and
+    0.1 % of llama-3.1-8b's weights, so decode gains are within 0.2 % (1B: the layer-0 Q projection
+    pinned whole, 4.19 M elements; 8B: the layer-0 K projection, 4.19 M) — see the smoke table in the
+    worker report / RESULTS_v4. The mechanism is in place for larger arrays (`cim_n_cores`) and the KV
+    reservation.
+* **C2 — prefill token-chunk pipelining** (`workload.build_prefill_dag`, `scheduler.prefill_chunks ∈ {1, 2,
+  4, 8, "auto"}`, default 1 = the one-forward DAG, byte-identical). The forward is built as C chunk sub-DAGs
+  of `P // C` rows (the last absorbs the remainder; `chunk_rows`), each from `build_token_dag` at its own
+  row count (per-row ops exact → GEMM FLOPs conserved EXACTLY), with every attention block widened to
+  `kv_c = rows of chunks ≤ c` (QK^T / S.V / scale / mask / softmax rescaled; block-causal). The fixture has
+  no KV-append node in prefill, so chunk c's QK^T depends on the K-side rope outputs of chunks < c (told from
+  the Q chain by the projection width equal to the V projection's; both when indistinguishable) and its S.V
+  on their V projections; all other ops depend only on their own chunk. Ids chunk-major; nodes carry
+  `wl.extra["chunk"]` / `["op_index"]`. **Bytes conserved** (the brief's requirement): a matmul of chunk c > 0
+  carries `chunk_weights_shared` — its weights were streamed by chunk 0 and are ASSUMED to stay on the unit
+  between consecutive chunks (`unit_bytes` streams its activation rows only, on every unit); the assumption
+  is checked post hoc: the engine records the per-unit dispatch order (`stats["unit_order"]`) and
+  `workload.weight_order_violations` counts the chunk-c > 0 matmuls whose unit ran a different GEMM since
+  chunk c − 1's same GEMM (runner `prefill_weight_order_violations` / `_checked`). The whole chunked DAG is
+  scheduled by the same per-op solver (every chunk re-solved: the attention blocks differ in kv; plans may
+  differ per chunk) and the per-host portfolio; TTFT = the engine latency of the whole chunked DAG. `auto` =
+  the runner's engine-ranked portfolio over C ∈ {1, 2, 4, 8} (ties → the smaller C), keeping the per-host
+  portfolio inside each; `dag.prefill_chunks`, runner `prefill_chunks`, `prefill_chunks_config`,
+  `prefill_chunk_candidates_us`. Decode untouched.
+  - **Modelling differences, stated**: (i) the C = 1 DAG prices DENSE attention (the trace fixture's P × P
+    bmms) while a chunked DAG prices the block-causal total Σ_c H·M_c·hd·kv_c (= (C+1)/2C of dense) — a
+    model difference, not a scheduler gain; (ii) the shared-weight assumption is optimistic for the CIM:
+    a beyond-capacity GEMM still pays the R3 re-programming TIME per chunk while its bytes are counted
+    once; (iii) each chunk is a separate call: the CIM prefill tile law's per-call term `a` = 40.8 µs per
+    2048² tile (the array programming + call overhead the Card measured), the NPU per-matmul floor, the
+    GPU/NPU elementwise launch floors and the per-boundary syncs are all paid C times.
+  - **Measured effect**: (iii) dominates. sd8gen3_cim, 4 cores, host auto, `tiled_hetero`, engine latency
+    of the chunked forward: llama-3.2-1b P = 256: C = 1 67.0 ms (3821 tok/s), 2 73.7, 4 96.6, 8 141.1
+    (CIM utilisation 0.34 → 0.50 / 0.70 / 0.89, GPU 0.07 → 0.52 at C = 4 — the units ARE busier, on
+    inflated work: 232 tiles × 40.8 µs = 9.5 ms of per-call CIM cost per extra chunk, plus launch floors and
+    syncs, against ≈ 5 ms of GPU work to hide); llama-3.1-8b P = 1024: C = 1 374 ms, 2 423, 4 712 (all
+    `single:cim`; 1664 tiles × 40.8 µs = 68 ms per extra chunk + the per-chunk R3 program terms). The
+    shared-weight assumption is violated for most chunk GEMMs (order check 135/146 at 1B C = 2, 213/225 at
+    8B C = 2: the CIM interleaves GEMMs of different chunks), so the true chunked cost is higher still.
+    `auto` therefore keeps C = 1 on every smoke config (RESULTS_v3's prefill numbers stand). Reading: the
+    activation-centric chunking HeteroInfer uses for a weight-streaming NPU does not transfer to a
+    weight-stationary CIM, whose per-call array programming is exactly what chunking multiplies; a CIM-side
+    gain needs weight-stationary chunk ordering (all chunks of one GEMM back-to-back, which serialises the
+    pipeline) or a larger array — open.
+* **Engine**: `run_dag` iterates `started − done` in its finish passes (the running nodes; `finish` is
+  order-independent — same results, ~2× faster on 2.5 k-node DAGs) and records `stats["unit_order"]`
+  (both engines). `tiling.tile_parts(chain=)` lets the solver pass its `_block` once per op instead of
+  recomputing it per candidate. Numerics unchanged (full suite + L4 identical).
+* **Still open**: the solver's per-op estimate has no cross-chunk overlap (the engine ranks the chunk
+  portfolio); the engine dispatches ready nodes lowest-id-first with no cross-chunk priority, so the host unit
+  runs chunk c's long attention before chunk c+1's short norm that would unblock the CIM (on the test fake with
+  equal CIM/GPU work C = 4 hides 10 % of 50 % possible); the budget allocation is greedy by density (no knapsack optimality claim) and computed once
+  per host in the greedy pass; `weight_budget_frac` < 1 (KV reservation) is a parameter without a KV
+  consumer yet; the CIM attention model has no residency notion.

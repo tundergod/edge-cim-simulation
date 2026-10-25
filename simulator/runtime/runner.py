@@ -16,7 +16,7 @@ _ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(_ROOT / "tools" / "trace_export"))
 import op_profile  # noqa: E402
 
-from simulator.runtime.workload import build_token_dag  # noqa: E402
+from simulator.runtime.workload import build_token_dag, build_prefill_dag, weight_order_violations  # noqa: E402
 from simulator.runtime.scheduler import SCHEDULERS, plans_summary  # noqa: E402
 from simulator.runtime.platform import Platform  # noqa: E402
 from simulator.runtime.events import run_dag  # noqa: E402
@@ -76,7 +76,8 @@ def run(cfg):
                     bw_efficiency=cfg.bw_efficiency, soc_profile=cfg.soc_profile,
                     cim_n_cores=cfg.cim_n_cores, npu_scale=cfg.npu_scale,
                     cpu_gemv_efficiency=cfg.cpu_gemv_efficiency,
-                    cim_weight_bytes_per_param=cfg.cim_weight_bytes_per_param)
+                    cim_weight_bytes_per_param=cfg.cim_weight_bytes_per_param,
+                    cim_weight_budget_frac=cfg.cim_weight_budget_frac)
     model_obj = op_profile.Model(cfg.model)
     concurrency = not cfg.concurrency_off
     contention = not cfg.contention_off
@@ -118,10 +119,24 @@ def run(cfg):
     tok_s = 1e6 / t_dec_us if t_dec_us > 0 else 0.0
     total_generation_s = D * t_dec_us / 1e6
 
-    # prefill: one forward at P (TTFT reported only, not gated)
-    pre, pre_stats = assign(build_token_dag(cfg.model, "prefill", cfg.prefill_len, _model_obj=model_obj)), {}
-    t_pre_us = run_dag(pre, plat, plat.bw, concurrency=concurrency, contention=contention,
-                       price_compute=price_compute, pipeline=pipeline, stats=pre_stats)
+    # prefill: one forward at P (TTFT reported only, not gated). ADR-0009 cooperation revision C2:
+    # `scheduler.prefill_chunks` builds the forward as C chunk sub-DAGs (C = 1 = the one-forward DAG,
+    # byte-identical); "auto" = the engine-ranked portfolio over {1, 2, 4, 8} (ties -> the smaller C).
+    pc = cfg.prefill_chunks
+    chunk_cands = (1, 2, 4, 8) if pc == "auto" else (int(pc),)
+    pre, pre_stats, t_pre_us, chunk_us = None, None, None, {}
+    for C in chunk_cands:
+        d, st = assign(build_prefill_dag(cfg.model, cfg.prefill_len, C)), {}
+        t = run_dag(d, plat, plat.bw, concurrency=concurrency, contention=contention,
+                    price_compute=price_compute, pipeline=pipeline, stats=st)
+        chunk_us[C] = t
+        if t_pre_us is None or t < t_pre_us - 1e-9:
+            pre, pre_stats, t_pre_us = d, st, t
+    prefill_chunks = min(C for C, t in chunk_us.items() if abs(t - t_pre_us) <= 1e-9)
+    chunk_us = {C: round(t, 3) for C, t in chunk_us.items()}
+    pre.prefill_chunks = prefill_chunks
+    pre.chunk_candidates = chunk_us
+    order_bad, order_checked = weight_order_violations(pre, pre_stats["unit_order"])
     # per-call transport floor (alpha host-MMIO 911 us) is a TTFT artifact, amortized to ~0 over
     # decode tokens -> added to the prefill/TTFT path ONLY (D11; decode tok/s stays bandwidth-bound).
     t_pre_us += plat.per_call_floor_us
@@ -183,6 +198,20 @@ def run(cfg):
         "prefill_plan_source": getattr(pre, "plan_source", None),
         "plan_pass": getattr(dec, "plan_pass", None),              # greedy | deferred | neighbours (solver plans)
         "prefill_plan_pass": getattr(pre, "plan_pass", None),
+        # ADR-0009 cooperation revisions (2026-10-26): C2 prefill token-chunk pipelining (the C actually
+        # used + the portfolio's engine times) and C1 capacity-aware weight split (the CIM residency budget
+        # and what the decode plan at the middle kv point pinned)
+        "prefill_chunks": prefill_chunks,                      # C used (config value, or the auto portfolio's pick)
+        "prefill_chunks_config": cfg.prefill_chunks,
+        "prefill_chunk_candidates_us": chunk_us if pc == "auto" else None,
+        # the shared-weight assumption's post-hoc check (chunk c > 0 matmuls whose unit ran another GEMM
+        # since chunk c - 1's same GEMM: their weight bytes were counted once but would stream again)
+        "prefill_weight_order_violations": order_bad,
+        "prefill_weight_order_checked": order_checked,
+        "cim_weight_budget_frac": plat.cim_weight_budget_frac,     # share of the resident capacity pinnable (None = legacy)
+        "cim_weight_budget_elems": plat.cim_weight_budget_elems,   # knee x s x weight_budget_frac (None = legacy)
+        "cim_budget_used_decode": getattr(dec, "cim_budget_used", None),   # pinned weight elements (solver plans only)
+        "cim_resident_matmuls_decode": sum(1 for p in dec.plans.values() if p.get("cim_resident_elems", 0) > 0),
         "cim_n_cores": plat.cim_n_cores,
         "cim_weight_bytes_per_param": plat.cim_weight_bytes_per_param,   # streamed CIM weight bytes/param used
         "npu_scale": plat.npu_scale,

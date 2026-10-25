@@ -209,7 +209,8 @@ ALLOWED = {   # every plan strategy a scheduler may record (decode + prefill)
     "heteroinfer": {"gpu_fixed", "mem_fixed", "cpu_fixed", "gpu_only", "npu_only", "weight_centric",
                     "activation_centric", "hybrid"},
     "tiled_hetero": {"mem_fixed", "cpu_fixed", "gpu_only", "npu_only", "cim_only", "weight_centric",
-                     "activation_centric", "hybrid", "token_split", "k_split", "head_split", "kv_split", "row_split"},
+                     "activation_centric", "hybrid", "token_split", "k_split", "head_split", "kv_split", "row_split",
+                     "capacity_split"},     # ADR-0009 cooperation revision C1
 }
 
 

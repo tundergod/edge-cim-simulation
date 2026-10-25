@@ -24,6 +24,7 @@ weight bytes the engine will meter (rev F13) and the shared-bandwidth knee
 | k_split             | K     | ratio grid on K + partial-sum merge (tiled_hetero only)   |
 | head_split/kv_split | heads/kv | ratio grid over an attention block (tiled_hetero only) |
 | row_split           | rows  | ratio grid over a support op's rows (prefill only)        |
+| capacity_split      | N     | the CIM takes the output columns that FIT its residency budget (N_cim = min(N, floor(budget/K)) aligned down to the CIM core width), the remainder goes to the other units (single unit or ratio grid); decode: the CIM part is RESIDENT (pinned across tokens, no weight stream, charged against a global per-DAG budget allocated by saving density); prefill: per-op cap, weights written once per forward (ADR-0009 cooperation revision C1) |
 
 Complexity per op: O(|dims| * sum_{S subset of units, |S|>=2} C(g-1, |S|-1)) candidates, each
 priced with |chain|*|S| platform.compute_us calls — e.g. 3 dims x (3 pairs x 7 + 1 triple x 21)
@@ -48,6 +49,8 @@ class Candidate:
     plan: list                            # [(unit, fraction)]
     T_est: float = float("inf")
     merge_bytes: int = 0
+    resident: bool = False                # capacity_split in decode: the CIM part is pinned (part 0 / the whole op)
+    cim_elems: int = 0                    # capacity_split: K * N_cim weight elements the CIM part holds
 
 
 @dataclass
@@ -87,6 +90,18 @@ class SolverContext:
     handback: str = "always"
     fixed_units: dict = field(default_factory=dict)
     hints: dict = field(default_factory=dict)
+    # Cooperation revision C1 (ADR-0009, 2026-10-26): the capacity-aware weight split. `cim_cap_elems` =
+    # the CIM residency budget in weight elements (None = no capacity candidates); `cim_align` = the
+    # column quantum of the CIM part (the core width); `cim_resident` (decode) = the CIM part is pinned
+    # across tokens and consumes the GLOBAL per-DAG budget: pass 1 (`cim_alloc` None) lets every op
+    # request up to the cap and records its saving in `cim_requests`, pass 2 (`cim_alloc` = {nid: N_cim}
+    # from scheduler._allocate_cim_budget) offers each op exactly its allocation (absent -> no
+    # capacity candidate). Prefill: per-op cap, never resident (weights written once per forward).
+    cim_cap_elems: float | None = None
+    cim_align: int = 1
+    cim_resident: bool = False
+    cim_alloc: dict | None = None
+    cim_requests: dict = field(default_factory=dict)
 
 
 def _supports(ctx, unit, chain_nodes):
@@ -181,10 +196,17 @@ def _charges_handback(ctx, dag, chain, unit):
     return False
 
 
-def _estimate_single(ctx, dag, chain, unit):
+def _estimate_single(ctx, dag, chain, unit, resident=False):
+    """`resident` = the whole op is CIM-resident (a capacity_split that fits entirely, decode):
+    the template is tagged so its weight bytes drop out of the pool term; a regular template has
+    the tag removed (never inherits a stale one)."""
     t = ctx.sync_us if _boundary_in(dag, chain, unit) else 0.0
     for cid in chain:
         tmpl = tiling._copy(dag[cid], unit=unit, pricing_group=dag[cid].pricing_group)
+        if resident:
+            tmpl.wl.extra["cim_resident"] = True
+        else:
+            tmpl.wl.extra.pop("cim_resident", None)
         t += _node_us(ctx, tmpl)
     if unit != ctx.host and _charges_handback(ctx, dag, chain, unit):
         t += ctx.sync_us
@@ -245,6 +267,52 @@ def _label(dim, node, ctx):
             "kv": "kv_split", "rows": "row_split"}[dim]
 
 
+def cim_cols(ctx, nid, K, N):
+    """Output columns the CIM part of a capacity_split takes for a K x N matmul: the allocation
+    (pass 2) or min(N, floor(cap / K)) (pass 1 / prefill), aligned DOWN to `cim_align` unless the
+    whole op fits. 0 = no capacity candidate."""
+    if ctx.cim_cap_elems is None or K <= 0 or N <= 0:
+        return 0
+    if ctx.cim_alloc is not None:
+        n = int(ctx.cim_alloc.get(nid, 0))
+    else:
+        n = int(ctx.cim_cap_elems // K)
+    if n >= N:
+        return N
+    q = max(1, int(ctx.cim_align))
+    return (n // q) * q
+
+
+def _capacity_candidates(ctx, dag, nid, units):
+    """The capacity_split candidates of a matmul (revision C1): the CIM holds N_cim columns, the
+    remainder goes to ONE other unit or to a ratio-grid plan over the other units (host last).
+    Decode (`cim_resident`): an op that fits entirely is offered as a RESIDENT single placement
+    (plain cim_only streams its weights every token; the resident one does not); prefill: an op
+    that fits entirely is already the cim_only candidate (nothing to add)."""
+    node = dag[nid]
+    if node.category != "matmul" or "cim" not in units:
+        return []
+    K, N = node.wl.K, node.wl.N
+    n = cim_cols(ctx, nid, K, N)
+    if n <= 0:
+        return []
+    if n >= N:
+        if ctx.cim_resident:
+            return [Candidate("capacity_split", None, [("cim", 1.0)], resident=True, cim_elems=K * N)]
+        return []
+    others = [u for u in units if u != "cim"]
+    if not others:
+        return []
+    f = n / N
+    out = [Candidate("capacity_split", "N", [("cim", f), (u, 1.0 - f)], resident=ctx.cim_resident,
+                     cim_elems=K * n) for u in others]
+    if len(others) >= 2:
+        for plan in _grid_plans(ctx, others):
+            out.append(Candidate("capacity_split", "N", [("cim", f)] + [(u, c * (1.0 - f)) for u, c in plan],
+                                 resident=ctx.cim_resident, cim_elems=K * n))
+    return out
+
+
 def candidates(ctx, dag, nid):
     """Every feasible strategy for node `nid` (or its attention block), unpriced."""
     node = dag[nid]
@@ -252,6 +320,7 @@ def candidates(ctx, dag, nid):
     chain_nodes = [dag[c] for c in chain]
     units = [u for u in ctx.units if _supports(ctx, u, chain_nodes)]
     out = [Candidate(f"{u}_only", None, [(u, 1.0)]) for u in units]
+    out += _capacity_candidates(ctx, dag, nid, units)
     if len(units) < 2:
         return out, units
     legal = tiling.LEGAL_DIMS.get(node.category, ())
@@ -286,12 +355,14 @@ def solve(ctx, dag, nid):
                          f"({dag[nid].category}); cannot place it")
     chain = tiling._block(dag, nid)
     best, n = None, 0
+    best_reg, best_cap = None, None            # pass-1 bookkeeping of the capacity split (decode)
     for c in cands:
         if c.dim is None:
-            c.T_est = _estimate_single(ctx, dag, chain, c.plan[0][0])
+            c.T_est = _estimate_single(ctx, dag, chain, c.plan[0][0], resident=c.resident)
         else:
             try:
-                tp = tiling.tile_parts(dag, nid, c.dim, c.plan, align=ctx.align, rows=ctx.rows)
+                tp = tiling.tile_parts(dag, nid, c.dim, c.plan, align=ctx.align, rows=ctx.rows,
+                                       resident=((0,) if c.resident else ()), chain=chain)
             except ValueError:
                 continue
             c.T_est = _estimate_split(ctx, dag, tp)
@@ -299,5 +370,17 @@ def solve(ctx, dag, nid):
         n += 1
         if best is None or c.T_est < best.T_est - 1e-9:
             best = c
+        if c.strategy == "capacity_split":
+            if best_cap is None or c.T_est < best_cap.T_est - 1e-9:
+                best_cap = c
+        elif best_reg is None or c.T_est < best_reg.T_est - 1e-9:
+            best_reg = c
+    if ctx.cim_resident and ctx.cim_alloc is None and best_cap is not None and best_reg is not None:
+        # pass 1: what pinning this op's CIM part would save per pinned weight element
+        node = dag[nid]
+        n_cim = best_cap.cim_elems // node.wl.K
+        ctx.cim_requests[nid] = {"saving_us": best_reg.T_est - best_cap.T_est, "K": node.wl.K,
+                                 "N_cim": n_cim, "elems": best_cap.cim_elems,
+                                 "T_regular_us": best_reg.T_est, "T_capacity_us": best_cap.T_est}
     ctx.n_candidates = n
     return best, n

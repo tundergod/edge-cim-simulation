@@ -136,7 +136,7 @@ def run_serial(dag, platform, bw, *, price_compute=True, stats=None):
         raise ValueError("M3: DRAM memory traffic present but SharedBandwidth eff_BW <= 0 "
                          "(degenerate bandwidth would stall the simulation)")
     total = 0.0
-    unit_busy, dur, bytes_drained, mem_us = {}, {}, 0, 0.0
+    unit_busy, dur, bytes_drained, mem_us, unit_order = {}, {}, 0, 0.0, {}
     for n in dag.nodes:
         fixed, c = _price(platform, n, price_compute)
         # only DRAM-domain bytes hit the memory wall; cpu_cache bytes are already inside
@@ -146,12 +146,14 @@ def run_serial(dag, platform, bw, *, price_compute=True, stats=None):
         total += fixed + max(c, m)
         if stats is not None:
             unit_busy[n.unit] = unit_busy.get(n.unit, 0.0) + fixed + c
+            unit_order.setdefault(n.unit, []).append(n.id)
             dur[n.id] = fixed + max(c, m)
             if dram:
                 bytes_drained += n.bytes_streamed
                 mem_us += m
     if stats is not None:
         _fill_stats(stats, dag, total, unit_busy, dur, bytes_drained, mem_us)
+        stats["unit_order"] = unit_order
     return total
 
 
@@ -180,6 +182,7 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
         return run_serial(dag, platform, bw, price_compute=price_compute, stats=stats)
     n_total = len(dag.nodes)
     unit_busy, dur, bytes_drained, mem_active_us = {}, {}, 0.0, 0.0   # stats accumulators
+    unit_order = {}                      # unit -> node ids in dispatch order (stats; the C2 weight-order check)
     indeg = {n.id: len(n.deps) for n in dag.nodes}
     unit_free = {}                       # unit clock -> next-free time (compute serialization)
     pending = {nid for nid, d in indeg.items() if d == 0}   # deps satisfied, not yet dispatched
@@ -234,6 +237,7 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
                     unit_free[u] = start + ct
                     compute_done_at[nid] = start + ct
                     unit_busy[node.unit] = unit_busy.get(node.unit, 0.0) + fixed + ct
+                    unit_order.setdefault(node.unit, []).append(nid)
                     dur[nid] = fixed + max(ct, bw.stream_us(node.bytes_streamed, 1) if _dram(node) else 0.0)
                     owner[nid] = _stream_owner(dag, node)
                     progressed = True
@@ -246,12 +250,11 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
                     if _dram(node):
                         active_mem[nid] = float(node.bytes_streamed)
                     progressed = True
-            for nid in list(started):
-                if nid not in done:
-                    n_done = len(done)
-                    finish(nid)
-                    if len(done) > n_done:        # newly finished -> re-dispatch newly-ready nodes
-                        progressed = True
+            for nid in list(started - done):      # only the running nodes (finish is order-independent)
+                n_done = len(done)
+                finish(nid)
+                if len(done) > n_done:            # newly finished -> re-dispatch newly-ready nodes
+                    progressed = True
         if not (pending or active_mem or (started - done)):
             break
 
@@ -294,7 +297,7 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
                 active_mem[nid] -= drained
                 if active_mem[nid] <= _BYTE_EPS:
                     del active_mem[nid]
-        for nid in list(started):
+        for nid in list(started - done):
             finish(nid)
 
     # completion invariant (#56): every node must have finished
@@ -303,4 +306,5 @@ def run_dag(dag, platform, bw, *, concurrency=True, contention=True, price_compu
                            f"nodes never completed")
     if stats is not None:
         _fill_stats(stats, dag, last, unit_busy, dur, bytes_drained, mem_active_us)
+        stats["unit_order"] = unit_order
     return last

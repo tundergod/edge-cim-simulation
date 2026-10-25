@@ -178,6 +178,143 @@ def build_token_dag(model, phase, L, *, _model_obj=None):
     return Dag(nodes)
 
 
+def chunk_rows(P, chunks):
+    """Row counts of the prefill chunks: C = min(chunks, P) chunks of P // C rows, the LAST one
+    absorbing the remainder (sum == P exactly)."""
+    P, C = int(P), max(1, min(int(chunks), int(P)))
+    m = P // C
+    return [m] * (C - 1) + [P - m * (C - 1)]
+
+
+def _proj_N(dag, nid):
+    """N of the nearest matmul ancestor of `nid` (BFS over deps; None if there is none) — tells the
+    K-projection chain (N = kv_heads * hd, equal to the V projection's) from the Q chain under GQA."""
+    seen, queue = set(), [nid]
+    while queue:
+        i = queue.pop(0)
+        if i in seen:
+            continue
+        seen.add(i)
+        n = dag[i]
+        if n.category == "matmul":
+            return n.wl.N
+        queue.extend(n.deps)
+    return None
+
+
+def _kv_producers(sub, block):
+    """(k_deps, v_deps) of an attention block in a one-chunk sub-DAG: the QK^T's deps outside the
+    block that feed the K side (the rope chain whose projection N equals the V projection's; both
+    when they cannot be told apart) and the S.V's deps outside the block (the V projection)."""
+    inside = set(block)
+    qk, sv = sub[block[0]], sub[block[-1]]
+    v_deps = [d for d in sv.deps if d not in inside]
+    cand = [d for d in qk.deps if d not in inside]
+    vN = {_proj_N(sub, d) for d in v_deps}
+    k_deps = [d for d in cand if _proj_N(sub, d) in vN] or cand
+    return k_deps, v_deps
+
+
+def build_prefill_dag(model, P, chunks=1):
+    """The prefill forward at P rows as `chunks` CHUNK SUB-DAGS (ADR-0009 cooperation revision C2,
+    HeteroInfer §4.2.2 activation-centric across the whole layer): chunk c = build_token_dag at its
+    own row count (every per-row op has exact per-chunk shapes, so GEMM FLOPs sum exactly to the
+    one-forward DAG's), with every attention block widened
+    to kv_c = rows of chunks <= c (block-causal: the query rows of chunk c attend to all tokens up
+    to and including their own chunk — the fixture has no KV-append node in prefill, so chunk c's
+    QK^T additionally depends on the K-side rope outputs of chunks < c and its S.V on their V
+    projections). Ids are chunk-major (chunk c's node i -> c * n + i); every node carries
+    `wl.extra['chunk']` and `wl.extra['op_index']`. BYTES ARE CONSERVED: a matmul of chunk c > 0
+    carries `wl.extra['chunk_weights_shared']` = its weights were streamed by chunk 0 and are
+    ASSUMED to stay on the unit between consecutive chunks (tiling.unit_bytes streams only its
+    activation bytes); the runner's `weight_order_violations` counts the matmuls whose unit ran a
+    different GEMM in between (the assumption's post-hoc check). chunks == 1 returns
+    build_token_dag(model, 'prefill', P) unchanged (the legacy path). NB the one-forward DAG prices
+    DENSE attention (the trace fixture's [P x P] bmms) while a chunked DAG prices the block-causal
+    total Sum_c H*M_c*hd*kv_c — a modelling difference stated in the ADR, not a scheduler gain."""
+    sizes = chunk_rows(P, chunks)
+    if len(sizes) == 1:
+        return build_token_dag(model, "prefill", P)
+    from simulator.runtime import tiling          # deferred: tiling is a leaf over dag/engine
+    from dataclasses import replace
+    nodes, n_per = [], None
+    k_prev, v_prev = [], []                       # per attention block: global K / V producer ids of earlier chunks
+    for c, Mc in enumerate(sizes):
+        sub = build_token_dag(model, "prefill", Mc)
+        if n_per is None:
+            n_per = len(sub.nodes)
+        elif len(sub.nodes) != n_per:
+            raise ValueError(f"build_prefill_dag: chunk {c} has {len(sub.nodes)} nodes, chunk 0 has {n_per}")
+        base = c * n_per
+        kv_c = sum(sizes[:c + 1])
+        frac = kv_c / Mc                          # the block's kv grows from the chunk's own rows to kv_c
+        reps = [n.id for n in sub.nodes if tiling.is_attention_rep(n)]
+        if c == 0:
+            k_prev, v_prev = [[] for _ in reps], [[] for _ in reps]
+        elif len(reps) != len(k_prev):
+            raise ValueError("build_prefill_dag: attention block count differs between chunks")
+        repl, extra_deps = {}, {}                 # local id -> widened node; local id -> extra GLOBAL deps
+        for b, rid in enumerate(reps):
+            block = tiling._block(sub, rid)
+            k_deps, v_deps = _kv_producers(sub, block)
+            for cid in block:
+                node = sub[cid]
+                bshare = int(round(tiling.base_bytes(node) * frac))
+                if node.category == "attention" and "hd" in node.wl.extra:
+                    new = tiling._attn_bmm_part(node, "kv", kv_c, frac, bshare)
+                    new.wl = replace(new.wl, nbytes=int(round(node.wl.nbytes * frac)))
+                    new.pricing_group = node.pricing_group
+                else:
+                    new = tiling._scale_proportional(node, frac, bshare, kv=(kv_c if node.wl.kv else None))
+                repl[cid] = new
+            extra_deps[block[0]] = list(k_prev[b])
+            extra_deps[block[-1]] = list(v_prev[b])
+            k_prev[b].extend(d + base for d in k_deps)
+            v_prev[b].extend(d + base for d in v_deps)
+        for n in sub.nodes:
+            n = repl.get(n.id, n)
+            n.deps = [d + base for d in n.deps] + extra_deps.get(n.id, [])
+            n.id += base
+            n.in_values = list(n.deps)
+            n.out_value = n.id
+            if n.pricing_group is not None:
+                n.pricing_group += base
+            n.wl.extra["chunk"] = c
+            n.wl.extra["op_index"] = n.id - base             # the op's index inside its chunk (the weight-order check)
+            if c > 0 and n.category == "matmul":
+                n.wl.extra["chunk_weights_shared"] = True   # bytes conservation: chunk 0 streams the weights once
+                n.wl.extra["bytes_int8"] = n.bytes_streamed   # the full INT8 basis stays the part-byte source
+                n.bytes_streamed = tiling.unit_bytes(n, 1.0)  # -> activation bytes only
+            nodes.append(n)
+    dag = Dag(nodes)
+    dag.prefill_chunks = len(sizes)
+    dag.chunk_rows = sizes
+    return dag
+
+
+def weight_order_violations(dag, unit_order):
+    """C2 post-hoc check of the shared-weight assumption: for every matmul node of chunk c > 0, the
+    previous MATMUL dispatched on its unit (`unit_order` = events stats) must be the same GEMM —
+    same `op_index`, same K x N columns (same tile part) — of chunk c - 1; otherwise the unit ran
+    other weights in between and this node's weight bytes (counted once per forward) were
+    under-metered. Returns (violations, checked)."""
+    key = lambda n: (n.wl.extra.get("op_index"), n.wl.K, n.wl.N,          # noqa: E731
+                     (n.tile or {}).get("part"), (n.tile or {}).get("dim"))
+    bad = checked = 0
+    for unit, order in unit_order.items():
+        prev = None
+        for nid in order:
+            n = dag[nid]
+            if n.category != "matmul":
+                continue
+            if n.wl.extra.get("chunk_weights_shared"):
+                checked += 1
+                if prev is None or key(prev) != key(n) or prev.wl.extra.get("chunk") != n.wl.extra.get("chunk") - 1:
+                    bad += 1
+            prev = n
+    return bad, checked
+
+
 def category_counts(dag):
     """{category: n_nodes} for a single DAG."""
     out = {}

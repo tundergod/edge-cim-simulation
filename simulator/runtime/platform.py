@@ -81,7 +81,8 @@ class Platform:
 
     def __init__(self, model, *, memory_spec="mem_lpddr4x", topology=None, knee_GBs=None,
                  interconnect_efficiency=1.0, bw_efficiency=None, soc_profile=None,
-                 cim_n_cores=None, npu_scale=1.0, cpu_gemv_efficiency=None, cim_weight_bytes_per_param=None):
+                 cim_n_cores=None, npu_scale=1.0, cpu_gemv_efficiency=None, cim_weight_bytes_per_param=None,
+                 cim_weight_budget_frac=None):
         """`cim_n_cores` / `npu_scale` are the ADR-0008 scalable axes (None / 1.0 = the profile's own
         geometry); `cpu_gemv_efficiency` overrides the profile's CPU M=1 GEMV efficiency (None = profile;
         geometry; anything else is EXTRAPOLATED and flagged by SimConfig); `cim_weight_bytes_per_param`
@@ -167,6 +168,7 @@ class Platform:
             unit_caps["mem"] = eff
         self.bw = SharedBandwidth(eff, knee_GBs=knee_GBs,
                                   interconnect_efficiency=interconnect_efficiency, unit_caps=unit_caps)
+        self._cim_weight_budget_frac_override = cim_weight_budget_frac
         self._build_units(cim_params, cim_n_cores, npu_scale, cpu_gemv_efficiency)
         self.cim_weight_bytes_per_param = self.weight_bytes_per_param["cim"]
         if cim_weight_bytes_per_param is not None and self.profile is not None:
@@ -214,6 +216,18 @@ class Platform:
                                     residency_policy=self.cim_residency_policy,
                                     weight_bytes_per_param=self.weight_bytes_per_param["cim"])
         self.cim_n_cores = int(self.cim.n_cores)
+        # C1 (ADR-0009 cooperation revision, 2026-10-26): the CIM residency budget the capacity-aware
+        # weight split may pin = knee x s (the resident capacity, R3) x `units.cim.weight_budget_frac`
+        # (default 1.0; later work may reserve part for KV); the CIM part is aligned to the core width.
+        # None on the legacy path (no residency model there -> no capacity candidates).
+        self.cim_weight_budget_frac = None if legacy else float(units["cim"].get("weight_budget_frac", 1.0))
+        if self._cim_weight_budget_frac_override is not None and not legacy:
+            self.cim_weight_budget_frac = float(self._cim_weight_budget_frac_override)      # SimConfig.platform.cim_weight_budget_frac
+        if self.cim_weight_budget_frac is not None and not (0 <= self.cim_weight_budget_frac <= 1):
+            raise ValueError(f"units.cim.weight_budget_frac must be in [0, 1], got {self.cim_weight_budget_frac!r}")
+        self.cim_weight_budget_elems = (None if (legacy or self.cim.mt_knee is None)
+                                        else float(self.cim.mt_knee) * self.cim_weight_budget_frac)
+        self.cim_align_cols = int(self.cim.core_width)
         attn_model = "memory_bound_zero" if legacy else units["cim"]["attention_model"]
         self.cim_heads_mode = "serial" if legacy else units["cim"].get("attention_heads_mode", "serial")
         if attn_model == "alpha_floor_fit":

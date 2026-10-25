@@ -33,6 +33,16 @@ HeteroInfer's published numbers); the L4 legacy path (`soc_profile` unset, `all_
   single-unit plan, engine-ranked → "ours ≥ best single-unit baseline" by construction), `plan_source` surfaced, solver
   refinement passes (deferred / neighbours hand-back charging). G3: `platform.cim_weight_bytes_per_param`, `price_table.py
   --cim-n-cores`. Tests: `tests/test_hetero_round2.py`. Docs synced (CONTEXT repo index, README knobs, OVERALL Phase 3).
+- **2026-10-26 — CIM beyond-capacity (ADR-0008 R3) + cooperation (ADR-0009 "Revisions 2026-10-26 (cooperation)").**
+  R3: on the profile path the non-resident weights are re-programmed from the pool (`units.cim.program_BW_GBs`,
+  `residency_policy`) instead of the Metis spill floor. C1: `capacity_split` candidate — the CIM takes the output columns
+  that fit its residency budget (`units.cim.weight_budget_frac` × knee × s; decode = one global budget per token DAG
+  allocated by saving density, pinned parts stream no weight bytes; prefill = per-op cap), `cim_budget_used_decode`
+  echoed. C2: `scheduler.prefill_chunks` ∈ {1, 2, 4, 8, auto} — the prefill forward as token-chunk sub-DAGs (block-causal
+  attention, bytes conserved) for cross-unit overlap; measured: every chunk re-pays the CIM per-call tile term + floors +
+  syncs, so `auto` keeps C = 1 on the P1 smoke configs (documented in the ADR). Engine: `run_dag` finish passes iterate
+  the running set only (same numbers, faster) and record `unit_order`. Tests: `tests/test_cim_residency.py`,
+  `tests/test_cooperation.py`.
 
 ---
 

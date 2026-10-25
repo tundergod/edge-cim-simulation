@@ -122,10 +122,14 @@ def base_bytes(node):
 def unit_bytes(node, wbpp):
     """`bytes_streamed` of a matmul node on a unit streaming `wbpp` bytes per weight parameter:
     the INT8 basis with the K*N weight part rescaled (activation bytes unchanged). Non-matmul
-    nodes: the INT8 basis."""
+    nodes: the INT8 basis. A CIM-RESIDENT part (`wl.extra['cim_resident']`: the decode
+    capacity split, ADR-0009 cooperation revision C1) streams NO weight bytes per token — the
+    weights are pinned in the array across tokens, only the activation bytes hit the pool."""
     b = base_bytes(node)
     if node.category != "matmul":
         return b
+    if node.wl.extra and (node.wl.extra.get("cim_resident") or node.wl.extra.get("chunk_weights_shared")):
+        wbpp = 0.0            # C1 pinned CIM part / C2 chunk c > 0: the weights were streamed by chunk 0
     return int(round(b + node.wl.K * node.wl.N * (float(wbpp) - 1.0)))
 
 
@@ -303,11 +307,14 @@ def _normalize_plan(plan):
     return units, fracs
 
 
-def tile_parts(dag, nid, dim, plan, *, align=None, rows=None):
+def tile_parts(dag, nid, dim, plan, *, align=None, rows=None, resident=(), chain=None):
     """Compute the sub-node templates for splitting `nid` on `dim` by `plan` (no DAG rewrite).
     `align` = {unit: (quantum, minimum)} for N/M/K; the keys "heads"/"kv"/"rows" give the
     axis quantum for attention/row splits (heads quantum = the GQA group). `rows` is the row
-    count of a row-split op (tokens in flight; 1 in decode -> unsplittable)."""
+    count of a row-split op (tokens in flight; 1 in decode -> unsplittable). `resident` = part
+    indices whose matmul part is tagged CIM-resident (`wl.extra['cim_resident']`: pinned
+    weights, no per-token weight stream; the decode capacity split) — every other part has
+    the tag removed, so a template never inherits a stale one."""
     align = {**DEFAULT_ALIGN, **(align or {})}
     node = dag[nid]
     if dim not in LEGAL_DIMS.get(node.category, ()) and not (dim == "rows" and node.category == "attention"
@@ -316,7 +323,7 @@ def tile_parts(dag, nid, dim, plan, *, align=None, rows=None):
                          f"(legal: {LEGAL_DIMS.get(node.category, ())})")
     units, fracs = _normalize_plan(plan)
     k = len(units)
-    chain = _block(dag, nid)
+    chain = _block(dag, nid) if chain is None else list(chain)   # `chain` = the caller's _block (solver: once per op)
     wl = node.wl
     if dim in ("N", "M", "K"):
         total = {"N": wl.N, "M": wl.M, "K": wl.K}[dim]
@@ -344,6 +351,10 @@ def tile_parts(dag, nid, dim, plan, *, align=None, rows=None):
             tile = {"of": nid, "dim": dim, "part": i, "n": k, "frac": f, "src": cid}
             if c.category == "matmul":
                 p = _matmul_part(c, dim, s)
+                if i in resident:
+                    p.wl.extra["cim_resident"] = True
+                else:
+                    p.wl.extra.pop("cim_resident", None)
             elif c.category == "attention" and "hd" in c.wl.extra:
                 p = _attn_bmm_part(c, dim, s, f, bshare)
             else:
@@ -368,11 +379,12 @@ def _residency(node):
     return r(node)
 
 
-def split_node(dag, nid, dim, plan, *, merge_unit="cpu", sync_us=0.0, align=None, rows=None):
+def split_node(dag, nid, dim, plan, *, merge_unit="cpu", sync_us=0.0, align=None, rows=None, resident=()):
     """Return a REBUILT Dag with `nid` (or its attention block) split per `plan` on `dim`
     and a merge node (unit `merge_unit`, fixed_us = `sync_us`, bytes = reduction bytes)
     feeding the original's successors. A single-part plan only sets the unit (no merge).
-    Ids: parts first (chain order within a part), merge last, all allocated from max id + 1."""
+    Ids: parts first (chain order within a part), merge last, all allocated from max id + 1.
+    `resident` = part indices tagged CIM-resident (see tile_parts)."""
     units, fracs = _normalize_plan(plan)
     if len(units) == 1:
         for cid in _block(dag, nid):
@@ -380,7 +392,7 @@ def split_node(dag, nid, dim, plan, *, merge_unit="cpu", sync_us=0.0, align=None
             n.unit = units[0]
             n.mem_domain = _residency(n)
         return dag
-    tp = tile_parts(dag, nid, dim, plan, align=align, rows=rows)
+    tp = tile_parts(dag, nid, dim, plan, align=align, rows=rows, resident=resident)
     block = set(tp.chain)
     last = tp.chain[-1]
     next_id = max(n.id for n in dag.nodes) + 1
