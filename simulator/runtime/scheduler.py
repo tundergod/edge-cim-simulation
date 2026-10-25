@@ -624,20 +624,26 @@ class HeteroInferScheduler(TiledHeteroScheduler):
     §4.4 solver among gpu-only, npu-only, weight-centric N-split (ratio grid), activation-
     centric standard-length chunks with a GPU remainder, and hybrid; attention never split;
     CPU control-plane only (sampling); embedding / KV cache through memory. The GPU is the
-    host graph: an NPU-only op pays the hand-back sync (T_NPU^all + T_sync), GPU-only does not."""
+    host graph: an NPU-only op pays the hand-back sync (T_NPU^all + T_sync), GPU-only does not.
+    `heteroinfer_layer` (registry) = the paper's "Hetero-layer": the same solver restricted to a
+    whole-op gpu/npu choice — `matmul_dims=()` (no weight-centric split) and `std_lengths=()` (no
+    activation-centric chunking), so every matmul is gpu_only or npu_only and no merge node exists."""
     required_units = ("gpu", "npu", "cpu")
 
-    def __init__(self, **kw):
-        super().__init__(name="heteroinfer", units=("gpu", "npu"), allow_cim=False,
-                         allow_cpu_compute=False, support_unit="gpu", matmul_dims=("N",),
-                         split_attention=False, split_support=False, host="gpu", **kw)
+    def __init__(self, *, name="heteroinfer", matmul_dims=("N",), std_lengths=STD_LENGTHS, **kw):
+        super().__init__(name=name, units=("gpu", "npu"), allow_cim=False,
+                         allow_cpu_compute=False, support_unit="gpu", matmul_dims=tuple(matmul_dims),
+                         split_attention=False, split_support=False, host="gpu",
+                         std_lengths=tuple(std_lengths), **kw)
 
 
 SCHEDULERS = {"all_cim": AllCimScheduler(), "cim_hetero": CimHeteroScheduler(),
               "gpu_only": SingleUnitScheduler("gpu"), "npu_only": SingleUnitScheduler("npu"),
               "cim_only": SingleUnitScheduler("cim", support_unit="cpu"),
               "cpu_only": SingleUnitScheduler("cpu"),      # round-2: the llama.cpp-style all-CPU baseline (SIMULATED)
-              "heteroinfer": HeteroInferScheduler(), "tiled_hetero": TiledHeteroScheduler(refine=True)}
+              "heteroinfer": HeteroInferScheduler(), "tiled_hetero": TiledHeteroScheduler(refine=True),
+              # paper "Hetero-layer" (§5 baseline): HeteroInfer without tensor partition / chunking (whole-op gpu|npu)
+              "heteroinfer_layer": HeteroInferScheduler(name="heteroinfer_layer", matmul_dims=(), std_lengths=())}
 
 
 def plans_summary(dag):

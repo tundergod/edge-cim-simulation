@@ -52,7 +52,7 @@ _TOPO_MEMORY = {"cim_topo_card": "mem_lpddr4x", "cim_topo_edge": "mem_lpddr5", "
 # provenance-labelling it as a real "simulated heterogeneous placement". Keep in sync with
 # simulator/runtime/scheduler.py SCHEDULERS.
 _KNOWN_SCHEDULERS = frozenset({"all_cim", "cim_hetero", "gpu_only", "npu_only", "cim_only", "cpu_only",
-                               "heteroinfer", "tiled_hetero"})
+                               "heteroinfer", "heteroinfer_layer", "tiled_hetero"})
 _SYNC_MODES = ("fast", "clfinish", "none")   # mirror of tiling.SYNC_US (config cannot import tiling, layering)
 _HOSTS = ("gpu", "npu", "cim", "auto")        # scheduler.host for tiled_hetero (None = scheduler default = gpu)
 _CAL_CIM_N_CORES = 4                           # the Metis geometry the M1 CIM tile fit is calibrated at
