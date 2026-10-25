@@ -242,12 +242,19 @@ class SingleUnitScheduler(Scheduler):
 
     def __init__(self, unit, support_unit=None, name=None):
         self.unit = unit
+        # "auto" (cim_only): resolved per run by single_support_unit -> the GPU (HeteroInfer's
+        # support block) when enabled, else the NPU, else the CPU. User rule 2026-10-26: the CPU is
+        # not a compute unit, so support ops go to the CPU only when no accelerator can run them.
         self.support_unit = support_unit or unit
         self.name = name or f"{unit}_only"
-        self.required_units = tuple(dict.fromkeys((unit, self.support_unit, "cpu")))
+        req = (unit, "cpu") if self.support_unit == "auto" else (unit, self.support_unit, "cpu")
+        self.required_units = tuple(dict.fromkeys(req))
 
     def assign(self, dag, cfg=None, *, platform=None):
         phase, _ = _phase_and_rows(dag)
+        support = self.support_unit
+        if support == "auto":
+            support = single_support_unit(self.unit, platform, getattr(cfg, "units", None))
         for n in dag.nodes:
             if n.category in ("convert", "merge"):
                 continue
@@ -259,7 +266,7 @@ class SingleUnitScheduler(Scheduler):
                                              or (n.category == "attention" and "hd" in n.wl.extra)):
                 n.unit = self.unit
             elif n.category in _SUPPORT or n.category == "attention":   # scale/mask = support
-                n.unit = self.support_unit
+                n.unit = support
             else:
                 raise ValueError(f"{self.name}: no unit mapping for category {n.category!r}; "
                                  f"map it explicitly, do not silently place.")
@@ -271,12 +278,20 @@ class SingleUnitScheduler(Scheduler):
         return out
 
 
-def single_support_unit(unit, platform):
+def single_support_unit(unit, platform, units=None):
     """The support-op unit of a single-unit plan on `unit`: the unit itself when it can run the
-    support ops, else the CPU (the CIM cannot run norm/rope/swiglu/softmax/residual) — exactly
-    what gpu_only / npu_only / cpu_only / cim_only do."""
+    support ops (gpu/npu/cpu); for the CIM (no norm/rope/swiglu/softmax/residual) the GPU when
+    enabled (HeteroInfer's GPU support block), else the NPU, else the CPU. `units` = the cfg's
+    enabled-unit flags (None = all enabled). User rule 2026-10-26: the CPU is not a compute unit."""
     sup = getattr(platform, "supports", None)
-    return unit if (sup is None or all(sup(unit, c) for c in _SUPPORT)) else "cpu"
+    def ok(u):
+        return sup is None or all(sup(u, c) for c in _SUPPORT)
+    if ok(unit):
+        return unit
+    for cand in ("gpu", "npu"):
+        if (units is None or units.get(cand)) and ok(cand):
+            return cand
+    return "cpu"
 
 
 class TiledHeteroScheduler(Scheduler):
@@ -472,7 +487,7 @@ class TiledHeteroScheduler(Scheduler):
     def _single_plan(self, dag, cfg, platform, unit):
         """The single-unit plan on `unit` (support ops on it, or on the CPU when it cannot run them)
         = the gpu_only / npu_only / cim_only / cpu_only placement under this cfg."""
-        out = SingleUnitScheduler(unit, support_unit=single_support_unit(unit, platform)).assign(
+        out = SingleUnitScheduler(unit, support_unit=single_support_unit(unit, platform, getattr(cfg, "units", None))).assign(
             copy.deepcopy(dag), cfg, platform=platform)
         out.host_est_us = None
         out.plan_pass = None
@@ -639,7 +654,7 @@ class HeteroInferScheduler(TiledHeteroScheduler):
 
 SCHEDULERS = {"all_cim": AllCimScheduler(), "cim_hetero": CimHeteroScheduler(),
               "gpu_only": SingleUnitScheduler("gpu"), "npu_only": SingleUnitScheduler("npu"),
-              "cim_only": SingleUnitScheduler("cim", support_unit="cpu"),
+              "cim_only": SingleUnitScheduler("cim", support_unit="auto"),
               "cpu_only": SingleUnitScheduler("cpu"),      # round-2: the llama.cpp-style all-CPU baseline (SIMULATED)
               "heteroinfer": HeteroInferScheduler(), "tiled_hetero": TiledHeteroScheduler(refine=True),
               # paper "Hetero-layer" (§5 baseline): HeteroInfer without tensor partition / chunking (whole-op gpu|npu)

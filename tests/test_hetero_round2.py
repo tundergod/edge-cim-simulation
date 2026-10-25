@@ -145,7 +145,11 @@ def test_g1_cpu_only_is_1_33x_slower_than_gpu_only_end_to_end(model):
 # ---- G2: portfolio + refinement ---------------------------------------------------------------------
 def test_g2_single_support_unit_rule():
     plat = Platform(MODEL, soc_profile=PROFILE)
-    assert [single_support_unit(u, plat) for u in ("gpu", "npu", "cpu", "cim")] == ["gpu", "npu", "cpu", "cpu"]
+    # CIM cannot run support ops -> the GPU support block when enabled, else the NPU, else the CPU
+    # (user rule 2026-10-26: the CPU is not a compute unit).
+    assert [single_support_unit(u, plat) for u in ("gpu", "npu", "cpu", "cim")] == ["gpu", "npu", "cpu", "gpu"]
+    assert single_support_unit("cim", plat, {"gpu": False, "npu": True, "cim": True, "cpu": True}) == "npu"
+    assert single_support_unit("cim", plat, {"gpu": False, "npu": False, "cim": True, "cpu": True}) == "cpu"
 
 
 def test_g2_refinement_makes_a_chain_of_npu_cheapest_ops_one_npu_run():

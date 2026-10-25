@@ -205,7 +205,7 @@ PROFILE = "sd8gen3_cim"
 ALLOWED = {   # every plan strategy a scheduler may record (decode + prefill)
     "gpu_only": {"gpu_fixed", "mem_fixed", "cpu_fixed"},
     "npu_only": {"npu_fixed", "mem_fixed", "cpu_fixed"},
-    "cim_only": {"cim_fixed", "cpu_fixed", "mem_fixed"},
+    "cim_only": {"cim_fixed", "gpu_fixed", "cpu_fixed", "mem_fixed"},   # support ops on the GPU (auto), sampling cpu
     "heteroinfer": {"gpu_fixed", "mem_fixed", "cpu_fixed", "gpu_only", "npu_only", "weight_centric",
                     "activation_centric", "hybrid"},
     "tiled_hetero": {"mem_fixed", "cpu_fixed", "gpu_only", "npu_only", "cim_only", "weight_centric",
