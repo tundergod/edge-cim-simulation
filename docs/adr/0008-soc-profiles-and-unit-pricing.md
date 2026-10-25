@@ -281,3 +281,48 @@ byte-identical (floor 0, knob ignored; `validate_e2e_l4.py` unchanged, snapshot 
   `cim_n_cores`).
 * **R2-D — `price_table.py --cim-n-cores N`** prices the table at another CIM core count (named in the
   output and the file suffix `_cim<N>c`; EXTRAPOLATED).
+
+## Revisions 2026-10-26 (CIM beyond-capacity on the profile path; branch `hetero`)
+
+User decision: the Metis Card's beyond-capacity behaviour — the ~70 GOP/s DRAM "spill floor"
+(`multitile_floor_gops`, the Phase-1.5 residency cliff) — is a Metis AIPU **implementation artifact**, not
+a property of SRAM-CIM, so the SoC-profile CIM must not inherit it. F12 above had kept the floor as the
+"array's measured ingest rate" on the profile path; this revision replaces it there. The legacy path
+(`soc_profile` unset, `scale_mode="legacy"`, the Card topology / L4 gate) keeps the cliff byte-identically
+(`validate_e2e_l4.py` unchanged, snapshot tests green). Regression tests: `tests/test_cim_residency.py`;
+`test_hetero_fixes.py::test_f12…` now asserts "physical == legacy at s = 1 **within capacity**".
+
+* **R3 — re-programming instead of a spill floor** (`CimTileModel(scale_mode="physical", program_BW_GBs=,
+  residency_policy=, weight_bytes_per_param=)`; `Platform.cim_program_BW_GBs` / `.cim_residency_policy`).
+  Resident regime (K·N ≤ knee × s, knee ∝ n_cores as in F12): unchanged (single-tile G_eff tiling law /
+  affine resident law / prefill tile law). Beyond capacity the weights that do not fit must be
+  re-programmed into the array from the SHARED DRAM pool for every use:
+  `latency = max(compute, program_us)` with `compute` = the resident law for the WHOLE GEMM (decode:
+  the Card-calibrated affine resident rate `a + b/s·K·N` extended past the knee — continuous at the
+  knee, no 3.5× collapse — or the G_eff law for a single-tile shape; prefill: the tile law, F12) and
+  `program_us = bytes_not_resident / program_BW_GBs`, `bytes_not_resident = max(0, K·N − knee × s) ×
+  weight_bytes_per_param`. Prefill: the same rule, the program term once per prefill forward (per GEMM
+  node). The DRAM bytes themselves are metered ONCE by the engine's shared pool (F2): the program term is
+  the on-chip write time overlapping the stream, hence `max`, never a sum, and the engine then takes
+  `max(latency, pool time)` as for every unit. `is_extrapolated()` is True beyond capacity (no silicon);
+  the price provenance says `BEYOND RESIDENT CAPACITY … ASSUMPTION, no silicon`.
+* **`units.cim.program_BW_GBs`** (array write bandwidth; P1 43.0, P2 29.97 = the unit's single-stream
+  DRAM cap `single_stream_eff_BW_GBs × cim.stream_eff`, which is also the default when absent): at the
+  cap, re-programming is DRAM-stream-bound — an ASSUMPTION (no array-write measurement); a lower value
+  models a slow array-write path (sensitivity axis).
+* **`units.cim.residency_policy ∈ {pin_first, none}`** (default `pin_first`): `pin_first` assumes the
+  first knee × s elements stay pinned across tokens (decode) so only the remainder is re-programmed per
+  use; `none` re-programs the whole beyond-capacity set per use (nothing pinned). Within capacity
+  nothing is re-programmed under either policy. ASSUMPTION, sensitivity axis.
+* **`cim_weight_bytes_per_param`** (R2-C) is unchanged (profile 1.0, knob 0.5) but now also scales the
+  re-programmed bytes (W4 storage halves the program term); within capacity it stays bytes-only.
+* Physical-mode `spills()` is capacity arithmetic for ANY shape (K·N > knee × s), no single-tile
+  exclusion (legacy keeps the cliff model's multi-tile-only domain): at 8 cores (W = 4096) a 4096²
+  single tile is 0.46 M elements past the 16.3 M knee → an 11 µs program term, below its compute.
+* Price-table consequence (sd8gen3_cim, 4 cores, CIM compute µs, before → after): decode 4096×1024 39.4
+  → 39.4 (resident); 4096×4096 480.0 → 200.4 (= 8.62 MB / 43 GB/s; its pool time 390 µs now dominates);
+  4096×14336 1680.1 → 1175.8 (pool 1366); 4096×128256 (lm_head) 15031 → 12027 (pool 12220); prefill
+  M=256 4096×4096 259.7 → 259.7 (tile law dominates). At 1 core (knee 2.04 M): decode 4096×1024 120.0
+  → 112.1, 4096×4096 480.0 → 403.0, 4096×14336 1680.1 → 1372.8 (the affine resident law × 4 dominates
+  the program term); prefill M=256 4096×4096 1038.8 → 1038.8. The 8B `cim_only` decode therefore
+  becomes pool-bound on its big GEMVs instead of floor-bound (`validation/reports/hetero/price_table_*.json`).

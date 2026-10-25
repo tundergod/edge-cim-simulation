@@ -45,7 +45,9 @@
       "stream_eff": 1.0,
       "min_split_rows": 1,
       "weight_bytes_per_param": 1.0,
-      "attention_heads_mode": "serial"
+      "attention_heads_mode": "serial",
+      "program_BW_GBs": 29.97,
+      "residency_policy": "pin_first"
     }
   },
   "memory": {
@@ -65,6 +67,8 @@
     "units.npu.stream_eff": "0.67 = npu_rknpu2 bw_GBs.eff_low 20.1 / the edge wall 29.97: the borrowed Fig.5 59% per-unit band applied to the RK3588 wall (was the NpuModel's internal memory ceiling before rev F2) [simulated]",
     "units.*.weight_bytes_per_param": "1.0 everywhere = op_profile INT8 bytes (the Metis scope; no W4 kernels measured on the RK3588) [measured scope]",
     "units.cpu.gemm.gemv_efficiency": "0.128 of NEON int8 peak at M=1, FITTED END-TO-END with kernel_floor_us by tools/analysis/fit_cpu_gemv.py: simulated cpu_only decode tok/s = gpu_only / 1.33 on llama-3.2-1b (InternLM-1.8B proxy) and llama-3.1-8b (Llama-7B proxy), ctx 1024 / prefill 256 / decode 128 (HeteroInfer Fig.12 llama.cpp/MNN decode 19.38/14.20 s, 63.39/48.76 s) [assumption anchored on published end-to-end only, no CPU GEMM silicon]; m_half 32 = one register-blocked row tile [assumption] (mirrored from sd8gen3_cim: same cpu_rk3588 A76 proxy)",
+    "units.cim.program_BW_GBs": "29.97 = the CIM unit's single-stream DRAM cap (memory.single_stream_eff_BW_GBs x units.cim.stream_eff): the array write bandwidth at which weights BEYOND the resident capacity (K*N > knee x n_cores/4) are re-programmed from the shared pool per use, latency = max(resident compute, bytes_not_resident / program_BW_GBs); equal to the stream cap => re-programming is DRAM-stream-bound; a lower value models a slow array-write path. The Card's ~70 GOP/s spill floor is a Metis AIPU artifact and is NOT used on the profile path [assumption, no silicon; ADR-0008 rev R3 2026-10-26]",
+    "units.cim.residency_policy": "pin_first = the first knee x n_cores/4 weight elements stay pinned across tokens, only the remainder is re-programmed per use; 'none' = nothing pinned, a beyond-capacity weight set is re-programmed whole per use [assumption, sensitivity axis; ADR-0008 rev R3]",
     "units.npu.min_split_rows": "32 = the systolic quantum (no silicon for a larger NPU minimum sub-tensor) [assumption]",
     "units.cpu.gemm.kernel_floor_us": "30.0 us per CPU kernel (GEMM/GEMV, x2 per attention composite, once per fused elementwise chain head on the CPU; multi-thread fork/join + dispatch) [assumption: the same 'tens of us' band as the GPU/NPU launch floors; value chosen on a 10-30 us grid by the end-to-end fit above] (mirrored from sd8gen3_cim: same cpu_rk3588 A76 proxy)"
   }

@@ -118,7 +118,7 @@ cfg.provenance        # ["simulated: topology 'cim_topo_edge' ...", "simulated: 
 | `platform.cim_n_cores` | int ≥ 1 (profile default 4 = the Metis geometry) | scalable axis: tile width + prefill throughput ∝ n (F12); other counts EXTRAPOLATED |
 | `platform.npu_scale` | float > 0 (default 1.0) | multiplies NPU compute throughput only; ≠ 1 EXTRAPOLATED |
 | `platform.cpu_gemv_efficiency` | (0, 1] (profile value 0.128 after the round-2 fit) | sensitivity knob on the CPU M=1 kernel efficiency (an ASSUMPTION); above the GEMM efficiency lifts both |
-| `platform.cim_weight_bytes_per_param` | (0, 4] (profile 1.0 = INT8 crossbar weights as stored; 0.5 = W4 storage unpacked on load) | a DESIGN OPTION with no silicon; bytes only; decides the CIM-vs-W4 competitors question (matrix v1 H2) |
+| `platform.cim_weight_bytes_per_param` | (0, 4] (profile 1.0 = INT8 crossbar weights as stored; 0.5 = W4 storage unpacked on load) | a DESIGN OPTION with no silicon; bytes only within the resident capacity (beyond it the re-programmed bytes scale with it, ADR-0008 R3); decides the CIM-vs-W4 competitors question (matrix v1 H2) |
 | `platform.memory_capacity_GB`, `platform.bw_efficiency`, `tunables.*` | forward-looking sweep knobs | any off-anchor value is auto-tagged in `cfg.provenance` |
 | topology spec `cim_compute_params` | a repo-relative params path | the **CIM compute-engine swap surface**; a non-Metis geometry is tagged `simulated` |
 

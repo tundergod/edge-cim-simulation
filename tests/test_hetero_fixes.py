@@ -269,10 +269,13 @@ def test_f12_cim_n_cores_scale_physically_on_profile_path():
     # single-tile decode throughput rises with cores (s x G_eff(N/s, K)), sub-linearly (per-core fill)
     t = {n: plats[n].compute_us(_mm("cim", 1, 2048, 2048)) for n in cores}
     assert t[8] < t[4] < t[2] and t[8] > t[4] / 2
-    # at the calibrated count physical == legacy numerics
+    # at the calibrated count physical == legacy numerics WITHIN the resident capacity; beyond it the
+    # profile path re-programs the non-resident weights instead of the Card's spill floor (R3 2026-10-26,
+    # tests/test_cim_residency.py)
     leg = Platform(MODEL)
-    for node in (_mm("cim", 1, 2048, 2048), _mm("cim", 1, 8192, 2048), _mm("cim", 256, 2048, 2048)):
+    for node in (_mm("cim", 1, 2048, 2048), _mm("cim", 1, 2048, 3900), _mm("cim", 256, 2048, 2048)):
         assert plats[4].compute_us(node) == leg.compute_us(node)
+    assert plats[4].compute_us(_mm("cim", 1, 8192, 2048)) < leg.compute_us(_mm("cim", 1, 8192, 2048))
     with pytest.raises(ValueError):
         CimTileModel(scale_mode="quadratic")
 

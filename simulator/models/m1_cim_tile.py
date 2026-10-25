@@ -32,9 +32,23 @@ Phase-1.5 numerics exactly: n_cores only widens the pass W = n_cores*512 (prefil
 the calibrated 4-core fit by s = n_cores / n_cal with explicit physics: compute throughput
 proportional to cores (single-tile: s x G_eff(N/s, K) — the output columns are spread over the
 cores, each at the per-core fill law; prefill tile throughput x s -> latency 1/n; resident slope
-b/s), SRAM residency proportional to cores (multi-tile knee x s), and the DRAM-spill floor kept
-as the array's measured ingest rate (n-independent kernel time; the shared pool meters the DRAM
-bytes themselves, F2). At s = 1 physical == legacy by construction. No silicon at s != 1.
+b/s) and SRAM residency proportional to cores (multi-tile knee x s). Within capacity, s = 1
+physical == legacy by construction. No silicon at s != 1.
+
+BEYOND CAPACITY on the profile path (ADR-0008 revision 2026-10-26, R3). The Card's ~70 GOP/s DRAM
+"spill floor" (`multitile_floor_gops`) is a Metis AIPU implementation artifact, not a property of
+SRAM-CIM, so physical mode does NOT inherit it (legacy mode keeps it: the L4 Card gate). Instead the
+weights that do not fit (K*N > knee x s) must be RE-PROGRAMMED into the array from the shared DRAM
+pool for every use: latency = max(compute, program_us), compute = the resident law for the whole
+GEMM (decode: the affine resident rate a + b/s * K*N, or the G_eff tiling law for a single-tile
+shape; prefill: the tile law), program_us = bytes_not_resident / program_BW_GBs (array write
+bandwidth, a profile parameter `units.cim.program_BW_GBs`; default = the unit's single-stream DRAM
+cap so re-programming is DRAM-stream-bound — an ASSUMPTION; lower = a slow array-write path).
+bytes_not_resident = (K*N - knee x s) * weight_bytes_per_param under `residency_policy="pin_first"`
+(the resident part stays pinned across tokens; ASSUMED) or K*N * weight_bytes_per_param under
+"none" (nothing pinned, the whole set re-programmed per use). The DRAM bytes themselves are metered
+ONCE by the engine's shared pool (F2): program_us is the on-chip write time overlapping the stream,
+and the engine takes max(latency, pool time) as for every unit. No silicon for any of it.
 """
 import json
 import math
@@ -45,16 +59,32 @@ CORE_WIDTH = 512  # per-core D-IMC crossbar output width (ISSCC 2024)
 
 
 _SCALE_MODES = ("legacy", "physical")
+_RESIDENCY_POLICIES = ("pin_first", "none")
 
 
 class CimTileModel:
-    def __init__(self, params=None, n_cores=None, scale_mode="legacy"):
+    def __init__(self, params=None, n_cores=None, scale_mode="legacy", program_BW_GBs=None,
+                 residency_policy="pin_first", weight_bytes_per_param=1.0):
+        """`program_BW_GBs` / `residency_policy` / `weight_bytes_per_param` govern the beyond-capacity
+        re-programming term of physical mode only (R3; legacy mode ignores them and keeps the Card
+        spill floor). program_BW_GBs is REQUIRED (> 0) in physical mode."""
         p = params if params is not None else json.loads(_PARAMS.read_text())
         self.n_cores = n_cores if n_cores is not None else p.get("n_cores", 4)
         self.n_cal = p.get("n_cores", 4)             # the core count the fit is calibrated at (Metis 4)
         if scale_mode not in _SCALE_MODES:
             raise ValueError(f"CimTileModel scale_mode must be one of {_SCALE_MODES}, got {scale_mode!r}")
         self.scale_mode = scale_mode
+        if residency_policy not in _RESIDENCY_POLICIES:
+            raise ValueError(f"CimTileModel residency_policy must be one of {_RESIDENCY_POLICIES}, "
+                             f"got {residency_policy!r}")
+        self.residency_policy = residency_policy
+        if scale_mode == "physical" and not (program_BW_GBs is not None and float(program_BW_GBs) > 0):
+            raise ValueError(f"CimTileModel physical mode needs program_BW_GBs > 0 (the array write "
+                             f"bandwidth for beyond-capacity re-programming), got {program_BW_GBs!r}")
+        self.program_BW_GBs = None if program_BW_GBs is None else float(program_BW_GBs)
+        if not (0 < float(weight_bytes_per_param) <= 4):
+            raise ValueError(f"CimTileModel weight_bytes_per_param must be in (0, 4], got {weight_bytes_per_param!r}")
+        self.weight_bytes_per_param = float(weight_bytes_per_param)   # bytes re-programmed per non-resident param
         self.core_width = p.get("core_width", CORE_WIDTH)
         # 2D effective-throughput closed form: G = Gmax * N/(N+Na) * K/(K+Kb)  (GOP/s)
         self.Gmax = p["G_eff_Gmax_gops"]
@@ -127,9 +157,11 @@ class CimTileModel:
             raise ValueError("prefill (M>1) latency needs the M-amortization fit; "
                              "run tools/analysis/fit_cim_prefill.py")
         if self.scale_mode == "physical":
-            # F12: tile throughput proportional to cores -> the calibrated-tile area / s (1/n scaling)
+            # F12: tile throughput proportional to cores -> the calibrated-tile area / s (1/n scaling);
+            # R3: beyond capacity the non-resident weights are re-programmed once per prefill forward
             W = self.n_cal * self.core_width
-            return (K * N) / (W * W) / self.core_scale * (self.prefill_a_us + self.prefill_b_us * M)
+            compute = (K * N) / (W * W) / self.core_scale * (self.prefill_a_us + self.prefill_b_us * M)
+            return max(compute, self.program_us(K, N))
         W = self.width   # canonical tile edge (= n_cores*512 = 2048); native_max_kn = W*W
         area = (K * N) / (W * W)   # fractional tile area (not ceil): no padded-tile over-charge
         return area * (self.prefill_a_us + self.prefill_b_us * M)
@@ -151,35 +183,72 @@ class CimTileModel:
         return lat
 
     def _decode_lat_us_full(self, K, N):
-        """M=1 latency dispatcher: single-tile (both dims <= W) uses the G_eff tiling fit; genuine
-        multi-tile (some dim > W) uses the native residency-cliff model when fit, else the tile-sum."""
+        """M=1 latency dispatcher. Legacy: single-tile (both dims <= W) uses the G_eff tiling fit; genuine
+        multi-tile (some dim > W) uses the native residency-cliff model when fit, else the tile-sum.
+        Physical (R3): max(resident law, re-programming term) -- no Card spill floor."""
+        if self.scale_mode == "physical":
+            return max(self._decode_resident_lat_us(K, N), self.program_us(K, N))
         if (K <= self.width and N <= self.width) or self.mt_knee_kn is None:
             return self._decode_lat_us(K, N)
         return self._decode_multitile_lat_us(K, N)
 
-    def spills(self, K, N):
-        """True iff an M=1 multi-tile weight set (K*N) exceeds the resident capacity at this core
-        count (physical mode: knee x s). Single-tile shapes never spill."""
+    def _decode_resident_lat_us(self, K, N):
+        """M=1 compute at the RESIDENT rate for the whole GEMM (physical mode): single-tile shapes by
+        the G_eff tiling fit; multi-tile shapes by the Card-calibrated affine resident law a + b/s * K*N,
+        extended past the knee as the array's resident tile rate (continuous at the knee)."""
         if (K <= self.width and N <= self.width) or self.mt_knee_kn is None:
+            return self._decode_lat_us(K, N)
+        return self.mt_resident_a_us + self.mt_resident_b_us / self.core_scale * K * N
+
+    def spills(self, K, N):
+        """True iff a weight set (K*N) exceeds the resident capacity at this core count (knee x s).
+        Legacy: only genuine multi-tile shapes (some dim > W) can spill (the Card cliff model's domain).
+        Physical: capacity is capacity -- any shape with K*N > knee x s is beyond it."""
+        if self.mt_knee_kn is None:
+            return False
+        if self.scale_mode == "legacy" and K <= self.width and N <= self.width:
             return False
         return K * N > self.mt_knee
 
+    def bytes_not_resident(self, K, N):
+        """Weight bytes beyond the resident capacity = the bytes physical mode re-programs into the array
+        per use (R3): 0 within capacity; beyond it (K*N - knee x s) x weight_bytes_per_param under
+        'pin_first' (the resident part stays pinned across tokens -- ASSUMED) or K*N x weight_bytes_per_param
+        under 'none'. Mode-independent capacity arithmetic (legacy: the spilled bytes, informational;
+        only program_us() is physical-only)."""
+        if not self.spills(K, N):
+            return 0.0
+        kn = K * N
+        non_resident = (kn - self.mt_knee) if self.residency_policy == "pin_first" else kn
+        return non_resident * self.weight_bytes_per_param
+
+    def program_us(self, K, N):
+        """Array re-programming time (us) of the non-resident weights = bytes_not_resident / program_BW
+        (physical mode only; 0 in legacy mode and within capacity). Overlaps the DRAM stream the engine's
+        shared pool meters, hence latency = max(compute, program_us), never a sum."""
+        if self.scale_mode != "physical":
+            return 0.0
+        b = self.bytes_not_resident(K, N)
+        return 0.0 if b <= 0 else b / (self.program_BW_GBs * 1e9) * 1e6
+
     def _decode_multitile_lat_us(self, K, N):
-        """Native multi-tile M=1 latency (us), Card-calibrated (Phase 1.5). Resident (K*N <= knee):
-        weights fit SRAM -> latency affine in K*N. Spill (K*N > knee): weights stream from DRAM ->
-        memory-bound floor throughput. K*N > native_envelope_kn is floor-extrapolated (memory-bound
-        linear, low risk; is_extrapolated flags it)."""
+        """Native multi-tile M=1 latency (us), Card-calibrated (Phase 1.5), LEGACY mode (the Card
+        topology / L4 gate). Resident (K*N <= knee): weights fit SRAM -> latency affine in K*N. Spill
+        (K*N > knee): weights stream from DRAM -> memory-bound floor throughput (the Metis AIPU artifact
+        physical mode replaces with the re-programming term, R3). K*N > native_envelope_kn is
+        floor-extrapolated (memory-bound linear, low risk; is_extrapolated flags it)."""
         kn = K * N
         if kn <= self.mt_knee:
             return self.mt_resident_a_us + self.mt_resident_b_us / self.core_scale * kn
         return 2.0 * kn / (self.mt_floor_gops * 1e9) * 1e6     # spill: array ingest rate (n-independent)
 
     def is_extrapolated(self, K, N):
-        """True if (K,N) is beyond the natively measured M=1/K*N envelope ONLY. Single-tile (both dims
-        <= W) and multi-tile up to native_envelope_kn are Card-measured; beyond that the spill floor is
+        """True if (K,N) is beyond the natively measured M=1/K*N envelope, or (physical mode) beyond the
+        resident capacity -- the re-programming model has no silicon. Single-tile (both dims <= W) and
+        multi-tile up to native_envelope_kn are Card-measured; beyond that the legacy spill floor is
         memory-bound-linear extrapolated. Prefill (M>1) extrapolation is NOT covered here -- use
         prefill_extrapolated() for the M-axis (M>prefill_M_max / partial-width) calibration limits."""
-        return K * N > self.native_envelope_kn
+        return K * N > self.native_envelope_kn or (self.scale_mode == "physical" and self.spills(K, N))
 
     def prefill_extrapolated(self, M, K, N):
         """True if an M>1 prefill prediction is outside the calibrated range: M>prefill_M_max (508;

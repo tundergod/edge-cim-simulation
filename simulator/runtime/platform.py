@@ -22,7 +22,10 @@ selects the per-unit models for ALL four units (gpu/npu/cpu/cim) and the shared-
 (single-stream eff BW + aggregate knee). Precedence: the profile fixes the CIM topology (a
 conflicting `topology` is rejected), its memory block OVERRIDES the topology's resolved eff_BW,
 `knee_GBs` comes from the profile unless explicitly given (sensitivity knob), and `bw_efficiency`
-is rejected. With soc_profile UNSET every pre-existing (unit, category) combination is priced
+is rejected. CIM beyond-capacity (R3, 2026-10-26): on the profile path the weights past the resident
+knee are RE-PROGRAMMED from the shared pool (`units.cim.program_BW_GBs`, `units.cim.residency_policy`;
+latency = max(resident compute, program time)) instead of the Card's 70 GOP/s spill floor, which is a
+Metis AIPU artifact kept for the legacy path only. With soc_profile UNSET every pre-existing (unit, category) combination is priced
 BYTE-IDENTICALLY to Phase 2.5 (the L4 gate); only the combinations that used to raise or were
 unreachable (gpu/npu GEMM + support ops, cpu GEMM/sampling, npu anything) pick up the
 `rk3588_cim` profile's unit parameters so a heterogeneous scheduler can run without a profile.
@@ -172,6 +175,7 @@ class Platform:
                                  f"{cim_weight_bytes_per_param!r}")
             self.weight_bytes_per_param["cim"] = float(cim_weight_bytes_per_param)
             self.cim_weight_bytes_per_param = float(cim_weight_bytes_per_param)
+            self.cim.weight_bytes_per_param = float(cim_weight_bytes_per_param)   # R3: re-programmed bytes follow
         self.energy = EnergyModel()
 
     # ---- unit construction -----------------------------------------------------------------
@@ -192,9 +196,23 @@ class Platform:
         self.weight_bytes_per_param = ({u: 1.0 for u in units} if legacy else
                                        {u: float(units[u].get("weight_bytes_per_param", 1.0)) for u in units})
         # CIM: tile params from the topology; n_cores = the profile's scalable axis (None = params default);
-        # F12: a profile scales the tile PHYSICALLY with n_cores (legacy numerics untouched)
+        # F12: a profile scales the tile PHYSICALLY with n_cores (legacy numerics untouched).
+        # R3 (2026-10-26): on the profile path the beyond-capacity weights are RE-PROGRAMMED from the
+        # shared pool at `units.cim.program_BW_GBs` (default = the unit's single-stream DRAM cap, so the
+        # re-programming is stream-bound: an ASSUMPTION) under `units.cim.residency_policy` (pin_first |
+        # none); the Card's 70 GOP/s spill floor is a Metis artifact kept for the legacy path only.
         n_cores = (None if legacy else int(units["cim"]["n_cores"])) if cim_n_cores is None else int(cim_n_cores)
-        self.cim = CimTileModel(params=cim_params, n_cores=n_cores, scale_mode="legacy" if legacy else "physical")
+        if legacy:
+            self.cim = CimTileModel(params=cim_params, n_cores=n_cores, scale_mode="legacy")
+            self.cim_program_BW_GBs, self.cim_residency_policy = None, None
+        else:
+            c = units["cim"]
+            self.cim_program_BW_GBs = float(c.get("program_BW_GBs", self.bw.eff_BW * float(c.get("stream_eff", 1.0))))
+            self.cim_residency_policy = c.get("residency_policy", "pin_first")
+            self.cim = CimTileModel(params=cim_params, n_cores=n_cores, scale_mode="physical",
+                                    program_BW_GBs=self.cim_program_BW_GBs,
+                                    residency_policy=self.cim_residency_policy,
+                                    weight_bytes_per_param=self.weight_bytes_per_param["cim"])
         self.cim_n_cores = int(self.cim.n_cores)
         attn_model = "memory_bound_zero" if legacy else units["cim"]["attention_model"]
         self.cim_heads_mode = "serial" if legacy else units["cim"].get("attention_heads_mode", "serial")
@@ -330,6 +348,12 @@ class Platform:
             if self.cim.is_extrapolated(wl.K, wl.N) or (
                     wl.M > 1 and self.cim.prefill_extrapolated(wl.M, wl.K, wl.N)):
                 prov += "; EXTRAPOLATED beyond native envelope"
+            if self.cim.scale_mode == "physical" and self.cim.spills(wl.K, wl.N):
+                # R3: beyond the resident capacity the non-resident weights are re-programmed from the pool
+                prov += (f"; BEYOND RESIDENT CAPACITY (K*N > knee x s): latency = max(resident compute, "
+                         f"re-program {self.cim.bytes_not_resident(wl.K, wl.N) / 1e6:.2f} MB / "
+                         f"{self.cim.program_BW_GBs:g} GB/s = {self.cim.program_us(wl.K, wl.N):.1f} us; "
+                         f"residency_policy {self.cim.residency_policy}; ASSUMPTION, no silicon, ADR-0008 rev R3)")
             return {"latency_us": float(lat), "compute_provenance": prov, "source_model": "m1_cim_tile"}
         if cat == "attention" and self.cim_attn is not None and "hd" in wl.extra:
             if not self._is_rep(node, "cim"):
