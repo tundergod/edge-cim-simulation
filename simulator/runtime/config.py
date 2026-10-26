@@ -60,7 +60,7 @@ _CAL_CIM_N_CORES = 4                           # the Metis geometry the M1 CIM t
 # ADR-0008 SoC profiles (simulator/specs/soc_<name>.json). A profile fixes the CIM topology (its
 # units.cim.topology) and supplies the memory wall; `topology` may be omitted (resolved from the
 # profile) or must equal it. Keep in sync with simulator/runtime/platform.py SOC_PROFILES.
-_VALID_SOC_PROFILES = frozenset({"sd8gen3_cim", "rk3588_cim"})
+_VALID_SOC_PROFILES = frozenset({"sd8gen3_cim", "sd8gen3_cim_paper", "rk3588_cim"})
 
 
 def _profile_topology(name):

@@ -33,7 +33,7 @@ from simulator.runtime.platform import Platform, SOC_PROFILES  # noqa: E402
 from simulator.runtime.workload import build_token_dag  # noqa: E402
 from simulator.runtime.scheduler import SCHEDULERS  # noqa: E402
 
-PROFILES = ("sd8gen3_cim", "rk3588_cim")
+PROFILES = ("sd8gen3_cim", "sd8gen3_cim_paper", "rk3588_cim")
 TOL = 0.15   # the ADR-0008 acceptance band on every HeteroInfer Table 3 anchor
 
 

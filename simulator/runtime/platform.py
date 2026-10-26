@@ -51,7 +51,7 @@ from simulator.runtime.tiling import SYNC_US
 _CPU_OP = {"norm": "rmsnorm", "rope": "rope_apply", "ffn": "swiglu",
            "softmax": "softmax", "residual": "residual", "sampling": "sampling_argmax"}
 
-SOC_PROFILES = ("sd8gen3_cim", "rk3588_cim")
+SOC_PROFILES = ("sd8gen3_cim", "sd8gen3_cim_paper", "rk3588_cim")
 _LEGACY_UNITS_PROFILE = "rk3588_cim"   # unit params for the NEW combos when soc_profile is unset
 
 # The (unit, category) support matrix — supports() and price() agree by construction. 'merge'
