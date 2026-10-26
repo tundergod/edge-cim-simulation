@@ -1,0 +1,83 @@
+{
+  "_doc": "Snapdragon 8 Gen 3 GPU (Adreno-750-like) spec for SoC profile sd8gen3_cim (ADR-0008). EVERY number is BORROWED from HeteroInfer (SOSP'25, arXiv 2501.14794v2; cim-mobile-soc/docs/heteroinfer-design-reference.md): the `anchors` are Table 3 latencies of the paper's own W4A16 OpenCL kernels (weight [N_out,K_in], activation [K_in,M]); `anchor_fit` is our 2-regime roofline reproduction of them (tools/analysis/fit_hetero_anchors.py; model = simulator/models/m4_gpu_anchor.py). NO silicon of ours; NOT a calibration.",
+  "unit": "gpu",
+  "arch": "Adreno 750 (Snapdragon 8 Gen 3)",
+  "fp16_peak_tflops": 2.8,
+  "fp16_practical_tflops": 1.0,
+  "calibration_dtype": "w4a16",
+  "kernel_launch_us": 20.0,
+  "honesty": "borrowed (HeteroInfer published Table 3/Fig.1 numbers; fitted, no silicon of ours)",
+  "anchors": [
+    {
+      "N_out": 4096,
+      "K_in": 4096,
+      "M": 1,
+      "latency_us": 511,
+      "cite": "Tab.3 row 1 (decode QKV/O shape)"
+    },
+    {
+      "N_out": 4096,
+      "K_in": 4096,
+      "M": 128,
+      "latency_us": 7306,
+      "cite": "Tab.3 row 4"
+    },
+    {
+      "N_out": 4096,
+      "K_in": 4096,
+      "M": 256,
+      "latency_us": 10841,
+      "cite": "Tab.3 row 6"
+    },
+    {
+      "N_out": 4096,
+      "K_in": 14336,
+      "M": 1,
+      "latency_us": 1467,
+      "cite": "Tab.3 row 3 (FFN-down shape)"
+    },
+    {
+      "N_out": 4096,
+      "K_in": 14336,
+      "M": 256,
+      "latency_us": 35231,
+      "cite": "Tab.3 row 8"
+    },
+    {
+      "N_out": 28672,
+      "K_in": 4096,
+      "M": 1,
+      "latency_us": 1903,
+      "cite": "Tab.3 row 2 (fused gate+up shape)"
+    }
+  ],
+  "notes": {
+    "shape_semantics": "paper: weight [N_out, K_in] x activation [K_in, M]; simulator Workload (M, K=K_in, N=N_out).",
+    "weights": "W4A16: 0.5 B/weight when computing streamed bytes (weight_bytes_per_param in anchor_fit).",
+    "decode_regime": "a constant-BW roofline cannot beat ~15% on the three M=1 anchors (implied effective BW 16/20/31 GB/s rises with N_out); the floor absorbs the per-kernel dequant/launch cost of the paper's GEMV kernel.",
+    "kernel_launch_us": "ASSUMPTION for attention/elementwise kernels: \u00a74.3 'tens of microseconds' GPU submission overhead. The fitted gemm_floor (~320 us) is a GEMV-kernel cost, NOT a launch floor.",
+    "attention": "no attention anchor in the paper (checklist item 9) -> attention/elementwise pricing is EXTRAPOLATED from the GEMM fit."
+  },
+  "provenance": {
+    "fp16_peak_tflops": "HeteroInfer \u00a71/Tab.2: 2.8 TFLOPS theoretical [borrowed]",
+    "fp16_practical_tflops": "HeteroInfer \u00a71/Fig.1: ~1 TFLOPS in practice [borrowed]",
+    "anchors": "HeteroInfer Tab.3 (8 Gen 3, W4A16, OpenCL) [borrowed]",
+    "anchor_fit": "minimax relative-error fit of the anchors (fit_hetero_anchors.py) [borrowed, fitted]",
+    "kernel_launch_us": "HeteroInfer \u00a74.3 submission overhead 'tens of microseconds' [assumption]",
+    "calibration_dtype": "HeteroInfer \u00a75.1 W4A16 [borrowed]"
+  },
+  "anchor_fit": {
+    "_doc": "2-regime KERNEL-TIME minimax fit of `anchors` under pred = max(kernel, 0.5*K*N/43 GB/s) (fit_hetero_anchors.py, ADR-0008 rev F2/F3). GEMV: gemv_floor + K*(N+n_half)/rate; GEMM: gemm_floor + 2MKN/(C_max*M/(M+M_half)); M>1 = min(M*GEMV, GEMM); gemv_floor <= 60 us (\u00a74.3 launch band). [borrowed, fitted]",
+    "gemv_floor_us": 59.9997,
+    "gemv_rate_gparams_s": 73.4118,
+    "n_half": 3504.506,
+    "gemm_floor_us": 402.4284,
+    "c_max_tflops": 1.1736,
+    "m_half": 110.641,
+    "weight_bytes_per_param": 0.5,
+    "pool_GBs": 43.0,
+    "objective": "minimax |rel err| over anchors",
+    "max_abs_rel_residual": 0.0528,
+    "all_within_15pct": true
+  }
+}

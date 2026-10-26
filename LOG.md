@@ -9,6 +9,43 @@ Reverse-chronological (newest first).
 
 ---
 
+## 2026-10-23 — Phase 3: heterogeneous tiled scheduling on SoC profiles (branch `hetero`; ADR-0008/0009 + revisions)
+
+Everything in this entry is **SIMULATED** (no heterogeneous-execution silicon; the P1 profile is **borrowed** from
+HeteroInfer's published numbers); the L4 legacy path (`soc_profile` unset, `all_cim`) is byte-identical throughout
+(`validate_e2e_l4.py` unchanged, snapshot tests). Cross-cutting changes, newest last:
+
+- **ADR-0008 — SoC profiles + unit pricing.** `Platform.price()` prices every (unit × op) combination; `platform.soc_profile`
+  swaps the whole SoC (`sd8gen3_cim` P1 fitted to HeteroInfer Table 3 / Fig.3 / §3.3 by `tools/analysis/fit_hetero_anchors.py`;
+  `rk3588_cim` P2 = this repo's measured units + Metis CIM). Legacy combos byte-identical; new combos take profile parameters.
+- **ADR-0009 — op tiling + heterogeneous schedulers.** `tiling.py` (N/M/K/heads/kv/rows splits + merge nodes + the one sync
+  table), `solver.py` (HeteroInfer §4.4 generalised), schedulers `gpu_only` / `npu_only` / `cim_only` / `heteroinfer` / `tiled_hetero`;
+  runner statistics (utilisation, syncs, achieved bandwidth, critical path, plans).
+- **Revisions F1–F15 (independent review, 2026-10-23).** Sync = serial pre-op delay; ONE memory model (every unit model is a
+  kernel-time model, DRAM bytes pool-metered with per-unit stream caps + the knee); GPU GEMV refit; launch floor per fused
+  elementwise chain; physical `cim_n_cores`; per-unit weight bytes (`weight_bytes_per_param`); minimum sub-tensor rule;
+  `host=auto` ranked by the engine. Knobs: `scheduler.host`, `allow_cpu_compute`, `platform.cim_n_cores`, `npu_scale`,
+  `cpu_gemv_efficiency`. Tests: `tests/test_hetero_fixes.py`, `test_knobs.py`.
+- **Round 2 (after matrix v1, `cim-mobile-soc/experiments/RESULTS_v1.md`).** G1: CPU GEMM kernel floor (`kernel_floor_us`,
+  fused-chain rule on CPU elementwise ops, profile path only) + `cpu_only` baseline + END-TO-END refit of the CPU model to the
+  HeteroInfer Fig.12 CPU/GPU decode ratio (`tools/analysis/fit_cpu_gemv.py`: floor 30 µs, gemv_efficiency 0.217 → 0.128; the
+  pre-fit model had a CPU-only decode beating the GPU). G2: `host=auto` is a portfolio (per-host solver plans + every
+  single-unit plan, engine-ranked → "ours ≥ best single-unit baseline" by construction), `plan_source` surfaced, solver
+  refinement passes (deferred / neighbours hand-back charging). G3: `platform.cim_weight_bytes_per_param`, `price_table.py
+  --cim-n-cores`. Tests: `tests/test_hetero_round2.py`. Docs synced (CONTEXT repo index, README knobs, OVERALL Phase 3).
+- **2026-10-26 — CIM beyond-capacity (ADR-0008 R3) + cooperation (ADR-0009 "Revisions 2026-10-26 (cooperation)").**
+  R3: on the profile path the non-resident weights are re-programmed from the pool (`units.cim.program_BW_GBs`,
+  `residency_policy`) instead of the Metis spill floor. C1: `capacity_split` candidate — the CIM takes the output columns
+  that fit its residency budget (`units.cim.weight_budget_frac` × knee × s; decode = one global budget per token DAG
+  allocated by saving density, pinned parts stream no weight bytes; prefill = per-op cap), `cim_budget_used_decode`
+  echoed. C2: `scheduler.prefill_chunks` ∈ {1, 2, 4, 8, auto} — the prefill forward as token-chunk sub-DAGs (block-causal
+  attention, bytes conserved) for cross-unit overlap; measured: every chunk re-pays the CIM per-call tile term + floors +
+  syncs, so `auto` keeps C = 1 on the P1 smoke configs (documented in the ADR). Engine: `run_dag` finish passes iterate
+  the running set only (same numbers, faster) and record `unit_order`. Tests: `tests/test_cim_residency.py`,
+  `tests/test_cooperation.py`.
+
+---
+
 ## 2026-07-07 — Phase 2.1–2.5 complete; honesty reframe + docs sync (touches Phase-1 deliverables)
 
 The integrated per-token simulator (`simulator/runtime/`) shipped across waves 2.1–2.5 (PRs #51/#53,

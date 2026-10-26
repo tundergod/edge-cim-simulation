@@ -1,0 +1,115 @@
+{
+  "_doc": "Snapdragon 8 Gen 3 NPU (Hexagon, weight-stall 32x32 systolic arrays) spec for SoC profile sd8gen3_cim (ADR-0008). EVERY number is BORROWED from HeteroInfer (SOSP'25; cim-mobile-soc/docs/heteroinfer-design-reference.md \u00a72.2, \u00a73b Table 3): `anchors` are Table 3 NPU latencies (weight [N_out,K_in], activation [K_in,M]); `anchor_fit` is our staircase-roofline reproduction (tools/analysis/fit_hetero_anchors.py; model = NpuStaircaseModel in simulator/models/m4_npu.py). NO silicon of ours. The RKNPU2 fields (tops_int8, bw_GBs, dtypes, systolic_dim) are carried because NpuStaircaseModel subclasses the analytic NpuModel; the staircase model reads anchor_fit, not tops_int8/bw_GBs.",
+  "unit": "npu",
+  "arch": "Hexagon NPU (Snapdragon 8 Gen 3)",
+  "cores": 1,
+  "freq_ghz": 1.0,
+  "tops_int8": 34,
+  "tflops_fp16_estimated": 17,
+  "tflops_actual_upto": 10,
+  "dtypes": [
+    "int4",
+    "int8",
+    "int16",
+    "fp16"
+  ],
+  "systolic_dim": [
+    32,
+    32
+  ],
+  "order_penalty_max": 6.0,
+  "bw_GBs": {
+    "host_peak": 68.0,
+    "eff_frac_low": 0.59,
+    "eff_frac_high": 0.66,
+    "eff_low": 40.0,
+    "eff_high": 45.0,
+    "heteroinfer_peak_denominator": 68
+  },
+  "honesty": "borrowed (HeteroInfer published Table 3/Fig.3/Fig.4 numbers; fitted, no silicon of ours)",
+  "anchors": [
+    {
+      "N_out": 4096,
+      "K_in": 4096,
+      "M": 1,
+      "latency_us": 693,
+      "cite": "Tab.3 row 1"
+    },
+    {
+      "N_out": 4096,
+      "K_in": 4096,
+      "M": 128,
+      "latency_us": 912,
+      "cite": "Tab.3 row 4"
+    },
+    {
+      "N_out": 4096,
+      "K_in": 4096,
+      "M": 256,
+      "latency_us": 1884,
+      "cite": "Tab.3 row 6"
+    },
+    {
+      "N_out": 4096,
+      "K_in": 14336,
+      "M": 1,
+      "latency_us": 6506,
+      "cite": "Tab.3 row 3"
+    },
+    {
+      "N_out": 4096,
+      "K_in": 14336,
+      "M": 256,
+      "latency_us": 23445,
+      "cite": "Tab.3 row 8"
+    },
+    {
+      "N_out": 28672,
+      "K_in": 4096,
+      "M": 1,
+      "latency_us": 3886,
+      "cite": "Tab.3 row 2"
+    }
+  ],
+  "fig3_staircase_4096x14336_us": [
+    6900,
+    8700,
+    10900,
+    14000,
+    16000,
+    18000
+  ],
+  "notes": {
+    "staircase": "Fig.3: latency steps every 32 activation rows (one systolic tile); any M <= 32 costs the same.",
+    "k_penalty": "NPU-3: a large contraction dim (K_in=14336) costs ~4x more per weight than K_in=4096 at equal N_out*K_in; modelled as (K/k_ref)^k_penalty_exp on both the weight-load and the streamed term.",
+    "order": "Fig.4: reversing the operand order (activation stationary) costs up to 6x -> wl.extra['order']='activation_stationary' multiplies by order_penalty_max.",
+    "4096x4096_triple": "the M=1/128/256 anchors (693/912/1884) are mutually inconsistent with a linear-in-steps law; minimax spreads the error to ~14% on each.",
+    "weights": "weight_bytes_per_param=1 (effective; decode uses INT per \u00a75.1 fn.1, prefill W4A16->FP16 \u2014 the fit cannot separate them).",
+    "fig3_check": "the fitted model reproduces the Fig.3 levels for [4096,14336] at steps 1..6 within -7%..+5% (see anchor_fit.json)."
+  },
+  "provenance": {
+    "tops_int8": "HeteroInfer \u00a71/Tab.2 34 TOPS INT8 [borrowed]",
+    "tflops_fp16_estimated": "HeteroInfer Tab.2 authors' estimate (half of INT8) [borrowed]",
+    "tflops_actual_upto": "HeteroInfer \u00a71 'up to 10 TFLOPS (in actual)' [borrowed]",
+    "systolic_dim": "HeteroInfer \u00a73.2 Fig.2 32x32 weight-stall arrays [borrowed]",
+    "bw_GBs": "HeteroInfer \u00a73.3 Fig.5 per-unit 40-45 GB/s of a 68 peak [borrowed]",
+    "anchors": "HeteroInfer Tab.3 (8 Gen 3) [borrowed]",
+    "fig3_staircase_4096x14336_us": "HeteroInfer Fig.3 levels (read from figure) [borrowed]",
+    "order_penalty_max": "HeteroInfer Fig.4 6x [borrowed]",
+    "anchor_fit": "minimax relative-error fit of the anchors (fit_hetero_anchors.py) [borrowed, fitted]",
+    "cores": "single logical NPU (the paper never splits it) [assumption]"
+  },
+  "anchor_fit": {
+    "_doc": "32-row staircase KERNEL-TIME minimax fit of `anchors` under pred = max(kernel, K*N/43 GB/s) (fit_hetero_anchors.py, ADR-0008 rev F2): floor + (K/k_ref)^p * (K*N/bw + ceil(M/32)*2*32*K*N/tops_eff); bw_GBs = the array weight-load pass (kernel side), DRAM bytes pool-metered. [borrowed, fitted]",
+    "floor_us": 58.6396,
+    "bw_GBs": 42.7622,
+    "tops_eff": 7.3208,
+    "k_penalty_exp": 1.0639,
+    "k_ref": 4096,
+    "weight_bytes_per_param": 1.0,
+    "pool_GBs": 43.0,
+    "objective": "minimax |rel err| over anchors",
+    "max_abs_rel_residual": 0.1378,
+    "all_within_15pct": true
+  }
+}

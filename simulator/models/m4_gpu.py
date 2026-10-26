@@ -22,9 +22,12 @@ class MaliGpuModel:
         self.attn_b_us = p["attn_bmm_b_us_per_kv"]  # slope (us per kv token)
         self.gemm_gflops_lb = p["gemm_gflops_saturated_lowerbound"]
 
-    def attn_bmm_us(self, kv, heads=1, layers=1):
-        """Single-head decode attention (QK^T+S.V) us, x heads x layers if given."""
-        return (self.attn_a_us + self.attn_b_us * kv) * heads * layers
+    def attn_bmm_us(self, kv, heads=1, layers=1, M=1):
+        """Single-head single-query-row attention (QK^T+S.V) us, x heads x layers x M query rows.
+        The fit is a per-row (decode) measurement; M > 1 (prefill, ADR-0008 revision F5) scales it
+        linearly — EXTRAPOLATED (no multi-row Mali attention measurement). Legacy callers leave
+        M = 1 (byte-identical)."""
+        return (self.attn_a_us + self.attn_b_us * kv) * heads * layers * M
 
     def gemm_lat_us(self, M, K, N):
         """GEMM latency (us) = FLOPs / saturated throughput. LOWER BOUND (unoptimised kernel)."""
