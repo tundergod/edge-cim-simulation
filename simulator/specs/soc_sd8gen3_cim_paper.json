@@ -1,7 +1,7 @@
 {
   "_doc": "SoC PROFILE P1-paper = sd8gen3_cim with two parameters moved to HeteroInfer's own end-to-end measurements for a calibration check (2026-10-27, user request): NPU weight storage 0.5 B/param (the paper's NPU decode runs INT kernels on 4-bit-stored weights, §5.4 footnote; our default 1.0 = INT8 storage) and the aggregate memory knee = the paper's practical maximum 61.9 GB/s (§3.3; default 60.0), single stream 43.3 (§5.4 GPU-only decode). Everything else identical to sd8gen3_cim. Honesty: BORROWED; this profile exists to measure how much of the gap to the paper's Fig.15 those two assumptions explain, not as the main result.",
-  "profile": "sd8gen3_cim",
-  "honesty": "borrowed: soc_profile 'sd8gen3_cim' — GPU/NPU/memory fitted to HeteroInfer (SOSP'25) Table 3 / Fig.3 / §3.3 published numbers, CPU = RK3588 A76 proxy, CIM = Metis M1 tile on the simulated edge topology; NO silicon of ours",
+  "profile": "sd8gen3_cim_paper",
+  "honesty": "borrowed: soc_profile 'sd8gen3_cim_paper' = sd8gen3_cim with NPU W4 storage (0.5 B/param) and the paper's 61.9 GB/s practical ceiling / 43.3 single stream — a calibration-check variant, not the main profile; borrowed: soc_profile 'sd8gen3_cim' — GPU/NPU/memory fitted to HeteroInfer (SOSP'25) Table 3 / Fig.3 / §3.3 published numbers, CPU = RK3588 A76 proxy, CIM = Metis M1 tile on the simulated edge topology; NO silicon of ours",
   "units": {
     "gpu": {
       "spec": "gpu_adreno750_sd8gen3",
